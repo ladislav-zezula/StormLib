@@ -1,0 +1,30 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.lib
+*.la
+*.a
+
+# Temporary work files for MS Visual Studio
+BuildLog.htm
+*.dep
+*.dll
+*.embed.manifest
+*.intermediate.manifest
+*.exe
+*.idb
+*.ilk
+*.obj
+*.pdb
+*.res
+*.ncb
+*.suo
+*.user
