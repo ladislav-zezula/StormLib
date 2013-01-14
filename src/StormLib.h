@@ -66,6 +66,7 @@
 /* 15.09.11  8.04  Lad  Bug fixes, testing for Diablo III MPQs               */
 /* 26.04.12  8.10  Lad  Support for data map, added SFileGetArchiveBitmap    */
 /* 29.05.12  8.20  Lad  C-only interface                                     */
+/* 14.01.13  8.21  Lad  ADPCM and Huffmann (de)compression refactored        */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -129,6 +130,9 @@ extern "C" {
 
 //-----------------------------------------------------------------------------
 // Defines
+
+#define STORMLIB_VERSION                0x0815  // Current version of StormLib (8.21)
+#define STORMLIB_VERSION_STRING         "8.21"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
@@ -263,9 +267,6 @@ extern "C" {
 #define SIGNATURE_NAME           "(signature)"  // Name of internal signature
 #define ATTRIBUTES_NAME         "(attributes)"  // Name of internal attributes file
 #define PATCH_METADATA_NAME "(patch_metadata)"
-
-#define STORMLIB_VERSION                0x0814  // Current version of StormLib (8.10)
-#define STORMLIB_VERSION_STRING         "8.20"
 
 #define MPQ_FORMAT_VERSION_1                 0  // Up to The Burning Crusade
 #define MPQ_FORMAT_VERSION_2                 1  // The Burning Crusade and newer 
