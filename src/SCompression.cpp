@@ -1042,7 +1042,7 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     }
 
     // Apply the first decompression method
-    nResult = pfnDecompress1(pbWorkBuffer, &cbWorkBuffer, pvInBuffer, cbInBuffer);
+    nResult = pfnDecompress1(pbWorkBuffer, &cbWorkBuffer, pbInBuffer, cbInBuffer);
 
     // Apply the second decompression method, if any
     if(pfnDecompress2 != NULL && nResult != 0)

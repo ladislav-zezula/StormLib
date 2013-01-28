@@ -1806,7 +1806,7 @@ static int TestOpenPatchedArchive(const TCHAR * szMpqName, ...)
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
     va_list argList;
-    const char * szFileName = "Interface/Cinematics/MOP_BR.mp3";
+    const char * szFileName = "Creature\\ALLIANCELIONMOUNT\\AllianceLion.M2";
     TCHAR szLocFileName[MAX_PATH];
     LPBYTE pbFullFile = NULL;
     DWORD dwFileSize;
@@ -2170,11 +2170,11 @@ int main(void)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestPartFileRead(MAKE_PATH("2009 - PartialMPQs/patch.MPQ.part"));
 
-    if(nError == ERROR_SUCCESS)
-    {
-        CompareHuffmanCompressions7();
-        nError = CompareHuffmanCompressions0();
-    }
+//  if(nError == ERROR_SUCCESS)
+//  {
+//      CompareHuffmanCompressions7();
+//      nError = CompareHuffmanCompressions0();
+//  }
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = ComparePklibCompressions();
@@ -2189,7 +2189,7 @@ int main(void)
 
     // Test the archive open and close
 //  if(nError == ERROR_SUCCESS)
-//      nError = TestArchiveOpenAndClose(MAKE_PATH("BrooDat.mpq"));
+//      nError = TestArchiveOpenAndClose(MAKE_PATH("OldWorld-enGB.MPQ"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
@@ -2241,12 +2241,25 @@ int main(void)
 //      nError = TestCreateArchiveCopy(MAKE_PATH("PartialMPQs/interface.MPQ.part"), MAKE_PATH("PartialMPQs/interface-copy.MPQ.part"), NULL);
 
 
-//  if(nError == ERROR_SUCCESS)
-//  {
-//      nError = TestOpenPatchedArchive(MAKE_PATH("2012 - WoW\\16057\\enUS\\locale-enUS.MPQ"),
-//                                      MAKE_PATH("2012 - WoW\\16057\\enUS\\wow-update-enUS-16016.MPQ"),
-//                                      NULL);
-//  }
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = TestOpenPatchedArchive(MAKE_PATH("2013 - WoW\\12911\\world.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13164.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13205.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13287.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13329.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13596.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13623.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-13914.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14007.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14333.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14480.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14545.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14946.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15005.MPQ"),
+                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15050.MPQ"),
+                                        NULL);
+    }
   
 //  if(nError == ERROR_SUCCESS)
 //  {

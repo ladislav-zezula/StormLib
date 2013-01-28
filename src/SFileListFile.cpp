@@ -21,14 +21,15 @@
 struct TListFileCache
 {
     HANDLE  hFile;                      // Stormlib file handle
-    char  * szMask;                     // File mask
+    char  * szMask;                     // Self-relative pointer to file mask
     DWORD   dwFileSize;                 // Total size of the cached file
     DWORD   dwFilePos;                  // Position of the cache in the file
     BYTE  * pBegin;                     // The begin of the listfile cache
     BYTE  * pPos;
     BYTE  * pEnd;                       // The last character in the file cache
 
-    BYTE Buffer[CACHE_BUFFER_SIZE];     // Listfile cache itself
+    BYTE Buffer[CACHE_BUFFER_SIZE];
+//  char MaskBuff[1]                    // Followed by the name mask (if any)
 };
 
 //-----------------------------------------------------------------------------
@@ -40,9 +41,12 @@ static bool FreeListFileCache(TListFileCache * pCache)
     if(pCache == NULL)
         return false;
 
+    //
+    // Note: don't close the pCache->hFile handle.
+    // This has to be done by the creator of the listfile cache
+    //
+
     // Free all allocated buffers
-    if(pCache->hFile != NULL)
-        SFileCloseFile(pCache->hFile);
     if(pCache->szMask != NULL)
         STORM_FREE(pCache->szMask);
     STORM_FREE(pCache);
@@ -52,54 +56,48 @@ static bool FreeListFileCache(TListFileCache * pCache)
 static TListFileCache * CreateListFileCache(HANDLE hListFile, const char * szMask)
 {
     TListFileCache * pCache = NULL;
+    size_t nMaskLength = 0;
     DWORD dwBytesRead = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwFileSize;
+
+    // Get the amount of bytes that need to be allocated
+    dwFileSize = SFileGetFileSize(hListFile, NULL);
+    if(dwFileSize == 0)
+        return NULL;
+
+    // Append buffer for name mask, if any
+    if(szMask != NULL)
+        nMaskLength = strlen(szMask) + 1;
 
     // Allocate cache for one file block
-    pCache = (TListFileCache *)STORM_ALLOC(TListFileCache, 1);
-    if(pCache == NULL)
-        nError = ERROR_NOT_ENOUGH_MEMORY;
-
-    // Clear the entire structure
-    if(nError == ERROR_SUCCESS)
+    pCache = (TListFileCache *)STORM_ALLOC(BYTE, sizeof(TListFileCache));
+    if(pCache != NULL)
     {
-        memset(pCache, 0, sizeof(TListFileCache));
-        pCache->hFile = hListFile;
+        // Clear the entire structure
+        memset(pCache, 0, sizeof(TListFileCache) + nMaskLength);
 
-        // Shall we allocate a mask?
+        // Shall we copy the mask?
         if(szMask != NULL)
         {
-            pCache->szMask = STORM_ALLOC(char, strlen(szMask) + 1);
-            if(pCache->szMask != NULL)
-                strcpy(pCache->szMask, szMask);
-            else
-                nError = ERROR_NOT_ENOUGH_MEMORY;
+            pCache->szMask = (char *)(pCache + 1);
+            memcpy(pCache->szMask, szMask, nMaskLength);
         }
-    }
 
-    // Initialize the file cache
-    if(nError == ERROR_SUCCESS)
-    {
-        pCache->dwFileSize = SFileGetFileSize(pCache->hFile, NULL);
-
-        // Fill the cache
-        SFileReadFile(pCache->hFile, pCache->Buffer, CACHE_BUFFER_SIZE, &dwBytesRead, NULL);
-        if(dwBytesRead == 0)
-            nError = GetLastError();
-    }
-
-    // Allocate pointers
-    if(nError == ERROR_SUCCESS)
-    {
-        pCache->pBegin =
-        pCache->pPos = &pCache->Buffer[0];
-        pCache->pEnd = pCache->pBegin + dwBytesRead;
-    }
-    else
-    {
-        FreeListFileCache(pCache);
-        SetLastError(nError);
-        pCache = NULL;
+        // Load the file cache from the file
+        SFileReadFile(hListFile, pCache->Buffer, CACHE_BUFFER_SIZE, &dwBytesRead, NULL);
+        if(dwBytesRead != 0)
+        {
+            // Allocate pointers
+            pCache->pBegin = pCache->pPos = &pCache->Buffer[0];
+            pCache->pEnd   = pCache->pBegin + dwBytesRead;
+            pCache->dwFileSize = dwFileSize;
+            pCache->hFile  = hListFile;
+        }
+        else
+        {
+            FreeListFileCache(pCache);
+            pCache = NULL;
+        }
     }
 
     // Return the cache
@@ -116,8 +114,6 @@ static DWORD ReloadListFileCache(TListFileCache * pCache)
     // Only do something if the cache is empty
     if(pCache->pPos >= pCache->pEnd)
     {
-//      __TryReadBlock:
-
         // Move the file position forward
         pCache->dwFilePos += CACHE_BUFFER_SIZE;
         if(pCache->dwFilePos >= pCache->dwFileSize)
@@ -415,25 +411,20 @@ static int SFileAddArbitraryListFile(
     TListFileCache * pCache = NULL;
     size_t nLength;
     char szFileName[MAX_PATH];
-    int nError = ERROR_SUCCESS;
 
     // Create the listfile cache for that file
     pCache = CreateListFileCache(hListFile, NULL);
-    if(pCache == NULL)
-        nError = GetLastError();
-
-    // Load the node list. Add the node for every locale in the archive
-    if(nError == ERROR_SUCCESS)
+    if(pCache != NULL)
     {
+        // Load the node list. Add the node for every locale in the archive
         while((nLength = ReadListFileLine(pCache, szFileName, sizeof(szFileName))) > 0)
             SListFileCreateNodeForAllLocales(ha, szFileName);
-        pCache->hFile = NULL;
-    }
 
-    // Delete the cache
-    if(pCache != NULL)
+        // Delete the cache
         FreeListFileCache(pCache);
-    return nError;
+    }
+    
+    return (pCache != NULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
 static int SFileAddExternalListFile(
@@ -540,7 +531,7 @@ int WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile)
 HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const char * szMask, SFILE_FIND_DATA * lpFindFileData)
 {
     TListFileCache * pCache = NULL;
-    HANDLE hListFile;
+    HANDLE hListFile = NULL;
     size_t nLength = 0;
     DWORD dwSearchScope = SFILE_OPEN_LOCAL_FILE;
     int nError = ERROR_SUCCESS;
@@ -566,7 +557,7 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
     {
         pCache = CreateListFileCache(hListFile, szMask);
         if(pCache == NULL)
-            nError = GetLastError();
+            nError = ERROR_FILE_CORRUPT;
     }
 
     // Perform file search
@@ -592,10 +583,13 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
     if(nError != ERROR_SUCCESS)
     {
         memset(lpFindFileData, 0, sizeof(SFILE_FIND_DATA));
-        FreeListFileCache(pCache);
         SetLastError(nError);
-        pCache = NULL;
     }
+
+    if(pCache != NULL)
+        FreeListFileCache(pCache);
+    if(hListFile != NULL)
+        SFileCloseFile(hListFile);
     return (HANDLE)pCache;
 }
 

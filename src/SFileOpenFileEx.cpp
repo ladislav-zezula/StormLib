@@ -16,6 +16,18 @@
 /* Local functions                                                           */
 /*****************************************************************************/
 
+static const char * GetPrefixedName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
+{
+    if(ha->cchPatchPrefix != 0)
+    {
+        memcpy(szBuffer, ha->szPatchPrefix, ha->cchPatchPrefix);
+        strcpy(szBuffer + ha->cchPatchPrefix, szFileName);
+        szFileName = szBuffer;
+    }
+
+    return szFileName;
+}
+
 static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
 {
     TFileStream * pStream;
@@ -63,7 +75,7 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     TMPQFile * hfLast = NULL;               // The highest file in the chain that is not patch file
     TMPQFile * hf = NULL;
     HANDLE hPatchFile;
-    char szPatchFileName[MAX_PATH];
+    char szPrefixBuffer[MAX_PATH];
 
     // Keep this flag here for future updates
     dwReserved = dwReserved;
@@ -71,10 +83,8 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     // First of all, try to open the original version of the file in any of the patch chain
     while(ha != NULL)
     {
-        // Construct the name of the patch file
-        strcpy(szPatchFileName, ha->szPatchPrefix);
-        strcpy(&szPatchFileName[ha->cchPatchPrefix], szFileName);
-        if(SFileOpenFileEx((HANDLE)ha, szPatchFileName, SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
+        // Prepare the file name with a correct prefix
+        if(SFileOpenFileEx((HANDLE)ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
         {
             // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
             if((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
@@ -100,10 +110,8 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     // Now keep going in the patch chain and open every patch file that is there
     for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
     {
-        // Construct patch file name
-        strcpy(szPatchFileName, ha->szPatchPrefix);
-        strcpy(&szPatchFileName[ha->cchPatchPrefix], szFileName);
-        if(SFileOpenFileEx((HANDLE)ha, szPatchFileName, SFILE_OPEN_BASE_FILE, &hPatchFile))
+        // Prepare the file name with a correct prefix
+        if(SFileOpenFileEx((HANDLE)ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
         {
             // Remember the new version
             hfPatch = (TMPQFile *)hPatchFile;
@@ -232,7 +240,7 @@ bool WINAPI SFileHasFile(HANDLE hMpq, const char * szFileName)
     TFileEntry * pFileEntry;
     DWORD dwFlagsToCheck = MPQ_FILE_EXISTS;
     DWORD dwFileIndex = 0;
-    char szPatchFileName[MAX_PATH];
+    char szPrefixBuffer[MAX_PATH];
     bool bIsPseudoName;
     int nError = ERROR_SUCCESS;
 
@@ -251,7 +259,7 @@ bool WINAPI SFileHasFile(HANDLE hMpq, const char * szFileName)
         while(ha != NULL)
         {
             // Verify presence of the file
-            pFileEntry = (bIsPseudoName == false) ? GetFileEntryLocale(ha, szFileName, lcFileLocale)
+            pFileEntry = (bIsPseudoName == false) ? GetFileEntryLocale(ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), lcFileLocale)
                                                   : GetFileEntryByIndex(ha, dwFileIndex);
             // Verify the file flags
             if(pFileEntry != NULL && (pFileEntry->dwFlags & dwFlagsToCheck) == MPQ_FILE_EXISTS)
@@ -260,14 +268,6 @@ bool WINAPI SFileHasFile(HANDLE hMpq, const char * szFileName)
             // If this is patched archive, go to the patch
             dwFlagsToCheck = MPQ_FILE_EXISTS | MPQ_FILE_PATCH_FILE;
             ha = ha->haPatch;
-
-            // Prepare the patched file name
-            if(ha != NULL)
-            {
-                strcpy(szPatchFileName, ha->szPatchPrefix);
-                strcat(szPatchFileName, szFileName);
-                szFileName = szPatchFileName;
-            }
         }
 
         // Not found, sorry
