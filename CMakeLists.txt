@@ -28,6 +28,7 @@ set(SRC_FILES
            src/SFileReadFile.cpp
            src/SFileVerify.cpp
            src/libtomcrypt/src/pk/rsa/rsa_verify_simple.c
+           src/libtomcrypt/src/misc/crypt_libc.c
 )
 
 set(TOMCRYPT_FILES
@@ -43,7 +44,6 @@ set(TOMCRYPT_FILES
            src/libtomcrypt/src/misc/crypt_find_prng.c
            src/libtomcrypt/src/misc/crypt_hash_descriptor.c
            src/libtomcrypt/src/misc/crypt_hash_is_valid.c
-           src/libtomcrypt/src/misc/crypt_libc.c
            src/libtomcrypt/src/misc/crypt_ltc_mp_descriptor.c
            src/libtomcrypt/src/misc/crypt_prng_descriptor.c
            src/libtomcrypt/src/misc/crypt_prng_is_valid.c
@@ -278,9 +278,10 @@ endif()
 
 option(WITH_STATIC "Compile static linked library" OFF)
 if(WITH_STATIC)
-    add_library(StormLib_static STATIC ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
-    target_link_libraries(StormLib_static ${LINK_LIBS})
-    set_target_properties(StormLib_static PROPERTIES OUTPUT_NAME StormLib)
+    add_library(storm_static STATIC ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
+    target_link_libraries(storm_static ${LINK_LIBS})
+    set_target_properties(storm_static PROPERTIES OUTPUT_NAME storm)
+    install(TARGETS storm_static RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib FRAMEWORK DESTINATION /Library/Frameworks)
 endif()
 
 if(APPLE)
@@ -290,8 +291,8 @@ if(APPLE)
 endif()
 
 if(UNIX)
-    set_target_properties(storm PROPERTIES VERSION 8.10.0)
-    set_target_properties(storm PROPERTIES SOVERSION 8.10)
+    set_target_properties(storm PROPERTIES VERSION 8.21.0)
+    set_target_properties(storm PROPERTIES SOVERSION 8)
 endif()
 
 # On Win32, build StormLib.dll since we don't want to clash with Storm.dll

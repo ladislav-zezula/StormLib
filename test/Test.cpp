@@ -1148,7 +1148,7 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     if(nError == ERROR_SUCCESS)
     {
         _tprintf(_T("Opening archive %s ...\n"), szMpqName);
-        if(!SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE, &hMpq))
+        if(!SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_PARTIAL | BASE_PROVIDER_FILE, &hMpq))
             nError = GetLastError();
         ha = (TMPQArchive *)hMpq;
     }
@@ -2157,7 +2157,7 @@ int main(void)
     // Mix the random number generator
 //  srand(GetTickCount());
 
-//  FileStream_OpenEncrypted(_T("e:\\Multimedia\\MPQs\\2010 - Starcraft II\\Installer UI 2 deDE.MPQE"));
+    FileStream_OpenFile(_T("e:\\Hry\\StarCraft II\\Updates\\SC2_HotS_20_BGDL\\SC2_HotS_20_BGDL_deDE.MPQE"), STREAM_PROVIDER_ENCRYPTED | BASE_PROVIDER_FILE);
 
     // Test structure sizes
 //  if(nError == ERROR_SUCCESS)
@@ -2188,8 +2188,8 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestArchiveOpenAndClose(MAKE_PATH("OldWorld-enGB.MPQ"));
+    if(nError == ERROR_SUCCESS)
+        nError = TestArchiveOpenAndClose(MAKE_PATH("speech.mpq.part"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
@@ -2241,25 +2241,25 @@ int main(void)
 //      nError = TestCreateArchiveCopy(MAKE_PATH("PartialMPQs/interface.MPQ.part"), MAKE_PATH("PartialMPQs/interface-copy.MPQ.part"), NULL);
 
 
-    if(nError == ERROR_SUCCESS)
-    {
-        nError = TestOpenPatchedArchive(MAKE_PATH("2013 - WoW\\12911\\world.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13164.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13205.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13287.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13329.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13596.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-13623.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-13914.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14007.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14333.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14480.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14545.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14946.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15005.MPQ"),
-                                        MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15050.MPQ"),
-                                        NULL);
-    }
+//  if(nError == ERROR_SUCCESS)
+//  {
+//      nError = TestOpenPatchedArchive(MAKE_PATH("2013 - WoW\\12911\\world.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13164.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13205.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13287.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13329.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13596.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-13623.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-13914.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14007.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14333.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14480.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14545.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-14946.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15005.MPQ"),
+//                                      MAKE_PATH("2013 - WoW\\12911\\wow-update-base-15050.MPQ"),
+//                                      NULL);
+//  }
   
 //  if(nError == ERROR_SUCCESS)
 //  {

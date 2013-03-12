@@ -1394,6 +1394,11 @@ static const char * szKeyTemplate = "expand 32-byte k000000000000000000000000000
 
 static const char * AuthCodeArray[] =
 {
+    // Starcraft II (Heart of the Swarm)
+    // Authentication code URL: http://dist.blizzard.com/mediakey/hots-authenticationcode-bgdl.txt
+    //                                                                                          -0C-    -1C--08-    -18--04-    -14--00-    -10-
+    "S48B6CDTN5XEQAKQDJNDLJBJ73FDFM3U",         // SC2 Heart of the Swarm-all : "expand 32-byte kQAKQ0000FM3UN5XE000073FD6CDT0000LJBJS48B0000DJND"
+
     // Diablo III: Agent.exe (1.0.0.954)
     // Address of decryption routine: 00502b00                             
     // Pointer to decryptor object: ECX
@@ -1415,7 +1420,7 @@ static const char * AuthCodeArray[] =
     "6VWCQTN8V3ZZMRUCZXV8A8CGUX2TAA8H",         // Diablo III Installer (zhTW): "expand 32-byte kMRUC0000AA8HV3ZZ0000UX2TQTN80000A8CG6VWC0000ZXV8"
 //  "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",         // Diablo III Installer (zhCN): "expand 32-byte kXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-    // Note: Starcraft II (Wings of Liberty): Installer.exe (4.1.1.4219)
+    // Starcraft II (Wings of Liberty): Installer.exe (4.1.1.4219)
     // Address of decryption routine: 0053A3D0
     // Pointer to decryptor object: ECX
     // Pointer to key: ECX+0x5C
