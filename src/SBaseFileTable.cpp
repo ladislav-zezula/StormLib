@@ -1766,27 +1766,26 @@ int LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsCompl
     DWORD ExtraBitsCount;
 
     // Is there enough space for a MPQ bitmap?
+    // Note: Do not rely on file size when looking for the bitmap.
+    // Battle.net.MPQ from SC2:HOTS (build 22342) has some data appended after the bitmap
     EndOfMpq = ha->MpqPos + ha->pHeader->ArchiveSize64;
-    FileSize = FileSize - sizeof(TMPQBitmap);
     if(FileSize > EndOfMpq)
     {
+        // Calculate the number of extra bytes for data bitmap
+        DataBlockCount = (DWORD)(((ha->pHeader->ArchiveSize64 - 1) / ha->pHeader->dwRawChunkSize) + 1);
+        BitmapByteSize = ((DataBlockCount - 1) / 8) + 1;
+        BitmapOffset = EndOfMpq + BitmapByteSize;
+
         // Try to load the data bitmap from the end of the file
-        if(FileStream_Read(ha->pStream, &FileSize, &DataBitmap, sizeof(TMPQBitmap)))
+        if(FileStream_Read(ha->pStream, &BitmapOffset, &DataBitmap, sizeof(TMPQBitmap)))
         {
             // Is it a valid data bitmap?
             BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&DataBitmap), sizeof(TMPQBitmap));
             if(DataBitmap.dwSignature == MPQ_DATA_BITMAP_SIGNATURE)
             {
-                // We assume that MPQs with data bitmap begin at position 0
-                assert(ha->MpqPos == 0);
-
-                // Calculate the number of extra bytes for data bitmap
-                DataBlockCount = (DWORD)(((ha->pHeader->ArchiveSize64 - 1) / DataBitmap.dwBlockSize) + 1);
-                BitmapByteSize = ((DataBlockCount - 1) / 8) + 1;
-
-                // Verify the data block size
-                BitmapOffset = ((ULONGLONG)DataBitmap.dwMapOffsetHi << 32) | DataBitmap.dwMapOffsetLo;
-                assert((DWORD)(FileSize - BitmapOffset) == BitmapByteSize);
+                // Several sanity checks to ensure integrity of the bitmap
+                assert(MAKE_OFFSET64(DataBitmap.dwMapOffsetHi, DataBitmap.dwMapOffsetLo) == EndOfMpq);
+                assert(ha->pHeader->dwRawChunkSize == DataBitmap.dwBlockSize);
 
                 // Allocate space for the data bitmap
                 pBitmap = (TMPQBitmap *)STORM_ALLOC(BYTE, sizeof(TMPQBitmap) + BitmapByteSize);
@@ -1796,7 +1795,7 @@ int LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsCompl
                     memcpy(pBitmap, &DataBitmap, sizeof(TMPQBitmap));
 
                     // Read the remaining part
-                    if(!FileStream_Read(ha->pStream, &BitmapOffset, (pBitmap + 1), BitmapByteSize))
+                    if(!FileStream_Read(ha->pStream, &EndOfMpq, (pBitmap + 1), BitmapByteSize))
                     {
                         STORM_FREE(pBitmap);
                         pBitmap = NULL;

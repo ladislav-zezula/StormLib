@@ -2189,7 +2189,7 @@ int main(void)
 
     // Test the archive open and close
     if(nError == ERROR_SUCCESS)
-        nError = TestArchiveOpenAndClose(MAKE_PATH("speech.mpq.part"));
+        nError = TestArchiveOpenAndClose(MAKE_PATH("Battle.net.MPQ"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
