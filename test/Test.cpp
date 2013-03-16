@@ -2157,7 +2157,7 @@ int main(void)
     // Mix the random number generator
 //  srand(GetTickCount());
 
-    FileStream_OpenFile(_T("e:\\Hry\\StarCraft II\\Updates\\SC2_HotS_20_BGDL\\SC2_HotS_20_BGDL_deDE.MPQE"), STREAM_PROVIDER_ENCRYPTED | BASE_PROVIDER_FILE);
+//  FileStream_OpenFile(_T("e:\\Hry\\StarCraft II\\Updates\\SC2_HotS_20_BGDL\\SC2_HotS_20_BGDL_deDE.MPQE"), STREAM_PROVIDER_ENCRYPTED | BASE_PROVIDER_FILE);
 
     // Test structure sizes
 //  if(nError == ERROR_SUCCESS)
