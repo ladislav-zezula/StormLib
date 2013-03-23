@@ -1158,35 +1158,43 @@ int AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
 
     // Does the size of the file table match with the CRC32-based checksums?
     dwExpectedSize = (hf->dwSectorCount + 2) * sizeof(DWORD);
-    if(hf->SectorOffsets[0] == dwExpectedSize)
+    if(hf->SectorOffsets[0] != 0 && hf->SectorOffsets[0] == dwExpectedSize)
     {
-        // Is there valid size of the sector checksums?
-        if(hf->SectorOffsets[hf->dwSectorCount + 1] >= hf->SectorOffsets[hf->dwSectorCount])
-            dwCompressedSize = hf->SectorOffsets[hf->dwSectorCount + 1] - hf->SectorOffsets[hf->dwSectorCount];
-
-        // Ignore cases when the length is too small or too big.
-        if(dwCompressedSize < sizeof(DWORD) || dwCompressedSize > hf->dwSectorSize)
-            return ERROR_SUCCESS;
-
-        // Allocate the array for the sector checksums
-        hf->SectorChksums = STORM_ALLOC(DWORD, hf->dwSectorCount);
-        if(hf->SectorChksums == NULL)
-            return ERROR_NOT_ENOUGH_MEMORY;
-
-        // If we are not supposed to load it from the file, allocate empty buffer
+        // If we are not loading from the MPQ file, we just allocate the sector table
+        // In that case, do not check any sizes
         if(bLoadFromFile == false)
         {
+            hf->SectorChksums = STORM_ALLOC(DWORD, hf->dwSectorCount);
+            if(hf->SectorChksums == NULL)
+                return ERROR_NOT_ENOUGH_MEMORY;
+
+            // Fill the checksum table with zeros
             memset(hf->SectorChksums, 0, hf->dwSectorCount * sizeof(DWORD));
             return ERROR_SUCCESS;
         }
+        else
+        {
+            // Is there valid size of the sector checksums?
+            if(hf->SectorOffsets[hf->dwSectorCount + 1] >= hf->SectorOffsets[hf->dwSectorCount])
+                dwCompressedSize = hf->SectorOffsets[hf->dwSectorCount + 1] - hf->SectorOffsets[hf->dwSectorCount];
 
-        // Calculate offset of the CRC table
-        dwCrcSize = hf->dwSectorCount * sizeof(DWORD);
-        dwCrcOffset = hf->SectorOffsets[hf->dwSectorCount];
-        CalculateRawSectorOffset(RawFilePos, hf, dwCrcOffset); 
+            // Ignore cases when the length is too small or too big.
+            if(dwCompressedSize < sizeof(DWORD) || dwCompressedSize > hf->dwSectorSize)
+                return ERROR_SUCCESS;
 
-        // Now read the table from the MPQ
-        return LoadMpqTable(ha, RawFilePos, hf->SectorChksums, dwCompressedSize, dwCrcSize, 0);
+            // Allocate the array for the sector checksums
+            hf->SectorChksums = STORM_ALLOC(DWORD, hf->dwSectorCount);
+            if(hf->SectorChksums == NULL)
+                return ERROR_NOT_ENOUGH_MEMORY;
+
+            // Calculate offset of the CRC table
+            dwCrcSize = hf->dwSectorCount * sizeof(DWORD);
+            dwCrcOffset = hf->SectorOffsets[hf->dwSectorCount];
+            CalculateRawSectorOffset(RawFilePos, hf, dwCrcOffset); 
+
+            // Now read the table from the MPQ
+            return LoadMpqTable(ha, RawFilePos, hf->SectorChksums, dwCompressedSize, dwCrcSize, 0);
+        }
     }
 
     // If the size doesn't match, we ignore sector checksums
