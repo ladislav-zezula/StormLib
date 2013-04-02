@@ -11,11 +11,11 @@ if x%1 == xx64 goto PlatformWin64
 goto exit
 
 :PlatformWin32
-copy .\bin\Stormlib\%1\%2\*.lib    ..\aaa\lib32
+copy .\bin\StormLib\%1\%2\*.lib    ..\aaa\lib32
 goto exit
 
 :PlatformWin64
-copy .\bin\Stormlib\%1\%2\*.lib    ..\aaa\lib64
+copy .\bin\StormLib\%1\%2\*.lib    ..\aaa\lib64
 goto exit
 
 :exit
