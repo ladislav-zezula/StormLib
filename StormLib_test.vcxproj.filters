@@ -1,0 +1,782 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Doc Files">
+      <UniqueIdentifier>{c0babef7-a4c6-465f-b35d-e3e76db9fbf2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{a5af690c-30fc-48a4-a8b3-b355364f523a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{efe8c45b-9ac6-4ece-9802-0684c7c04f4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\adpcm">
+      <UniqueIdentifier>{a4ffdb8c-2367-4167-b46f-5053f9efe5ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\bzip2">
+      <UniqueIdentifier>{c0d46102-b1f4-4ddd-afb2-23c823e87200}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\huffman">
+      <UniqueIdentifier>{177c16f2-a75f-402b-9a3f-d5ff582737bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt">
+      <UniqueIdentifier>{b16d7cfc-d53a-47d5-9bce-f1bacea7c30c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\hashes">
+      <UniqueIdentifier>{5ced2573-f357-4a5e-803d-10623c23d91f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\math">
+      <UniqueIdentifier>{a7ad01bf-937b-4726-815b-7017d7fce74b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\misc">
+      <UniqueIdentifier>{5178056b-812c-43bb-947e-792cabc52dc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\pk">
+      <UniqueIdentifier>{f3716532-2a20-4722-af58-917f82b27231}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\pk\asn1">
+      <UniqueIdentifier>{7740e6d6-03cf-46d7-8b7f-71296fecb507}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\pk\ecc">
+      <UniqueIdentifier>{b5ee44e8-e6c9-461f-b63f-1135451f1cb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\pk\pkcs1">
+      <UniqueIdentifier>{b0440145-14bb-423e-86ed-91a8013e1df5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtomcrypt\pk\rsa">
+      <UniqueIdentifier>{62e2f0bb-db68-4626-b8b6-6ff1425b3ef2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libtommath">
+      <UniqueIdentifier>{e795a249-ae13-4b6c-90ff-3340873e1d5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lzma">
+      <UniqueIdentifier>{f710fac0-2561-4ef8-8b66-6de4a840f05d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\pklib">
+      <UniqueIdentifier>{60cd5d7f-a9a5-4fbf-ac59-39c097b2e7ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\sparse">
+      <UniqueIdentifier>{9f869665-533d-424d-ada9-db9827e28b0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\zlib">
+      <UniqueIdentifier>{3d0b81c2-cba7-41dc-9fbb-f16fa9638c5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\jenkins">
+      <UniqueIdentifier>{1712688f-dc14-4979-8fdd-8d6b559ab26d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="doc\History.txt">
+      <Filter>Doc Files</Filter>
+    </Text>
+    <Text Include="doc\The MoPaQ File Format 0.9.txt">
+      <Filter>Doc Files</Filter>
+    </Text>
+    <Text Include="doc\The MoPaQ File Format 1.0.txt">
+      <Filter>Doc Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\FileStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StormCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StormLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StormPort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\adpcm\adpcm.h">
+      <Filter>Source Files\adpcm</Filter>
+    </ClInclude>
+    <ClInclude Include="src\huffman\huff.h">
+      <Filter>Source Files\huffman</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pklib\pklib.h">
+      <Filter>Source Files\pklib</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sparse\sparse.h">
+      <Filter>Source Files\sparse</Filter>
+    </ClInclude>
+    <ClInclude Include="src\jenkins\lookup.h">
+      <Filter>Source Files\jenkins</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\FileStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SBaseCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SBaseDumpData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SBaseFileTable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SCompression.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileAddFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileAttributes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileCompactArchive.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileCreateArchive.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileExtractFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileFindFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileListFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileOpenArchive.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileOpenFileEx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFilePatchArchives.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileReadFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SFileVerify.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\adpcm\adpcm.cpp">
+      <Filter>Source Files\adpcm</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\blocksort.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\bzlib.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\compress.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\crctable.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\decompress.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\huffman.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bzip2\randtable.c">
+      <Filter>Source Files\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\huffman\huff.cpp">
+      <Filter>Source Files\huffman</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\hashes\hash_memory.c">
+      <Filter>Source Files\libtomcrypt\hashes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\hashes\md5.c">
+      <Filter>Source Files\libtomcrypt\hashes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\hashes\sha1.c">
+      <Filter>Source Files\libtomcrypt\hashes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\math\ltm_desc.c">
+      <Filter>Source Files\libtomcrypt\math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\math\multi.c">
+      <Filter>Source Files\libtomcrypt\math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\math\rand_prime.c">
+      <Filter>Source Files\libtomcrypt\math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\base64_decode.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_argchk.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_find_hash.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_find_prng.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_hash_descriptor.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_hash_is_valid.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_libc.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_ltc_mp_descriptor.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_prng_descriptor.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_prng_is_valid.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_register_hash.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\crypt_register_prng.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\misc\zeromem.c">
+      <Filter>Source Files\libtomcrypt\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_bit_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_boolean.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_choice.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_ia5_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_object_identifier.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_octet_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_printable_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_sequence_ex.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_sequence_flexi.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_sequence_multi.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_short_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_utctime.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_utf8_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_bit_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_boolean.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_ia5_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_object_identifier.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_octet_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_printable_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_sequence.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_short_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_utctime.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_utf8_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_sequence_free.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_map.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_mul2add.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_mulmod.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_points.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_projective_add_point.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\ecc\ltc_ecc_projective_dbl_point.c">
+      <Filter>Source Files\libtomcrypt\pk\ecc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_mgf1.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_oaep_decode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_pss_decode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_v1_5_decode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_exptmod.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_free.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_import.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_make_key.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_verify_hash.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_verify_simple.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_fast_mp_invmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_fast_mp_montgomery_reduce.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_fast_s_mp_mul_digs.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_fast_s_mp_mul_high_digs.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_fast_s_mp_sqr.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_2expt.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_abs.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_add.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_add_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_addmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_and.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_clamp.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_clear.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_clear_multi.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_cmp.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_cmp_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_cmp_mag.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_cnt_lsb.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_copy.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_count_bits.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_div.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_div_2.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_div_2d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_div_3.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_div_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_dr_is_modulus.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_dr_reduce.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_dr_setup.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_exch.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_expt_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_exptmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_exptmod_fast.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_exteuclid.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_fread.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_fwrite.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_gcd.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_get_int.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_grow.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init_copy.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init_multi.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init_set.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init_set_int.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_init_size.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_invmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_invmod_slow.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_is_square.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_jacobi.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_karatsuba_mul.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_karatsuba_sqr.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_lcm.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_lshd.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mod_2d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mod_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_montgomery_calc_normalization.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_montgomery_reduce.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_montgomery_setup.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mul.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mul_2.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mul_2d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mul_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_mulmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_n_root.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_neg.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_or.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_fermat.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_is_divisible.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_is_prime.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_miller_rabin.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_next_prime.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_rabin_miller_trials.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_prime_random_ex.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_radix_size.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_radix_smap.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_rand.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_read_radix.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_read_signed_bin.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_read_unsigned_bin.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_2k.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_2k_l.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_2k_setup.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_2k_setup_l.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_is_2k.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_is_2k_l.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_reduce_setup.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_rshd.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_set.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_set_int.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_shrink.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_signed_bin_size.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_sqr.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_sqrmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_sqrt.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_sub.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_sub_d.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_submod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_to_signed_bin.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_to_signed_bin_n.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_to_unsigned_bin.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_to_unsigned_bin_n.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_toom_mul.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_toom_sqr.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_toradix.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_toradix_n.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_unsigned_bin_size.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_xor.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_mp_zero.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_prime_tab.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_reverse.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_add.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_exptmod.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_mul_digs.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_mul_high_digs.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_sqr.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bn_s_mp_sub.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtommath\bncore.c">
+      <Filter>Source Files\libtommath</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lzma\C\LzFind.c">
+      <Filter>Source Files\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lzma\C\LzFindMt.c">
+      <Filter>Source Files\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lzma\C\LzmaDec.c">
+      <Filter>Source Files\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lzma\C\LzmaEnc.c">
+      <Filter>Source Files\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lzma\C\Threads.c">
+      <Filter>Source Files\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pklib\explode.c">
+      <Filter>Source Files\pklib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pklib\implode.c">
+      <Filter>Source Files\pklib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sparse\sparse.cpp">
+      <Filter>Source Files\sparse</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\adler32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\compress2.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\crc32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\deflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\inffast.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\inflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\inftrees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\trees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\zutil.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\jenkins\lookup3.c">
+      <Filter>Source Files\jenkins</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -743,7 +743,6 @@ static bool BaseHttp_Read(
         TCHAR szRangeRequest[0x80];
         DWORD dwStartOffset = (DWORD)ByteOffset;
         DWORD dwEndOffset = dwStartOffset + dwBytesToRead;
-        BYTE Buffer[0x200];
 
         // Open HTTP request to the file
         szFileName = BaseHttp_ExtractServerName(pStream->szFileName, NULL);
@@ -764,8 +763,8 @@ static bool BaseHttp_Read(
                     DWORD dwBlockBytesRead = 0;
 
                     // Read the block from the file
-                    if(dwBlockBytesToRead > sizeof(Buffer))
-                        dwBlockBytesToRead = sizeof(Buffer);
+                    if(dwBlockBytesToRead > 0x200)
+                        dwBlockBytesToRead = 0x200;
                     InternetReadFile(hRequest, pbBuffer, dwBlockBytesToRead, &dwBlockBytesRead);
 
                     // Check for end
