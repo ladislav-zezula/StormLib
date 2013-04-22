@@ -6,6 +6,7 @@
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
 /* 27.03.10  1.00  Lad  Splitted from SFileCreateArchiveEx.cpp               */
+/* 21.04.13  1.01  Dea  AddFile callback now part of TMPQArchive             */
 /*****************************************************************************/
 
 #define __STORMLIB_SELF__
@@ -46,8 +47,6 @@ typedef struct _WAVE_FILE_HEADER
 // Kept here for compatibility with code that was created with StormLib version < 6.50
 static DWORD DefaultDataCompression = MPQ_COMPRESSION_PKWARE;
 
-static SFILE_ADDFILE_CALLBACK AddFileCB = NULL;
-static void * pvUserData = NULL;
 
 //-----------------------------------------------------------------------------
 // MPQ write data functions
@@ -200,8 +199,8 @@ static int WriteDataToMpqFile(
                 }
 
                 // Call the compact callback, if any
-                if(AddFileCB != NULL)
-                    AddFileCB(pvUserData, hf->dwFilePos, hf->dwDataSize, false);
+                if(ha->aAddFileCB != NULL)
+                    ha->aAddFileCB(ha->pvAddFileUserData, hf->dwFilePos, hf->dwDataSize, false);
 
                 // Update the compressed file size
                 pFileEntry->dwCmpSize += dwBytesInSector;
@@ -465,8 +464,8 @@ int SFileAddFile_Init(
         pFileEntry->FileTime = FileTime;
 
         // Call the callback, if needed
-        if(AddFileCB != NULL)
-            AddFileCB(pvUserData, 0, hf->dwDataSize, false);
+        if(ha->aAddFileCB != NULL)
+            ha->aAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
     }
 
     // If an error occured, remember it
@@ -658,8 +657,8 @@ int SFileAddFile_Finish(TMPQFile * hf)
     if(!hf->bErrorOccured)
     {
         // Call the user callback, if any
-        if(AddFileCB != NULL)
-            AddFileCB(pvUserData, hf->dwDataSize, hf->dwDataSize, true);
+        if(ha->aAddFileCB != NULL)
+            ha->aAddFileCB(ha->pvAddFileUserData, hf->dwDataSize, hf->dwDataSize, true);
 
         // Update the size of the block table
         ha->pHeader->dwBlockTableSize = ha->dwFileTableSize;
@@ -673,8 +672,6 @@ int SFileAddFile_Finish(TMPQFile * hf)
 
     // Clear the add file callback
     FreeMPQFile(hf);
-    pvUserData = NULL;
-    AddFileCB = NULL;
     return nError;
 }
 
@@ -1269,9 +1266,16 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
 //-----------------------------------------------------------------------------
 // Sets add file callback
 
-bool WINAPI SFileSetAddFileCallback(HANDLE /* hMpq */, SFILE_ADDFILE_CALLBACK aAddFileCB, void * pvData)
+bool WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK aAddFileCB, void * pvData)
 {
-    pvUserData = pvData;
-    AddFileCB = aAddFileCB;
+    TMPQArchive * ha = (TMPQArchive *) hMpq;
+
+    if (!IsValidMpqHandle(ha)) {
+        SetLastError(ERROR_INVALID_HANDLE);
+        return false;
+    }
+
+    ha->pvAddFileUserData = pvData;
+    ha->aAddFileCB = aAddFileCB;
     return true;
 }
