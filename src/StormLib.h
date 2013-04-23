@@ -750,6 +750,8 @@ typedef struct _TMPQArchive
 
     SFILE_COMPACT_CALLBACK aCompactCB;  // Callback function for compacting the archive
     void         * pvCompactUserData;   // User data thats passed to the callback
+    ULONGLONG      CompactBytesProcessed; // Amount of bytes that have been processed during a particular compact call
+    ULONGLONG      CompactTotalBytes;   // Total amount of bytes to be compacted
 } TMPQArchive;                                      
 
 // File handle structure
