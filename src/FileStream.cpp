@@ -465,13 +465,13 @@ static bool BaseFile_Open(
 #ifdef PLATFORM_WINDOWS
     {
         ULARGE_INTEGER FileSize;
-        DWORD dwDesiredAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? GENERIC_READ : GENERIC_ALL;
+        DWORD dwWriteAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? 0 : GENERIC_ALL;
         DWORD dwWriteShare = (dwStreamFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
 
         // Open the file
         pStream->Base.File.hFile = CreateFile(szFileName,
-                                              dwDesiredAccess,
-                                              dwWriteShare | FILE_SHARE_READ,
+                                              FILE_READ_DATA | dwWriteAccess,
+                                              FILE_SHARE_READ | dwWriteShare,
                                               NULL,
                                               OPEN_EXISTING,
                                               0,
@@ -610,7 +610,7 @@ static bool BaseMap_Open(
     bool bResult = false;
 
     // Open the file for read access
-    hFile = CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    hFile = CreateFile(szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
     if(hFile != NULL)
     {
         // Retrieve file size. Don't allow mapping file of a zero size.

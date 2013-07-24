@@ -1148,7 +1148,7 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     if(nError == ERROR_SUCCESS)
     {
         _tprintf(_T("Opening archive %s ...\n"), szMpqName);
-        if(!SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_PARTIAL | BASE_PROVIDER_FILE, &hMpq))
+        if(!SFileOpenArchive(szMpqName, 0, STREAM_FLAG_READ_ONLY | BASE_PROVIDER_MAP, &hMpq))
             nError = GetLastError();
         ha = (TMPQArchive *)hMpq;
     }
