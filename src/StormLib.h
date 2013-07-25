@@ -745,13 +745,13 @@ typedef struct _TMPQArchive
     DWORD          dwAttrFlags;         // Flags for the (attributes) file, see MPQ_ATTRIBUTE_XXX
     DWORD          dwFlags;             // See MPQ_FLAG_XXXXX
 
-    SFILE_ADDFILE_CALLBACK aAddFileCB;  // Callback function for adding files
-    void         * pvAddFileUserData;   // User data thats passed to the callback
+    SFILE_ADDFILE_CALLBACK pfnAddFileCB;    // Callback function for adding files
+    void         * pvAddFileUserData;       // User data thats passed to the callback
 
-    SFILE_COMPACT_CALLBACK aCompactCB;  // Callback function for compacting the archive
-    void         * pvCompactUserData;   // User data thats passed to the callback
-    ULONGLONG      CompactBytesProcessed; // Amount of bytes that have been processed during a particular compact call
-    ULONGLONG      CompactTotalBytes;   // Total amount of bytes to be compacted
+    SFILE_COMPACT_CALLBACK pfnCompactCB;    // Callback function for compacting the archive
+    ULONGLONG      CompactBytesProcessed;   // Amount of bytes that have been processed during a particular compact call
+    ULONGLONG      CompactTotalBytes;       // Total amount of bytes to be compacted
+    void         * pvCompactUserData;       // User data thats passed to the callback
 } TMPQArchive;                                      
 
 // File handle structure
@@ -879,7 +879,7 @@ bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 int    WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
 
 // Archive compacting
-bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvData);
+bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvUserData);
 bool   WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool bReserved);
 
 // Changing the maximum file count
@@ -960,7 +960,7 @@ bool   WINAPI SFileRenameFile(HANDLE hMpq, const char * szOldFileName, const cha
 bool   WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale);
 bool   WINAPI SFileSetDataCompression(DWORD DataCompression);
 
-bool   WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK AddFileCB, void * pvData);
+bool   WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK AddFileCB, void * pvUserData);
 
 //-----------------------------------------------------------------------------
 // Compression and decompression

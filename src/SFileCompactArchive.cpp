@@ -29,8 +29,8 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha, const char * szListFile, LPDWO
     if(nError == ERROR_SUCCESS && szListFile != NULL)
     {
         // Notify the user
-        if(ha->aCompactCB != NULL)
-            ha->aCompactCB(ha->pvCompactUserData, CCB_CHECKING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+        if(ha->pfnCompactCB != NULL)
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_CHECKING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
 
         nError = SFileAddListFile((HANDLE)ha, szListFile);
     }
@@ -107,10 +107,10 @@ static int CopyNonMpqData(
         }
 
         // Update the progress
-        if(ha->aCompactCB != NULL)
+        if(ha->pfnCompactCB != NULL)
         {
             ha->CompactBytesProcessed += dwToRead;
-            ha->aCompactCB(ha->pvCompactUserData, CCB_COPYING_NON_MPQ_DATA, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_COPYING_NON_MPQ_DATA, ha->CompactBytesProcessed, ha->CompactTotalBytes);
         }
 
         // Decrement the number of data to be copied
@@ -192,10 +192,10 @@ static int CopyMpqFileSectors(
         }
 
         // Update compact progress
-        if(ha->aCompactCB != NULL)
+        if(ha->pfnCompactCB != NULL)
         {
             ha->CompactBytesProcessed += dwSectorOffsLen;
-            ha->aCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
         }
 
         STORM_FREE(SectorOffsetsCopy);
@@ -250,10 +250,10 @@ static int CopyMpqFileSectors(
             }
 
             // Update compact progress
-            if(ha->aCompactCB != NULL)
+            if(ha->pfnCompactCB != NULL)
             {
                 ha->CompactBytesProcessed += dwRawDataInSector;
-                ha->aCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+                ha->pfnCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
             }
 
             // Adjust byte counts
@@ -278,10 +278,10 @@ static int CopyMpqFileSectors(
                 nError = GetLastError();
 
             // Update compact progress
-            if(ha->aCompactCB != NULL)
+            if(ha->pfnCompactCB != NULL)
             {
                 ha->CompactBytesProcessed += dwCrcLength;
-                ha->aCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+                ha->pfnCompactCB(ha->pvCompactUserData, CCB_COMPACTING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
             }
 
             // Size of the CRC block is also included in the compressed file size
@@ -437,7 +437,7 @@ static int CopyMpqFiles(TMPQArchive * ha, LPDWORD pFileKeys, TFileStream * pNewS
 /* Public functions                                                          */
 /*****************************************************************************/
 
-bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK aCompactCB, void * pvData)
+bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK pfnCompactCB, void * pvUserData)
 {
     TMPQArchive * ha = (TMPQArchive *) hMpq;
 
@@ -446,8 +446,8 @@ bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK aCompact
         return false;
     }
 
-    ha->aCompactCB = aCompactCB;
-    ha->pvCompactUserData = pvData;
+    ha->pfnCompactCB = pfnCompactCB;
+    ha->pvCompactUserData = pvUserData;
     return true;
 }
 
@@ -514,8 +514,8 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     if(nError == ERROR_SUCCESS && ha->UserDataPos != 0)
     {
         // Inform the application about the progress
-        if(ha->aCompactCB != NULL)
-            ha->aCompactCB(ha->pvCompactUserData, CCB_COPYING_NON_MPQ_DATA, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+        if(ha->pfnCompactCB != NULL)
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_COPYING_NON_MPQ_DATA, ha->CompactBytesProcessed, ha->CompactTotalBytes);
 
         ByteOffset = 0;
         ByteCount = ha->UserDataPos;
@@ -576,11 +576,11 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
         // 
 
         nError = SaveMPQTables(ha);
-        if(nError == ERROR_SUCCESS && ha->aCompactCB != NULL)
+        if(nError == ERROR_SUCCESS && ha->pfnCompactCB != NULL)
         {
             ha->CompactBytesProcessed += (ha->pHeader->dwHashTableSize * sizeof(TMPQHash));
             ha->CompactBytesProcessed += (ha->pHeader->dwBlockTableSize * sizeof(TMPQBlock));
-            ha->aCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
         }
     }
 

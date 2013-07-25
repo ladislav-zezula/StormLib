@@ -199,8 +199,8 @@ static int WriteDataToMpqFile(
                 }
 
                 // Call the compact callback, if any
-                if(ha->aAddFileCB != NULL)
-                    ha->aAddFileCB(ha->pvAddFileUserData, hf->dwFilePos, hf->dwDataSize, false);
+                if(ha->pfnAddFileCB != NULL)
+                    ha->pfnAddFileCB(ha->pvAddFileUserData, hf->dwFilePos, hf->dwDataSize, false);
 
                 // Update the compressed file size
                 pFileEntry->dwCmpSize += dwBytesInSector;
@@ -464,8 +464,8 @@ int SFileAddFile_Init(
         pFileEntry->FileTime = FileTime;
 
         // Call the callback, if needed
-        if(ha->aAddFileCB != NULL)
-            ha->aAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
+        if(ha->pfnAddFileCB != NULL)
+            ha->pfnAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
     }
 
     // If an error occured, remember it
@@ -657,8 +657,8 @@ int SFileAddFile_Finish(TMPQFile * hf)
     if(!hf->bErrorOccured)
     {
         // Call the user callback, if any
-        if(ha->aAddFileCB != NULL)
-            ha->aAddFileCB(ha->pvAddFileUserData, hf->dwDataSize, hf->dwDataSize, true);
+        if(ha->pfnAddFileCB != NULL)
+            ha->pfnAddFileCB(ha->pvAddFileUserData, hf->dwDataSize, hf->dwDataSize, true);
 
         // Update the size of the block table
         ha->pHeader->dwBlockTableSize = ha->dwFileTableSize;
@@ -1266,7 +1266,7 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
 //-----------------------------------------------------------------------------
 // Sets add file callback
 
-bool WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK aAddFileCB, void * pvData)
+bool WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK AddFileCB, void * pvUserData)
 {
     TMPQArchive * ha = (TMPQArchive *) hMpq;
 
@@ -1275,7 +1275,7 @@ bool WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK aAddFile
         return false;
     }
 
-    ha->pvAddFileUserData = pvData;
-    ha->aAddFileCB = aAddFileCB;
+    ha->pvAddFileUserData = pvUserData;
+    ha->pfnAddFileCB = AddFileCB;
     return true;
 }
