@@ -72,6 +72,11 @@
   #include <fcntl.h>
   #include <stdlib.h>
   #include <errno.h>
+
+  #if __ppc__ == 1 || __POWERPC__ == 1 || _ARCH_PPC == 1
+    #include <stdint.h>
+    #include <CoreFoundation/CFByteOrder.h>
+  #endif
   
   #define    PKEXPORT
   #define    __SYS_ZLIB
