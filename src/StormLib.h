@@ -590,10 +590,10 @@ typedef struct _TMPQBlock
 // Patch file information, preceding the sector offset table
 typedef struct _TPatchInfo
 {
-	DWORD dwLength;                     // Length of patch info header, in bytes
-	DWORD dwFlags;                      // Flags. 0x80000000 = MD5 (?)
-	DWORD dwDataSize;                   // Uncompressed size of the patch file
-	BYTE  md5[0x10];                    // MD5 of the entire patch file after decompression
+    DWORD dwLength;                     // Length of patch info header, in bytes
+    DWORD dwFlags;                      // Flags. 0x80000000 = MD5 (?)
+    DWORD dwDataSize;                   // Uncompressed size of the patch file
+    BYTE  md5[0x10];                    // MD5 of the entire patch file after decompression
 
     // Followed by the sector table (variable length)
 } TPatchInfo;
@@ -744,6 +744,14 @@ typedef struct _TMPQArchive
     DWORD          dwFileFlags2;        // Flags for (attributes)
     DWORD          dwAttrFlags;         // Flags for the (attributes) file, see MPQ_ATTRIBUTE_XXX
     DWORD          dwFlags;             // See MPQ_FLAG_XXXXX
+
+    SFILE_ADDFILE_CALLBACK aAddFileCB;  // Callback function for adding files
+    void         * pvAddFileUserData;   // User data thats passed to the callback
+
+    SFILE_COMPACT_CALLBACK aCompactCB;  // Callback function for compacting the archive
+    void         * pvCompactUserData;   // User data thats passed to the callback
+    ULONGLONG      CompactBytesProcessed; // Amount of bytes that have been processed during a particular compact call
+    ULONGLONG      CompactTotalBytes;   // Total amount of bytes to be compacted
 } TMPQArchive;                                      
 
 // File handle structure
