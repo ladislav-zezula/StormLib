@@ -465,7 +465,7 @@ static bool BaseFile_Open(
 #ifdef PLATFORM_WINDOWS
     {
         ULARGE_INTEGER FileSize;
-        DWORD dwWriteAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? 0 : GENERIC_ALL;
+        DWORD dwWriteAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? 0 : GENERIC_READ | GENERIC_WRITE;
         DWORD dwWriteShare = (dwStreamFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
 
         // Open the file
