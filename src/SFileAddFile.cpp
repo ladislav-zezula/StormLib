@@ -1270,7 +1270,8 @@ bool WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK AddFileC
 {
     TMPQArchive * ha = (TMPQArchive *) hMpq;
 
-    if (!IsValidMpqHandle(ha)) {
+    if (!IsValidMpqHandle(ha))
+    {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
     }

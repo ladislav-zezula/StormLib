@@ -16,6 +16,7 @@ zip.exe -u9  ..\WWW\web\download\stormlib_beta.zip StormLib\Info.plist
 zip.exe -u9  ..\WWW\web\download\stormlib_beta.zip StormLib\*.bat
 zip.exe -u9  ..\WWW\web\download\stormlib_beta.zip StormLib\*.sln
 zip.exe -u9  ..\WWW\web\download\stormlib_beta.zip StormLib\*.vcproj
+zip.exe -u9  ..\WWW\web\download\stormlib_beta.zip StormLib\*.vcxproj
 echo.
 
 echo Press any key to exit ...

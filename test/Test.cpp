@@ -875,23 +875,47 @@ static int CompareHuffmanCompressions0()
 //-----------------------------------------------------------------------------
 // Compare PKLIB decompression
 
+FILE * data_file;
+
 BYTE pbCompressed1[] = {0x00, 0x04, 0x00, 0x00, 0x04, 0xF0, 0x1F, 0x7B, 0x01, 0xFF};
 BYTE pbCompressed2[] = {0x00, 0x04, 0x00, 0x00, 0x04, 0xF0, 0x1F, 0x00, 0x00, 0x04, 0xFC, 0x03};
 
 static int ComparePklibCompressions()
 {
-    char Decompressed[0x1000];
-    char Compressed[0x1000];
-    int cbDecompressed = 0x208;
-    int cbCompressed = sizeof(Compressed);
+    TFileStream * pStream;
+    ULONGLONG ByteOffset = 0;
+    ULONGLONG FileSize = 0;
+    unsigned char * pbRawData; 
+    unsigned char * pbCompressed; 
+    unsigned char * pbDecompressed; 
+    int cbOutBuffer;
+    int cbInBuffer;
 
-    memset(Decompressed, 0, cbDecompressed);
-    SCompImplode(Compressed, &cbCompressed, Decompressed, cbDecompressed);
-    
-    cbDecompressed = sizeof(Decompressed);
-    SCompExplode(Decompressed, &cbDecompressed, Compressed, cbCompressed);
+    pStream = FileStream_OpenFile(_T("doc\\data_to_compress.dat"), BASE_PROVIDER_FILE | STREAM_PROVIDER_LINEAR);
+    if(pStream != NULL)
+    {
+        FileStream_GetSize(pStream, &FileSize);
+        cbOutBuffer = (int)FileSize;
 
+        pbRawData = new unsigned char[cbOutBuffer];
+        pbCompressed = new unsigned char[cbOutBuffer];
+        pbDecompressed = new unsigned char[cbOutBuffer];
+        if(pbRawData && pbCompressed && pbDecompressed)
+        {
+            FileStream_Read(pStream, &ByteOffset, pbRawData, (DWORD)FileSize);
+            SCompImplode(pbCompressed, &cbOutBuffer, pbRawData, (DWORD)FileSize);
+            cbInBuffer = cbOutBuffer;
+            cbOutBuffer = (int)FileSize;
 
+            SCompExplode(pbDecompressed, &cbOutBuffer, pbCompressed, cbInBuffer); 
+        }
+
+        delete [] pbDecompressed;
+        delete [] pbCompressed;
+        delete [] pbRawData;
+
+        FileStream_Close(pStream);
+    }
     return ERROR_SUCCESS;
 }
 
@@ -2177,8 +2201,8 @@ int main(void)
 //      nError = CompareHuffmanCompressions0();
 //  }
 
-//  if(nError == ERROR_SUCCESS)
-//      nError = ComparePklibCompressions();
+    if(nError == ERROR_SUCCESS)
+        nError = ComparePklibCompressions();
 
     // Test LZMA compression method against the code ripped from Starcraft II
 //  if(nError == ERROR_SUCCESS)
@@ -2189,8 +2213,8 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-    if(nError == ERROR_SUCCESS)
-        nError = TestArchiveOpenAndClose(MAKE_PATH("Battle.net.MPQ"));
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestArchiveOpenAndClose(MAKE_PATH("Battle.net.MPQ"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));

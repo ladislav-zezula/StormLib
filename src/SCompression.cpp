@@ -236,6 +236,7 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
 {
     TDataInfo Info;                                      // Data information
     char * work_buf = STORM_ALLOC(char, CMP_BUFFER_SIZE);// Pklib's work buffer
+//  char * work_buf = (char *)malloc(CMP_BUFFER_SIZE);           // Pklib's work buffer
     unsigned int dict_size;                              // Dictionary size
     unsigned int ctype = CMP_BINARY;                     // Compression type
 
@@ -253,8 +254,8 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     //
     // Set the dictionary size
     //
-    // Diablo I ues fixed dictionary size of CMP_IMPLODE_DICT_SIZE3
-    // Starcraft uses the variable dictionary size based on algorithm below
+    // Diablo I uses fixed dictionary size of CMP_IMPLODE_DICT_SIZE3
+    // Starcraft I uses the variable dictionary size based on algorithm below
     //
 
     if (cbInBuffer < 0x600)
