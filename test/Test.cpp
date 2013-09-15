@@ -1172,7 +1172,7 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     if(nError == ERROR_SUCCESS)
     {
         _tprintf(_T("Opening archive %s ...\n"), szMpqName);
-        if(!SFileOpenArchive(szMpqName, 0, STREAM_FLAG_READ_ONLY | BASE_PROVIDER_MAP, &hMpq))
+        if(!SFileOpenArchive(szMpqName, 0, SFILE_OPEN_HARD_DISK_FILE | BASE_PROVIDER_FILE, &hMpq))
             nError = GetLastError();
         ha = (TMPQArchive *)hMpq;
     }
@@ -2201,8 +2201,8 @@ int main(void)
 //      nError = CompareHuffmanCompressions0();
 //  }
 
-    if(nError == ERROR_SUCCESS)
-        nError = ComparePklibCompressions();
+//  if(nError == ERROR_SUCCESS)
+//      nError = ComparePklibCompressions();
 
     // Test LZMA compression method against the code ripped from Starcraft II
 //  if(nError == ERROR_SUCCESS)
@@ -2213,8 +2213,8 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestArchiveOpenAndClose(MAKE_PATH("Battle.net.MPQ"));
+    if(nError == ERROR_SUCCESS)
+        nError = TestArchiveOpenAndClose(MAKE_PATH("Base.SC2Assets"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));

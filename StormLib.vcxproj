@@ -892,7 +892,7 @@
     <ClCompile Include="src\pklib\implode.c" />
     <ClCompile Include="src\sparse\sparse.cpp" />
     <ClCompile Include="src\zlib\adler32.c" />
-    <ClCompile Include="src\zlib\compress2.c" />
+    <ClCompile Include="src\zlib\compress.c" />
     <ClCompile Include="src\zlib\crc32.c" />
     <ClCompile Include="src\zlib\deflate.c" />
     <ClCompile Include="src\zlib\inffast.c" />

@@ -1769,7 +1769,7 @@ int LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsCompl
     // Note: Do not rely on file size when looking for the bitmap.
     // Battle.net.MPQ from SC2:HOTS (build 22342) has some data appended after the bitmap
     EndOfMpq = ha->MpqPos + ha->pHeader->ArchiveSize64;
-    if(FileSize > EndOfMpq)
+    if(FileSize > EndOfMpq && ha->pHeader->dwRawChunkSize != 0)
     {
         // Calculate the number of extra bytes for data bitmap
         DataBlockCount = (DWORD)(((ha->pHeader->ArchiveSize64 - 1) / ha->pHeader->dwRawChunkSize) + 1);

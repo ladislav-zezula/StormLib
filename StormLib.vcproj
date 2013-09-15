@@ -4450,7 +4450,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\zlib\compress2.c"
+					RelativePath=".\src\zlib\compress.c"
 					>
 				</File>
 				<File
