@@ -83,13 +83,9 @@ OBJS_C   = src/jenkins/lookup3.o \
            src/libtomcrypt/src/pk/asn1/der_length_printable_string.obj \
            src/libtomcrypt/src/pk/asn1/der_length_sequence.obj \
            src/libtomcrypt/src/pk/asn1/der_length_short_integer.obj \
-
            src/libtomcrypt/src/pk/asn1/der_length_utctime.obj \
-
            src/libtomcrypt/src/pk/asn1/der_length_utf8_string.obj \
-
            src/libtomcrypt/src/pk/asn1/der_sequence_free.obj \
-
            src/libtomcrypt/src/pk/ecc/ltc_ecc_map.obj \
            src/libtomcrypt/src/pk/ecc/ltc_ecc_mul2add.obj \
            src/libtomcrypt/src/pk/ecc/ltc_ecc_mulmod.obj \
