@@ -830,7 +830,7 @@ bool WINAPI SFileAddFileEx(
     int nError = ERROR_SUCCESS;
 
     // Check parameters
-    if(szFileName == NULL || *szFileName == 0)
+    if(hMpq == NULL || szFileName == NULL || *szFileName == 0)
         nError = ERROR_INVALID_PARAMETER;
 
     // Open added file

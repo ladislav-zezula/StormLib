@@ -745,9 +745,6 @@
     <ClCompile Include="src\zlib\adler32.c">
       <Filter>Source Files\zlib</Filter>
     </ClCompile>
-    <ClCompile Include="src\zlib\compress2.c">
-      <Filter>Source Files\zlib</Filter>
-    </ClCompile>
     <ClCompile Include="src\zlib\crc32.c">
       <Filter>Source Files\zlib</Filter>
     </ClCompile>
@@ -771,6 +768,9 @@
     </ClCompile>
     <ClCompile Include="src\jenkins\lookup3.c">
       <Filter>Source Files\jenkins</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zlib\compress.c">
+      <Filter>Source Files\zlib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
