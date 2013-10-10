@@ -1222,139 +1222,6 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     return nError;
 }
 
-static int TestArchiveOpenAndClose_VORTEX(const TCHAR * szMpqName)
-{                                                 
-    const char * szFileName1 = "D:\\!GIT\\StormLib\\bin\\MPQs\\sc2.txt";
-//  const char * szFileName2 = "items\\map\\mapz_deleted.cel";
-    TMPQArchive * ha = NULL;
-    HANDLE hFile1 = NULL;
-//  HANDLE hFile2 = NULL;
-    HANDLE hMpq = NULL;
-    HANDLE hMpq2 = NULL;
-    DWORD dwHashTableSize = 0;
-    const TCHAR * szMpqCopyName = MAKE_PATH("newmpq.mpq");
-    int nError = ERROR_SUCCESS;
-    TCHAR  szLocalFile[MAX_PATH];
- 
-    if(nError == ERROR_SUCCESS)
-    {
-        _tprintf(_T("Opening archive %s ...\n"), szMpqName);
-        if(!SFileOpenArchive(szMpqName, 0, MPQ_OPEN_READ_ONLY, &hMpq))
-            nError = GetLastError();
-        ha = (TMPQArchive *)hMpq;
-    }
- 
-    if (nError == ERROR_SUCCESS)
-    {
-        _tprintf(_T("Creating new archive %s ... \n"), szMpqCopyName);
-        SFileGetFileInfo(hMpq, SFILE_INFO_HASH_TABLE_SIZE, &dwHashTableSize, 4, NULL);
-        _tprintf(_T("Hash table size: %d \n"), dwHashTableSize);
-        SFileCreateArchive(szMpqCopyName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_ATTRIBUTES, dwHashTableSize, &hMpq2);
-    }
- 
-    if(nError == ERROR_SUCCESS)
-    {
-        printf("Adding sc2.txt...\n");
-        SFileAddListFile(hMpq2, szFileName1);
-    }
- 
-    // Copy all files from one archive to another
-    if(nError == ERROR_SUCCESS)
-    {
-        SFILE_FIND_DATA sf;
-        HANDLE hFind = SFileFindFirstFile(hMpq, "*", &sf, szFileName1);
-        bool bResult = true;
- 
-        _tprintf(_T("Scanning files ...\n"));
- 
-        if(hFind != NULL)
-        {
-            while(bResult)
-            {
-                if(strcmp(sf.cFileName, LISTFILE_NAME) && strcmp(sf.cFileName, ATTRIBUTES_NAME))
-                {
-                    SFileSetLocale(sf.lcLocale);
- 
-                    // Create the local file name
-                    MergeLocalPath(szLocalFile, szWorkDir, sf.szPlainName);
-                    if(SFileExtractFile(hMpq, sf.cFileName, szLocalFile, SFILE_OPEN_FROM_MPQ))
-                    {
-                        //printf("Extracting %s ... OK\n", sf.cFileName);
-                        if(!SFileAddFile(hMpq2, szLocalFile, sf.cFileName, sf.dwFileFlags))
-                        {
-                            nError = GetLastError();
-                            printf("Adding %s ... Failed\n\n", sf.cFileName);
-                            _tremove(szLocalFile);
-                            break;
-                        }
-                        else
-                        {
-                            //printf("Adding %s ... OK\n", sf.cFileName);
-                        }
-                    }
-                    else
-                    {
-                        printf("Extracting %s ... Failed\n", sf.cFileName);
-                    }
- 
-                    // Delete the added file
-                    _tremove(szLocalFile);
-                }
- 
-                // Find the next file
-                bResult = SFileFindNextFile(hFind, &sf);
-            }
- 
-            // Close the search handle
-            SFileFindClose(hFind);
-            printf("\n");
-        }
-    }
- 
-    printf("DONE!\n");
- 
- 
-    // Verify the raw data in the archive
-    /*if(nError == ERROR_SUCCESS)
-    {
-        // Verify the archive
-        SFileVerifyRawData(hMpq, SFILE_VERIFY_FILE, szFileName1);
- 
-        // Try to open a file
-        if(!SFileOpenFileEx(hMpq, szFileName1, SFILE_OPEN_FROM_MPQ, &hFile1))
-        {
-            nError = GetLastError();
-            printf("%s - file not found in the MPQ\n", szFileName1);
-        }
-    }
- 
-    // Dummy read from the file
-    if(nError == ERROR_SUCCESS)
-    {
-        DWORD dwBytesRead = 0;
-        BYTE Buffer[0x1000];
- 
-        SFileSetFilePointer(hFile1, 0x1000, NULL, FILE_BEGIN);
-        SFileReadFile(hFile1, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
-    }
- 
-    // Verify the MPQ listfile
-    if(nError == ERROR_SUCCESS)
-    {
-        SFileExtractFile(hMpq, szFileName1, _T("D:\\!GIT\\StormLib\\bin\\extracted.wav"), 0);
-        PlaySound(_T("D:\\!GIT\\StormLib\\bin\\extracted.wav"), NULL, SND_FILENAME);
-    }*/
- 
-    if(hFile1 != NULL)
-        SFileCloseFile(hFile1);
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
-    if(hMpq2 != NULL)
-        SFileCloseArchive(hMpq2);
-    return nError;
-}
-
-
 static int TestFindFiles(const TCHAR * szMpqName)
 {
     TMPQFile * hf;
@@ -2346,11 +2213,8 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestArchiveOpenAndClose(MAKE_PATH("Base.SC2Assets"));
-
     if(nError == ERROR_SUCCESS)
-        nError = TestArchiveOpenAndClose_VORTEX(MAKE_PATH("war3.mpq"));
+        nError = TestArchiveOpenAndClose(MAKE_PATH("2013 - War of the Immortals\\Other.sqp"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
