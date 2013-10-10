@@ -638,6 +638,9 @@ static DWORD VerifyFile(
     // automatically check the patched version of the file
     //
 
+    // Make sure the md5 is initialized
+    memset(md5, 0, sizeof(md5));
+
     // If we have to verify raw data MD5, do it before file open
     if(dwFlags & SFILE_VERIFY_RAW_MD5)
     {
