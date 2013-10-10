@@ -469,7 +469,7 @@ int SFileAddFile_Init(
     }
 
     // If an error occured, remember it
-    if(nError != ERROR_SUCCESS)
+    if(nError != ERROR_SUCCESS && hf != NULL)
         hf->bErrorOccured = true;
     *phf = hf;
     return nError;
