@@ -26,7 +26,7 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha, const char * szListFile, LPDWO
     int nError = ERROR_SUCCESS;
 
     // Add the listfile to the MPQ
-    if(nError == ERROR_SUCCESS && szListFile != NULL)
+    if(szListFile != NULL)
     {
         // Notify the user
         if(ha->pfnCompactCB != NULL)

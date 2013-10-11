@@ -86,6 +86,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
 {
     TFileStream * pStream = NULL;           // File stream
     TMPQArchive * ha = NULL;                // MPQ archive handle
+    TMPQHeader * pHeader;
     ULONGLONG MpqPos = 0;                   // Position of MPQ header in the file
     HANDLE hMpq = NULL;
     DWORD dwBlockTableSize = 0;             // Initial block table size
@@ -175,7 +176,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         ha->dwSectorSize    = pCreateInfo->dwSectorSize;
         ha->UserDataPos     = MpqPos;
         ha->MpqPos          = MpqPos;
-        ha->pHeader         = (TMPQHeader *)ha->HeaderData;
+        ha->pHeader         = pHeader = (TMPQHeader *)ha->HeaderData;
         ha->dwMaxFileCount  = dwMaxFileCount;
         ha->dwFileTableSize = 0;
         ha->dwFileFlags1    = pCreateInfo->dwFileFlags1;
@@ -185,12 +186,6 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         // Setup the attributes
         ha->dwAttrFlags     = pCreateInfo->dwAttrFlags;
         pStream = NULL;
-    }
-
-    // Fill the MPQ header
-    if(nError == ERROR_SUCCESS)
-    {
-        TMPQHeader * pHeader = ha->pHeader;
 
         // Fill the MPQ header
         memset(pHeader, 0, sizeof(ha->HeaderData));

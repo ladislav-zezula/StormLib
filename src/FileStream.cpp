@@ -446,7 +446,6 @@ static bool BaseFile_Create(
     pStream->BaseGetPos  = BaseFile_GetPos;
     pStream->BaseGetSize = BaseFile_GetSize;
     pStream->BaseSetSize = BaseFile_SetSize;
-    pStream->BaseSetSize = BaseFile_SetSize;
     pStream->BaseGetTime = BaseFile_GetTime;
     pStream->BaseClose   = BaseFile_Close;
 

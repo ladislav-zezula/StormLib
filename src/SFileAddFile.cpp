@@ -53,7 +53,7 @@ static DWORD DefaultDataCompression = MPQ_COMPRESSION_PKWARE;
 
 #define LOSSY_COMPRESSION_MASK (MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_ADPCM_STEREO | MPQ_COMPRESSION_HUFFMANN)
 
-static int IsWaveFile(
+static bool IsWaveFile(
     LPBYTE pbFileData,
     DWORD cbFileData,
     LPDWORD pdwChannels)

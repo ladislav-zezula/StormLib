@@ -628,7 +628,7 @@ static int Decompress_ADPCM_stereo(void * pvOutBuffer, int * pcbOutBuffer, void 
 
 int WINAPI SCompImplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
-    int cbOutBuffer = *pcbOutBuffer;
+    int cbOutBuffer;
 
     // Check for valid parameters
     if(!pcbOutBuffer || *pcbOutBuffer < cbInBuffer || !pvOutBuffer || !pvInBuffer)
@@ -638,6 +638,7 @@ int WINAPI SCompImplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     }
 
     // Perform the compression
+    cbOutBuffer = *pcbOutBuffer;
     Compress_PKLIB(pvOutBuffer, &cbOutBuffer, pvInBuffer, cbInBuffer, NULL, 0);
 
     // If the compression was unsuccessful, copy the data as-is
@@ -659,7 +660,7 @@ int WINAPI SCompImplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
 
 int WINAPI SCompExplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
-    int cbOutBuffer = *pcbOutBuffer;
+    int cbOutBuffer;
 
     // Check for valid parameters
     if(!pcbOutBuffer || *pcbOutBuffer < cbInBuffer || !pvOutBuffer || !pvInBuffer)
@@ -669,6 +670,7 @@ int WINAPI SCompExplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     }
 
     // If the input length is the same as output length, do nothing.
+    cbOutBuffer = *pcbOutBuffer;
     if(cbInBuffer == cbOutBuffer)
     {
         // If the buffers are equal, don't copy anything.
@@ -683,7 +685,7 @@ int WINAPI SCompExplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     if(!Decompress_PKLIB(pvOutBuffer, &cbOutBuffer, pvInBuffer, cbInBuffer))
     {
         SetLastError(ERROR_FILE_CORRUPT);
-        return false;
+        return 0;
     }
 
     *pcbOutBuffer = cbOutBuffer;

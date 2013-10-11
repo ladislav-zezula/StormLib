@@ -334,7 +334,7 @@ int SListFileSaveToMpq(TMPQArchive * ha)
         // Count all next items
         for(i = 1; i < nFileNodes; i++)
         {
-            // If the item is the same like the last one, skip it
+            // If the item is different from the previous one, include its size to the file size
             if(_stricmp(SortTable[i], szPrevItem))
             {
                 dwFileSize += (DWORD)strlen(SortTable[i]) + 2;
@@ -597,30 +597,34 @@ bool WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData
 {
     TListFileCache * pCache = (TListFileCache *)hFind;
     size_t nLength;
-    bool bResult = false;
     int nError = ERROR_SUCCESS;
 
-    for(;;)
+    // Check for parameters
+    if(pCache != NULL)
     {
-        // Read the (next) line
-        nLength = ReadListFileLine(pCache, lpFindFileData->cFileName, sizeof(lpFindFileData->cFileName));
-        if(nLength == 0)
+        for(;;)
         {
-            nError = ERROR_NO_MORE_FILES;
-            break;
-        }
+            // Read the (next) line
+            nLength = ReadListFileLine(pCache, lpFindFileData->cFileName, sizeof(lpFindFileData->cFileName));
+            if(nLength == 0)
+            {
+                nError = ERROR_NO_MORE_FILES;
+                break;
+            }
 
-        // If some mask entered, check it
-        if(CheckWildCard(lpFindFileData->cFileName, pCache->szMask))
-        {
-            bResult = true;
-            break;
+            // If some mask entered, check it
+            if(CheckWildCard(lpFindFileData->cFileName, pCache->szMask))
+                break;
         }
+    }
+    else
+    {
+        nError = ERROR_INVALID_PARAMETER;
     }
 
     if(nError != ERROR_SUCCESS)
         SetLastError(nError);
-    return bResult;
+    return (nError == ERROR_SUCCESS);
 }
 
 bool WINAPI SListFileFindClose(HANDLE hFind)

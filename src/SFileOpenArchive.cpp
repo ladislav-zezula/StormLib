@@ -178,6 +178,9 @@ bool WINAPI SFileOpenArchive(
     // Initialize handle structure and allocate structure for MPQ header
     if(nError == ERROR_SUCCESS)
     {
+        ULONGLONG SearchPos = 0;
+        DWORD dwHeaderID;
+
         memset(ha, 0, sizeof(TMPQArchive));
         ha->pStream = pStream;
         pStream = NULL;
@@ -189,14 +192,8 @@ bool WINAPI SFileOpenArchive(
         // Also remember if we shall check sector CRCs when reading file
         if(dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC)
             ha->dwFlags |= MPQ_FLAG_CHECK_SECTOR_CRC;
-    }
 
-    // Find the offset of MPQ header within the file
-    if(nError == ERROR_SUCCESS)
-    {
-        ULONGLONG SearchPos = 0;
-        DWORD dwHeaderID;
-
+        // Find the offset of MPQ header within the file
         while(SearchPos < FileSize)
         {
             DWORD dwBytesAvailable = MPQ_HEADER_SIZE_V4;
