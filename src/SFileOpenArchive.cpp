@@ -258,7 +258,7 @@ bool WINAPI SFileOpenArchive(
         }
 
         // If we haven't found MPQ header in the file, it's an error
-        if(ha->pHeader == NULL)
+        if(ha->pHeader == NULL || ha->pHeader->wSectorSize == 0)
             nError = ERROR_BAD_FORMAT;
     }
 
@@ -327,7 +327,6 @@ bool WINAPI SFileOpenArchive(
     if(nError == ERROR_SUCCESS && (ha->dwFlags & MPQ_FLAG_PROTECTED) == 0)
     {
         TFileEntry * pFileTableEnd = ha->pFileTable + ha->pHeader->dwBlockTableSize;
-//      ULONGLONG ArchiveSize = 0;
         ULONGLONG RawFilePos;
 
         // Parse all file entries
@@ -354,10 +353,6 @@ bool WINAPI SFileOpenArchive(
                     nError = ERROR_FILE_CORRUPT;
                     break;
                 }
-
-                // Also, we remember end of the file
-//              if(RawFilePos > ArchiveSize)
-//                  ArchiveSize = RawFilePos;
             }
         }
     }

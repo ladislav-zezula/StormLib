@@ -339,6 +339,107 @@ static TMPQHash * GetHashEntryExact(TMPQArchive * ha, const char * szFileName, L
     return NULL;
 }
 
+static int ConvertMpqBlockTable(
+    TMPQArchive * ha,
+    TFileEntry * pFileTable,
+    TMPQBlock * pBlockTable)
+{
+    TFileEntry * pFileEntry;
+    TMPQHeader * pHeader = ha->pHeader;
+    TMPQBlock * pMpqBlock;
+    TMPQHash * pHashEnd = ha->pHashTable + pHeader->dwHashTableSize;
+    TMPQHash * pHash;
+
+    for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
+    {
+        if(pHash->dwBlockIndex < pHeader->dwBlockTableSize)
+        {
+            pFileEntry = pFileTable + pHash->dwBlockIndex;
+            pMpqBlock = pBlockTable + pHash->dwBlockIndex;
+
+            //
+            // Yet another silly map protector: For each valid file,
+            // there are 4 items in the hash table, that appears to be valid:
+            //
+            //   a6d79af0 e61a0932 001e0000 0000770b <== Fake valid
+            //   a6d79af0 e61a0932 0000d761 0000dacb <== Fake valid
+            //   a6d79af0 e61a0932 00000000 0000002f <== Real file entry
+            //   a6d79af0 e61a0932 00005a4f 000093bc <== Fake valid
+            // 
+
+            if(!(pMpqBlock->dwFlags & ~MPQ_FILE_VALID_FLAGS) && (pMpqBlock->dwFlags & MPQ_FILE_EXISTS))
+            {
+                // Fill the entry
+                pFileEntry->ByteOffset  = pMpqBlock->dwFilePos;
+                pFileEntry->dwHashIndex = (DWORD)(pHash - ha->pHashTable);
+                pFileEntry->dwFileSize  = pMpqBlock->dwFSize;
+                pFileEntry->dwCmpSize   = pMpqBlock->dwCSize;
+                pFileEntry->dwFlags     = pMpqBlock->dwFlags;
+                pFileEntry->lcLocale    = pHash->lcLocale;
+                pFileEntry->wPlatform   = pHash->wPlatform;
+            }
+            else
+            {
+                // If the hash table entry doesn't point to the valid file item,
+                // we invalidate the hash table entry
+                pHash->dwName1      = 0xFFFFFFFF;
+                pHash->dwName2      = 0xFFFFFFFF;
+                pHash->lcLocale     = 0xFFFF;
+                pHash->wPlatform    = 0xFFFF;
+                pHash->dwBlockIndex = HASH_ENTRY_DELETED;
+            }
+        }
+    }
+
+    return ERROR_SUCCESS;
+}
+
+static int ConvertSqpBlockTable(
+    TMPQArchive * ha,
+    TFileEntry * pFileTable,
+    TSQPBlock * pBlockTable)
+{
+    TFileEntry * pFileEntry;
+    TMPQHeader * pHeader = ha->pHeader;
+    TSQPBlock * pSqpBlock;
+    TMPQHash * pHashEnd = ha->pHashTable + pHeader->dwHashTableSize;
+    TMPQHash * pHash;
+
+    for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
+    {
+        if(pHash->dwBlockIndex < pHeader->dwBlockTableSize)
+        {
+            pFileEntry = pFileTable + pHash->dwBlockIndex;
+            pSqpBlock = pBlockTable + pHash->dwBlockIndex;
+
+            if(!(pSqpBlock->dwFlags & ~MPQ_FILE_VALID_FLAGS) && (pSqpBlock->dwFlags & MPQ_FILE_EXISTS))
+            {
+                // Convert SQP block table entry to the file entry
+                pFileEntry->ByteOffset  = pSqpBlock->dwFilePos;
+                pFileEntry->dwHashIndex = (DWORD)(pHash - ha->pHashTable);
+                pFileEntry->dwFileSize  = pSqpBlock->dwFSize;
+                pFileEntry->dwCmpSize   = pSqpBlock->dwCSize;
+                pFileEntry->dwFlags     = pSqpBlock->dwFlags;
+                pFileEntry->lcLocale    = pHash->lcLocale;
+                pFileEntry->wPlatform   = pHash->wPlatform;
+            }
+            else
+            {
+                // If the hash table entry doesn't point to the valid file item,
+                // we invalidate the hash table entry
+                pHash->dwName1      = 0xFFFFFFFF;
+                pHash->dwName2      = 0xFFFFFFFF;
+                pHash->lcLocale     = 0xFFFF;
+                pHash->wPlatform    = 0xFFFF;
+                pHash->dwBlockIndex = HASH_ENTRY_DELETED;
+            }
+        }
+    }
+
+    return ERROR_SUCCESS;
+}
+
+
 static TMPQHash * TranslateHashTable(
     TMPQArchive * ha,
     ULONGLONG * pcbTableSize)
@@ -702,19 +803,28 @@ TMPQHetTable * CreateHetTable(DWORD dwMaxFileCount, DWORD dwHashBitSize, bool bC
 
         // Allocate hash table
         pHetTable->pHetHashes = STORM_ALLOC(BYTE, pHetTable->dwHashTableSize);
-        memset(pHetTable->pHetHashes, 0, pHetTable->dwHashTableSize);
+        if(pHetTable->pHetHashes != NULL)
+        {
+            // Make sure that the HET hashes are initialized
+            memset(pHetTable->pHetHashes, 0, pHetTable->dwHashTableSize);
 
-        // If we shall create empty HET table, we have to allocate empty block index table as well
-        if(bCreateEmpty)
-            pHetTable->pBetIndexes = CreateBitArray(pHetTable->dwHashTableSize * pHetTable->dwIndexSizeTotal, 0xFF);
+            // If we shall create empty HET table, we have to allocate empty block index table as well
+            if(bCreateEmpty)
+                pHetTable->pBetIndexes = CreateBitArray(pHetTable->dwHashTableSize * pHetTable->dwIndexSizeTotal, 0xFF);
 
-        // Calculate masks
-        pHetTable->AndMask64 = 0;
-        if(dwHashBitSize != 0x40)
-            pHetTable->AndMask64 = (ULONGLONG)1 << dwHashBitSize;
-        pHetTable->AndMask64--;
+            // Calculate masks
+            pHetTable->AndMask64 = 0;
+            if(dwHashBitSize != 0x40)
+                pHetTable->AndMask64 = (ULONGLONG)1 << dwHashBitSize;
+            pHetTable->AndMask64--;
 
-        pHetTable->OrMask64 = (ULONGLONG)1 << (dwHashBitSize - 1);
+            pHetTable->OrMask64 = (ULONGLONG)1 << (dwHashBitSize - 1);
+        }
+        else
+        {
+            STORM_FREE(pHetTable);
+            pHetTable = NULL;
+        }
     }
 
     return pHetTable;
@@ -1866,6 +1976,44 @@ int CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize)
     return ERROR_SUCCESS;
 }
 
+int VerifyAndConvertSqpHashTable(TMPQArchive * ha, TMPQHash * pHashTable, DWORD dwTableSize)
+{
+    TMPQHash * pMpqHashEnd = pHashTable + dwTableSize;
+    TSQPHash * pSqpHash = (TSQPHash *)pHashTable;
+    TMPQHash * pMpqHash;
+    DWORD dwBlockIndex;
+
+    // Parse all SQP hash table entries
+    for(pMpqHash = pHashTable; pMpqHash < pMpqHashEnd; pMpqHash++, pSqpHash++)
+    {
+        // Ignore free entries
+        if(pSqpHash->dwBlockIndex != HASH_ENTRY_FREE)
+        {
+            // Check block index against the size of the block table
+            dwBlockIndex = pSqpHash->dwBlockIndex;
+            if(ha->pHeader->dwBlockTableSize <= dwBlockIndex && dwBlockIndex < HASH_ENTRY_DELETED)
+                return ERROR_FILE_CORRUPT;
+
+            // We do not support nonzero locale and platform ID
+            if(pSqpHash->dwAlwaysZero != 0 && pSqpHash->dwAlwaysZero != HASH_ENTRY_FREE)
+                return ERROR_FILE_CORRUPT;
+
+            // Store the file name hash
+            pMpqHash->dwName1 = pSqpHash->dwName1;
+            pMpqHash->dwName2 = pSqpHash->dwName2;
+
+            // Store the rest. Note that this must be done last,
+            // because pSqpHash->dwBlockIndex corresponds to pMpqHash->dwName2
+            pMpqHash->dwBlockIndex = dwBlockIndex;
+            pMpqHash->wPlatform = 0;
+            pMpqHash->lcLocale = 0;
+        }
+    }
+
+    // The conversion went OK
+    return ERROR_SUCCESS;
+}
+
 TMPQHash * LoadHashTable(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
@@ -1902,6 +2050,12 @@ TMPQHash * LoadHashTable(TMPQArchive * ha)
 
     ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
     nError = LoadMpqTable(ha, ByteOffset, pHashTable, dwCmpSize, dwTableSize, MPQ_KEY_HASH_TABLE);
+    
+    // If the file is a SQP file, we need to verify the SQP hash table and convert it to MPQ hash table
+    if(ha->dwSubType == MPQ_SUBTYPE_SQP)
+        nError = VerifyAndConvertSqpHashTable(ha, pHashTable, pHeader->dwHashTableSize);
+    
+    // If anything failed, free the hash table
     if(nError != ERROR_SUCCESS)
     {
         STORM_FREE(pHashTable);
@@ -2106,8 +2260,7 @@ int BuildFileTable_Classic(
 {
     TFileEntry * pFileEntry;
     TMPQHeader * pHeader = ha->pHeader;
-    TMPQBlock * pBlockTable;
-    TMPQBlock * pBlock;
+    void * pBlockTable;
     int nError = ERROR_SUCCESS;
 
     // Sanity checks
@@ -2123,46 +2276,11 @@ int BuildFileTable_Classic(
         // If we don't have HET table, we build the file entries from the hash&block tables
         if(ha->pHetTable == NULL)
         {
-            for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
-            {
-                if(pHash->dwBlockIndex < pHeader->dwBlockTableSize)
-                {
-                    pFileEntry = pFileTable + pHash->dwBlockIndex;
-                    pBlock = pBlockTable + pHash->dwBlockIndex;
-
-                    //
-                    // Yet another silly map protector: For each valid file,
-                    // there are 4 items in the hash table, that appears to be valid:
-                    //
-                    //   a6d79af0 e61a0932 001e0000 0000770b <== Fake valid
-                    //   a6d79af0 e61a0932 0000d761 0000dacb <== Fake valid
-                    //   a6d79af0 e61a0932 00000000 0000002f <== Real file entry
-                    //   a6d79af0 e61a0932 00005a4f 000093bc <== Fake valid
-                    // 
-
-                    if(!(pBlock->dwFlags & ~MPQ_FILE_VALID_FLAGS) && (pBlock->dwFlags & MPQ_FILE_EXISTS))
-                    {
-                        // Fill the entry
-                        pFileEntry->ByteOffset  = pBlock->dwFilePos;
-                        pFileEntry->dwHashIndex = (DWORD)(pHash - ha->pHashTable);
-                        pFileEntry->dwFileSize  = pBlock->dwFSize;
-                        pFileEntry->dwCmpSize   = pBlock->dwCSize;
-                        pFileEntry->dwFlags     = pBlock->dwFlags;
-                        pFileEntry->lcLocale    = pHash->lcLocale;
-                        pFileEntry->wPlatform   = pHash->wPlatform;
-                    }
-                    else
-                    {
-                        // If the hash table entry doesn't point to the valid file item,
-                        // we invalidate the entire hash table entry
-                        pHash->dwName1      = 0xFFFFFFFF;
-                        pHash->dwName2      = 0xFFFFFFFF;
-                        pHash->lcLocale     = 0xFFFF;
-                        pHash->wPlatform    = 0xFFFF;
-                        pHash->dwBlockIndex = HASH_ENTRY_DELETED;
-                    }
-                }
-            }
+            // For MPQ files, treat the block table as MPQ Block Table
+            if(ha->dwSubType == MPQ_SUBTYPE_MPQ)
+                nError = ConvertMpqBlockTable(ha, pFileTable, (TMPQBlock *)pBlockTable);
+            else
+                nError = ConvertSqpBlockTable(ha, pFileTable, (TSQPBlock *)pBlockTable);
         }
         else
         {

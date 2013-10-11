@@ -443,15 +443,16 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
         nError = AllocatePatchInfo(hf, true);
     }
 
-    // Cleanup
+    // Cleanup and exit
     if(nError != ERROR_SUCCESS)
     {
         SetLastError(nError);
         FreeMPQFile(hf);
+        return false;
     }
 
     *phFile = hf;
-    return (nError == ERROR_SUCCESS);
+    return true;
 }
 
 //-----------------------------------------------------------------------------

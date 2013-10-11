@@ -1161,7 +1161,7 @@ __TryAgain:
 
 static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
 {                                                 
-    const char * szFileName1 = "Sound\\terran\\duran\\TDnPss01.wav";
+    const char * szFileName1 = "../Data/Task/1315.str";
 //  const char * szFileName2 = "items\\map\\mapz_deleted.cel";
     TMPQArchive * ha = NULL;
     HANDLE hFile1 = NULL;
@@ -1172,7 +1172,7 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     if(nError == ERROR_SUCCESS)
     {
         _tprintf(_T("Opening archive %s ...\n"), szMpqName);
-        if(!SFileOpenArchive(szMpqName, 0, SFILE_OPEN_HARD_DISK_FILE | BASE_PROVIDER_FILE, &hMpq))
+        if(!SFileOpenArchive(szMpqName, 0, 0, &hMpq))
             nError = GetLastError();
         ha = (TMPQArchive *)hMpq;
     }
@@ -2214,7 +2214,8 @@ int main(void)
 
     // Test the archive open and close
     if(nError == ERROR_SUCCESS)
-        nError = TestArchiveOpenAndClose(MAKE_PATH("2013 - War of the Immortals\\Other.sqp"));
+        nError = TestArchiveOpenAndClose(MAKE_PATH("2013 - War of the Immortals\\1\\Other.sqp"));
+//      nError = TestArchiveOpenAndClose(MAKE_PATH("1997 - Diablo I\\DIABDAT.MPQ"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));

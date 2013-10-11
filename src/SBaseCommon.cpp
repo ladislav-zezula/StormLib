@@ -48,11 +48,13 @@ unsigned char AsciiToLowerTable[256] =
 };
 
 // This table converts ASCII characters to uppercase and slash to backslash
+// BUGBUG: Reverted conversion of normal slash to backslash
+// Will we have issues on Linux/Mac, when adding files like /home/Ladik/Files/File.ext ?
 unsigned char AsciiToUpperTable[256] = 
 {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 
-    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x5C, 
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 
     0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 
     0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 
@@ -75,24 +77,6 @@ unsigned char AsciiToUpperTable[256] =
 
 static DWORD StormBuffer[STORM_BUFFER_SIZE];    // Buffer for the decryption engine
 static bool  bMpqCryptographyInitialized = false;
-
-DWORD HashString(const char * szFileName, DWORD dwHashType)
-{
-    LPBYTE pbKey   = (BYTE *)szFileName;
-    DWORD  dwSeed1 = 0x7FED7FED;
-    DWORD  dwSeed2 = 0xEEEEEEEE;
-    DWORD  ch;
-
-    while(*pbKey != 0)
-    {
-        ch = AsciiToUpperTable[*pbKey++];
-
-        dwSeed1 = StormBuffer[dwHashType + ch] ^ (dwSeed1 + dwSeed2);
-        dwSeed2 = ch + dwSeed1 + dwSeed2 + (dwSeed2 << 5) + 3;
-    }
-
-    return dwSeed1;
-}
 
 void InitializeMpqCryptography()
 {
@@ -131,6 +115,27 @@ void InitializeMpqCryptography()
         // Don't do that again
         bMpqCryptographyInitialized = true;
     }
+}
+
+DWORD HashString(const char * szFileName, DWORD dwHashType)
+{
+    LPBYTE pbKey   = (BYTE *)szFileName;
+    DWORD  dwSeed1 = 0x7FED7FED;
+    DWORD  dwSeed2 = 0xEEEEEEEE;
+    DWORD  ch;
+
+    while(*pbKey != 0)
+    {
+        // Note: AsciiToUpperTable conversion table must not convert '/' to '\',
+        // due to SQP data files for War of the Immortal,
+        // who commonly use file names like "../Data/Task/1315.str"
+        ch = AsciiToUpperTable[*pbKey++];
+
+        dwSeed1 = StormBuffer[dwHashType + ch] ^ (dwSeed1 + dwSeed2);
+        dwSeed2 = ch + dwSeed1 + dwSeed2 + (dwSeed2 << 5) + 3;
+    }
+
+    return dwSeed1;
 }
 
 //-----------------------------------------------------------------------------
@@ -183,6 +188,72 @@ ULONGLONG HashStringJenkins(const char * szFileName)
 
     // Combine those 2 together
     return (ULONGLONG)primary_hash * (ULONGLONG)0x100000000ULL + (ULONGLONG)secondary_hash;
+}
+
+//-----------------------------------------------------------------------------
+// Processes War of the Immortals data files (SQP)
+//
+
+int ConvertSqpHeaderToFormat4(
+    TMPQArchive * ha,
+    ULONGLONG FileSize,
+    DWORD dwFlags)
+{
+    TMPQHeader * pHeader = ha->pHeader;
+    TSQPHeader SqpHeader;
+
+    // SQP files from War of the Immortal use MPQ file format with slightly
+    // modified structure. These fields have different position:
+    //
+    //  Offset  TMPQHeader             TSQPHeader
+    //  ------  ----------             -----------
+    //   000C   wFormatVersion         dwHashTablePos (lo)
+    //   000E   wSectorSize            dwHashTablePos (hi)
+    //   001C   dwBlockTableSize (lo)  wBlockSize
+    //   001E   dwHashTableSize (hi)   wFormatVersion
+
+    // Can't open the archive with ceraint flags
+    if(dwFlags & MPQ_OPEN_FORCE_MPQ_V1)
+        return ERROR_FILE_CORRUPT;
+
+    // The file must not be greater than 4 GB
+    if((FileSize >> 0x20) != 0)
+        return ERROR_FILE_CORRUPT;
+
+    // Copy the MPQ header into the SQP header
+    memcpy(&SqpHeader, ha->pHeader, sizeof(TSQPHeader));
+    assert(SqpHeader.dwHeaderSize == sizeof(TSQPHeader));
+
+    // SQP format uses header size of 0x20
+    if(SqpHeader.dwID == ID_MPQ && SqpHeader.dwHeaderSize == MPQ_HEADER_SIZE_V1 && SqpHeader.dwArchiveSize == FileSize)
+    {
+        // Check for fixed value in the SQP files
+        if(SqpHeader.wFormatVersion == MPQ_FORMAT_VERSION_1 && SqpHeader.wSectorSize == 3)
+        {
+            // Translate the SQP header into MPQ Header
+            pHeader->wFormatVersion   = SqpHeader.wFormatVersion;
+            pHeader->wSectorSize      = SqpHeader.wSectorSize;
+            pHeader->dwHashTablePos   = SqpHeader.dwHashTablePos;
+            pHeader->dwBlockTablePos  = SqpHeader.dwBlockTablePos;
+            pHeader->dwHashTableSize  = SqpHeader.dwHashTableSize;
+            pHeader->dwBlockTableSize = SqpHeader.dwBlockTableSize;
+
+            // Initialize the fields of header 2.0+
+            memset(&pHeader->HiBlockTablePos64, 0, MPQ_HEADER_SIZE_V4 - MPQ_HEADER_SIZE_V1);
+
+            // Initialize the fields of 3.0 header
+            pHeader->ArchiveSize64    = SqpHeader.dwArchiveSize;
+            pHeader->HashTableSize64  = SqpHeader.dwHashTableSize * sizeof(TMPQHash);
+            pHeader->BlockTableSize64 = SqpHeader.dwBlockTableSize * sizeof(TMPQBlock);
+            
+            // Mark this file as SQP file
+            ha->dwFlags |= MPQ_FLAG_READ_ONLY;
+            ha->dwSubType = MPQ_SUBTYPE_SQP;
+            return ERROR_SUCCESS;
+        }
+    }
+
+    return ERROR_FILE_CORRUPT;
 }
 
 //-----------------------------------------------------------------------------
@@ -347,6 +418,12 @@ int ConvertMpqHeaderToFormat4(
             // signature until the position of header MD5 at offset 0xC0
             if(!VerifyDataBlockHash(ha->pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, ha->pHeader->MD5_MpqHeader))
                 nError = ERROR_FILE_CORRUPT;
+            break;
+
+        default:
+
+            // Last resort: Check if it's a War of the Immortal data file (SQP)
+            nError = ConvertSqpHeaderToFormat4(ha, FileSize, dwFlags);
             break;
     }
 

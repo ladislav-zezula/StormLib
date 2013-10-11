@@ -178,6 +178,10 @@ extern "C" {
 #define MPQ_FLAG_INV_LISTFILE       0x00000020  // If set, it means that the (listfile) has been invalidated
 #define MPQ_FLAG_INV_ATTRIBUTES     0x00000040  // If set, it means that the (attributes) has been invalidated
 
+// Values for TMPQArchive::dwSubType
+#define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
+#define MPQ_SUBTYPE_SQP             0x00000001  // The file is a SQP file (War of the Immortals)
+
 // Return value for SFileGetFileSize and SFileSetFilePointer
 #define SFILE_INVALID_SIZE          0xFFFFFFFF
 #define SFILE_INVALID_POS           0xFFFFFFFF
@@ -530,10 +534,44 @@ typedef struct _TMPQHeader
     unsigned char MD5_HetTable[MD5_DIGEST_SIZE];        // MD5 of the HET table before decryption
     unsigned char MD5_MpqHeader[MD5_DIGEST_SIZE];       // MD5 of the MPQ header from signature to (including) MD5_HetTable
 } TMPQHeader;
+
+// MPQ Header for SQP data files
+typedef struct _TSQPHeader
+{
+    // The ID_MPQ ('MPQ\x1A') signature
+    DWORD dwID;                         
+
+    // Size of the archive header
+    DWORD dwHeaderSize;                   
+
+    // 32-bit size of MPQ archive
+    DWORD dwArchiveSize;
+
+    // Offset to the beginning of the hash table, relative to the beginning of the archive.
+    DWORD dwHashTablePos;
+    
+    // Offset to the beginning of the block table, relative to the beginning of the archive.
+    DWORD dwBlockTablePos;
+    
+    // Number of entries in the hash table. Must be a power of two, and must be less than 2^16 for
+    // the original MoPaQ format, or less than 2^20 for the Burning Crusade format.
+    DWORD dwHashTableSize;
+    
+    // Number of entries in the block table
+    DWORD dwBlockTableSize;
+
+    // Must be zero for SQP files
+    USHORT wFormatVersion;
+
+    // Power of two exponent specifying the number of 512-byte disk sectors in each file sector
+    // in the archive. The size of each file sector in the archive is 512 * 2 ^ wSectorSize.
+    USHORT wSectorSize;
+
+} TSQPHeader;
 #pragma pack(pop)
 
 
-// Hash entry. All files in the archive are searched by their hashes.
+// Hash table entry. All files in the archive are searched by their hashes.
 typedef struct _TMPQHash
 {
     // The hash of the file path, using method A.
@@ -569,6 +607,26 @@ typedef struct _TMPQHash
     DWORD dwBlockIndex;
 } TMPQHash;
 
+typedef struct _TSQPHash
+{
+    // Most likely the lcLocale+wPlatform.
+    DWORD dwAlwaysZero;
+
+    // If the hash table entry is valid, this is the index into the block table of the file.
+    // Otherwise, one of the following two values:
+    //  - FFFFFFFFh: Hash table entry is empty, and has always been empty.
+    //               Terminates searches for a given file.
+    //  - FFFFFFFEh: Hash table entry is empty, but was valid at some point (a deleted file).
+    //               Does not terminate searches for a given file.
+    DWORD dwBlockIndex;
+
+    // The hash of the file path, using method A.
+    DWORD dwName1;
+    
+    // The hash of the file path, using method B.
+    DWORD dwName2;
+
+} TSQPHash;
 
 // File description block contains informations about the file
 typedef struct _TMPQBlock
@@ -586,6 +644,23 @@ typedef struct _TMPQBlock
     // Flags for the file. See MPQ_FILE_XXXX constants
     DWORD dwFlags;                      
 } TMPQBlock;
+
+// File description block for SQP files
+typedef struct _TSQPBlock
+{
+    // Offset of the beginning of the file, relative to the beginning of the archive.
+    DWORD dwFilePos;
+    
+    // Flags for the file. See MPQ_FILE_XXXX constants
+    DWORD dwFlags;                      
+
+    // Compressed file size
+    DWORD dwCSize;
+    
+    // Uncompressed file size
+    DWORD dwFSize;                      
+    
+} TSQPBlock;
 
 // Patch file information, preceding the sector offset table
 typedef struct _TPatchInfo
@@ -744,6 +819,7 @@ typedef struct _TMPQArchive
     DWORD          dwFileFlags2;        // Flags for (attributes)
     DWORD          dwAttrFlags;         // Flags for the (attributes) file, see MPQ_ATTRIBUTE_XXX
     DWORD          dwFlags;             // See MPQ_FLAG_XXXXX
+    DWORD          dwSubType;           // See MPQ_SUBTYPE_XXX
 
     SFILE_ADDFILE_CALLBACK pfnAddFileCB;    // Callback function for adding files
     void         * pvAddFileUserData;       // User data thats passed to the callback

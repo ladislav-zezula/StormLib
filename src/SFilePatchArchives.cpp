@@ -133,7 +133,7 @@ static int LoadMpqPatch_BSD0(TMPQFile * hf, TPatchHeader * pPatchHeader)
     cbCompressed = pPatchHeader->dwXfrmBlockSize - SIZE_OF_XFRM_HEADER;
     pbCompressed = STORM_ALLOC(BYTE, cbCompressed);
     if(pbCompressed == NULL)
-        nError = ERROR_SUCCESS;
+        nError = ERROR_NOT_ENOUGH_MEMORY;
 
     // Read the compressed patch data
     if(nError == ERROR_SUCCESS)

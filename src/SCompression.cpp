@@ -236,7 +236,6 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
 {
     TDataInfo Info;                                      // Data information
     char * work_buf = STORM_ALLOC(char, CMP_BUFFER_SIZE);// Pklib's work buffer
-//  char * work_buf = (char *)malloc(CMP_BUFFER_SIZE);           // Pklib's work buffer
     unsigned int dict_size;                              // Dictionary size
     unsigned int ctype = CMP_BINARY;                     // Compression type
 
@@ -244,38 +243,46 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     STORMLIB_UNUSED(pCmpType);
     STORMLIB_UNUSED(nCmpLevel);
 
-    // Fill data information structure
-    memset(work_buf, 0, CMP_BUFFER_SIZE);
-    Info.pbInBuff     = (unsigned char *)pvInBuffer;
-    Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
-    Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
-    Info.pbOutBuffEnd = (unsigned char *)pvOutBuffer + *pcbOutBuffer;
+    // Handle no-memory condition
+    if(work_buf != NULL)
+    {
+        // Fill data information structure
+        memset(work_buf, 0, CMP_BUFFER_SIZE);
+        Info.pbInBuff     = (unsigned char *)pvInBuffer;
+        Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
+        Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
+        Info.pbOutBuffEnd = (unsigned char *)pvOutBuffer + *pcbOutBuffer;
 
-    //
-    // Set the dictionary size
-    //
-    // Diablo I uses fixed dictionary size of CMP_IMPLODE_DICT_SIZE3
-    // Starcraft I uses the variable dictionary size based on algorithm below
-    //
+        //
+        // Set the dictionary size
+        //
+        // Diablo I uses fixed dictionary size of CMP_IMPLODE_DICT_SIZE3
+        // Starcraft I uses the variable dictionary size based on algorithm below
+        //
 
-    if (cbInBuffer < 0x600)
-        dict_size = CMP_IMPLODE_DICT_SIZE1;
-    else if(0x600 <= cbInBuffer && cbInBuffer < 0xC00)
-        dict_size = CMP_IMPLODE_DICT_SIZE2;
-    else
-        dict_size = CMP_IMPLODE_DICT_SIZE3;
+        if (cbInBuffer < 0x600)
+            dict_size = CMP_IMPLODE_DICT_SIZE1;
+        else if(0x600 <= cbInBuffer && cbInBuffer < 0xC00)
+            dict_size = CMP_IMPLODE_DICT_SIZE2;
+        else
+            dict_size = CMP_IMPLODE_DICT_SIZE3;
 
-    // Do the compression
-    if(implode(ReadInputData, WriteOutputData, work_buf, &Info, &ctype, &dict_size) == CMP_NO_ERROR)
-        *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
+        // Do the compression
+        if(implode(ReadInputData, WriteOutputData, work_buf, &Info, &ctype, &dict_size) == CMP_NO_ERROR)
+            *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
 
-    STORM_FREE(work_buf);
+        STORM_FREE(work_buf);
+    }
 }
 
 static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     TDataInfo Info;                             // Data information
     char * work_buf = STORM_ALLOC(char, EXP_BUFFER_SIZE);// Pklib's work buffer
+
+    // Handle no-memory condition
+    if(work_buf == NULL)
+        return 0;
 
     // Fill data information structure
     memset(work_buf, 0, EXP_BUFFER_SIZE);
