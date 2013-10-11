@@ -597,7 +597,7 @@ bool WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData
 {
     TListFileCache * pCache = (TListFileCache *)hFind;
     size_t nLength;
-    int nError = ERROR_SUCCESS;
+    int nError = ERROR_INVALID_PARAMETER;
 
     // Check for parameters
     if(pCache != NULL)
@@ -614,12 +614,11 @@ bool WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData
 
             // If some mask entered, check it
             if(CheckWildCard(lpFindFileData->cFileName, pCache->szMask))
+            {
+                nError = ERROR_SUCCESS;
                 break;
+            }
         }
-    }
-    else
-    {
-        nError = ERROR_INVALID_PARAMETER;
     }
 
     if(nError != ERROR_SUCCESS)
