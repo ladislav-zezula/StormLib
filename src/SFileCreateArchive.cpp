@@ -56,7 +56,9 @@ static int WriteNakedMPQHeader(TMPQArchive * ha)
     Header.wSectorSize    = pHeader->wSectorSize;
 
     // Write it to the file
-    BSWAP_TMPQHEADER(&Header);
+    BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_1);
+    BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_3);
+    BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_4);
     if(!FileStream_Write(ha->pStream, &ha->MpqPos, &Header, dwBytesToWrite))
         nError = GetLastError();
 
@@ -172,6 +174,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     if(nError == ERROR_SUCCESS)
     {
         memset(ha, 0, sizeof(TMPQArchive));
+        ha->pfnHashString   = HashString;
         ha->pStream         = pStream;
         ha->dwSectorSize    = pCreateInfo->dwSectorSize;
         ha->UserDataPos     = MpqPos;

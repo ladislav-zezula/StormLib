@@ -315,7 +315,6 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
                         lpFindFileData->szPlainName = (char *)GetPlainFileNameA(lpFindFileData->cFileName);
                         return ERROR_SUCCESS;
                     }
-
                 }
             }
 

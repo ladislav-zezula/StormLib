@@ -223,7 +223,7 @@ set(ZLIB_BZIP2_FILES
            src/bzip2/huffman.c
            src/bzip2/randtable.c
            src/zlib/adler32.c
-           src/zlib/compress2.c
+           src/zlib/compress.c
            src/zlib/crc32.c
            src/zlib/deflate.c
            src/zlib/inffast.c

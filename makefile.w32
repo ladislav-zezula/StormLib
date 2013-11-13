@@ -235,7 +235,7 @@ OBJS_C   = src/bzip2/blocksort.o \
            src/pklib/explode.o \
            src/pklib/implode.o \
            src/zlib/adler32.o \
-           src/zlib/compress2.o \
+           src/zlib/compress.o \
            src/zlib/crc32.o \
            src/zlib/deflate.o \
            src/zlib/inffast.o \

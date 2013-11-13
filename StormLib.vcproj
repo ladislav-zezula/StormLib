@@ -1559,6 +1559,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\SBaseSubTypes.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\SCompression.cpp"
 				>
 				<FileConfiguration
@@ -3690,50 +3694,156 @@
 					/>
 				</FileConfiguration>
 			</File>
-			<Filter Name="adpcm">
-				<File RelativePath=".\src\adpcm\adpcm.cpp" />
-				<File RelativePath=".\src\adpcm\adpcm.h" />
+			<Filter
+				Name="adpcm"
+				>
+				<File
+					RelativePath=".\src\adpcm\adpcm.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\adpcm\adpcm.h"
+					>
+				</File>
 			</Filter>
-			<Filter Name="bzip2">
-				<File RelativePath=".\src\bzip2\blocksort.c" />
-				<File RelativePath=".\src\bzip2\bzlib.c" />
-				<File RelativePath=".\src\bzip2\compress.c"	/>
-				<File RelativePath=".\src\bzip2\crctable.c" />
-				<File RelativePath=".\src\bzip2\decompress.c"/>
-				<File RelativePath=".\src\bzip2\huffman.c" />
-				<File RelativePath=".\src\bzip2\randtable.c" />
+			<Filter
+				Name="bzip2"
+				>
+				<File
+					RelativePath=".\src\bzip2\blocksort.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\bzlib.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\compress.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\crctable.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\decompress.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\huffman.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\bzip2\randtable.c"
+					>
+				</File>
 			</Filter>
-			<Filter Name="huffman">
-				<File RelativePath=".\src\huffman\huff.cpp" />
-				<File RelativePath=".\src\huffman\huff.h" />
+			<Filter
+				Name="huffman"
+				>
+				<File
+					RelativePath=".\src\huffman\huff.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\huffman\huff.h"
+					>
+				</File>
 			</Filter>
-			<Filter Name="libtomcrypt">
-				<Filter Name="hashes">
-					<File RelativePath=".\src\libtomcrypt\src\hashes\hash_memory.c" />
-					<File RelativePath=".\src\libtomcrypt\src\hashes\md5.c" />
-					<File RelativePath=".\src\libtomcrypt\src\hashes\sha1.c" />
+			<Filter
+				Name="libtomcrypt"
+				>
+				<Filter
+					Name="hashes"
+					>
+					<File
+						RelativePath=".\src\libtomcrypt\src\hashes\hash_memory.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\hashes\md5.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\hashes\sha1.c"
+						>
+					</File>
 				</Filter>
-				<Filter Name="math">
-					<File RelativePath=".\src\libtomcrypt\src\math\ltm_desc.c" />
-					<File RelativePath=".\src\libtomcrypt\src\math\multi.c" />
-					<File RelativePath=".\src\libtomcrypt\src\math\rand_prime.c" />
+				<Filter
+					Name="math"
+					>
+					<File
+						RelativePath=".\src\libtomcrypt\src\math\ltm_desc.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\math\multi.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\math\rand_prime.c"
+						>
+					</File>
 				</Filter>
-				<Filter Name="misc">
-					<File RelativePath=".\src\libtomcrypt\src\misc\base64_decode.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_argchk.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_find_hash.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_find_prng.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_hash_descriptor.c"	/>
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_hash_is_valid.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_libc.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_ltc_mp_descriptor.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_prng_descriptor.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_prng_is_valid.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_register_hash.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\crypt_register_prng.c" />
-					<File RelativePath=".\src\libtomcrypt\src\misc\zeromem.c" />
+				<Filter
+					Name="misc"
+					>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\base64_decode.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_argchk.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_find_hash.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_find_prng.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_hash_descriptor.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_hash_is_valid.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_libc.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_ltc_mp_descriptor.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_prng_descriptor.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_prng_is_valid.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_register_hash.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\crypt_register_prng.c"
+						>
+					</File>
+					<File
+						RelativePath=".\src\libtomcrypt\src\misc\zeromem.c"
+						>
+					</File>
 				</Filter>
-				<Filter Name="pk">
+				<Filter
+					Name="pk"
+					>
 					<Filter
 						Name="asn1"
 						>
@@ -3923,9 +4033,15 @@
 			<Filter
 				Name="libtommath"
 				>
-				<File RelativePath=".\src\libtommath\bn_fast_mp_invmod.c" />
-				<File RelativePath=".\src\libtommath\bn_fast_mp_montgomery_reduce.c" />
-				<File 
+				<File
+					RelativePath=".\src\libtommath\bn_fast_mp_invmod.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\libtommath\bn_fast_mp_montgomery_reduce.c"
+					>
+				</File>
+				<File
 					RelativePath=".\src\libtommath\bn_fast_s_mp_mul_digs.c"
 					>
 				</File>

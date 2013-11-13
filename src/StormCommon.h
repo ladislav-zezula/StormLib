@@ -127,6 +127,8 @@ extern unsigned char AsciiToUpperTable[256];
 #define MPQ_HASH_FILE_KEY       0x300
 
 DWORD HashString(const char * szFileName, DWORD dwHashType);
+DWORD HashStringSlash(const char * szFileName, DWORD dwHashType);
+DWORD HashStringLower(const char * szFileName, DWORD dwHashType);
 
 void  InitializeMpqCryptography();
 
@@ -134,6 +136,9 @@ DWORD GetHashTableSizeForFileCount(DWORD dwFileCount);
 
 bool IsPseudoFileName(const char * szFileName, LPDWORD pdwFileIndex);
 ULONGLONG HashStringJenkins(const char * szFileName);
+
+void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength);
+void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength);
 
 int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
 
@@ -159,9 +164,10 @@ bool IsValidFileHandle(TMPQFile * hf);
 //-----------------------------------------------------------------------------
 // Hash table and block table manipulation
 
+TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pPrevHash);
-DWORD AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
+TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 DWORD AllocateHetEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 
 void FindFreeMpqSpace(TMPQArchive * ha, ULONGLONG * pFreeSpacePos);
@@ -201,10 +207,23 @@ int  FreeFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 void InvalidateInternalFiles(TMPQArchive * ha);
 
 //-----------------------------------------------------------------------------
+// Support for alternate file formats (SBaseSubTypes.cpp)
+
+int ConvertSqpHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
+TMPQHash * LoadSqpHashTable(TMPQArchive * ha);
+TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha);
+
+int ConvertMpkHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
+void DecryptMpkTable(void * pvMpkTable, size_t cbSize);
+TMPQHash * LoadMpkHashTable(TMPQArchive * ha);
+TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha);
+int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
+
+//-----------------------------------------------------------------------------
 // Common functions - MPQ File
 
 TMPQFile * CreateMpqFile(TMPQArchive * ha);
-int  LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, void * pvTable, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey);
+void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey);
 int  AllocateSectorBuffer(TMPQFile * hf);
 int  AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile);
 int  AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile);

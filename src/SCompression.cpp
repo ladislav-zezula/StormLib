@@ -532,6 +532,47 @@ static int Decompress_LZMA(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     return 1;
 }
 
+static int Decompress_LZMA_MPK(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    ELzmaStatus LzmaStatus;
+    ISzAlloc SzAlloc;
+    Byte * destBuffer = (Byte *)pvOutBuffer;
+    Byte * srcBuffer = (Byte *)pvInBuffer;
+    SizeT destLen = *pcbOutBuffer;
+    SizeT srcLen = cbInBuffer;
+    SRes nResult;
+    BYTE LZMA_Props[] = {0x5D, 0x00, 0x00, 0x00, 0x01};
+
+    // There must be at least 0x0E bytes in the buffer
+    if(srcLen <= sizeof(LZMA_Props))
+        return 0;
+
+    // Verify the props header
+    if(memcmp(pvInBuffer, LZMA_Props, sizeof(LZMA_Props)))
+        return 0;
+
+    // Fill the callbacks in structures
+    SzAlloc.Alloc = LZMA_Callback_Alloc;
+    SzAlloc.Free = LZMA_Callback_Free;
+
+    // Perform compression
+    srcLen = cbInBuffer - sizeof(LZMA_Props);
+    nResult = LzmaDecode(destBuffer,
+                        &destLen,
+                         srcBuffer + sizeof(LZMA_Props),
+                        &srcLen,
+                         srcBuffer, 
+                         sizeof(LZMA_Props),
+                         LZMA_FINISH_END,
+                        &LzmaStatus,
+                        &SzAlloc);
+    if(nResult != SZ_OK)
+        return 0;
+
+    *pcbOutBuffer = (unsigned int)destLen;
+    return 1;
+}
+
 /******************************************************************************/
 /*                                                                            */
 /*  Support functions for SPARSE compression (0x20)                           */
@@ -1073,3 +1114,15 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
         SetLastError(ERROR_FILE_CORRUPT);
     return nResult;
 }
+
+/*****************************************************************************/
+/*                                                                           */
+/*   File decompression for MPK archives                                     */
+/*                                                                           */
+/*****************************************************************************/
+
+int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    return Decompress_LZMA_MPK(pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);    
+}
+

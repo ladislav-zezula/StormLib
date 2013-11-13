@@ -539,13 +539,15 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     // Write the MPQ header
     if(nError == ERROR_SUCCESS)
     {
-        // Remember the header size before swapping
-        DWORD dwBytesToWrite = ha->pHeader->dwHeaderSize;
+        TMPQHeader SaveMpqHeader;
 
-        BSWAP_TMPQHEADER(ha->pHeader);
-        if(!FileStream_Write(pTempStream, NULL, ha->pHeader, dwBytesToWrite))
+        // Write the MPQ header to the file
+        memcpy(&SaveMpqHeader, ha->pHeader, ha->pHeader->dwHeaderSize);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_1);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_3);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_4);
+        if(!FileStream_Write(pTempStream, NULL, &SaveMpqHeader, ha->pHeader->dwHeaderSize))
             nError = GetLastError();
-        BSWAP_TMPQHEADER(ha->pHeader);
 
         // Update the progress
         ha->CompactBytesProcessed += ha->pHeader->dwHeaderSize;
@@ -696,8 +698,7 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
                 // Create new entry in the hash table
                 if(ha->pHashTable != NULL)
                 {
-                    dwHashIndex = AllocateHashEntry(ha, pFileEntry);
-                    if(dwHashIndex == HASH_ENTRY_FREE)
+                    if(AllocateHashEntry(ha, pFileEntry) == NULL)
                     {
                         nError = ERROR_CAN_NOT_COMPLETE;
                         break;

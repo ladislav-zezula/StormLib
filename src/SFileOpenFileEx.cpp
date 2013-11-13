@@ -32,21 +32,13 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
 {
     TFileStream * pStream;
     TMPQFile * hf = NULL;
-
-    // We have to convert the local file name to UNICODE, if needed
-#ifdef _UNICODE
     TCHAR szFileNameT[MAX_PATH];
-    int i;
 
-    for(i = 0; szFileName[i] != 0; i++)
-        szFileNameT[i] = szFileName[i];
-    szFileNameT[i] = 0;
-    pStream = FileStream_OpenFile(szFileNameT, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
+    // Convert the file name to UNICODE (if needed)
+    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
 
-#else
-    pStream = FileStream_OpenFile(szFileName, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
-#endif
-
+    // Open the file and create the TMPQFile structure
+    pStream = FileStream_OpenFile(szFileNameT, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE | STREAM_FLAG_READ_ONLY);
     if(pStream != NULL)
     {
         // Allocate and initialize file handle

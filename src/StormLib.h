@@ -136,6 +136,7 @@ extern "C" {
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
+#define ID_MPK                      0x1A4B504D  // MPK archive header ID ('MPK\x1A')
 
 #define ERROR_AVI_FILE                   10000  // No MPQ file, but AVI file.
 #define ERROR_UNKNOWN_FILE_KEY           10001  // Returned by SFileReadFile when can't find file key
@@ -181,6 +182,7 @@ extern "C" {
 // Values for TMPQArchive::dwSubType
 #define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
 #define MPQ_SUBTYPE_SQP             0x00000001  // The file is a SQP file (War of the Immortals)
+#define MPQ_SUBTYPE_MPK             0x00000002  // The file is a MPK file (Longwu Online)
 
 // Return value for SFileGetFileSize and SFileSetFilePointer
 #define SFILE_INVALID_SIZE          0xFFFFFFFF
@@ -304,8 +306,9 @@ extern "C" {
 
 #define MPQ_OPEN_NO_LISTFILE        0x00010000  // Don't load the internal listfile
 #define MPQ_OPEN_NO_ATTRIBUTES      0x00020000  // Don't open the attributes
-#define MPQ_OPEN_FORCE_MPQ_V1       0x00040000  // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
-#define MPQ_OPEN_CHECK_SECTOR_CRC   0x00080000  // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
+#define MPQ_OPEN_NO_HEADER_SEARCH   0x00040000  // Don't search for the MPQ header past the begin of the file
+#define MPQ_OPEN_FORCE_MPQ_V1       0x00080000  // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
+#define MPQ_OPEN_CHECK_SECTOR_CRC   0x00100000  // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
 
 // Deprecated
 #define MPQ_OPEN_READ_ONLY          STREAM_FLAG_READ_ONLY
@@ -369,6 +372,9 @@ extern "C" {
 #ifndef LANG_NEUTRAL
 #define LANG_NEUTRAL                      0x00  // Neutral locale
 #endif
+
+// Pointer to hashing function
+typedef DWORD (*HASH_STRING)(const char * szFileName, DWORD dwHashType);
 
 //-----------------------------------------------------------------------------
 // Callback functions
@@ -449,10 +455,10 @@ typedef struct _TMPQUserData
 typedef struct _TMPQHeader
 {
     // The ID_MPQ ('MPQ\x1A') signature
-    DWORD dwID;                         
+    DWORD dwID;
 
     // Size of the archive header
-    DWORD dwHeaderSize;                   
+    DWORD dwHeaderSize;
 
     // 32-bit size of MPQ archive
     // This field is deprecated in the Burning Crusade MoPaQ format, and the size of the archive
@@ -534,42 +540,7 @@ typedef struct _TMPQHeader
     unsigned char MD5_HetTable[MD5_DIGEST_SIZE];        // MD5 of the HET table before decryption
     unsigned char MD5_MpqHeader[MD5_DIGEST_SIZE];       // MD5 of the MPQ header from signature to (including) MD5_HetTable
 } TMPQHeader;
-
-// MPQ Header for SQP data files
-typedef struct _TSQPHeader
-{
-    // The ID_MPQ ('MPQ\x1A') signature
-    DWORD dwID;                         
-
-    // Size of the archive header
-    DWORD dwHeaderSize;                   
-
-    // 32-bit size of MPQ archive
-    DWORD dwArchiveSize;
-
-    // Offset to the beginning of the hash table, relative to the beginning of the archive.
-    DWORD dwHashTablePos;
-    
-    // Offset to the beginning of the block table, relative to the beginning of the archive.
-    DWORD dwBlockTablePos;
-    
-    // Number of entries in the hash table. Must be a power of two, and must be less than 2^16 for
-    // the original MoPaQ format, or less than 2^20 for the Burning Crusade format.
-    DWORD dwHashTableSize;
-    
-    // Number of entries in the block table
-    DWORD dwBlockTableSize;
-
-    // Must be zero for SQP files
-    USHORT wFormatVersion;
-
-    // Power of two exponent specifying the number of 512-byte disk sectors in each file sector
-    // in the archive. The size of each file sector in the archive is 512 * 2 ^ wSectorSize.
-    USHORT wSectorSize;
-
-} TSQPHeader;
 #pragma pack(pop)
-
 
 // Hash table entry. All files in the archive are searched by their hashes.
 typedef struct _TMPQHash
@@ -607,27 +578,6 @@ typedef struct _TMPQHash
     DWORD dwBlockIndex;
 } TMPQHash;
 
-typedef struct _TSQPHash
-{
-    // Most likely the lcLocale+wPlatform.
-    DWORD dwAlwaysZero;
-
-    // If the hash table entry is valid, this is the index into the block table of the file.
-    // Otherwise, one of the following two values:
-    //  - FFFFFFFFh: Hash table entry is empty, and has always been empty.
-    //               Terminates searches for a given file.
-    //  - FFFFFFFEh: Hash table entry is empty, but was valid at some point (a deleted file).
-    //               Does not terminate searches for a given file.
-    DWORD dwBlockIndex;
-
-    // The hash of the file path, using method A.
-    DWORD dwName1;
-    
-    // The hash of the file path, using method B.
-    DWORD dwName2;
-
-} TSQPHash;
-
 // File description block contains informations about the file
 typedef struct _TMPQBlock
 {
@@ -644,23 +594,6 @@ typedef struct _TMPQBlock
     // Flags for the file. See MPQ_FILE_XXXX constants
     DWORD dwFlags;                      
 } TMPQBlock;
-
-// File description block for SQP files
-typedef struct _TSQPBlock
-{
-    // Offset of the beginning of the file, relative to the beginning of the archive.
-    DWORD dwFilePos;
-    
-    // Flags for the file. See MPQ_FILE_XXXX constants
-    DWORD dwFlags;                      
-
-    // Compressed file size
-    DWORD dwCSize;
-    
-    // Uncompressed file size
-    DWORD dwFSize;                      
-    
-} TSQPBlock;
 
 // Patch file information, preceding the sector offset table
 typedef struct _TPatchInfo
@@ -806,6 +739,7 @@ typedef struct _TMPQArchive
     TMPQHash     * pHashTable;          // Hash table
     TMPQHetTable * pHetTable;           // Het table
     TFileEntry   * pFileTable;          // File table
+    HASH_STRING    pfnHashString;       // Hashing function that will convert the file name into hash
     
     TMPQUserData   UserData;            // MPQ user data. Valid only when ID_MPQ_USERDATA has been found
     BYTE           HeaderData[MPQ_HEADER_SIZE_V4];  // Storage for MPQ header
@@ -814,6 +748,7 @@ typedef struct _TMPQArchive
     DWORD          dwBETBlockSize;
     DWORD          dwFileTableSize;     // Current size of the file table, e.g. index of the entry past the last occupied one
     DWORD          dwMaxFileCount;      // Maximum number of files in the MPQ
+    DWORD          dwHashIndexMask;     // Mask for converting MPQ_HASH_TABLE_INDEX into real index
     DWORD          dwSectorSize;        // Default size of one file sector
     DWORD          dwFileFlags1;        // Flags for (listfile)
     DWORD          dwFileFlags2;        // Flags for (attributes)

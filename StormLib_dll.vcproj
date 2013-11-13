@@ -553,6 +553,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\SBaseSubTypes.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\SCompression.cpp"
 				>
 				<FileConfiguration

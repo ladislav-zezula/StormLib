@@ -182,6 +182,7 @@ bool WINAPI SFileOpenArchive(
         DWORD dwHeaderID;
 
         memset(ha, 0, sizeof(TMPQArchive));
+        ha->pfnHashString = HashString;
         ha->pStream = pStream;
         pStream = NULL;
 
@@ -238,15 +239,23 @@ bool WINAPI SFileOpenArchive(
             // There must be MPQ header signature
             if(dwHeaderID == ID_MPQ)
             {
-                // Save the position where the MPQ header has been found
-                if(ha->pUserData == NULL)
-                    ha->UserDataPos = SearchPos;
-                ha->pHeader = (TMPQHeader *)ha->HeaderData;
-                ha->MpqPos = SearchPos;
-
                 // Now convert the header to version 4
-                BSWAP_TMPQHEADER(ha->pHeader);
                 nError = ConvertMpqHeaderToFormat4(ha, FileSize, dwFlags);
+                break;
+            }
+
+            // Check for MPK archives (Longwu Online - MPQ fork)
+            if(dwHeaderID == ID_MPK)
+            {
+                // Now convert the MPK header to MPQ Header version 4
+                nError = ConvertMpkHeaderToFormat4(ha, FileSize, dwFlags);
+                break;
+            }
+
+            // If searching for the MPQ header is disabled, return an error
+            if(dwFlags & MPQ_OPEN_NO_HEADER_SEARCH)
+            {
+                nError = ERROR_NOT_SUPPORTED;
                 break;
             }
 
@@ -254,9 +263,19 @@ bool WINAPI SFileOpenArchive(
             SearchPos += 0x200;
         }
 
-        // If we haven't found MPQ header in the file, it's an error
-        if(ha->pHeader == NULL || ha->pHeader->wSectorSize == 0)
-            nError = ERROR_BAD_FORMAT;
+        // Did we identify one of the supported headers?
+        if(nError == ERROR_SUCCESS)
+        {
+            // Set the position of user data, header and file offset of the header
+            if(ha->pUserData == NULL)
+                ha->UserDataPos = SearchPos;
+            ha->pHeader = (TMPQHeader *)ha->HeaderData;
+            ha->MpqPos = SearchPos;
+
+            // Sector size must be nonzero.
+            if(ha->pHeader->wSectorSize == 0)
+                nError = ERROR_BAD_FORMAT;
+        }
     }
 
     // Fix table positions according to format

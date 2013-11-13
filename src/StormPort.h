@@ -211,7 +211,8 @@
     #define    BSWAP_ARRAY64_UNSIGNED(a,b)      {}
     #define    BSWAP_PART_HEADER(a)             {}
     #define    BSWAP_TMPQUSERDATA(a)            {}
-    #define    BSWAP_TMPQHEADER(a)              {}
+    #define    BSWAP_TMPQHEADER(a,b)            {}
+    #define    BSWAP_TMPKHEADER(a)              {}
 #else
 
 #ifdef __cplusplus
@@ -228,7 +229,8 @@
     void ConvertUInt64Buffer(void * ptr, size_t length);
     void ConvertPartHeader(void * partHeader);
     void ConvertTMPQUserData(void *userData);
-    void ConvertTMPQHeader(void *header);
+    void ConvertTMPQHeader(void *header, uint16_t wPart);
+    void ConvertTMPKHeader(void *header);
 #ifdef __cplusplus
   }
 #endif
@@ -243,7 +245,8 @@
     #define    BSWAP_ARRAY64_UNSIGNED(a,b)      ConvertUInt64Buffer((a),(b))
     #define    BSWAP_PART_HEADER(a)             ConvertPartHeader(a)
     #define    BSWAP_TMPQUSERDATA(a)            ConvertTMPQUserData((a))
-    #define    BSWAP_TMPQHEADER(a)              ConvertTMPQHeader((a))
+    #define    BSWAP_TMPQHEADER(a,b)            ConvertTMPQHeader((a),(b))
+    #define    BSWAP_TMPKHEADER(a)              ConvertTMPKHeader((a))
 #endif
 
 #endif // __STORMPORT_H__

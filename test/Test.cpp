@@ -1161,8 +1161,9 @@ __TryAgain:
 
 static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
 {                                                 
-    const char * szFileName1 = "../Data/Task/1315.str";
-//  const char * szFileName2 = "items\\map\\mapz_deleted.cel";
+//  const char * szFileName = "../Bin/Config/Setting/ErroeString.str";
+    const char * szFileName = "Scp\\LifeSkills.csv";
+//  const char * szFileName = "File00000000.xxx";
     TMPQArchive * ha = NULL;
     HANDLE hFile1 = NULL;
 //  HANDLE hFile2 = NULL;
@@ -1185,14 +1186,11 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     // Verify the raw data in the archive
     if(nError == ERROR_SUCCESS)
     {
-        // Verify the archive
-        SFileVerifyRawData(hMpq, SFILE_VERIFY_FILE, szFileName1);
-
         // Try to open a file
-        if(!SFileOpenFileEx(hMpq, szFileName1, SFILE_OPEN_FROM_MPQ, &hFile1))
+        if(!SFileOpenFileEx(hMpq, szFileName, SFILE_OPEN_FROM_MPQ, &hFile1))
         {
             nError = GetLastError();
-            printf("%s - file not found in the MPQ\n", szFileName1);
+            printf("%s - file not found in the MPQ\n", szFileName);
         }
     }
 
@@ -1201,7 +1199,9 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
 	{
         DWORD dwBytesRead = 0;
         BYTE Buffer[0x1000];
+        char szNameBuff[MAX_PATH];
 
+        SFileGetFileName(hFile1, szNameBuff);
         SFileSetFilePointer(hFile1, 0x1000, NULL, FILE_BEGIN);
         SFileReadFile(hFile1, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
 	}
@@ -1210,7 +1210,7 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
 #ifdef _MSC_VER
     if(nError == ERROR_SUCCESS)
     {
-        SFileExtractFile(hMpq, szFileName1, _T("E:\\extracted.wav"), 0); 
+        SFileExtractFile(hMpq, szFileName, _T("E:\\extracted.wav"), 0); 
         PlaySound(_T("E:\\extracted.wav"), NULL, SND_FILENAME);
     }
 #endif
@@ -2189,7 +2189,7 @@ int main(void)
 //      nError = TestStructureSizes();
 
 //  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenLocalFile("C:\\autoexec.bat");
+//      nError = TestOpenLocalFile("C:\\Windows\\System32\\kernel32.dll");
 
     // Test reading partial file
 //  if(nError == ERROR_SUCCESS)
@@ -2213,9 +2213,10 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-    if(nError == ERROR_SUCCESS)
-        nError = TestArchiveOpenAndClose(MAKE_PATH("2013 - War of the Immortals\\1\\Other.sqp"));
+    if(nError == ERROR_SUCCESS)                     
+        nError = TestArchiveOpenAndClose(MAKE_PATH("2012 - Longwu Online\\Data\\Scp.mpk"));
 //      nError = TestArchiveOpenAndClose(MAKE_PATH("1997 - Diablo I\\DIABDAT.MPQ"));
+//      nError = TestArchiveOpenAndClose(MAKE_PATH("2012 - War of the Immortals\\1\\Other.sqp"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
