@@ -27,6 +27,7 @@ OBJS_CPP = src/adpcm/adpcm.o \
            src/FileStream.o \
            src/SBaseCommon.o \
            src/SBaseFileTable.o \
+           src/SBaseSubTypes.o \
            src/SCompression.o \
            src/SFileAddFile.o \
            src/SFileAttributes.o \

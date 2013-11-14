@@ -14,6 +14,7 @@ set(SRC_FILES
            src/FileStream.cpp
            src/SBaseCommon.cpp
            src/SBaseFileTable.cpp
+           src/SBaseSubTypes.cpp
            src/SCompression.cpp
            src/SFileAddFile.cpp
            src/SFileAttributes.cpp

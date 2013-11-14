@@ -32,6 +32,7 @@ OBJS =  src/adpcm/adpcm.o \
 	src/huffman/huff.o \
 	src/SBaseCommon.o \
 	src/SBaseFileTable.o \
+	src/SBaseSubTypes.o \
 	src/SCompression.o \
 	src/SFileAddFile.o \
 	src/SFileAttributes.o \
