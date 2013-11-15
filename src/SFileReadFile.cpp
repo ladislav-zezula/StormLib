@@ -143,7 +143,7 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
     dwRawBytesToRead = dwBytesToRead;
 
     // Perform all necessary work to do with compressed files
-    if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+    if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
     {
         // If the sector positions are not loaded yet, do it
         if(hf->SectorOffsets == NULL)
@@ -209,7 +209,7 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
             dwBytesInThisSector = dwBytesToRead;
 
         // If the file is compressed, we have to adjust the raw sector size
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
             dwRawBytesInThisSector = hf->SectorOffsets[dwIndex + 1] - hf->SectorOffsets[dwIndex];
 
         // If the file is encrypted, we have to decrypt the sector
@@ -332,7 +332,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     if(hf->dwSectorOffs != 0)
     {
         // Is the file compressed?
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
             // Allocate space for compressed data
             pbCompressed = STORM_ALLOC(BYTE, pFileEntry->dwCmpSize);
@@ -357,7 +357,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         }
 
         // If the file is compressed, we have to decompress it now
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
             int cbOutBuffer = (int)hf->dwDataSize;
             int cbInBuffer = (int)pFileEntry->dwCmpSize;
@@ -455,7 +455,7 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
             return nError;
 
         // Is the file compressed?
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
             // Allocate space for compressed data
             pbCompressed = STORM_ALLOC(BYTE, pFileEntry->dwCmpSize);
@@ -478,7 +478,7 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         }
 
         // If the file is compressed, we have to decompress it now
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
             int cbOutBuffer = (int)hf->dwDataSize;
 

@@ -33,7 +33,9 @@
   #define false 0
 #endif
 
+//-----------------------------------------------------------------------------
 // Defines for Windows
+
 #if !defined(PLATFORM_DEFINED) && (defined(WIN32) || defined(WIN64))
 
   // In MSVC 8.0, there are some functions declared as deprecated.
@@ -61,7 +63,9 @@
 
 #endif
 
-// Defines for Mac 
+//-----------------------------------------------------------------------------
+// Defines for Mac
+
 #if !defined(PLATFORM_DEFINED) && defined(__APPLE__)  // Mac BSD API
 
   // Macintosh
@@ -92,7 +96,9 @@
 
 #endif
 
+//-----------------------------------------------------------------------------
 // Assumption: we are not on Windows nor Macintosh, so this must be linux *grin*
+
 #if !defined(PLATFORM_DEFINED)
 
   #include <sys/types.h>
@@ -115,7 +121,9 @@
 
 #endif
 
-// Definition of Windows-specific structures for non-Windows platforms
+//-----------------------------------------------------------------------------
+// Definition of Windows-specific types for non-Windows platforms
+
 #ifndef PLATFORM_WINDOWS
   #if __LP64__
     #define PLATFORM_64BIT
@@ -199,6 +207,9 @@
   #define ERROR_FILE_CORRUPT             1004        // No such error code under Linux
 #endif
 
+//-----------------------------------------------------------------------------
+// Swapping functions
+
 #ifdef PLATFORM_LITTLE_ENDIAN
     #define    BSWAP_INT16_UNSIGNED(a)          (a)
     #define    BSWAP_INT16_SIGNED(a)            (a)
@@ -247,6 +258,19 @@
     #define    BSWAP_TMPQUSERDATA(a)            ConvertTMPQUserData((a))
     #define    BSWAP_TMPQHEADER(a,b)            ConvertTMPQHeader((a),(b))
     #define    BSWAP_TMPKHEADER(a)              ConvertTMPKHeader((a))
+#endif
+
+//-----------------------------------------------------------------------------
+// Macro for deprecated symbols
+
+#ifdef _MSC_VER
+  #if _MSC_FULL_VER >= 140050320
+    #define STORMLIB_DEPRECATED(_Text) __declspec(deprecated(_Text))
+  #else
+    #define STORMLIB_DEPRECATED(_Text) __declspec(deprecated)
+  #endif
+#else
+  #define STORMLIB_DEPRECATED(_Text) __attribute__((deprecated(_Text)))
 #endif
 
 #endif // __STORMPORT_H__

@@ -192,7 +192,6 @@ extern "C" {
 // Flags for SFileAddFile
 #define MPQ_FILE_IMPLODE            0x00000100  // Implode method (By PKWARE Data Compression Library)
 #define MPQ_FILE_COMPRESS           0x00000200  // Compress methods (By multiple methods)
-#define MPQ_FILE_COMPRESSED         0x0000FF00  // File is compressed
 #define MPQ_FILE_ENCRYPTED          0x00010000  // Indicates whether file is encrypted 
 #define MPQ_FILE_FIX_KEY            0x00020000  // File decryption key has to be fixed
 #define MPQ_FILE_PATCH_FILE         0x00100000  // The file is a patch file. Raw file data begin with TPatchInfo structure
@@ -200,6 +199,8 @@ extern "C" {
 #define MPQ_FILE_DELETE_MARKER      0x02000000  // File is a deletion marker. Used in MPQ patches, indicating that the file no longer exists.
 #define MPQ_FILE_SECTOR_CRC         0x04000000  // File has checksums for each sector.
                                                 // Ignored if file is not compressed or imploded.
+
+#define MPQ_FILE_COMPRESS_MASK      0x0000FF00  // Mask for a file being compressed
 #define MPQ_FILE_EXISTS             0x80000000  // Set if file exists, reset when the file was deleted
 #define MPQ_FILE_REPLACEEXISTING    0x80000000  // Replace when the file exist (SFileAddFile)
 
@@ -212,6 +213,9 @@ extern "C" {
                                   MPQ_FILE_DELETE_MARKER |  \
                                   MPQ_FILE_SECTOR_CRC    |  \
                                   MPQ_FILE_EXISTS)
+
+// A notification that people should stop using this flag
+const STORMLIB_DEPRECATED("This symbol is deprecated. Use MPQ_FILE_COMPRESS_MASK") unsigned int MPQ_FILE_COMPRESSED = 0x0000FF00;
 
 // Compression types for multiple compressions
 #define MPQ_COMPRESSION_HUFFMANN          0x01  // Huffmann compression (used on WAVE files only)

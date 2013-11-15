@@ -1151,7 +1151,7 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
         dwSectorOffsLen += sizeof(DWORD);
 
     // Only allocate and load the table if the file is compressed
-    if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+    if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
     {
         __LoadSectorOffsets:
 
@@ -1364,7 +1364,7 @@ int WriteSectorOffsets(TMPQFile * hf)
 
     // The caller must make sure that this function is only called
     // when the following is true.
-    assert(hf->pFileEntry->dwFlags & MPQ_FILE_COMPRESSED);
+    assert(hf->pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK);
     assert(hf->SectorOffsets != NULL);
     dwSectorOffsLen = hf->SectorOffsets[0];
 

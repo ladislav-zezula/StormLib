@@ -140,7 +140,7 @@ static int WriteDataToMpqFile(
                 hf->dwCrc32 = crc32(hf->dwCrc32, hf->pbFileSector, dwBytesInSector);
 
                 // Compress the file sector, if needed
-                if(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED)
+                if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
                 {
                     int nOutBuffer = (int)dwBytesInSector;
                     int nInBuffer = (int)dwBytesInSector;
@@ -365,7 +365,7 @@ int SFileAddFile_Init(
         dwFlags &= ~MPQ_FILE_SECTOR_CRC;
 
     // Sector CRC is not allowed if the file is not compressed
-    if(!(dwFlags & MPQ_FILE_COMPRESSED))
+    if(!(dwFlags & MPQ_FILE_COMPRESS_MASK))
         dwFlags &= ~MPQ_FILE_SECTOR_CRC;
     
     // Fix Key is not allowed if the file is not enrypted

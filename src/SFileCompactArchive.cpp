@@ -171,7 +171,7 @@ static int CopyMpqFileSectors(
         DWORD dwSectorOffsLen = hf->SectorOffsets[0];
 
         assert((pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT) == 0);
-        assert(pFileEntry->dwFlags & MPQ_FILE_COMPRESSED);
+        assert(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK);
 
         if(SectorOffsetsCopy == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;

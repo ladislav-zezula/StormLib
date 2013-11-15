@@ -1222,6 +1222,33 @@ static int TestArchiveOpenAndClose(const TCHAR * szMpqName)
     return nError;
 }
 
+static int TestAddFilesToArchive(const TCHAR * szMpqName)
+{
+    HANDLE hFile;
+    HANDLE hMpq;
+    LPCSTR szFileData = "0123456789";
+    char szAddedFile[128];
+    DWORD dwFileSize = 10;
+
+    CopyFile(_T("e:\\Ladik\\Incoming\\Tya's Zerg Defense.SC2Map"), _T("e:\\Multimedia\\MPQs\\Tya's Zerg Defense.SC2Map"), FALSE);
+
+    for(int i = 0; i < 3; i++)
+    {
+        if(SFileOpenArchive(szMpqName, 0, 0, &hMpq))
+        {
+            sprintf(szAddedFile, "AddedFile%04u.txt", i);
+
+            if(SFileCreateFile(hMpq, szAddedFile, 0, dwFileSize, 0, MPQ_FILE_COMPRESS, &hFile))
+            {
+                SFileWriteFile(hMpq, szFileData, dwFileSize, MPQ_COMPRESSION_ZLIB);
+                SFileFinishFile(hFile);
+            }
+        }
+    }
+
+    return ERROR_SUCCESS;
+}
+
 static int TestFindFiles(const TCHAR * szMpqName)
 {
     TMPQFile * hf;
@@ -2213,10 +2240,14 @@ int main(void)
 //      nError = TestSectorCompress(MPQ_SECTOR_SIZE);
 
     // Test the archive open and close
-    if(nError == ERROR_SUCCESS)                     
-        nError = TestArchiveOpenAndClose(MAKE_PATH("2012 - Longwu Online\\Data\\Scp.mpk"));
+//  if(nError == ERROR_SUCCESS)                     
+//      nError = TestArchiveOpenAndClose(MAKE_PATH("2012 - Longwu Online\\Data\\Scp.mpk"));
 //      nError = TestArchiveOpenAndClose(MAKE_PATH("1997 - Diablo I\\DIABDAT.MPQ"));
 //      nError = TestArchiveOpenAndClose(MAKE_PATH("2012 - War of the Immortals\\1\\Other.sqp"));
+
+    // Test for bug reported by BlueRaja
+    if(nError == ERROR_SUCCESS)
+        nError = TestAddFilesToArchive(MAKE_PATH("Tya's Zerg Defense.SC2Map"));
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestFindFiles(MAKE_PATH("2002 - Warcraft III/HumanEd.mpq"));
