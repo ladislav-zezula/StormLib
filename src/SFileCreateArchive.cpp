@@ -211,13 +211,13 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         nError = WriteNakedMPQHeader(ha);
 
         // Remember that the (listfile) and (attributes) need to be saved
-        ha->dwFlags |= MPQ_FLAG_CHANGED | MPQ_FLAG_INV_LISTFILE | MPQ_FLAG_INV_ATTRIBUTES;
+        ha->dwFlags |= MPQ_FLAG_CHANGED | MPQ_FLAG_LISTFILE_INVALID | MPQ_FLAG_ATTRIBUTES_INVALID;
     }
 
     // Create initial HET table, if the caller required an MPQ format 3.0 or newer
     if(nError == ERROR_SUCCESS && pCreateInfo->dwMpqVersion >= MPQ_FORMAT_VERSION_3)
     {
-        ha->pHetTable = CreateHetTable(ha->dwMaxFileCount, 0x40, true);
+        ha->pHetTable = CreateHetTable(0, ha->dwFileTableSize, 0x40, true);
         if(ha->pHetTable == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }

@@ -140,7 +140,7 @@ static DWORD GetSearchTableItems(TMPQArchive * ha)
     while(ha != NULL)
     {
         // Append the number of files
-        dwMergeItems += (ha->pHetTable != NULL) ? ha->pHetTable->dwMaxFileCount
+        dwMergeItems += (ha->pHetTable != NULL) ? ha->pHetTable->dwFileCount
                                                 : ha->pHeader->dwBlockTableSize;
         // Move to the patched archive
         ha = ha->haPatch;

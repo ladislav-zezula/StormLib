@@ -386,7 +386,7 @@ int SFileAddFile_Init(
     if(nError == ERROR_SUCCESS)
     {
         // Find the position where the file will be stored
-        FindFreeMpqSpace(ha, &hf->MpqFilePos);
+        hf->MpqFilePos = FindFreeMpqSpace(ha);
         hf->RawFilePos = ha->MpqPos + hf->MpqFilePos;
         hf->bIsWriteHandle = true;
 
@@ -418,15 +418,19 @@ int SFileAddFile_Init(
         }
         else
         {
-            // If the file exists and "replace existing" is not set, fail it
-            if((dwFlags & MPQ_FILE_REPLACEEXISTING) == 0)
-                nError = ERROR_ALREADY_EXISTS;
-
-            // If the file entry already contains a file
-            // and it is a pseudo-name, replace it
-            if(nError == ERROR_SUCCESS)
+            // Only if the file really exists
+            if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
             {
-                AllocateFileName(pFileEntry, szFileName);
+                // If the file exists and "replace existing" is not set, fail it
+                if((dwFlags & MPQ_FILE_REPLACEEXISTING) == 0)
+                    nError = ERROR_ALREADY_EXISTS;
+
+                // If the file entry already contains a file
+                // and it is a pseudo-name, replace it
+                if(nError == ERROR_SUCCESS)
+                {
+                    AllocateFileName(pFileEntry, szFileName);
+                }
             }
         }
     }

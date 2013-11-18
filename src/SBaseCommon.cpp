@@ -843,7 +843,7 @@ TMPQHash * AllocateHashEntry(
 // Finds a free space in the MPQ where to store next data
 // The free space begins beyond the file that is stored at the fuhrtest
 // position in the MPQ.
-void FindFreeMpqSpace(TMPQArchive * ha, ULONGLONG * pFreeSpacePos)
+ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
     TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
@@ -854,8 +854,8 @@ void FindFreeMpqSpace(TMPQArchive * ha, ULONGLONG * pFreeSpacePos)
     // Parse the entire block table
     for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
     {
-        // Only take existing files
-        if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
+        // Only take existing files with nonzero size
+        if((pFileEntry->dwFlags & MPQ_FILE_EXISTS) && (pFileEntry->dwCmpSize != 0))
         {
             // If the end of the file is bigger than current MPQ table pos, update it
             if((pFileEntry->ByteOffset + pFileEntry->dwCmpSize) > FreeSpacePos)
@@ -874,8 +874,7 @@ void FindFreeMpqSpace(TMPQArchive * ha, ULONGLONG * pFreeSpacePos)
     }
 
     // Give the free space position to the caller
-    if(pFreeSpacePos != NULL)
-        *pFreeSpacePos = FreeSpacePos;
+    return FreeSpacePos;
 }
 
 //-----------------------------------------------------------------------------

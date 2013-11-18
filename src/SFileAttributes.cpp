@@ -363,7 +363,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
     }
 
     if(nError == ERROR_SUCCESS)
-        ha->dwFlags &= ~MPQ_FLAG_INV_ATTRIBUTES;
+        ha->dwFlags &= ~MPQ_FLAG_ATTRIBUTES_INVALID;
     return nError;
 }
 

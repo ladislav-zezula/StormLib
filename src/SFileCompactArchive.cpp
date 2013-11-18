@@ -625,12 +625,12 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
         nError = ERROR_ACCESS_DENIED;
 
-    // The new limit must not be lower than the index of the last file entry in the table
+    // The new limit must be greater than the current file table size
     if(nError == ERROR_SUCCESS && ha->dwFileTableSize > dwMaxFileCount)
         nError = ERROR_DISK_FULL;
 
     // ALL file names must be known in order to be able
-    // to rebuild hash table size
+    // to rebuild hash table
     if(nError == ERROR_SUCCESS)
     {
         nError = CheckIfAllFilesKnown(ha, NULL, NULL);
@@ -659,7 +659,7 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
         pOldHetTable = ha->pHetTable;
 
         // Create new one
-        ha->pHetTable = CreateHetTable(dwMaxFileCount, 0x40, true);
+        ha->pHetTable = CreateHetTable(0, dwMaxFileCount, 0x40, true);
         if(ha->pHetTable == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }

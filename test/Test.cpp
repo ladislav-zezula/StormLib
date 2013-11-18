@@ -1229,23 +1229,53 @@ static int TestAddFilesToArchive(const TCHAR * szMpqName)
     LPCSTR szFileData = "0123456789";
     char szAddedFile[128];
     DWORD dwFileSize = 10;
+    int nIndex = 0;
 
-    CopyFile(_T("e:\\Ladik\\Incoming\\Tya's Zerg Defense.SC2Map"), _T("e:\\Multimedia\\MPQs\\Tya's Zerg Defense.SC2Map"), FALSE);
+#ifdef _MSC_VER
+    CopyFile(MAKE_PATH("2013 - Starcraft II\\!maps\\Tya's Zerg Defense.SC2Map"), MAKE_PATH("Tya's Zerg Defense.SC2Map"), FALSE);
+#endif
 
+    if(SFileOpenArchive(szMpqName, 0, 0, &hMpq))
+    {
+        SFileRemoveFile(hMpq, "BankList.xml", 0);
+
+        sprintf(szAddedFile, "BankList.xml", nIndex++);
+        if(SFileCreateFile(hMpq, szAddedFile, 0, dwFileSize, 0, MPQ_FILE_COMPRESS, &hFile))
+        {
+            SFileWriteFile(hFile, szFileData, dwFileSize, MPQ_COMPRESSION_ZLIB);
+            SFileFinishFile(hFile);
+        }
+/*
+        sprintf(szAddedFile, "AddedFile%04u.txt", nIndex++);
+        if(SFileCreateFile(hMpq, szAddedFile, 0, dwFileSize, 0, MPQ_FILE_COMPRESS, &hFile))
+        {
+            SFileWriteFile(hFile, szFileData, dwFileSize, MPQ_COMPRESSION_ZLIB);
+            SFileFinishFile(hFile);
+        }
+
+        sprintf(szAddedFile, "AddedFile%04u.txt", nIndex++);
+        if(SFileCreateFile(hMpq, szAddedFile, 0, dwFileSize, 0, MPQ_FILE_COMPRESS, &hFile))
+        {
+            SFileWriteFile(hFile, szFileData, dwFileSize, MPQ_COMPRESSION_ZLIB);
+            SFileFinishFile(hFile);
+        }
+*/
+
+        SFileCloseArchive(hMpq);
+    }
+
+/*
     for(int i = 0; i < 3; i++)
     {
         if(SFileOpenArchive(szMpqName, 0, 0, &hMpq))
         {
             sprintf(szAddedFile, "AddedFile%04u.txt", i);
+            SFileRemoveFile(hFile, szAddedFile, 0);
 
-            if(SFileCreateFile(hMpq, szAddedFile, 0, dwFileSize, 0, MPQ_FILE_COMPRESS, &hFile))
-            {
-                SFileWriteFile(hMpq, szFileData, dwFileSize, MPQ_COMPRESSION_ZLIB);
-                SFileFinishFile(hFile);
-            }
+            SFileCloseArchive(hMpq);
         }
     }
-
+*/
     return ERROR_SUCCESS;
 }
 

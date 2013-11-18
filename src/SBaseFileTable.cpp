@@ -25,7 +25,7 @@
 typedef struct _HET_TABLE_HEADER
 {
     DWORD dwTableSize;                      // Size of the entire HET table, including HET_TABLE_HEADER (in bytes)
-    DWORD dwMaxFileCount;                   // Maximum number of files in the MPQ
+    DWORD dwFileCount;                      // Number of occupied entries in the hash table
     DWORD dwHashTableSize;                  // Size of the hash table (in bytes)
     DWORD dwHashEntrySize;                  // Effective size of the hash entry (in bits)
     DWORD dwIndexSizeTotal;                 // Total size of file index (in bits)
@@ -722,10 +722,10 @@ static void CreateHetHeader(
     PHET_TABLE_HEADER pHetHeader)
 {
     // Fill the BET header
-    pHetHeader->dwMaxFileCount   = pHetTable->dwMaxFileCount;
+    pHetHeader->dwFileCount      = pHetTable->dwFileCount;
     pHetHeader->dwHashTableSize  = pHetTable->dwHashTableSize;
     pHetHeader->dwHashEntrySize  = pHetTable->dwHashBitSize;
-    pHetHeader->dwIndexSizeTotal = GetNecessaryBitCount(pHetTable->dwMaxFileCount);
+    pHetHeader->dwIndexSizeTotal = GetNecessaryBitCount(pHetTable->dwHashTableSize);
     pHetHeader->dwIndexSizeExtra = 0;
     pHetHeader->dwIndexSize      = pHetHeader->dwIndexSizeTotal;
     pHetHeader->dwIndexTableSize = ((pHetHeader->dwIndexSizeTotal * pHetTable->dwHashTableSize) + 7) / 8;
@@ -736,7 +736,7 @@ static void CreateHetHeader(
                               pHetHeader->dwIndexTableSize;
 }
 
-TMPQHetTable * CreateHetTable(DWORD dwMaxFileCount, DWORD dwHashBitSize, bool bCreateEmpty)
+TMPQHetTable * CreateHetTable(DWORD dwHashTableSize, DWORD dwFileCount, DWORD dwHashBitSize, bool bCreateEmpty)
 {
     TMPQHetTable * pHetTable;
 
@@ -746,12 +746,22 @@ TMPQHetTable * CreateHetTable(DWORD dwMaxFileCount, DWORD dwHashBitSize, bool bC
         pHetTable->dwIndexSizeTotal = 0;
         pHetTable->dwIndexSizeExtra = 0;
         pHetTable->dwIndexSize      = pHetTable->dwIndexSizeTotal;
-        pHetTable->dwMaxFileCount   = dwMaxFileCount;
-        pHetTable->dwHashTableSize  = (dwMaxFileCount * 4 / 3);
         pHetTable->dwHashBitSize    = dwHashBitSize;
 
-        // Size of one index is calculated from max file count
-        pHetTable->dwIndexSizeTotal = GetNecessaryBitCount(dwMaxFileCount);
+        // If the hash table size is not entered, calculate an optimal
+        // hash table size as 4/3 of the current file count.
+        if(dwHashTableSize == 0)
+        {
+            dwHashTableSize = (dwFileCount * 4 / 3);
+            assert(dwFileCount != 0);
+        }
+
+        // Store the hash table size and file count
+        pHetTable->dwHashTableSize = dwHashTableSize;
+        pHetTable->dwFileCount = dwFileCount;
+
+        // Size of one index is calculated from hash table size
+        pHetTable->dwIndexSizeTotal = GetNecessaryBitCount(dwHashTableSize);
         pHetTable->dwIndexSizeExtra = 0;
         pHetTable->dwIndexSize      = pHetTable->dwIndexSizeTotal;
 
@@ -805,8 +815,12 @@ static TMPQHetTable * TranslateHetTable(TMPQExtTable * pExtTable)
         // Verify the size of the table in the header
         if(HetHeader.dwTableSize == pExtTable->dwDataSize)
         {
+            // The size of index table (in entries) is expected
+            // to be the same like the hash table size (in bytes)
+            assert(((HetHeader.dwIndexTableSize * 8) / HetHeader.dwIndexSize) == HetHeader.dwHashTableSize);
+
             // Create translated table
-            pHetTable = CreateHetTable(HetHeader.dwMaxFileCount, HetHeader.dwHashEntrySize, false);
+            pHetTable = CreateHetTable(HetHeader.dwHashTableSize, HetHeader.dwFileCount, HetHeader.dwHashEntrySize, false);
             if(pHetTable != NULL)
             {
                 // Copy the hash table size, index size and extra bits from the HET header
@@ -909,7 +923,7 @@ DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
     // Go through HET table until we find a terminator
     while(pHetTable->pHetHashes[Index] != HET_ENTRY_FREE)
     {
-        // Did we find match ?
+        // Did we find a match ?
         if(pHetTable->pHetHashes[Index] == HetHash)
         {
             DWORD dwFileIndex = 0;
@@ -919,7 +933,6 @@ DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
                                             pHetTable->dwIndexSize,
                                            &dwFileIndex,
                                             4);
-
             //
             // TODO: This condition only happens when we are opening a MPQ
             // where some files were deleted by StormLib. Perhaps 
@@ -952,6 +965,7 @@ DWORD AllocateHetEntry(
     ULONGLONG AndMask64;
     ULONGLONG OrMask64;
     ULONGLONG BetHash;
+    DWORD FileCountIncrement = 0;
     DWORD FreeHetIndex = HASH_ENTRY_FREE;
     DWORD dwFileIndex;
     DWORD StartIndex;
@@ -978,29 +992,35 @@ DWORD AllocateHetEntry(
     // Go through HET table until we find a terminator
     for(;;)
     {
-        // Check for entries that might have been deleted
-        if(pHetTable->pHetHashes[Index] == HET_ENTRY_DELETED)
+        // Did we find a match ?
+        if(pHetTable->pHetHashes[Index] == HetHash)
         {
-            DWORD dwInvalidBetIndex = (1 << pHetTable->dwIndexSizeTotal) - 1;
-            DWORD dwBetIndex = 0;
+            DWORD dwFileIndex = 0;
 
-            // Verify the BET index. If it's really free, we can use it
-            dwFileIndex = (DWORD)(pFileEntry - ha->pFileTable);
+            // Get the index of the BetHash
             GetBits(pHetTable->pBetIndexes, pHetTable->dwIndexSizeTotal * Index,
                                             pHetTable->dwIndexSize,
-                                           &dwBetIndex,
+                                           &dwFileIndex,
                                             4);
-            
-            if(dwBetIndex == dwInvalidBetIndex)
+            //
+            // TODO: This condition only happens when we are opening a MPQ
+            // where some files were deleted by StormLib. Perhaps 
+            // we should not allow shrinking of the file table in MPQs v 4.0?
+            // assert(dwFileIndex <= ha->dwFileTableSize);
+            //
+
+            // Verify the BetHash against the entry in the table of BET hashes
+            if(dwFileIndex <= ha->dwFileTableSize && ha->pFileTable[dwFileIndex].BetHash == BetHash)
             {
                 FreeHetIndex = Index;
                 break;
             }
         }
 
-        // Is that entry free ?
-        if(pHetTable->pHetHashes[Index] == HET_ENTRY_FREE)
+        // Check for entries that might have been deleted
+        if(pHetTable->pHetHashes[Index] == HET_ENTRY_DELETED || pHetTable->pHetHashes[Index] == HET_ENTRY_FREE)
         {
+            FileCountIncrement++;
             FreeHetIndex = Index;
             break;
         }
@@ -1015,10 +1035,12 @@ DWORD AllocateHetEntry(
     // Fill the HET table entry
     dwFileIndex = (DWORD)(pFileEntry - ha->pFileTable);
     pHetTable->pHetHashes[FreeHetIndex] = HetHash;
+    pHetTable->dwFileCount += FileCountIncrement;
     SetBits(pHetTable->pBetIndexes, pHetTable->dwIndexSizeTotal * FreeHetIndex,
                                     pHetTable->dwIndexSize,
                                    &dwFileIndex,
                                     4);
+
     // Fill the file entry
     pFileEntry->BetHash    = BetHash;
     pFileEntry->dwHetIndex = FreeHetIndex;
@@ -1792,22 +1814,28 @@ void InvalidateInternalFiles(TMPQArchive * ha)
 {
     TFileEntry * pFileEntry;
 
+    //
+    // Note: We set the size of both (listfile) and (attributes) to zero.
+    // This causes allocating space for newly added files straight over
+    // (listfile)/(attributes), if these were the last ones in the MPQ
+    //
+
     // Invalidate the (listfile), if not done yet
-    if(!(ha->dwFlags & MPQ_FLAG_INV_LISTFILE))
+    if(!(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID))
     {
         pFileEntry = GetFileEntryExact(ha, LISTFILE_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
-            FreeFileEntry(ha, pFileEntry);
-        ha->dwFlags |= MPQ_FLAG_INV_LISTFILE;
+            pFileEntry->dwFileSize = pFileEntry->dwCmpSize = 0;
+        ha->dwFlags |= MPQ_FLAG_LISTFILE_INVALID;
     }
 
     // Invalidate the (attributes), if not done yet
-    if(!(ha->dwFlags & MPQ_FLAG_INV_ATTRIBUTES))
+    if(!(ha->dwFlags & MPQ_FLAG_ATTRIBUTES_INVALID))
     {
         pFileEntry = GetFileEntryExact(ha, ATTRIBUTES_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
-            FreeFileEntry(ha, pFileEntry);
-        ha->dwFlags |= MPQ_FLAG_INV_ATTRIBUTES;
+            pFileEntry->dwFileSize = pFileEntry->dwCmpSize = 0;
+        ha->dwFlags |= MPQ_FLAG_ATTRIBUTES_INVALID;
     }
 
     // Remember that the MPQ has been changed and it will be necessary
@@ -2085,11 +2113,11 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, ULONGLONG FileSize)
     return pBlockTable;
 }
 
-int LoadHetTable(TMPQArchive * ha)
+TMPQHetTable * LoadHetTable(TMPQArchive * ha)
 {
+    TMPQHetTable * pHetTable = NULL;
     TMPQExtTable * pExtTable;
     TMPQHeader * pHeader = ha->pHeader;
-    int nError = ERROR_SUCCESS;
 
     // If the HET table position is not NULL, we expect
     // both HET and BET tables to be present.
@@ -2099,22 +2127,13 @@ int LoadHetTable(TMPQArchive * ha)
         pExtTable = LoadExtTable(ha, pHeader->HetTablePos64, (size_t)pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
         if(pExtTable != NULL)
         {
-            // If succeeded, we have to limit the maximum file count
-            // to the values saved in the HET table
             // If loading HET table fails, we ignore the result.
-            ha->pHetTable = TranslateHetTable(pExtTable);
-            if(ha->pHetTable != NULL)
-                ha->dwMaxFileCount = ha->pHetTable->dwMaxFileCount;
-
+            pHetTable = TranslateHetTable(pExtTable);
             STORM_FREE(pExtTable);
         }
-
-        // If the HET hable failed to load, it's corrupt.
-        if(ha->pHetTable == NULL)
-            nError = ERROR_FILE_CORRUPT;
     }
 
-    return nError;
+    return pHetTable;
 }
 
 TMPQBetTable * LoadBetTable(TMPQArchive * ha)
@@ -2149,20 +2168,17 @@ int LoadAnyHashTable(TMPQArchive * ha)
     if(pHeader->dwHashTableSize == 0 && pHeader->HetTableSize64 == 0)
         return CreateHashTable(ha, HASH_TABLE_SIZE_DEFAULT);
 
-    // Try to load HET and/or classic hash table
-    LoadHetTable(ha);
-
-    // Load the HASH table
+    // Try to load HET table (the new hash table) and the classic HASH table
+    ha->pHetTable = LoadHetTable(ha);
     ha->pHashTable = LoadHashTable(ha);
-
-    // Set the maximum file count to the size of the hash table
-    // In case there is HET table, we have to keep the file limit
-    if(ha->pHetTable == NULL)
-        ha->dwMaxFileCount = pHeader->dwHashTableSize;
-
-    // Did at least one succeed?
     if(ha->pHetTable == NULL && ha->pHashTable == NULL)
         return ERROR_FILE_CORRUPT;
+
+    // Set the maximum file count
+    if(ha->pHetTable != NULL && ha->pHashTable != NULL)
+        ha->dwMaxFileCount = STORMLIB_MIN(ha->pHetTable->dwHashTableSize, pHeader->dwHashTableSize);
+    else
+        ha->dwMaxFileCount = (ha->pHetTable != NULL) ? ha->pHetTable->dwHashTableSize : pHeader->dwHashTableSize;
 
     // In theory, a MPQ could have bigger block table than hash table
     if(ha->pHeader->dwBlockTableSize > ha->dwMaxFileCount)
@@ -2445,7 +2461,7 @@ int SaveMPQTables(TMPQArchive * ha)
     assert(ha->dwFlags & MPQ_FLAG_CHANGED);
 
     // Find the space where the MPQ tables will be saved 
-    FindFreeMpqSpace(ha, &TablePos);
+    TablePos = FindFreeMpqSpace(ha);
 
     // If the MPQ has HET table, we prepare a ready-to-save version
     if(nError == ERROR_SUCCESS && ha->pHetTable != NULL)

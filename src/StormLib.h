@@ -131,14 +131,14 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0816  // Current version of StormLib (8.21)
-#define STORMLIB_VERSION_STRING         "8.22"  // String version of StormLib version
+#define STORMLIB_VERSION                0x0817  // Current version of StormLib (8.23)
+#define STORMLIB_VERSION_STRING         "8.23"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
 #define ID_MPK                      0x1A4B504D  // MPK archive header ID ('MPK\x1A')
 
-#define ERROR_AVI_FILE                   10000  // No MPQ file, but AVI file.
+#define ERROR_AVI_FILE                   10000  // Not a MPQ file, but an AVI file.
 #define ERROR_UNKNOWN_FILE_KEY           10001  // Returned by SFileReadFile when can't find file key
 #define ERROR_CHECKSUM_ERROR             10002  // Returned by SFileReadFile when sector CRC doesn't match
 #define ERROR_INTERNAL_FILE              10003  // The given operation is not allowed on internal file
@@ -176,8 +176,8 @@ extern "C" {
 #define MPQ_FLAG_PROTECTED          0x00000004  // Set on protected MPQs (like W3M maps)
 #define MPQ_FLAG_CHECK_SECTOR_CRC   0x00000008  // Checking sector CRC when reading files
 #define MPQ_FLAG_NEED_FIX_SIZE      0x00000010  // Used during opening the archive
-#define MPQ_FLAG_INV_LISTFILE       0x00000020  // If set, it means that the (listfile) has been invalidated
-#define MPQ_FLAG_INV_ATTRIBUTES     0x00000040  // If set, it means that the (attributes) has been invalidated
+#define MPQ_FLAG_LISTFILE_INVALID   0x00000020  // If set, it means that the (listfile) has been invalidated
+#define MPQ_FLAG_ATTRIBUTES_INVALID 0x00000040  // If set, it means that the (attributes) has been invalidated
 
 // Values for TMPQArchive::dwSubType
 #define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
@@ -694,7 +694,7 @@ typedef struct _TMPQHetTable
     DWORD      dwIndexSizeTotal;        // Total size of one entry in pBetIndexes (in bits)
     DWORD      dwIndexSizeExtra;        // Extra bits in the entry in pBetIndexes
     DWORD      dwIndexSize;             // Effective size of one entry in pBetIndexes (in bits)
-    DWORD      dwMaxFileCount;          // Maximum number of files in the MPQ
+    DWORD      dwFileCount;             // Number of occupied entries in the HET table
     DWORD      dwHashTableSize;         // Number of entries in pBetHashes
     DWORD      dwHashBitSize;           // Effective number of bits in the hash
 } TMPQHetTable;

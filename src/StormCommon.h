@@ -170,7 +170,7 @@ TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * 
 TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 DWORD AllocateHetEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 
-void FindFreeMpqSpace(TMPQArchive * ha, ULONGLONG * pFreeSpacePos);
+ULONGLONG FindFreeMpqSpace(TMPQArchive * ha);
 
 // Functions that loads and verifies MPQ data bitmap
 int  LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsComplete);
@@ -181,7 +181,7 @@ int  LoadAnyHashTable(TMPQArchive * ha);
 int  BuildFileTable(TMPQArchive * ha, ULONGLONG FileSize);
 int  SaveMPQTables(TMPQArchive * ha);
 
-TMPQHetTable * CreateHetTable(DWORD dwMaxFileCount, DWORD dwHashBitSize, bool bCreateEmpty);
+TMPQHetTable * CreateHetTable(DWORD dwHashTableSize, DWORD dwFileCount, DWORD dwHashBitSize, bool bCreateEmpty);
 void FreeHetTable(TMPQHetTable * pHetTable);
 
 TMPQBetTable * CreateBetTable(DWORD dwMaxFileCount);

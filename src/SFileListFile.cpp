@@ -398,7 +398,7 @@ int SListFileSaveToMpq(TMPQArchive * ha)
     
     // Free buffers
     if(nError == ERROR_SUCCESS)
-        ha->dwFlags &= ~MPQ_FLAG_INV_LISTFILE;
+        ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
     if(SortTable != NULL)
         STORM_FREE(SortTable);
     return nError;
