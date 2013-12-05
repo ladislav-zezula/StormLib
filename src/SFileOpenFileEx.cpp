@@ -16,11 +16,19 @@
 /* Local functions                                                           */
 /*****************************************************************************/
 
-static const char * GetPrefixedName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
+static const char * GetPatchFileName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
 {
     if(ha->cchPatchPrefix != 0)
     {
+        // Copy the patch prefix
         memcpy(szBuffer, ha->szPatchPrefix, ha->cchPatchPrefix);
+        
+        // The patch name for "OldWorld\\XXX\\YYY" is "Base\\XXX\YYY"
+        // We need to remove the "Oldworld\\" prefix
+        if(!_strnicmp(szFileName, "OldWorld\\", 9))
+            szFileName += 9;
+
+        // Copy the rest of the name
         strcpy(szBuffer + ha->cchPatchPrefix, szFileName);
         szFileName = szBuffer;
     }
@@ -61,10 +69,11 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
 
 bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HANDLE * phFile)
 {
+    TMPQArchive * haBase = NULL;
     TMPQArchive * ha = (TMPQArchive *)hMpq;
+    TFileEntry * pFileEntry;
     TMPQFile * hfPatch;                     // Pointer to patch file
     TMPQFile * hfBase = NULL;               // Pointer to base open file
-    TMPQFile * hfLast = NULL;               // The highest file in the chain that is not patch file
     TMPQFile * hf = NULL;
     HANDLE hPatchFile;
     char szPrefixBuffer[MAX_PATH];
@@ -72,64 +81,50 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     // Keep this flag here for future updates
     dwReserved = dwReserved;
 
-    // First of all, try to open the original version of the file in any of the patch chain
+    // First of all, find the latest archive where the file is in base version
+    // (i.e. where the original, unpatched version of the file exists)
     while(ha != NULL)
     {
-        // Prepare the file name with a correct prefix
-        if(SFileOpenFileEx((HANDLE)ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
-        {
-            // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
-            if((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
-            {
-                hf = hfLast = hfBase;
-                break;
-            }
+        // If the file is there, then we remember the archive
+        pFileEntry = GetFileEntryExact(ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), 0);
+        if(pFileEntry != NULL && (pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
+            haBase = ha;
 
-            SFileCloseFile((HANDLE)hfBase);
-        }
-
-        // Move to the next file in the patch chain
+        // Move to the patch archive
         ha = ha->haPatch;
     }
 
-    // If we couldn't find the file in any of the patches, it doesn't exist
-    if(hf == NULL)
+    // If we couldn't find the base file in any of the patches, it doesn't exist
+    if((ha = haBase) == NULL)
     {
         SetLastError(ERROR_FILE_NOT_FOUND);
         return false;
     }
 
-    // Now keep going in the patch chain and open every patch file that is there
-    for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
+    // Now open the base file
+    if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
     {
-        // Prepare the file name with a correct prefix
-        if(SFileOpenFileEx((HANDLE)ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
+        // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
+        assert((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0);
+        hf = hfBase;
+
+        // Now open all patches and attach them on top of the base file
+        for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
         {
-            // Remember the new version
-            hfPatch = (TMPQFile *)hPatchFile;
+            // Prepare the file name with a correct prefix
+            if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
+            {
+                // Remember the new version
+                hfPatch = (TMPQFile *)hPatchFile;
 
-            // If we encountered a full replacement of the file, 
-            // we have to remember the highest full file
-            if((hfPatch->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
-                hfLast = hfPatch;
+                // We should not find patch file
+                assert((hfPatch->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) != 0);
 
-            // Set current patch to base file and move on
-            hf->hfPatchFile = hfPatch;
-            hf = hfPatch;
+                // Attach the patch to the base file
+                hf->hfPatch = hfPatch;
+                hf = hfPatch;
+            }
         }
-    }
-
-    // Now we need to free all files that are below the highest unpatched version
-    while(hfBase != hfLast)
-    {
-        TMPQFile * hfNext = hfBase->hfPatchFile;
-
-        // Free the file below
-        hfBase->hfPatchFile = NULL;
-        FreeMPQFile(hfBase);
-
-        // Move the base to the next file
-        hfBase = hfNext;
     }
 
     // Give the updated base MPQ
@@ -163,7 +158,7 @@ int WINAPI SFileEnumLocales(
     DWORD dwLocales = 0;
 
     // Test the parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         return ERROR_INVALID_HANDLE;
     if(szFileName == NULL || *szFileName == 0)
         return ERROR_INVALID_PARAMETER;
@@ -236,7 +231,7 @@ bool WINAPI SFileHasFile(HANDLE hMpq, const char * szFileName)
     bool bIsPseudoName;
     int nError = ERROR_SUCCESS;
 
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         nError = ERROR_INVALID_HANDLE;
     if(szFileName == NULL || *szFileName == 0)
         nError = ERROR_INVALID_PARAMETER;
@@ -251,7 +246,7 @@ bool WINAPI SFileHasFile(HANDLE hMpq, const char * szFileName)
         while(ha != NULL)
         {
             // Verify presence of the file
-            pFileEntry = (bIsPseudoName == false) ? GetFileEntryLocale(ha, GetPrefixedName(ha, szFileName, szPrefixBuffer), lcFileLocale)
+            pFileEntry = (bIsPseudoName == false) ? GetFileEntryLocale(ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), lcFileLocale)
                                                   : GetFileEntryByIndex(ha, dwFileIndex);
             // Verify the file flags
             if(pFileEntry != NULL && (pFileEntry->dwFlags & dwFlagsToCheck) == MPQ_FILE_EXISTS)
@@ -301,7 +296,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
             case SFILE_OPEN_FROM_MPQ:
             case SFILE_OPEN_BASE_FILE:
                 
-                if(!IsValidMpqHandle(ha))
+                if(!IsValidMpqHandle(hMpq))
                 {
                     nError = ERROR_INVALID_HANDLE;
                     break;
@@ -369,6 +364,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
         if(nError != ERROR_SUCCESS)
         {
             SetLastError(nError);
+            *phFile = NULL;
             return false;
         }
     }
@@ -409,7 +405,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
         if(bOpenByIndex == false)
         {
             // If there is no file name yet, allocate it
-            AllocateFileName(pFileEntry, szFileName);
+            AllocateFileName(ha, pFileEntry, szFileName);
 
             // If the file is encrypted, we should detect the file key
             if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
@@ -454,7 +450,7 @@ bool WINAPI SFileCloseFile(HANDLE hFile)
 {
     TMPQFile * hf = (TMPQFile *)hFile;
     
-    if(!IsValidFileHandle(hf))
+    if(!IsValidFileHandle(hFile))
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;

@@ -15,7 +15,7 @@
 #include "StormLib.h"
 #include "StormCommon.h"
 
-char StormLibCopyright[] = "StormLib v " STORMLIB_VERSION_STRING " Copyright Ladislav Zezula 1998-2012";
+char StormLibCopyright[] = "StormLib v " STORMLIB_VERSION_STRING " Copyright Ladislav Zezula 1998-2014";
 
 //-----------------------------------------------------------------------------
 // Local variables
@@ -96,6 +96,8 @@ unsigned char AsciiToUpperTable_Slash[256] =
 // Storm hashing functions
 
 #define STORM_BUFFER_SIZE       0x500
+
+#define HASH_INDEX_MASK(ha) (ha->pHeader->dwHashTableSize ? (ha->pHeader->dwHashTableSize - 1) : 0)
 
 static DWORD StormBuffer[STORM_BUFFER_SIZE];    // Buffer for the decryption engine
 static bool  bMpqCryptographyInitialized = false;
@@ -204,19 +206,17 @@ DWORD HashStringLower(const char * szFileName, DWORD dwHashType)
 
 DWORD GetHashTableSizeForFileCount(DWORD dwFileCount)
 {
-    DWORD dwPowerOfTwo;
-    
-    // Round the hash table size up to the nearest power of two
-    for(dwPowerOfTwo = HASH_TABLE_SIZE_MIN; dwPowerOfTwo < HASH_TABLE_SIZE_MAX; dwPowerOfTwo <<= 1)
-    {
-        if(dwPowerOfTwo >= dwFileCount)
-        {
-            return dwPowerOfTwo;
-        }
-    }
+    DWORD dwPowerOfTwo = HASH_TABLE_SIZE_MIN;
 
+    // For zero files, there is no hash table needed
+    if(dwFileCount == 0)
+        return 0;
+
+    // Round the hash table size up to the nearest power of two
     // Don't allow the hash table size go over allowed maximum
-    return HASH_TABLE_SIZE_MAX;
+    while(dwPowerOfTwo < HASH_TABLE_SIZE_MAX && dwPowerOfTwo < dwFileCount)
+        dwPowerOfTwo <<= 1;
+    return dwPowerOfTwo;
 }
 
 //-----------------------------------------------------------------------------
@@ -252,224 +252,12 @@ ULONGLONG HashStringJenkins(const char * szFileName)
 }
 
 //-----------------------------------------------------------------------------
-// Copies the string from char * to TCHAR * and back
-
-#ifdef _UNICODE
-
-// For UNICODE builds, we need two functions
-void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength)
-{
-    mbstowcs(szTarget, szSource, cchLength);
-    szTarget[cchLength] = 0;
-}
-
-void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength)
-{
-    wcstombs(szTarget, szSource, cchLength);
-    szTarget[cchLength] = 0;
-}
-
-#else
-
-// For ANSI build, we only need one
-void CopyFileName(char * szTarget, const char * szSource, size_t cchLength)
-{
-    memcpy(szTarget, szSource, cchLength);
-    szTarget[cchLength] = 0;
-}
-
-#endif
-
-//-----------------------------------------------------------------------------
-// This function converts the MPQ header so it always looks like version 4
-
-int ConvertMpqHeaderToFormat4(
-    TMPQArchive * ha,
-    ULONGLONG FileSize,
-    DWORD dwFlags)
-{
-    TMPQHeader * pHeader = (TMPQHeader *)ha->HeaderData;
-    ULONGLONG ByteOffset;
-    DWORD dwExpectedArchiveSize;
-    USHORT wFormatVersion = BSWAP_INT16_UNSIGNED(pHeader->wFormatVersion);
-    int nError = ERROR_SUCCESS;
-
-    // If version 1.0 is forced, then the format version is forced to be 1.0
-    // Reason: Storm.dll in Warcraft III ignores format version value
-    if(dwFlags & MPQ_OPEN_FORCE_MPQ_V1)
-        wFormatVersion = MPQ_FORMAT_VERSION_1;
-
-    // Format-specific fixes
-    switch(wFormatVersion)
-    {
-        case MPQ_FORMAT_VERSION_1:
-
-            // Make sure that the V1 header part is BSWAPPed
-            BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_1);
-
-            // Check for malformed MPQ header version 1.0
-            if(pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V1)
-            {
-                pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V1;
-                ha->dwFlags |= MPQ_FLAG_PROTECTED;
-            }
-
-            //
-            // The value of "dwArchiveSize" member in the MPQ header
-            // is ignored by Storm.dll and can contain garbage value
-            // ("w3xmaster" protector).
-            //
-
-            dwExpectedArchiveSize = (DWORD)(FileSize - ha->MpqPos);
-            if(pHeader->dwArchiveSize != dwExpectedArchiveSize)
-            {
-                // Note: dwExpectedArchiveSize might be incorrect at this point.
-                // MPQs version 1.0 can have strong digital signature appended at the end,
-                // or they might just have arbitrary data there.
-                // In either case, we recalculate the archive size later when
-                // block table is loaded and positions of all files is known.
-                pHeader->dwArchiveSize = dwExpectedArchiveSize;
-                ha->dwFlags |= MPQ_FLAG_NEED_FIX_SIZE;
-            }
-
-            // Zero the fields in 2.0 part of the MPQ header
-            pHeader->HiBlockTablePos64 = 0;
-            pHeader->wHashTablePosHi = 0;
-            pHeader->wBlockTablePosHi = 0;
-            // No break here !!!
-
-        case MPQ_FORMAT_VERSION_2:
-        case MPQ_FORMAT_VERSION_3:
-
-            // Make sure that the V2+V3 header part is BSWAPPed
-            BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_3);
-
-            // In MPQ format 3.0, the entire header is optional
-            // and the size of the header can actually be identical
-            // to size of header 2.0
-            if(pHeader->dwHeaderSize < MPQ_HEADER_SIZE_V3)
-            {
-                ULONGLONG ArchiveSize64 = pHeader->dwArchiveSize;
-
-                // In format 2.0, the archive size is obsolete and is calculated
-                // as the highest offset of hash table, block table or hi-block table.
-                // However, we can still rely on it, if the size of the archive is under 4 GB
-                if((FileSize - ha->MpqPos) >> 32)
-                {
-                    ByteOffset = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos) + (pHeader->dwHashTableSize * sizeof(TMPQHash));
-                    if(ByteOffset > ArchiveSize64)
-                        ArchiveSize64 = ByteOffset;
-
-                    ByteOffset = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos) + (pHeader->dwBlockTableSize * sizeof(TMPQBlock));
-                    if(ByteOffset > ArchiveSize64)
-                        ArchiveSize64 = ByteOffset;
-
-                    // Only if we actually have a hi-block table
-                    if(pHeader->HiBlockTablePos64)
-                    {
-                        ByteOffset = pHeader->HiBlockTablePos64 + (pHeader->dwBlockTableSize * sizeof(USHORT));
-                        if(ByteOffset > ArchiveSize64)
-                            ArchiveSize64 = ByteOffset;
-                    }
-
-                    // We need to recalculate archive size later,
-                    // when block table is loaded and the position of files is known
-                    ha->dwFlags |= MPQ_FLAG_NEED_FIX_SIZE;
-                }
-
-                // Initialize the rest of the 3.0 header
-                pHeader->ArchiveSize64 = ArchiveSize64;
-                pHeader->HetTablePos64 = 0;
-                pHeader->BetTablePos64 = 0;
-            }
-
-            //
-            // Calculate compressed size of each table. We assume the following order:
-            // 1) HET table
-            // 2) BET table
-            // 3) Classic hash table
-            // 4) Classic block table
-            // 5) Hi-block table
-            //
-
-            // Set all sizes to zero
-            pHeader->HetTableSize64 = 0;
-            pHeader->BetTableSize64 = 0;
-
-            // Either both HET and BET table exist or none of them does.
-            if(pHeader->HetTablePos64)
-            {
-                // Compressed size of the HET and BET tables
-                pHeader->HetTableSize64 = pHeader->BetTablePos64 - pHeader->HetTablePos64;
-                pHeader->BetTableSize64 = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos) - pHeader->HetTablePos64;
-            }
-
-            // Compressed size of hash and block table
-            if(wFormatVersion >= MPQ_FORMAT_VERSION_2)
-            {
-                // Compressed size of the hash table
-                pHeader->HashTableSize64 = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos) - MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
-
-                // Block and hi-block table
-                if(pHeader->HiBlockTablePos64)
-                {
-                    pHeader->BlockTableSize64 = pHeader->HiBlockTablePos64 - MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
-                    pHeader->HiBlockTableSize64 = pHeader->ArchiveSize64 - pHeader->HiBlockTablePos64;
-                }
-                else
-                {
-                    pHeader->BlockTableSize64 = pHeader->ArchiveSize64 - MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
-                    pHeader->HiBlockTableSize64 = 0;
-                }
-            }
-            else
-            {
-                // No known MPQ in format 1.0 has any of the tables compressed
-                pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
-                pHeader->BlockTableSize64 = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
-                pHeader->HiBlockTableSize64 = 0;
-            }
-
-            // Set the data chunk size for MD5 to zero
-            pHeader->dwRawChunkSize = 0;
-
-            // Fill the MD5's
-            memset(pHeader->MD5_BlockTable,   0, MD5_DIGEST_SIZE);
-            memset(pHeader->MD5_HashTable,    0, MD5_DIGEST_SIZE);
-            memset(pHeader->MD5_HiBlockTable, 0, MD5_DIGEST_SIZE);
-            memset(pHeader->MD5_BetTable,     0, MD5_DIGEST_SIZE);
-            memset(pHeader->MD5_HetTable,     0, MD5_DIGEST_SIZE);
-            memset(pHeader->MD5_MpqHeader,    0, MD5_DIGEST_SIZE);
-            // No break here !!!!
-
-        case MPQ_FORMAT_VERSION_4:
-
-            // Make sure that the V4 header part is BSWAPPed
-            BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_4);
-
-            // Verify header MD5. Header MD5 is calculated from the MPQ header since the 'MPQ\x1A'
-            // signature until the position of header MD5 at offset 0xC0
-            if(!VerifyDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader))
-                nError = ERROR_FILE_CORRUPT;
-            break;
-
-        default:
-
-            // Last resort: Check if it's a War of the Immortal data file (SQP)
-            nError = ConvertSqpHeaderToFormat4(ha, FileSize, dwFlags);
-            break;
-    }
-
-    return nError;
-}
-
-//-----------------------------------------------------------------------------
 // Default flags for (attributes) and (listfile)
 
-DWORD GetDefaultSpecialFileFlags(TMPQArchive * ha, DWORD dwFileSize)
+DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
 {
     // Fixed for format 1.0
-    if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+    if(wFormatVersion == MPQ_FORMAT_VERSION_1)
         return MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_FIX_KEY;
 
     // Size-dependent for formats 2.0-4.0
@@ -664,7 +452,7 @@ DWORD DecryptFileKey(
     DWORD dwMpqPos = (DWORD)MpqPos;
 
     // File key is calculated from plain name
-    szFileName = GetPlainFileNameA(szFileName);
+    szFileName = GetPlainFileName(szFileName);
     dwFileKey = HashString(szFileName, MPQ_HASH_FILE_KEY);
 
     // Fix the key, if needed
@@ -678,28 +466,30 @@ DWORD DecryptFileKey(
 //-----------------------------------------------------------------------------
 // Handle validation functions
 
-bool IsValidMpqHandle(TMPQArchive * ha)
+TMPQArchive * IsValidMpqHandle(HANDLE hMpq)
 {
-    if(ha == NULL)
-        return false;
-    if(ha->pHeader == NULL || ha->pHeader->dwID != ID_MPQ)
-        return false;
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
     
-    return (bool)(ha->pHeader->dwID == ID_MPQ);
+    return (ha != NULL && ha->pHeader != NULL && ha->pHeader->dwID == ID_MPQ) ? ha : NULL;
 }
 
-bool IsValidFileHandle(TMPQFile * hf)
+TMPQFile * IsValidFileHandle(HANDLE hFile)
 {
-    if(hf == NULL)
-        return false;
+    TMPQFile * hf = (TMPQFile *)hFile;
 
-    if(hf->dwMagic != ID_MPQ_FILE)
-        return false;
+    // Must not be NULL
+    if(hf != NULL && hf->dwMagic == ID_MPQ_FILE)
+    {
+        // Local file handle?
+        if(hf->pStream != NULL)
+            return hf;
 
-    if(hf->pStream != NULL)
-        return true;
+        // Also verify the MPQ handle within the file handle
+        if(IsValidMpqHandle(hf->ha))
+            return hf;
+    }
 
-    return IsValidMpqHandle(hf->ha);
+    return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -710,10 +500,11 @@ TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1
 {
     TMPQHash * pDeletedEntry = NULL;            // If a deleted entry was found in the continuous hash range
     TMPQHash * pFreeEntry = NULL;               // If a free entry was found in the continuous hash range
+    DWORD dwHashIndexMask = HASH_INDEX_MASK(ha);
     DWORD dwIndex;
 
     // Set the initial index
-    dwStartIndex = dwIndex = (dwStartIndex & ha->dwHashIndexMask);
+    dwStartIndex = dwIndex = (dwStartIndex & dwHashIndexMask);
 
     // Search the hash table and return the found entries in the following priority:
     // 1) <MATCHING_ENTRY>
@@ -741,7 +532,7 @@ TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1
 
         // Move to the next hash entry.
         // If we reached the starting entry, it's failure.
-        dwIndex = (dwIndex + 1) & ha->dwHashIndexMask;
+        dwIndex = (dwIndex + 1) & dwHashIndexMask;
         if(dwIndex == dwStartIndex)
             break;
     }
@@ -750,18 +541,18 @@ TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1
     return (pDeletedEntry != NULL) ? pDeletedEntry : pFreeEntry;
 }
 
-
 // Retrieves the first hash entry for the given file.
 // Every locale version of a file has its own hash entry
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName)
 {
+    DWORD dwHashIndexMask = HASH_INDEX_MASK(ha);
     DWORD dwStartIndex = ha->pfnHashString(szFileName, MPQ_HASH_TABLE_INDEX);
     DWORD dwName1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
     DWORD dwName2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
     DWORD dwIndex;
 
     // Set the initial index
-    dwStartIndex = dwIndex = (dwStartIndex & ha->dwHashIndexMask);
+    dwStartIndex = dwIndex = (dwStartIndex & dwHashIndexMask);
 
     // Search the hash table
     for(;;)
@@ -778,7 +569,7 @@ TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName)
 
         // Move to the next hash entry. Stop searching
         // if we got reached the original hash entry
-        dwIndex = (dwIndex + 1) & ha->dwHashIndexMask;
+        dwIndex = (dwIndex + 1) & dwHashIndexMask;
         if(dwIndex == dwStartIndex)
             return NULL;
     }
@@ -786,6 +577,7 @@ TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName)
 
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pHash)
 {
+    DWORD dwHashIndexMask = HASH_INDEX_MASK(ha);
     DWORD dwStartIndex = (DWORD)(pFirstHash - ha->pHashTable);
     DWORD dwName1 = pHash->dwName1;
     DWORD dwName2 = pHash->dwName2;
@@ -797,7 +589,7 @@ TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * 
     {
         // Move to the next hash entry. Stop searching
         // if we got reached the original hash entry
-        dwIndex = (dwIndex + 1) & ha->dwHashIndexMask;
+        dwIndex = (dwIndex + 1) & dwHashIndexMask;
         if(dwIndex == dwStartIndex)
             return NULL;
         pHash = ha->pHashTable + dwIndex;
@@ -904,21 +696,23 @@ void * LoadMpqTable(
     TMPQArchive * ha,
     ULONGLONG ByteOffset,
     DWORD dwCompressedSize,
-    DWORD dwRealSize,
+    DWORD dwTableSize,
     DWORD dwKey)
 {
     LPBYTE pbCompressed = NULL;
     LPBYTE pbMpqTable;
     LPBYTE pbToRead;
+    DWORD dwBytesToRead = dwCompressedSize;
+    DWORD dwValidLength = dwTableSize;
     int nError = ERROR_SUCCESS;
 
     // Allocate the MPQ table
-    pbMpqTable = pbToRead = STORM_ALLOC(BYTE, dwRealSize);
+    pbMpqTable = pbToRead = STORM_ALLOC(BYTE, dwTableSize);
     if(pbMpqTable != NULL)
     {
         // "interface.MPQ.part" in trial version of World of Warcraft
         // has block table and hash table compressed.
-        if(dwCompressedSize < dwRealSize)
+        if(dwCompressedSize < dwTableSize)
         {
             // Allocate temporary buffer for holding compressed data
             pbCompressed = pbToRead = STORM_ALLOC(BYTE, dwCompressedSize);
@@ -930,7 +724,7 @@ void * LoadMpqTable(
         }
 
         // If everything succeeded, read the raw table form the MPQ
-        if(FileStream_Read(ha->pStream, &ByteOffset, pbToRead, dwCompressedSize))
+        if(FileStream_Read(ha->pStream, &ByteOffset, pbToRead, dwBytesToRead))
         {
             // First of all, decrypt the table
             if(dwKey != 0)
@@ -941,17 +735,21 @@ void * LoadMpqTable(
             }
 
             // If the table is compressed, decompress it
-            if(dwCompressedSize < dwRealSize)
+            if(dwCompressedSize < dwTableSize)
             {
-                int cbOutBuffer = (int)dwRealSize;
+                int cbOutBuffer = (int)dwTableSize;
                 int cbInBuffer = (int)dwCompressedSize;
 
                 if(!SCompDecompress2(pbMpqTable, &cbOutBuffer, pbCompressed, cbInBuffer))
                     nError = GetLastError();
             }
 
-            // Makre sure that the table is properly byte-swapped
-            BSWAP_ARRAY32_UNSIGNED(pbMpqTable, dwRealSize);
+            // Make sure that the table is properly byte-swapped
+            BSWAP_ARRAY32_UNSIGNED(pbMpqTable, dwTableSize);
+
+            // If the table was not fully readed, fill the rest with zeros
+            if(dwValidLength < dwTableSize)
+                memset(pbMpqTable + dwValidLength, 0, (dwTableSize - dwValidLength));
         }
         else
         {
@@ -1563,8 +1361,8 @@ void FreeMPQFile(TMPQFile *& hf)
     if(hf != NULL)
     {
         // If we have patch file attached to this one, free it first
-        if(hf->hfPatchFile != NULL)
-            FreeMPQFile(hf->hfPatchFile);
+        if(hf->hfPatch != NULL)
+            FreeMPQFile(hf->hfPatch);
 
         // Then free all buffers allocated in the file structure
         if(hf->pPatchHeader != NULL)
@@ -1621,34 +1419,6 @@ void FreeMPQArchive(TMPQArchive *& ha)
         STORM_FREE(ha);
         ha = NULL;
     }
-}
-
-const char * GetPlainFileNameA(const char * szFileName)
-{
-    const char * szPlainName = szFileName;
-
-    while(*szFileName != 0)
-    {
-        if(*szFileName == '\\' || *szFileName == '/')
-            szPlainName = szFileName + 1;
-        szFileName++;
-    }
-
-    return szPlainName;
-}
-
-const TCHAR * GetPlainFileNameT(const TCHAR * szFileName)
-{
-    const TCHAR * szPlainName = szFileName;
-
-    while(*szFileName != 0)
-    {
-        if(*szFileName == '\\' || *szFileName == '/')
-            szPlainName = szFileName + 1;
-        szFileName++;
-    }
-
-    return szPlainName;
 }
 
 bool IsInternalMpqFileName(const char * szFileName)
@@ -1824,17 +1594,6 @@ void ConvertUInt64Buffer(void * ptr, size_t length)
 	}
 }
 
-// Swaps the TMPQUserData structure
-void ConvertTMPQUserData(void *userData)
-{
-	TMPQUserData * theData = (TMPQUserData *)userData;
-
-	theData->dwID = SwapUInt32(theData->dwID);
-	theData->cbUserDataSize = SwapUInt32(theData->cbUserDataSize);
-	theData->dwHeaderOffs = SwapUInt32(theData->dwHeaderOffs);
-	theData->cbUserDataHeader = SwapUInt32(theData->cbUserDataHeader);
-}
-
 // Swaps the TMPQHeader structure
 void ConvertTMPQHeader(void *header, uint16_t version)
 {
@@ -1854,11 +1613,15 @@ void ConvertTMPQHeader(void *header, uint16_t version)
 	    theHeader->dwBlockTableSize = SwapUInt32(theHeader->dwBlockTableSize);
     }
 
-	if(version == MPQ_FORMAT_VERSION_2 || version == MPQ_FORMAT_VERSION_3)
+	if(version == MPQ_FORMAT_VERSION_2)
 	{
 		theHeader->HiBlockTablePos64 = SwapUInt64(theHeader->HiBlockTablePos64);
         theHeader->wHashTablePosHi = SwapUInt16(theHeader->wHashTablePosHi);
 		theHeader->wBlockTablePosHi = SwapUInt16(theHeader->wBlockTablePosHi);
+    }
+
+    if(version == MPQ_FORMAT_VERSION_3)
+    {
         theHeader->ArchiveSize64 = SwapUInt64(theHeader->ArchiveSize64);
         theHeader->BetTablePos64 = SwapUInt64(theHeader->BetTablePos64);
         theHeader->HetTablePos64 = SwapUInt64(theHeader->HetTablePos64);

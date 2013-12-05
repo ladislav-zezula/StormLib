@@ -139,6 +139,9 @@
     <ClCompile Include="src\SFileFindFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\SFileGetFileInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\SFileListFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

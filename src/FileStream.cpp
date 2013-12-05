@@ -2006,7 +2006,7 @@ bool FileStream_Switch(TFileStream * pStream, TFileStream * pNewStream)
  *
  * \a pStream Pointer to an open stream
  */
-TCHAR * FileStream_GetFileName(TFileStream * pStream)
+const TCHAR * FileStream_GetFileName(TFileStream * pStream)
 {
     assert(pStream != NULL);
     return pStream->szFileName;
@@ -2095,6 +2095,61 @@ void FileStream_Close(TFileStream * pStream)
 }
 
 //-----------------------------------------------------------------------------
+// Utility functions (ANSI)
+
+const char * GetPlainFileName(const char * szFileName)
+{
+    const char * szPlainName = szFileName;
+
+    while(*szFileName != 0)
+    {
+        if(*szFileName == '\\' || *szFileName == '/')
+            szPlainName = szFileName + 1;
+        szFileName++;
+    }
+
+    return szPlainName;
+}
+
+void CopyFileName(char * szTarget, const char * szSource, size_t cchLength)
+{
+    memcpy(szTarget, szSource, cchLength);
+    szTarget[cchLength] = 0;
+}
+
+//-----------------------------------------------------------------------------
+// Utility functions (UNICODE) only exist in the ANSI version of the library
+// In ANSI builds, TCHAR = char, so we don't need these functions implemented
+
+#ifdef _UNICODE
+const TCHAR * GetPlainFileName(const TCHAR * szFileName)
+{
+    const TCHAR * szPlainName = szFileName;
+
+    while(*szFileName != 0)
+    {
+        if(*szFileName == '\\' || *szFileName == '/')
+            szPlainName = szFileName + 1;
+        szFileName++;
+    }
+
+    return szPlainName;
+}
+
+void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength)
+{
+    mbstowcs(szTarget, szSource, cchLength);
+    szTarget[cchLength] = 0;
+}
+
+void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength)
+{
+    wcstombs(szTarget, szSource, cchLength);
+    szTarget[cchLength] = 0;
+}
+#endif
+
+//-----------------------------------------------------------------------------
 // main - for testing purposes
 
 #ifdef __STORMLIB_TEST__
@@ -2141,154 +2196,3 @@ int FileStream_Test(const TCHAR * szFileName, DWORD dwStreamFlags)
     return ERROR_SUCCESS;
 }
 #endif
-
-/*
-int FileStream_Test()
-{
-    TFileStream * pStream;
-
-    InitializeMpqCryptography();
-
-    //
-    // Test 1: Write to a stream
-    //
-
-    pStream = FileStream_CreateFile("E:\\Stream.bin", 0);
-    if(pStream != NULL)
-    {
-        char szString1[100] = "This is a single line\n\r";
-        DWORD dwLength = strlen(szString1);
-
-        for(int i = 0; i < 10; i++)
-        {
-            if(!FileStream_Write(pStream, NULL, szString1, dwLength))
-            {
-                printf("Failed to write to the stream\n");
-                return ERROR_CAN_NOT_COMPLETE;
-            }
-        }
-        FileStream_Close(pStream);
-    }
-
-    //
-    // Test2: Read from the stream
-    //
-
-    pStream = FileStream_OpenFile("E:\\Stream.bin", STREAM_FLAG_READ_ONLY | STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
-    if(pStream != NULL)
-    {
-        char szString1[100] = "This is a single line\n\r";
-        char szString2[100];
-        DWORD dwLength = strlen(szString1);
-
-        // This call must end with an error
-        if(FileStream_Write(pStream, NULL, "aaa", 3))
-        {
-            printf("Write succeeded while it should fail\n");
-            return -1;
-        }
-
-        for(int i = 0; i < 10; i++)
-        {
-            if(!FileStream_Read(pStream, NULL, szString2, dwLength))
-            {
-                printf("Failed to read from the stream\n");
-                return -1;
-            }
-
-            szString2[dwLength] = 0;
-            if(strcmp(szString1, szString2))
-            {
-                printf("Data read from file are different from data written\n");
-                return -1;
-            }
-        }
-        FileStream_Close(pStream);
-    }
-
-    //
-    // Test3: Open the temp stream, write some data and switch it to the original stream
-    //
-
-    pStream = FileStream_OpenFile("E:\\Stream.bin", STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
-    if(pStream != NULL)
-    {
-        TFileStream * pTempStream;
-        ULONGLONG FileSize;
-
-        pTempStream = FileStream_CreateFile("E:\\TempStream.bin", 0);
-        if(pTempStream == NULL)
-        {
-            printf("Failed to create temp stream\n");
-            return -1;
-        }
-
-        // Copy the original stream to the temp
-        if(!FileStream_GetSize(pStream, FileSize))
-        {
-            printf("Failed to get the file size\n");
-            return -1;
-        }
-
-        while(FileSize != 0)
-        {
-            DWORD dwBytesToRead = (DWORD)FileSize;
-            char Buffer[0x80];
-
-            if(dwBytesToRead > sizeof(Buffer))
-                dwBytesToRead = sizeof(Buffer);
-
-            if(!FileStream_Read(pStream, NULL, Buffer, dwBytesToRead))
-            {
-                printf("CopyStream: Read source file failed\n");
-                return -1;
-            }
-
-            if(!FileStream_Write(pTempStream, NULL, Buffer, dwBytesToRead))
-            {
-                printf("CopyStream: Write target file failed\n");
-                return -1;
-            }
-
-            FileSize -= dwBytesToRead;
-        }
-
-        // Switch the streams
-        // Note that the pTempStream is closed by the operation
-        FileStream_Switch(pStream, pTempStream);
-        FileStream_Close(pStream);
-    }
-
-    //
-    // Test4: Read from the stream again
-    //
-
-    pStream = FileStream_OpenFile("E:\\Stream.bin", STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
-    if(pStream != NULL)
-    {
-        char szString1[100] = "This is a single line\n\r";
-        char szString2[100];
-        DWORD dwLength = strlen(szString1);
-
-        for(int i = 0; i < 10; i++)
-        {
-            if(!FileStream_Read(pStream, NULL, szString2, dwLength))
-            {
-                printf("Failed to read from the stream\n");
-                return -1;
-            }
-
-            szString2[dwLength] = 0;
-            if(strcmp(szString1, szString2))
-            {
-                printf("Data read from file are different from data written\n");
-                return -1;
-            }
-        }
-        FileStream_Close(pStream);
-    }
-
-    return 0;
-}
-*/
-

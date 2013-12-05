@@ -34,7 +34,7 @@ static bool GetDefaultPatchPrefix(
     const TCHAR * szDash;
 
     // Ensure that both names are plain names
-    szBaseMpqName = GetPlainFileNameT(szBaseMpqName);
+    szBaseMpqName = GetPlainFileName(szBaseMpqName);
 
     // Patch prefix is for the Cataclysm MPQs, whose names
     // are like "locale-enGB.MPQ" or "speech-enGB.MPQ"
@@ -431,7 +431,7 @@ int PatchFileData(TMPQFile * hf)
     int nError = ERROR_SUCCESS;
 
     // Move to the first patch
-    hf = hf->hfPatchFile;
+    hf = hf->hfPatch;
 
     // Now go through all patches and patch the original data
     while(hf != NULL)
@@ -450,7 +450,7 @@ int PatchFileData(TMPQFile * hf)
             break;
 
         // Move to the next patch
-        hf = hf->hfPatchFile;
+        hf = hf->hfPatch;
     }
 
     return nError;
@@ -493,7 +493,7 @@ bool WINAPI SFileOpenPatchArchive(
     dwFlags = dwFlags;
 
     // Verify input parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         nError = ERROR_INVALID_HANDLE;
     if(szPatchMpqName == NULL || *szPatchMpqName == 0)
         nError = ERROR_INVALID_PARAMETER;
@@ -580,7 +580,7 @@ bool WINAPI SFileIsPatchedArchive(HANDLE hMpq)
     TMPQArchive * ha = (TMPQArchive *)hMpq;
 
     // Verify input parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         return false;
 
     return (ha->haPatch != NULL);

@@ -20,24 +20,7 @@
 //-----------------------------------------------------------------------------
 // Local defines
 
-#define SIGNATURE_TYPE_NONE             0
-#define SIGNATURE_TYPE_WEAK             1
-#define SIGNATURE_TYPE_STRONG           2
-
 #define MPQ_DIGEST_UNIT_SIZE      0x10000
-
-typedef struct _MPQ_SIGNATURE_INFO
-{
-    ULONGLONG BeginMpqData;                 // File offset where the hashing starts
-    ULONGLONG BeginExclude;                 // Begin of the excluded area (used for (signature) file)
-    ULONGLONG EndExclude;                   // End of the excluded area (used for (signature) file)
-    ULONGLONG EndMpqData;                   // File offset where the hashing ends
-    ULONGLONG EndOfFile;                    // Size of the entire file
-    BYTE  Signature[MPQ_STRONG_SIGNATURE_SIZE + 0x10];
-    DWORD cbSignatureSize;                  // Length of the signature
-    int nSignatureType;                     // See SIGNATURE_TYPE_XXX
-
-} MPQ_SIGNATURE_INFO, *PMPQ_SIGNATURE_INFO;
 
 //-----------------------------------------------------------------------------
 // Known Blizzard public keys
@@ -156,7 +139,7 @@ static void GetPlainAnsiFileName(
     const TCHAR * szFileName,
     char * szPlainName)
 {
-    const TCHAR * szPlainNameT = GetPlainFileNameT(szFileName);
+    const TCHAR * szPlainNameT = GetPlainFileName(szFileName);
 
     // Convert the plain name to ANSI
     while(*szPlainNameT != 0)
@@ -186,65 +169,11 @@ static void CalculateArchiveRange(
         }
     }
 
-    // Get the MPQ data end. This is stored in our MPQ header,
-    // and it's been already prepared by SFileOpenArchive,
+    // Get the MPQ data end. This is stored in the MPQ header
     pSI->EndMpqData = ha->MpqPos + ha->pHeader->ArchiveSize64;
 
     // Get the size of the entire file
     FileStream_GetSize(ha->pStream, &pSI->EndOfFile);
-}
-
-static bool QueryMpqSignatureInfo(
-    TMPQArchive * ha,
-    PMPQ_SIGNATURE_INFO pSI)
-{
-    ULONGLONG ExtraBytes;
-    TMPQFile * hf;
-    HANDLE hFile;
-    DWORD dwFileSize;
-
-    // Calculate the range of the MPQ
-    CalculateArchiveRange(ha, pSI);
-
-    // If there is "(signature)" file in the MPQ, it has a weak signature
-    if(SFileOpenFileEx((HANDLE)ha, SIGNATURE_NAME, SFILE_OPEN_BASE_FILE, &hFile))
-    {
-        // Get the content of the signature
-        SFileReadFile(hFile, pSI->Signature, sizeof(pSI->Signature), &pSI->cbSignatureSize, NULL);
-
-        // Verify the size of the signature
-        hf = (TMPQFile *)hFile;
-
-        // We have to exclude the signature file from the digest
-        pSI->BeginExclude = ha->MpqPos + hf->pFileEntry->ByteOffset;
-        pSI->EndExclude = pSI->BeginExclude + hf->pFileEntry->dwCmpSize;
-        dwFileSize = hf->dwDataSize;
-
-        // Close the file
-        SFileCloseFile(hFile);
-        pSI->nSignatureType = SIGNATURE_TYPE_WEAK;
-        return (dwFileSize == (MPQ_WEAK_SIGNATURE_SIZE + 8)) ? true : false;
-    }
-
-    // If there is extra bytes beyond the end of the archive,
-    // it's the strong signature
-    ExtraBytes = pSI->EndOfFile - pSI->EndMpqData;
-    if(ExtraBytes >= (MPQ_STRONG_SIGNATURE_SIZE + 4))
-    {
-        // Read the strong signature
-        if(!FileStream_Read(ha->pStream, &pSI->EndMpqData, pSI->Signature, (MPQ_STRONG_SIGNATURE_SIZE + 4)))
-            return false;
-
-        // Check the signature header "NGIS"
-        if(pSI->Signature[0] != 'N' || pSI->Signature[1] != 'G' || pSI->Signature[2] != 'I' || pSI->Signature[3] != 'S')
-            return false;
-
-        pSI->nSignatureType = SIGNATURE_TYPE_STRONG;
-        return true;
-    }
-
-    // Succeeded, but no known signature found
-    return true;
 }
 
 static bool CalculateMpqHashMd5(
@@ -723,7 +652,7 @@ static DWORD VerifyFile(
         if(dwTotalBytes == 0)
         {
             // Check CRC32 and MD5 only if there is no patches
-            if(hf->hfPatchFile == NULL)
+            if(hf->hfPatch == NULL)
             {
                 // Check if the CRC32 matches.
                 if(dwFlags & SFILE_VERIFY_FILE_CRC)
@@ -781,6 +710,63 @@ static DWORD VerifyFile(
     return dwVerifyResult;
 }
 
+// Used in SFileGetFileInfo
+bool QueryMpqSignatureInfo(
+    TMPQArchive * ha,
+    PMPQ_SIGNATURE_INFO pSI)
+{
+    ULONGLONG ExtraBytes;
+    TMPQFile * hf;
+    HANDLE hFile;
+    DWORD dwFileSize;
+
+    // Make sure it's all zeroed
+    memset(pSI, 0, sizeof(MPQ_SIGNATURE_INFO));
+
+    // Calculate the range of the MPQ
+    CalculateArchiveRange(ha, pSI);
+
+    // If there is "(signature)" file in the MPQ, it has a weak signature
+    if(SFileOpenFileEx((HANDLE)ha, SIGNATURE_NAME, SFILE_OPEN_BASE_FILE, &hFile))
+    {
+        // Get the content of the signature
+        SFileReadFile(hFile, pSI->Signature, sizeof(pSI->Signature), &pSI->cbSignatureSize, NULL);
+
+        // Verify the size of the signature
+        hf = (TMPQFile *)hFile;
+
+        // We have to exclude the signature file from the digest
+        pSI->BeginExclude = ha->MpqPos + hf->pFileEntry->ByteOffset;
+        pSI->EndExclude = pSI->BeginExclude + hf->pFileEntry->dwCmpSize;
+        dwFileSize = hf->dwDataSize;
+
+        // Close the file
+        SFileCloseFile(hFile);
+        pSI->SignatureTypes |= SIGNATURE_TYPE_WEAK;
+        return (dwFileSize == (MPQ_WEAK_SIGNATURE_SIZE + 8)) ? true : false;
+    }
+
+    // If there is extra bytes beyond the end of the archive,
+    // it's the strong signature
+    ExtraBytes = pSI->EndOfFile - pSI->EndMpqData;
+    if(ExtraBytes >= (MPQ_STRONG_SIGNATURE_SIZE + 4))
+    {
+        // Read the strong signature
+        if(!FileStream_Read(ha->pStream, &pSI->EndMpqData, pSI->Signature, (MPQ_STRONG_SIGNATURE_SIZE + 4)))
+            return false;
+
+        // Check the signature header "NGIS"
+        if(pSI->Signature[0] != 'N' || pSI->Signature[1] != 'G' || pSI->Signature[2] != 'I' || pSI->Signature[3] != 'S')
+            return false;
+
+        pSI->SignatureTypes |= SIGNATURE_TYPE_STRONG;
+        return true;
+    }
+
+    // Succeeded, but no known signature found
+    return true;
+}
+
 //-----------------------------------------------------------------------------
 // Public (exported) functions
 
@@ -828,7 +814,7 @@ int WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * sz
     TMPQHeader * pHeader;
 
     // Verify input parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         return ERROR_INVALID_PARAMETER;
     pHeader = ha->pHeader;
 
@@ -900,7 +886,7 @@ DWORD WINAPI SFileVerifyArchive(HANDLE hMpq)
     TMPQArchive * ha = (TMPQArchive *)hMpq;
 
     // Verify input parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         return ERROR_VERIFY_FAILED;
 
     // Get the MPQ signature and signature type
@@ -908,18 +894,20 @@ DWORD WINAPI SFileVerifyArchive(HANDLE hMpq)
     if(!QueryMpqSignatureInfo(ha, &si))
         return ERROR_VERIFY_FAILED;
 
-    // Verify the signature
-    switch(si.nSignatureType)
-    {
-        case SIGNATURE_TYPE_NONE:
-            return ERROR_NO_SIGNATURE;
+    // If there is no signature
+    if(si.SignatureTypes == 0)
+        return ERROR_NO_SIGNATURE;
 
-        case SIGNATURE_TYPE_WEAK:
-            return VerifyWeakSignature(ha, &si);
+    // We haven't seen a MPQ with both signatures
+    assert(si.SignatureTypes == SIGNATURE_TYPE_WEAK || si.SignatureTypes == SIGNATURE_TYPE_STRONG);
 
-        case SIGNATURE_TYPE_STRONG:
-            return VerifyStrongSignature(ha, &si);
-    }
+    // Verify the strong signature, if present
+    if(si.SignatureTypes & SIGNATURE_TYPE_STRONG)
+        return VerifyStrongSignature(ha, &si);
 
-    return ERROR_VERIFY_FAILED;
+    // Verify the weak signature, if present
+    if(si.SignatureTypes & SIGNATURE_TYPE_WEAK)
+        return VerifyWeakSignature(ha, &si);
+
+    return ERROR_NO_SIGNATURE;
 }

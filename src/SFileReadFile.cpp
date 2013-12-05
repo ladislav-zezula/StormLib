@@ -14,102 +14,7 @@
 #include "StormCommon.h"
 
 //-----------------------------------------------------------------------------
-// Local structures
-
-struct TFileHeader2Ext
-{
-    DWORD dwOffset00Data;               // Required data at offset 00 (32-bits)
-    DWORD dwOffset00Mask;               // Mask for data at offset 00 (32 bits). 0 = data are ignored
-    DWORD dwOffset04Data;               // Required data at offset 04 (32-bits)
-    DWORD dwOffset04Mask;               // Mask for data at offset 04 (32 bits). 0 = data are ignored
-    const char * szExt;                 // Supplied extension, if the condition is true
-};
-
-//-----------------------------------------------------------------------------
 // Local functions
-
-static DWORD GetMpqFileCount(TMPQArchive * ha)
-{
-    TFileEntry * pFileTableEnd;
-    TFileEntry * pFileEntry;
-    DWORD dwFileCount = 0;
-
-    // Go through all open MPQs, including patches
-    while(ha != NULL)
-    {
-        // Only count files that are not patch files
-        pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
-        for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
-        {
-            // If the file is patch file and this is not primary archive, skip it
-            // BUGBUG: This errorneously counts non-patch files that are in both
-            // base MPQ and in patches, and increases the number of files by cca 50%
-            if((pFileEntry->dwFlags & (MPQ_FILE_EXISTS | MPQ_FILE_PATCH_FILE)) == MPQ_FILE_EXISTS)
-                dwFileCount++;
-        }
-
-        // Move to the next patch archive
-        ha = ha->haPatch;
-    }
-
-    return dwFileCount;
-}
-
-static bool GetFilePatchChain(TMPQFile * hf, void * pvFileInfo, DWORD cbFileInfo, LPDWORD pcbLengthNeeded)
-{
-    TMPQFile * hfTemp;
-    TCHAR * szPatchChain = (TCHAR *)pvFileInfo;
-    TCHAR * szFileName;
-    size_t cchCharsNeeded = 1;
-    size_t nLength;
-    DWORD cbLengthNeeded;
-
-    // Check if the "hf" is a MPQ file
-    if(hf->pStream != NULL)
-    {
-        // Calculate the length needed
-        szFileName = FileStream_GetFileName(hf->pStream);
-        cchCharsNeeded += _tcslen(szFileName) + 1;
-        cbLengthNeeded = (DWORD)(cchCharsNeeded * sizeof(TCHAR));
-        
-        // If we have enough space, copy the file name
-        if(cbFileInfo >= cbLengthNeeded)
-        {
-            nLength = _tcslen(szFileName) + 1;
-            memcpy(szPatchChain, szFileName, nLength * sizeof(TCHAR));
-            szPatchChain += nLength;
-
-            // Terminate the multi-string
-            *szPatchChain = 0;
-        }
-    }
-    else
-    {
-        // Calculate number of characters needed
-        for(hfTemp = hf; hfTemp != NULL; hfTemp = hfTemp->hfPatchFile)
-            cchCharsNeeded += _tcslen(FileStream_GetFileName(hfTemp->ha->pStream)) + 1;
-        cbLengthNeeded = (DWORD)(cchCharsNeeded * sizeof(TCHAR));
-
-        // If we have enough space, the copy the patch chain
-        if(cbFileInfo >= cbLengthNeeded)
-        {
-            for(hfTemp = hf; hfTemp != NULL; hfTemp = hfTemp->hfPatchFile)
-            {
-                szFileName = FileStream_GetFileName(hfTemp->ha->pStream);
-                nLength = _tcslen(szFileName) + 1;
-                memcpy(szPatchChain, szFileName, nLength * sizeof(TCHAR));
-                szPatchChain += nLength;
-            }
-
-            // Terminate the multi-string
-            *szPatchChain = 0;
-        }
-    }
-
-    // Give result length, terminate multi-string and return
-    *pcbLengthNeeded = cbLengthNeeded;
-    return true;
-}
 
 //  hf            - MPQ File handle.
 //  pbBuffer      - Pointer to target buffer to store sectors.
@@ -453,7 +358,12 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         nError = AllocateSectorBuffer(hf);
         if(nError != ERROR_SUCCESS)
             return nError;
+        pbRawData = hf->pbFileSector;
+    }
 
+    // If the file sector is not loaded yet, do it
+    if(hf->dwSectorOffs != 0)
+    {
         // Is the file compressed?
         if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
@@ -750,7 +660,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     lpOverlapped = lpOverlapped;
 
     // Check valid parameters
-    if(!IsValidFileHandle(hf))
+    if(!IsValidFileHandle(hFile))
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
@@ -769,7 +679,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     }
 
     // If the file is a patch file, we have to read it special way
-    else if(hf->hfPatchFile != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
+    else if(hf->hfPatch != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
     {
         nError = ReadMpqFilePatchFile(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }
@@ -819,13 +729,13 @@ DWORD WINAPI SFileGetFileSize(HANDLE hFile, LPDWORD pdwFileSizeHigh)
     TMPQFile * hf = (TMPQFile *)hFile;
 
     // Validate the file handle before we go on
-    if(IsValidFileHandle(hf))
+    if(IsValidFileHandle(hFile))
     {
         // Make sure that the variable is initialized
         FileSize = 0;
 
         // If the file is patched file, we have to get the size of the last version
-        if(hf->hfPatchFile != NULL)
+        if(hf->hfPatch != NULL)
         {
             // Walk through the entire patch chain, take the last version
             while(hf != NULL)
@@ -834,7 +744,7 @@ DWORD WINAPI SFileGetFileSize(HANDLE hFile, LPDWORD pdwFileSizeHigh)
                 FileSize = hf->pFileEntry->dwFileSize;
 
                 // Move to the next patch file in the hierarchy
-                hf = hf->hfPatchFile;
+                hf = hf->hfPatch;
             }
         }
         else
@@ -868,7 +778,7 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
     DWORD dwFilePosHi;
 
     // If the hFile is not a valid file handle, return an error.
-    if(!IsValidFileHandle(hf))
+    if(!IsValidFileHandle(hFile))
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return SFILE_INVALID_POS;
@@ -954,367 +864,3 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
     }
 }
 
-//-----------------------------------------------------------------------------
-// Tries to retrieve the file name
-
-static TFileHeader2Ext data2ext[] = 
-{
-    {0x00005A4D, 0x0000FFFF, 0x00000000, 0x00000000, "exe"},    // EXE files
-    {0x00000006, 0xFFFFFFFF, 0x00000001, 0xFFFFFFFF, "dc6"},    // EXE files
-    {0x1A51504D, 0xFFFFFFFF, 0x00000000, 0x00000000, "mpq"},    // MPQ archive header ID ('MPQ\x1A')
-    {0x46464952, 0xFFFFFFFF, 0x00000000, 0x00000000, "wav"},    // WAVE header 'RIFF'
-    {0x324B4D53, 0xFFFFFFFF, 0x00000000, 0x00000000, "smk"},    // Old "Smacker Video" files 'SMK2'
-    {0x694B4942, 0xFFFFFFFF, 0x00000000, 0x00000000, "bik"},    // Bink video files (new)
-    {0x0801050A, 0xFFFFFFFF, 0x00000000, 0x00000000, "pcx"},    // PCX images used in Diablo I
-    {0x544E4F46, 0xFFFFFFFF, 0x00000000, 0x00000000, "fnt"},    // Font files used in Diablo II
-    {0x6D74683C, 0xFFFFFFFF, 0x00000000, 0x00000000, "html"},   // HTML '<htm'
-    {0x4D54483C, 0xFFFFFFFF, 0x00000000, 0x00000000, "html"},   // HTML '<HTM
-    {0x216F6F57, 0xFFFFFFFF, 0x00000000, 0x00000000, "tbl"},    // Table files
-    {0x31504C42, 0xFFFFFFFF, 0x00000000, 0x00000000, "blp"},    // BLP textures
-    {0x32504C42, 0xFFFFFFFF, 0x00000000, 0x00000000, "blp"},    // BLP textures (v2)
-    {0x584C444D, 0xFFFFFFFF, 0x00000000, 0x00000000, "mdx"},    // MDX files
-    {0x45505954, 0xFFFFFFFF, 0x00000000, 0x00000000, "pud"},    // Warcraft II maps
-    {0x38464947, 0xFFFFFFFF, 0x00000000, 0x00000000, "gif"},    // GIF images 'GIF8'
-    {0x3032444D, 0xFFFFFFFF, 0x00000000, 0x00000000, "m2"},     // WoW ??? .m2
-    {0x43424457, 0xFFFFFFFF, 0x00000000, 0x00000000, "dbc"},    // ??? .dbc
-    {0x47585053, 0xFFFFFFFF, 0x00000000, 0x00000000, "bls"},    // WoW pixel shaders
-    {0xE0FFD8FF, 0xFFFFFFFF, 0x00000000, 0x00000000, "jpg"},    // JPEG image
-    {0x00000000, 0x00000000, 0x00000000, 0x00000000, "xxx"},    // Default extension
-    {0, 0, 0, 0, NULL}                                          // Terminator 
-};
-
-static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * szFileName)
-{
-    TMPQFile * hf = (TMPQFile *)hFile;  // MPQ File handle
-    DWORD FirstBytes[2] = {0, 0};       // The first 4 bytes of the file
-    DWORD dwBytesRead = 0;
-    DWORD dwFilePos;                    // Saved file position
-
-    // Read the first 2 DWORDs bytes from the file
-    dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);   
-    SFileReadFile(hFile, FirstBytes, sizeof(FirstBytes), &dwBytesRead, NULL);
-    SFileSetFilePointer(hFile, dwFilePos, NULL, FILE_BEGIN);
-
-    // If we read at least 8 bytes
-    if(dwBytesRead == sizeof(FirstBytes))
-    {
-        // Make sure that the array is properly BSWAP-ed
-        BSWAP_ARRAY32_UNSIGNED(FirstBytes, sizeof(FirstBytes));
-
-        // Try to guess file extension from those 2 DWORDs
-        for(size_t i = 0; data2ext[i].szExt != NULL; i++)
-        {
-            if((FirstBytes[0] & data2ext[i].dwOffset00Mask) == data2ext[i].dwOffset00Data &&
-               (FirstBytes[1] & data2ext[i].dwOffset04Mask) == data2ext[i].dwOffset04Data)
-            {
-                char szPseudoName[20] = "";    
-
-                // Format the pseudo-name
-                sprintf(szPseudoName, "File%08u.%s", (unsigned int)(pFileEntry - hf->ha->pFileTable), data2ext[i].szExt);
-
-                // Save the pseudo-name in the file entry as well
-                AllocateFileName(pFileEntry, szPseudoName);
-
-                // If the caller wants to copy the file name, do it
-                if(szFileName != NULL)
-                    strcpy(szFileName, szPseudoName);
-                return ERROR_SUCCESS;
-            }
-        }
-    }
-
-    return ERROR_NOT_SUPPORTED;
-}
-
-bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
-{
-    TMPQFile * hf = (TMPQFile *)hFile;  // MPQ File handle
-    TCHAR * szFileNameT;
-    int nError = ERROR_INVALID_HANDLE;
-
-    // Pre-zero the output buffer
-    if(szFileName != NULL)
-        *szFileName = 0;
-
-    // Check valid parameters
-    if(IsValidFileHandle(hf))
-    {
-        TFileEntry * pFileEntry = hf->pFileEntry;
-
-        // For MPQ files, retrieve the file name from the file entry
-        if(hf->pStream == NULL)
-        {
-            if(pFileEntry != NULL)
-            {
-                // If the file name is not there yet, create a pseudo name
-                if(pFileEntry->szFileName == NULL)
-                {
-                    nError = CreatePseudoFileName(hFile, pFileEntry, szFileName);
-                }
-                else
-                {
-                    if(szFileName != NULL)
-                        strcpy(szFileName, pFileEntry->szFileName);
-                    nError = ERROR_SUCCESS;
-                }
-            }
-        }
-
-        // For local files, copy the file name from the stream
-        else
-        {
-            if(szFileName != NULL)
-            {
-                szFileNameT = FileStream_GetFileName(hf->pStream);
-                CopyFileName(szFileName, szFileNameT, _tcslen(szFileNameT));
-            }
-            nError = ERROR_SUCCESS;
-        }
-    }
-
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
-    return (nError == ERROR_SUCCESS);
-}
-
-//-----------------------------------------------------------------------------
-// Retrieves an information about an archive or about a file within the archive
-//
-//  hMpqOrFile - Handle to an MPQ archive or to a file
-//  dwInfoType - Information to obtain
-
-#define VERIFY_MPQ_HANDLE(h)                \
-    if(!IsValidMpqHandle(h))                \
-    {                                       \
-        nError = ERROR_INVALID_HANDLE;      \
-        break;                              \
-    }
-
-#define VERIFY_FILE_HANDLE(h)               \
-    if(!IsValidFileHandle(h))               \
-    {                                       \
-        nError = ERROR_INVALID_HANDLE;      \
-        break;                              \
-    }
-
-bool WINAPI SFileGetFileInfo(
-    HANDLE hMpqOrFile,
-    DWORD dwInfoType,
-    void * pvFileInfo,
-    DWORD cbFileInfo,
-    LPDWORD pcbLengthNeeded)
-{
-    TMPQArchive * ha = (TMPQArchive *)hMpqOrFile;
-    TMPQBlock * pBlock;
-    TMPQFile * hf = (TMPQFile *)hMpqOrFile;
-    void * pvSrcFileInfo = NULL;
-    DWORD cbLengthNeeded = 0;
-    DWORD dwIsReadOnly;
-    DWORD dwFileCount = 0;
-    DWORD dwFileIndex;
-    DWORD dwFileKey;
-    DWORD i;
-    int nError = ERROR_SUCCESS;
-
-    switch(dwInfoType)
-    {
-        case SFILE_INFO_ARCHIVE_NAME:
-            VERIFY_MPQ_HANDLE(ha);
-            
-            // pvFileInfo receives the name of the archive, terminated by 0
-            pvSrcFileInfo = FileStream_GetFileName(ha->pStream);
-            cbLengthNeeded = (DWORD)(_tcslen((TCHAR *)pvSrcFileInfo) + 1) * sizeof(TCHAR);
-            break;
-
-        case SFILE_INFO_ARCHIVE_SIZE:       // Size of the archive
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &ha->pHeader->dwArchiveSize;
-            break;
-
-        case SFILE_INFO_MAX_FILE_COUNT:     // Max. number of files in the MPQ
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &ha->dwMaxFileCount;
-            break;
-
-        case SFILE_INFO_HASH_TABLE_SIZE:    // Size of the hash table
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &ha->pHeader->dwHashTableSize;
-            break;
-
-        case SFILE_INFO_BLOCK_TABLE_SIZE:   // Size of the block table
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &ha->pHeader->dwBlockTableSize;
-            break;
-
-        case SFILE_INFO_SECTOR_SIZE:
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &ha->dwSectorSize;
-            break;
-
-        case SFILE_INFO_HASH_TABLE:
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
-            pvSrcFileInfo = ha->pHashTable;
-            break;
-
-        case SFILE_INFO_BLOCK_TABLE:
-            VERIFY_MPQ_HANDLE(ha);
-            cbLengthNeeded = ha->dwFileTableSize * sizeof(TMPQBlock);
-            if(cbFileInfo < cbLengthNeeded)
-            {
-                nError = ERROR_INSUFFICIENT_BUFFER;
-                break;
-            }
-
-            // Construct block table from file table size
-            pBlock = (TMPQBlock *)pvFileInfo;
-            for(i = 0; i < ha->dwFileTableSize; i++)
-            {
-                pBlock->dwFilePos = (DWORD)ha->pFileTable[i].ByteOffset;
-                pBlock->dwFSize   = ha->pFileTable[i].dwFileSize;
-                pBlock->dwCSize   = ha->pFileTable[i].dwCmpSize;
-                pBlock->dwFlags   = ha->pFileTable[i].dwFlags;
-                pBlock++;
-            }
-            break;
-
-        case SFILE_INFO_NUM_FILES:
-            VERIFY_MPQ_HANDLE(ha);
-            dwFileCount = GetMpqFileCount(ha);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &dwFileCount;
-            break;
-
-        case SFILE_INFO_STREAM_FLAGS:
-            VERIFY_MPQ_HANDLE(ha);
-            FileStream_GetFlags(ha->pStream, &dwFileKey);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &dwFileKey;
-            break;
-
-        case SFILE_INFO_IS_READ_ONLY:
-            VERIFY_MPQ_HANDLE(ha);
-            dwIsReadOnly = (FileStream_IsReadOnly(ha->pStream) || (ha->dwFlags & MPQ_FLAG_READ_ONLY));
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &dwIsReadOnly;
-            break;
-
-        case SFILE_INFO_HASH_INDEX:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->dwHashIndex;
-            break;
-
-        case SFILE_INFO_CODENAME1:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->dwHashIndex;
-            if(ha->pHashTable != NULL)
-                pvSrcFileInfo = &ha->pHashTable[hf->pFileEntry->dwHashIndex].dwName1;
-            break;
-
-        case SFILE_INFO_CODENAME2:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            if(ha->pHashTable != NULL)
-                pvSrcFileInfo = &ha->pHashTable[hf->pFileEntry->dwHashIndex].dwName2;
-            break;
-
-        case SFILE_INFO_LOCALEID:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->lcLocale;
-            break;
-
-        case SFILE_INFO_BLOCKINDEX:
-            VERIFY_FILE_HANDLE(hf);
-            dwFileIndex = (DWORD)(hf->pFileEntry - hf->ha->pFileTable);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &dwFileIndex;
-            break;
-
-        case SFILE_INFO_FILE_SIZE:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->dwFileSize;
-            break;
-
-        case SFILE_INFO_COMPRESSED_SIZE:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->dwCmpSize;
-            break;
-
-        case SFILE_INFO_FLAGS:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->pFileEntry->dwFlags;
-            break;
-
-        case SFILE_INFO_POSITION:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(ULONGLONG);
-            pvSrcFileInfo = &hf->pFileEntry->ByteOffset;
-            break;
-
-        case SFILE_INFO_KEY:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &hf->dwFileKey;
-            break;
-
-        case SFILE_INFO_KEY_UNFIXED:
-            VERIFY_FILE_HANDLE(hf);
-            dwFileKey = hf->dwFileKey;
-            if(hf->pFileEntry->dwFlags & MPQ_FILE_FIX_KEY)
-                dwFileKey = (dwFileKey ^ hf->pFileEntry->dwFileSize) - (DWORD)hf->MpqFilePos;
-            cbLengthNeeded = sizeof(DWORD);
-            pvSrcFileInfo = &dwFileKey;
-            break;
-
-        case SFILE_INFO_FILETIME:
-            VERIFY_FILE_HANDLE(hf);
-            cbLengthNeeded = sizeof(ULONGLONG);
-            pvSrcFileInfo = &hf->pFileEntry->FileTime;
-            break;
-
-        case SFILE_INFO_PATCH_CHAIN:
-            VERIFY_FILE_HANDLE(hf);
-            GetFilePatchChain(hf, pvFileInfo, cbFileInfo, &cbLengthNeeded);
-            break;
-
-        default:
-            nError = ERROR_INVALID_PARAMETER;
-            break;
-    }
-
-    // If everything is OK so far, copy the information
-    if(nError == ERROR_SUCCESS)
-    {
-        // Is the output buffer large enough?
-        if(cbFileInfo >= cbLengthNeeded)
-        {
-            // Copy the data
-            if(pvSrcFileInfo != NULL)
-                memcpy(pvFileInfo, pvSrcFileInfo, cbLengthNeeded);
-        }
-        else
-        {
-            nError = ERROR_INSUFFICIENT_BUFFER;
-        }
-
-        // Give the size to the caller
-        if(pcbLengthNeeded != NULL)
-            *pcbLengthNeeded = cbLengthNeeded;
-    }
-
-    // Set the last error value, if needed
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
-    return (nError == ERROR_SUCCESS);
-}

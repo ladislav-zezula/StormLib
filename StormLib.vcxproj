@@ -666,6 +666,11 @@
       <PrecompiledHeaderFile>StormCommon.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
     </ClCompile>
+    <ClCompile Include="src\SFileGetFileInfo.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>StormCommon.h</PrecompiledHeaderFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
     <ClCompile Include="src\SFileListFile.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>StormCommon.h</PrecompiledHeaderFile>

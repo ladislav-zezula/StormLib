@@ -61,9 +61,6 @@
 
 #define ID_MPQ_FILE            0x46494c45     // Used internally for checking TMPQFile ('FILE')
 
-#define MPQ_WEAK_SIGNATURE_SIZE        64
-#define MPQ_STRONG_SIGNATURE_SIZE     256 
-
 // Prevent problems with CRT "min" and "max" functions,
 // as they are not defined on all platforms
 #define STORMLIB_MIN(a, b) ((a < b) ? a : b)
@@ -71,39 +68,50 @@
 #define STORMLIB_UNUSED(p) ((void)(p))
 
 // Macro for building 64-bit file offset from two 32-bit
-#define MAKE_OFFSET64(hi, lo)      (((ULONGLONG)hi << 32) | lo)
+#define MAKE_OFFSET64(hi, lo)      (((ULONGLONG)hi << 32) | (ULONGLONG)lo)
+
+//-----------------------------------------------------------------------------
+// MPQ signature information
+
+// Size of each signature type
+#define MPQ_WEAK_SIGNATURE_SIZE        64
+#define MPQ_STRONG_SIGNATURE_SIZE     256 
+
+// MPQ signature info
+typedef struct _MPQ_SIGNATURE_INFO
+{
+    ULONGLONG BeginMpqData;                 // File offset where the hashing starts
+    ULONGLONG BeginExclude;                 // Begin of the excluded area (used for (signature) file)
+    ULONGLONG EndExclude;                   // End of the excluded area (used for (signature) file)
+    ULONGLONG EndMpqData;                   // File offset where the hashing ends
+    ULONGLONG EndOfFile;                    // Size of the entire file
+    BYTE  Signature[MPQ_STRONG_SIGNATURE_SIZE + 0x10];
+    DWORD cbSignatureSize;                  // Length of the signature
+    DWORD SignatureTypes;                   // See SIGNATURE_TYPE_XXX
+
+} MPQ_SIGNATURE_INFO, *PMPQ_SIGNATURE_INFO;
 
 //-----------------------------------------------------------------------------
 // Memory management
 //
 // We use our own macros for allocating/freeing memory. If you want
-// to redefine them, please keep the following rules
+// to redefine them, please keep the following rules:
 //
 //  - The memory allocation must return NULL if not enough memory
 //    (i.e not to throw exception)
-//  - It is not necessary to fill the allocated buffer with zeros
-//  - Memory freeing function doesn't have to test the pointer to NULL.
+//  - The allocating function does not need to fill the allocated buffer with zeros
+//  - Memory freeing function doesn't have to test the pointer to NULL
 //
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-__inline void * DebugMalloc(char * /* szFile */, int /* nLine */, size_t nSize)
-{
-//  return new BYTE[nSize];
-    return HeapAlloc(GetProcessHeap(), 0, nSize);
-}
 
-__inline void DebugFree(void * ptr)
-{
-//  delete [] ptr;
-    HeapFree(GetProcessHeap(), 0, ptr);
-}
+#define STORM_ALLOC(type, nitems) (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
+#define STORM_FREE(ptr)           HeapFree(GetProcessHeap(), 0, ptr)
 
-#define STORM_ALLOC(type, nitems) (type *)DebugMalloc(__FILE__, __LINE__, (nitems) * sizeof(type))
-#define STORM_FREE(ptr)           DebugFree(ptr)
 #else
 
-#define STORM_ALLOC(type, nitems)   (type *)malloc((nitems) * sizeof(type))
-#define STORM_FREE(ptr) free(ptr)
+#define STORM_ALLOC(type, nitems) (type *)malloc((nitems) * sizeof(type))
+#define STORM_FREE(ptr)           free(ptr)
 
 #endif
 
@@ -137,12 +145,7 @@ DWORD GetHashTableSizeForFileCount(DWORD dwFileCount);
 bool IsPseudoFileName(const char * szFileName, LPDWORD pdwFileIndex);
 ULONGLONG HashStringJenkins(const char * szFileName);
 
-void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength);
-void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength);
-
-int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
-
-DWORD GetDefaultSpecialFileFlags(TMPQArchive * ha, DWORD dwFileSize);
+DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion);
 
 void  EncryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwKey);
 void  DecryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwKey);
@@ -158,17 +161,26 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
 //-----------------------------------------------------------------------------
 // Handle validation functions
 
-bool IsValidMpqHandle(TMPQArchive * ha);
-bool IsValidFileHandle(TMPQFile * hf);
+TMPQArchive * IsValidMpqHandle(HANDLE hMpq);
+TMPQFile * IsValidFileHandle(HANDLE hFile);
 
 //-----------------------------------------------------------------------------
-// Hash table and block table manipulation
+// Support for MPQ file tables
+
+int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
 
 TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pPrevHash);
 TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
-DWORD AllocateHetEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
+
+TMPQExtHeader * LoadExtTable(TMPQArchive * ha, ULONGLONG ByteOffset, size_t Size, DWORD dwSignature, DWORD dwKey);
+TMPQHetTable * LoadHetTable(TMPQArchive * ha);
+TMPQBetTable * LoadBetTable(TMPQArchive * ha);
+
+TMPQHash * LoadHashTable(TMPQArchive * ha);
+TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries = false);
+TMPQBlock * TranslateBlockTable(TMPQArchive * ha, ULONGLONG * pcbTableSize, bool * pbNeedHiBlockTable);
 
 ULONGLONG FindFreeMpqSpace(TMPQArchive * ha);
 
@@ -178,10 +190,12 @@ int  LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsComp
 // Functions that load the HET and BET tables
 int  CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize);
 int  LoadAnyHashTable(TMPQArchive * ha);
-int  BuildFileTable(TMPQArchive * ha, ULONGLONG FileSize);
+int  BuildFileTable(TMPQArchive * ha);
+int  RebuildHetTable(TMPQArchive * ha);
+int  RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxFileCount);
 int  SaveMPQTables(TMPQArchive * ha);
 
-TMPQHetTable * CreateHetTable(DWORD dwHashTableSize, DWORD dwFileCount, DWORD dwHashBitSize, bool bCreateEmpty);
+TMPQHetTable * CreateHetTable(DWORD dwFileCount, DWORD dwHashBitSize, LPBYTE pbSrcData);
 void FreeHetTable(TMPQHetTable * pHetTable);
 
 TMPQBetTable * CreateBetTable(DWORD dwMaxFileCount);
@@ -194,17 +208,18 @@ TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID l
 TFileEntry * GetFileEntryByIndex(TMPQArchive * ha, DWORD dwIndex);
 
 // Allocates file name in the file entry
-void AllocateFileName(TFileEntry * pFileEntry, const char * szFileName);
+void AllocateFileName(TMPQArchive * ha, TFileEntry * pFileEntry, const char * szFileName);
 
 // Allocates new file entry in the MPQ tables. Reuses existing, if possible
-TFileEntry * FindFreeFileEntry(TMPQArchive * ha);
 TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID lcLocale);
 int  RenameFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry, const char * szNewFileName);
-void ClearFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
-int  FreeFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
+void DeleteFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
 
 // Invalidates entries for (listfile) and (attributes)
 void InvalidateInternalFiles(TMPQArchive * ha);
+
+// Retrieves information about the strong signature
+bool QueryMpqSignatureInfo(TMPQArchive * ha, PMPQ_SIGNATURE_INFO pSignatureInfo);
 
 //-----------------------------------------------------------------------------
 // Support for alternate file formats (SBaseSubTypes.cpp)
@@ -245,9 +260,13 @@ void FreeMPQArchive(TMPQArchive *& ha);
 // Utility functions
 
 bool CheckWildCard(const char * szString, const char * szWildCard);
-const char * GetPlainFileNameA(const char * szFileName);
-const TCHAR * GetPlainFileNameT(const TCHAR * szFileName);
 bool IsInternalMpqFileName(const char * szFileName);
+
+const TCHAR * GetPlainFileName(const TCHAR * szFileName);
+const char * GetPlainFileName(const char * szFileName);
+
+void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength);
+void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength);
 
 //-----------------------------------------------------------------------------
 // Support for adding files to the MPQ

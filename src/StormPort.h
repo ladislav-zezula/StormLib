@@ -169,15 +169,17 @@
   #define _tcscpy   strcpy
   #define _tcscat   strcat
   #define _tcsrchr  strrchr
+  #define _tcsstr   strstr
   #define _tprintf  printf
   #define _stprintf sprintf
   #define _tremove  remove
 
   #define _stricmp  strcasecmp
   #define _strnicmp strncasecmp
+  #define _tcsicmp  strcasecmp
   #define _tcsnicmp strncasecmp
 
-#endif // !WIN32
+#endif // !PLATFORM_WINDOWS
 
 // 64-bit calls are supplied by "normal" calls on Mac
 #if defined(PLATFORM_MAC)
@@ -221,7 +223,6 @@
     #define    BSWAP_ARRAY32_UNSIGNED(a,b)      {}
     #define    BSWAP_ARRAY64_UNSIGNED(a,b)      {}
     #define    BSWAP_PART_HEADER(a)             {}
-    #define    BSWAP_TMPQUSERDATA(a)            {}
     #define    BSWAP_TMPQHEADER(a,b)            {}
     #define    BSWAP_TMPKHEADER(a)              {}
 #else
@@ -255,7 +256,6 @@
     #define    BSWAP_ARRAY32_UNSIGNED(a,b)      ConvertUInt32Buffer((a),(b))
     #define    BSWAP_ARRAY64_UNSIGNED(a,b)      ConvertUInt64Buffer((a),(b))
     #define    BSWAP_PART_HEADER(a)             ConvertPartHeader(a)
-    #define    BSWAP_TMPQUSERDATA(a)            ConvertTMPQUserData((a))
     #define    BSWAP_TMPQHEADER(a,b)            ConvertTMPQHeader((a),(b))
     #define    BSWAP_TMPKHEADER(a)              ConvertTMPKHeader((a))
 #endif
@@ -271,6 +271,14 @@
   #endif
 #else
   #define STORMLIB_DEPRECATED(_Text) __attribute__((deprecated(_Text)))
+#endif
+
+// When a flag is deprecated, use this macro
+#ifndef _STORMLIB_NO_DEPRECATE
+  #define STORMLIB_DEPRECATED_FLAG(type, oldflag, newflag)    \
+    const STORMLIB_DEPRECATED(#oldflag " is deprecated. Use " #newflag ". To supress this warning, define _STORMLIB_NO_DEPRECATE") type oldflag = (type)newflag;
+#else
+  #define STORMLIB_DEPRECATED_FLAG(type, oldflag, newflag) const type oldflag = (type)newflag;
 #endif
 
 #endif // __STORMPORT_H__

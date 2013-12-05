@@ -425,7 +425,7 @@ static void LZMA_Callback_Free(void *p, void *address)
 // the data compressed by StormLib.
 //
 
-/*static */ void Compress_LZMA(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer, int * pCmpType, int nCmpLevel)
+static void Compress_LZMA(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer, int * pCmpType, int nCmpLevel)
 {
     ICompressProgress Progress;
     CLzmaEncProps props;
@@ -1075,6 +1075,16 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
         // MPQ_COMPRESSION_ADPCM_STEREO or MPQ_COMPRESSION_HUFFMANN
         // is not supported by newer MPQs.
         //
+
+        case (MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_HUFFMANN):
+            pfnDecompress1 = Decompress_huff;
+            pfnDecompress2 = Decompress_ADPCM_mono;
+            break;
+
+        case (MPQ_COMPRESSION_ADPCM_STEREO | MPQ_COMPRESSION_HUFFMANN):
+            pfnDecompress1 = Decompress_huff;
+            pfnDecompress2 = Decompress_ADPCM_stereo;
+            break;
 
         default:
             SetLastError(ERROR_FILE_CORRUPT);

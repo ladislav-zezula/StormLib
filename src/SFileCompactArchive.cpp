@@ -441,7 +441,8 @@ bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK pfnCompa
 {
     TMPQArchive * ha = (TMPQArchive *) hMpq;
 
-    if (!IsValidMpqHandle(ha)) {
+    if (!IsValidMpqHandle(hMpq))
+    {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
@@ -466,7 +467,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     int nError = ERROR_SUCCESS;
 
     // Test the valid parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         nError = ERROR_INVALID_HANDLE;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
         nError = ERROR_ACCESS_DENIED;
@@ -544,6 +545,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
         // Write the MPQ header to the file
         memcpy(&SaveMpqHeader, ha->pHeader, ha->pHeader->dwHeaderSize);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_1);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_2);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_3);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_4);
         if(!FileStream_Write(pTempStream, NULL, &SaveMpqHeader, ha->pHeader->dwHeaderSize))
@@ -555,9 +557,21 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
 
     // Now copy all files
     if(nError == ERROR_SUCCESS)
-    {
         nError = CopyMpqFiles(ha, pFileKeys, pTempStream);
-        ha->dwFlags |= MPQ_FLAG_CHANGED;
+
+    // Defragment the file table
+    if(nError == ERROR_SUCCESS)
+        nError = RebuildFileTable(ha, ha->pHeader->dwHashTableSize, ha->dwMaxFileCount);
+
+    // We also need to rebuild the HET table, if any
+    if(nError == ERROR_SUCCESS)
+    {
+        // Invalidate (listfile) and (attributes)
+        InvalidateInternalFiles(ha);
+
+        // Rebuild the HET table, if we have any
+        if(ha->pHetTable != NULL)
+            nError = RebuildHetTable(ha);
     }
 
     // If succeeded, switch the streams
@@ -608,25 +622,16 @@ DWORD WINAPI SFileGetMaxFileCount(HANDLE hMpq)
 
 bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
 {
-    TMPQHetTable * pOldHetTable = NULL;
     TMPQArchive * ha = (TMPQArchive *)hMpq;
-    TFileEntry * pOldFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
-    TFileEntry * pOldFileTable = NULL;
-    TFileEntry * pOldFileEntry;
-    TFileEntry * pFileEntry;
-    TMPQHash * pOldHashTable = NULL;
-    DWORD dwOldHashTableSize = 0;
-    DWORD dwOldFileTableSize = 0;
+    DWORD dwNewHashTableSize = 0;
     int nError = ERROR_SUCCESS;
 
     // Test the valid parameters
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
         nError = ERROR_INVALID_HANDLE;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
         nError = ERROR_ACCESS_DENIED;
-
-    // The new limit must be greater than the current file table size
-    if(nError == ERROR_SUCCESS && ha->dwFileTableSize > dwMaxFileCount)
+    if(dwMaxFileCount < ha->dwFileTableSize)
         nError = ERROR_DISK_FULL;
 
     // ALL file names must be known in order to be able
@@ -637,126 +642,28 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
     }
 
     // If the MPQ has a hash table, then we relocate the hash table
-    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL)
-    {
-        // Save parameters for the current hash table
-        dwOldHashTableSize = ha->pHeader->dwHashTableSize;
-        pOldHashTable = ha->pHashTable;
-
-        // Allocate new hash table
-        ha->pHeader->dwHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
-        ha->pHashTable = STORM_ALLOC(TMPQHash, ha->pHeader->dwHashTableSize);
-        if(ha->pHashTable != NULL)
-            memset(ha->pHashTable, 0xFF, ha->pHeader->dwHashTableSize * sizeof(TMPQHash));
-        else
-            nError = ERROR_NOT_ENOUGH_MEMORY;
-    }
-
-    // If the MPQ has HET table, allocate new one as well
-    if(nError == ERROR_SUCCESS && ha->pHetTable != NULL)
-    {
-        // Save the original HET table
-        pOldHetTable = ha->pHetTable;
-
-        // Create new one
-        ha->pHetTable = CreateHetTable(0, dwMaxFileCount, 0x40, true);
-        if(ha->pHetTable == NULL)
-            nError = ERROR_NOT_ENOUGH_MEMORY;
-    }
-
-    // Now reallocate the file table
     if(nError == ERROR_SUCCESS)
     {
-        // Save the current file table
-        dwOldFileTableSize = ha->dwFileTableSize;
-        pOldFileTable = ha->pFileTable;
+        // Calculate the hash table size for the new file limit
+        dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
 
-        // Create new one
-        ha->pFileTable = STORM_ALLOC(TFileEntry, dwMaxFileCount);
-        if(ha->pFileTable != NULL)
-            memset(ha->pFileTable, 0, dwMaxFileCount * sizeof(TFileEntry));
-        else
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+        // Rebuild both file tables
+        nError = RebuildFileTable(ha, dwNewHashTableSize, dwMaxFileCount);
     }
 
-    // Now we have to build both classic hash table and HET table.
+    // We always have to rebuild the (attributes) file due to file table change
     if(nError == ERROR_SUCCESS)
     {
-        DWORD dwFileIndex = 0;
-        DWORD dwHashIndex = 0;
-
-        // Create new hash and HET entry for each file
-        pFileEntry = ha->pFileTable;
-        for(pOldFileEntry = pOldFileTable; pOldFileEntry < pOldFileTableEnd; pOldFileEntry++)
-        {
-            if(pOldFileEntry->dwFlags & MPQ_FILE_EXISTS)
-            {
-                // Copy the old file entry to the new one
-                memcpy(pFileEntry, pOldFileEntry, sizeof(TFileEntry));
-                assert(pFileEntry->szFileName != NULL);
-                
-                // Create new entry in the hash table
-                if(ha->pHashTable != NULL)
-                {
-                    if(AllocateHashEntry(ha, pFileEntry) == NULL)
-                    {
-                        nError = ERROR_CAN_NOT_COMPLETE;
-                        break;
-                    }
-                }
-
-                // Create new entry in the HET table, if needed
-                if(ha->pHetTable != NULL)
-                {
-                    dwHashIndex = AllocateHetEntry(ha, pFileEntry);
-                    if(dwHashIndex == HASH_ENTRY_FREE)
-                    {
-                        nError = ERROR_CAN_NOT_COMPLETE;
-                        break;
-                    }
-                }
-
-                // Move to the next file entry in the new table
-                pFileEntry++;
-                dwFileIndex++;
-            }
-        }
-    }
-
-    // Mark the archive as changed
-    // Note: We always have to rebuild the (attributes) file due to file table change
-    if(nError == ERROR_SUCCESS)
-    {
-        ha->dwMaxFileCount = dwMaxFileCount;
+        // Invalidate (listfile) and (attributes)
         InvalidateInternalFiles(ha);
+
+        // Rebuild the HET table, if we have any
+        if(ha->pHetTable != NULL)
+            nError = RebuildHetTable(ha);
     }
-    else
-    {
-        // Revert the hash table
-        if(ha->pHashTable != NULL && pOldHashTable != NULL)
-        {
-            STORM_FREE(ha->pHashTable);
-            ha->pHeader->dwHashTableSize = dwOldHashTableSize;
-            ha->pHashTable = pOldHashTable;
-        }
 
-        // Revert the HET table
-        if(ha->pHetTable != NULL && pOldHetTable != NULL)
-        {
-            FreeHetTable(ha->pHetTable);
-            ha->pHetTable = pOldHetTable;
-        }
-
-        // Revert the file table
-        if(pOldFileTable != NULL)
-        {
-            STORM_FREE(ha->pFileTable);
-            ha->pFileTable = pOldFileTable;
-        }
-
+    // Return the error
+    if(nError != ERROR_SUCCESS)
         SetLastError(nError);
-    }
-
-    // Return the result
     return (nError == ERROR_SUCCESS);
 }

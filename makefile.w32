@@ -35,6 +35,7 @@ OBJS_CPP = src/adpcm/adpcm.o \
            src/SFileCreateArchive.o \
            src/SFileExtractFile.o \
            src/SFileFindFile.o \
+           src/SFileGetFileInfo.o \
            src/SFileListFile.o \
            src/SFileOpenArchive.o \
            src/SFileOpenFileEx.o \

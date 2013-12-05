@@ -439,6 +439,42 @@ int ConvertMpkHeaderToFormat4(
     return ERROR_FILE_CORRUPT;
 }
 
+// Attempts to search a free hash entry in the hash table being converted.
+// The created hash table must always be of nonzero size,
+// should have no duplicated items and no deleted entries
+TMPQHash * FindFreeHashEntry(TMPQHash * pHashTable, DWORD dwHashTableSize, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2)
+{
+    TMPQHash * pHash;
+    DWORD dwIndex;
+
+    // Set the initial index
+    dwStartIndex = dwIndex = (dwStartIndex & (dwHashTableSize - 1));
+    assert(dwHashTableSize != 0);
+
+    // Search the hash table and return the found entries in the following priority:
+    for(;;)
+    {
+        // We are not expecting to find matching entry in the hash table being built
+        // We are not expecting to find deleted entry either
+        pHash = pHashTable + dwIndex;
+        assert(pHash->dwName1 != dwName1 || pHash->dwName2 != dwName2);
+
+        // If we found a free entry, we need to stop searching
+        if(pHash->dwBlockIndex == HASH_ENTRY_FREE)
+            return pHash;
+
+        // Move to the next hash entry.
+        // If we reached the starting entry, it's failure.
+        dwIndex = (dwIndex + 1) & (dwHashTableSize - 1);
+        if(dwIndex == dwStartIndex)
+            break;
+    }
+
+    // We haven't found anything
+    assert(false);
+    return NULL;
+}
+
 void DecryptMpkTable(void * pvMpkTable, size_t cbSize)
 {
     LPBYTE pbMpkTable = (LPBYTE)pvMpkTable;
@@ -477,6 +513,7 @@ void * LoadMpkTable(TMPQArchive * ha, DWORD dwByteOffset, DWORD cbTableSize)
 TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
+    TMPQHash * pHashTable = NULL;
     TMPKHash * pMpkHash;
     TMPQHash * pHash = NULL;
     DWORD dwHashTableSize = pHeader->dwHashTableSize;
@@ -484,7 +521,7 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
     // MPKs use different hash table searching.
     // Instead of using MPQ_HASH_TABLE_INDEX hash as index,
     // they store the value directly in the hash table.
-    // Also, for faster searching, the hash table is sorted ascending by the value
+    // Also for faster searching, the hash table is sorted ascending by the value
 
     // Load and decrypt the MPK hash table.
     pMpkHash = (TMPKHash *)LoadMpkTable(ha, pHeader->dwHashTablePos, pHeader->dwHashTableSize * sizeof(TMPKHash));
@@ -493,25 +530,21 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
         // Calculate the hash table size as if it was real MPQ hash table
         pHeader->dwHashTableSize = GetHashTableSizeForFileCount(dwHashTableSize);
         pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
-        ha->dwHashIndexMask = pHeader->dwHashTableSize ? (pHeader->dwHashTableSize - 1) : 0;
 
         // Now allocate table that will serve like a true MPQ hash table,
         // so we translate the MPK hash table to MPQ hash table
-        ha->pHashTable = STORM_ALLOC(TMPQHash, pHeader->dwHashTableSize);
-        if(ha->pHashTable != NULL)
+        pHashTable = STORM_ALLOC(TMPQHash, pHeader->dwHashTableSize);
+        if(pHashTable != NULL)
         {
             // Set the entire hash table to free
-            memset(ha->pHashTable, 0xFF, (size_t)pHeader->HashTableSize64);
+            memset(pHashTable, 0xFF, (size_t)pHeader->HashTableSize64);
 
             // Copy the MPK hash table into MPQ hash table
             for(DWORD i = 0; i < dwHashTableSize; i++)
             {
                 // Finds the free hash entry in the hash table
-                pHash = FindFreeHashEntry(ha, pMpkHash[i].dwName1, pMpkHash[i].dwName2, pMpkHash[i].dwName3, 0);
-                if(pHash == NULL)
-                    break;
-
-                // Sanity check
+                // We don;t expect any errors here, because we are putting files to empty hash table
+                pHash = FindFreeHashEntry(pHashTable, pHeader->dwHashTableSize, pMpkHash[i].dwName1, pMpkHash[i].dwName2, pMpkHash[i].dwName3);
                 assert(pHash->dwBlockIndex == HASH_ENTRY_FREE);
 
                 // Copy the MPK hash entry to the hash table
@@ -521,21 +554,13 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
                 pHash->dwName1 = pMpkHash[i].dwName2;
                 pHash->dwName2 = pMpkHash[i].dwName3;
             }
-
-            // If an error was found during conversion,
-            // free the hash table
-            if(pHash == NULL)
-            {
-                STORM_FREE(ha->pHashTable);
-                ha->pHashTable = NULL;
-            }
         }
 
         // Free the temporary hash table
         STORM_FREE(pMpkHash);
     }
 
-    return ha->pHashTable;
+    return pHashTable;
 }
 
 static DWORD ConvertMpkFlagsToMpqFlags(DWORD dwMpkFlags)

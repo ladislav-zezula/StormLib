@@ -16,13 +16,14 @@ class TLogHelper
 {
     public:
 
-    TLogHelper(const char * szTestName);
+    TLogHelper(const char * szNewMainTitle = NULL, const char * szNewSubTitle = NULL);
     ~TLogHelper();
 
 #if defined(UNICODE) || defined(UNICODE)
     // TCHAR-based functions. They are only needed on UNICODE builds.
     // On ANSI builds is TCHAR = char, so we don't need them at all
     int  PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine);
+    void PrintProgress(const TCHAR * szFormat, ...);
     int  PrintErrorVa(const TCHAR * szFormat, ...);
     int  PrintError(const TCHAR * szFormat, const TCHAR * szFileName = NULL);
 #endif  // defined(UNICODE) || defined(UNICODE)
@@ -34,11 +35,16 @@ class TLogHelper
     int  PrintErrorVa(const char * szFormat, ...);
     int  PrintError(const char * szFormat, const char * szFileName = NULL);
 
+    const char * UserString;
+    unsigned int UserCount;
+    unsigned int UserTotal;
+
     protected:
 
     int  GetConsoleWidth();
 
-    const char * szTestName;                        // Title of the text
+    const char * szMainTitle;                       // Title of the text (usually name)
+    const char * szSubTitle;                        // Title of the text (can be name of the tested file)
     size_t nTextLength;                             // Length of the previous progress message
     bool bMessagePrinted;
 };
@@ -46,22 +52,45 @@ class TLogHelper
 //-----------------------------------------------------------------------------
 // Constructor and destructor
 
-TLogHelper::TLogHelper(const char * szName)
+TLogHelper::TLogHelper(const char * szNewTestTitle, const char * szNewSubTitle)
 {
+    UserString = "";
+    UserCount = 1;
+    UserTotal = 1;
+
     // Fill the test line structure
-    szTestName = szName;
+    szMainTitle = szNewTestTitle;
+    szSubTitle = szNewSubTitle;
     nTextLength = 0;
     bMessagePrinted = false;
 
-    // Show the user that a test is running
-    PrintProgress("Running test \"%s\" ...", szTestName);
+    // Print the initial information
+    if(szMainTitle != NULL)
+    {
+        if(szSubTitle != NULL)
+            printf("Running test %s (%s) ...", szMainTitle, szSubTitle);
+        else
+            printf("Running test %s ...", szMainTitle);
+    }
 }
 
 TLogHelper::~TLogHelper()
 {
-    // If no message has been printed, show "OK"
-    if(bMessagePrinted == false)
-        PrintMessage("Running test \"%s\" ... OK", szTestName);
+    const char * szSaveMainTitle = szMainTitle;
+    const char * szSaveSubTitle = szSubTitle;
+
+    // Set both to NULL so the won't be printed
+    szMainTitle = NULL;
+    szSubTitle = NULL;
+
+    // Print the final information
+    if(szSaveMainTitle != NULL && bMessagePrinted == false)
+    {
+        if(szSaveSubTitle != NULL)
+            PrintMessage("The test %s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle);
+        else
+            PrintMessage("The test %s succeeded.", szSaveMainTitle);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -71,9 +100,9 @@ TLogHelper::~TLogHelper()
 #if defined(UNICODE) || defined(UNICODE)
 int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine)
 {
-    TCHAR szOneLineBuff[0x200];
-    TCHAR * szSaveBuffer;
-    TCHAR * szBuffer = szOneLineBuff;
+    TCHAR szFormatBuff[0x200];
+    TCHAR szMessage[0x200];
+    TCHAR * szBuffer = szFormatBuff;
     int nRemainingWidth;
     int nConsoleWidth = GetConsoleWidth();
     int nLength = 0;
@@ -81,45 +110,58 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
 
     // Always start the buffer with '\r'
     *szBuffer++ = '\r';
-    szSaveBuffer = szBuffer;
 
     // Print the prefix, if needed
-    if(szTestName != NULL && bPrintPrefix)
+    if(szMainTitle != NULL && bPrintPrefix)
     {
-        while(szTestName[nLength] != 0)
-            *szBuffer++ = szTestName[nLength++];
+        while(szMainTitle[nLength] != 0)
+            *szBuffer++ = szMainTitle[nLength++];
         
         *szBuffer++ = ':';
         *szBuffer++ = ' ';
     }
 
-    // Format the message itself
+    // Copy the message format itself. Replace %s with "%s", unless it's (%s)
     if(szFormat != NULL)
     {
-        nLength = _vstprintf(szBuffer, szFormat, argList);
-        szBuffer += nLength;
+        while(szFormat[0] != 0)
+        {
+            if(szFormat[0] == '%' && szFormat[1] == 's' && szFormat[2] != ')')
+            {
+                *szBuffer++ = '\"';
+                *szBuffer++ = '%';
+                *szBuffer++ = 's';
+                *szBuffer++ = '\"';
+                szFormat += 2;
+            }
+            else
+            {
+                *szBuffer++ = *szFormat++;
+            }
+        }
     }
 
-    // Print the last error, if needed
+    // Append the last error
     if(bPrintLastError)
     {
         nLength = _stprintf(szBuffer, _T(" (error code: %u)"), nError);
         szBuffer += nLength;
     }
 
+    // Create the result string
+    szBuffer[0] = 0;
+    nLength = _vstprintf(szMessage, szFormatBuff, argList);
+    szBuffer = szMessage + nLength;
+
     // Shall we pad the string?
-    if((szBuffer - szSaveBuffer) < nConsoleWidth)
+    if(nLength < nConsoleWidth)
     {
         // Calculate the remaining width
-        nRemainingWidth = GetConsoleWidth() - (int)(szBuffer - szSaveBuffer) - 1;
+        nRemainingWidth = nConsoleWidth - nLength - 1;
 
         // Pad the string with spaces to fill it up to the end of the line
         for(int i = 0; i < nRemainingWidth; i++)
             *szBuffer++ = 0x20;
-
-        // Pad the buffer with backslashes to fill it up to the end of the line
-        for(int i = 0; i < nRemainingWidth; i++)
-            *szBuffer++ = 0x08;
     }
 
     // Put the newline, if requested
@@ -131,8 +173,17 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
         bMessagePrinted = true;
 
     // Spit out the text in one single printf
-    _tprintf(szOneLineBuff);
+    _tprintf(szMessage);
     return nError;
+}
+
+void TLogHelper::PrintProgress(const TCHAR * szFormat, ...)
+{
+    va_list argList;
+
+    va_start(argList, szFormat);
+    PrintWithClreol(szFormat, argList, true, false, false);
+    va_end(argList);
 }
 
 int TLogHelper::PrintErrorVa(const TCHAR * szFormat, ...)
@@ -158,9 +209,9 @@ int TLogHelper::PrintError(const TCHAR * szFormat, const TCHAR * szFileName)
 
 int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine)
 {
-    char szOneLineBuff[0x200];
-    char * szSaveBuffer;
-    char * szBuffer = szOneLineBuff;
+    char szFormatBuff[0x200];
+    char szMessage[0x200];
+    char * szBuffer = szFormatBuff;
     int nRemainingWidth;
     int nConsoleWidth = GetConsoleWidth();
     int nLength = 0;
@@ -168,45 +219,58 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
 
     // Always start the buffer with '\r'
     *szBuffer++ = '\r';
-    szSaveBuffer = szBuffer;
 
     // Print the prefix, if needed
-    if(szTestName != NULL && bPrintPrefix)
+    if(szMainTitle != NULL && bPrintPrefix)
     {
-        while(szTestName[nLength] != 0)
-            *szBuffer++ = szTestName[nLength++];
+        while(szMainTitle[nLength] != 0)
+            *szBuffer++ = szMainTitle[nLength++];
         
         *szBuffer++ = ':';
         *szBuffer++ = ' ';
     }
 
-    // Format the message itself
+    // Copy the message format itself. Replace %s with "%s", unless it's (%s)
     if(szFormat != NULL)
     {
-        nLength = vsprintf(szBuffer, szFormat, argList);
-        szBuffer += nLength;
+        while(szFormat[0] != 0)
+        {
+            if(szFormat[0] == '%' && szFormat[1] == 's' && szFormat[2] != ')')
+            {
+                *szBuffer++ = '\"';
+                *szBuffer++ = '%';
+                *szBuffer++ = 's';
+                *szBuffer++ = '\"';
+                szFormat += 2;
+            }
+            else
+            {
+                *szBuffer++ = *szFormat++;
+            }
+        }
     }
 
-    // Print the last error, if needed
+    // Append the last error
     if(bPrintLastError)
     {
         nLength = sprintf(szBuffer, " (error code: %u)", nError);
         szBuffer += nLength;
     }
 
+    // Create the result string
+    szBuffer[0] = 0;
+    nLength = vsprintf(szMessage, szFormatBuff, argList);
+
     // Shall we pad the string?
-    if((szBuffer - szSaveBuffer) < nConsoleWidth)
+    szBuffer = szMessage + nLength;
+    if(nLength < nConsoleWidth)
     {
         // Calculate the remaining width
-        nRemainingWidth = GetConsoleWidth() - (int)(szBuffer - szSaveBuffer) - 1;
+        nRemainingWidth = nConsoleWidth - nLength - 1;
 
         // Pad the string with spaces to fill it up to the end of the line
         for(int i = 0; i < nRemainingWidth; i++)
             *szBuffer++ = 0x20;
-
-        // Pad the buffer with backslashes to fill it up to the end of the line
-        for(int i = 0; i < nRemainingWidth; i++)
-            *szBuffer++ = 0x08;
     }
 
     // Put the newline, if requested
@@ -218,7 +282,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
         bMessagePrinted = true;
 
     // Spit out the text in one single printf
-    printf(szOneLineBuff);
+    printf(szMessage, 0);
     return nError;
 }
 

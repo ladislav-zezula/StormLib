@@ -779,6 +779,42 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\SFileGetFileInfo.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						WarningLevel="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						WarningLevel="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						WarningLevel="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						WarningLevel="4"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\src\SFileListFile.cpp"
 				>
 				<FileConfiguration

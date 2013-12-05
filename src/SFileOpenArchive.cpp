@@ -32,6 +32,33 @@ static bool IsAviFile(void * pvFileBegin)
     return (DwordValue0 == 0x46464952 && DwordValue2 == 0x20495641 && DwordValue3 == 0x5453494C);
 }
 
+static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSize, void * pvUserData)
+{
+    TMPQUserData * pUserData;
+
+    // BSWAP the source data and copy them to our buffer
+    BSWAP_ARRAY32_UNSIGNED(&pvUserData, sizeof(TMPQUserData));
+    pUserData = (TMPQUserData *)pvUserData;
+
+    // Check the sizes
+    if(pUserData->cbUserDataHeader <= pUserData->cbUserDataSize && pUserData->cbUserDataSize <= pUserData->dwHeaderOffs)
+    {
+        // Move to the position given by the userdata
+        ByteOffset += pUserData->dwHeaderOffs;
+
+        // The MPQ header should be within range of the file size
+        if((ByteOffset + MPQ_HEADER_SIZE_V1) < FileSize)
+        {
+            // Note: We should verify if there is the MPQ header.
+            // However, the header could be at any position below that
+            // that is multiplier of 0x200
+            return (TMPQUserData *)pvUserData;
+        }
+    }
+
+    return NULL;
+}
+
 static TFileBitmap * CreateFileBitmap(TMPQArchive * ha, TMPQBitmap * pMpqBitmap, bool bFileIsComplete)
 {
     TFileBitmap * pBitmap;
@@ -144,6 +171,7 @@ bool WINAPI SFileOpenArchive(
     DWORD dwFlags,
     HANDLE * phMpq)
 {
+    TMPQUserData * pUserData;
     TFileStream * pStream = NULL;       // Open file stream
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
@@ -166,11 +194,18 @@ bool WINAPI SFileOpenArchive(
         if(pStream == NULL)
             nError = GetLastError();
     }
-    
-    // Allocate the MPQhandle
+
+    // Check the file size. There must be at least 0x20 bytes
     if(nError == ERROR_SUCCESS)
     {
         FileStream_GetSize(pStream, &FileSize);
+        if(FileSize < MPQ_HEADER_SIZE_V1)
+            nError = ERROR_FILE_CORRUPT;
+    }
+
+    // Allocate the MPQhandle
+    if(nError == ERROR_SUCCESS)
+    {
         if((ha = STORM_ALLOC(TMPQArchive, 1)) == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }
@@ -219,18 +254,18 @@ bool WINAPI SFileOpenArchive(
 
             // If there is the MPQ user data signature, process it
             dwHeaderID = BSWAP_INT32_UNSIGNED(*(LPDWORD)ha->HeaderData);
-            if(dwHeaderID == ID_MPQ_USERDATA && ha->pUserData == NULL)
+            if(dwHeaderID == ID_MPQ_USERDATA && ha->pUserData == NULL && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
             {
-                // Ignore the MPQ user data completely if the caller wants to open the MPQ as V1.0
-                if((dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
+                // Verify if this looks like a valid user data
+                pUserData = IsValidMpqUserData(SearchPos, FileSize, ha->HeaderData);
+                if(pUserData != NULL)
                 {
                     // Fill the user data header
-                    ha->pUserData = &ha->UserData;
-                    memcpy(ha->pUserData, ha->HeaderData, sizeof(TMPQUserData));
-                    BSWAP_TMPQUSERDATA(ha->pUserData);
-
-                    // Remember the position of the user data and continue search
                     ha->UserDataPos = SearchPos;
+                    ha->pUserData = &ha->UserData;
+                    memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
+
+                    // Continue searching from that position
                     SearchPos += ha->pUserData->dwHeaderOffs;
                     continue;
                 }
@@ -266,9 +301,11 @@ bool WINAPI SFileOpenArchive(
         // Did we identify one of the supported headers?
         if(nError == ERROR_SUCCESS)
         {
-            // Set the position of user data, header and file offset of the header
+            // Set the user data position to the MPQ header, if none
             if(ha->pUserData == NULL)
                 ha->UserDataPos = SearchPos;
+
+            // Set the position of the MPQ header
             ha->pHeader = (TMPQHeader *)ha->HeaderData;
             ha->MpqPos = SearchPos;
 
@@ -285,7 +322,7 @@ bool WINAPI SFileOpenArchive(
 //      DumpMpqHeader(ha->pHeader);
 
         // W3x Map Protectors use the fact that War3's Storm.dll ignores the MPQ user data,
-        // and probably ignores the MPQ format version as well. The trick is to
+        // and ignores the MPQ format version as well. The trick is to
         // fake MPQ format 2, with an improper hi-word position of hash table and block table
         // We can overcome such protectors by forcing opening the archive as MPQ v 1.0
         if(dwFlags & MPQ_OPEN_FORCE_MPQ_V1)
@@ -336,13 +373,13 @@ bool WINAPI SFileOpenArchive(
     // the block table, BET table, hi-block table, (attributes) and (listfile).
     if(nError == ERROR_SUCCESS)
     {
-        nError = BuildFileTable(ha, FileSize);
+        nError = BuildFileTable(ha);
     }
 
     // Verify the file table, if no kind of protection was detected
     if(nError == ERROR_SUCCESS && (ha->dwFlags & MPQ_FLAG_PROTECTED) == 0)
     {
-        TFileEntry * pFileTableEnd = ha->pFileTable + ha->pHeader->dwBlockTableSize;
+        TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
         ULONGLONG RawFilePos;
 
         // Parse all file entries
@@ -379,10 +416,11 @@ bool WINAPI SFileOpenArchive(
         // Save the flags for (listfile)
         pFileEntry = GetFileEntryLocale(ha, LISTFILE_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
+        {
+            // Ignore result of the operation. (listfile) is optional.
+            SFileAddListFile((HANDLE)ha, NULL);
             ha->dwFileFlags1 = pFileEntry->dwFlags;
-
-        // Ignore result of the operation. (listfile) is optional.
-        SFileAddListFile((HANDLE)ha, NULL);
+        }
     }
 
     // Load the "(attributes)" file and merge it to the file table
@@ -391,10 +429,11 @@ bool WINAPI SFileOpenArchive(
         // Save the flags for (attributes)
         pFileEntry = GetFileEntryLocale(ha, ATTRIBUTES_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
+        {
+            // Ignore result of the operation. (attributes) is optional.
+            SAttrLoadAttributes(ha);
             ha->dwFileFlags2 = pFileEntry->dwFlags;
-
-        // Ignore result of the operation. (attributes) is optional.
-        SAttrLoadAttributes(ha);
+        }
     }
 
     // Cleanup and exit
@@ -436,11 +475,14 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
     int nError;
 
     // Do nothing if 'hMpq' is bad parameter
-    if(!IsValidMpqHandle(ha))
+    if(!IsValidMpqHandle(hMpq))
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
+
+    // Indicate that we are saving MPQ internal structures
+    ha->dwFlags |= MPQ_FLAG_SAVING_TABLES;
 
     // If the (listfile) has been invalidated, save it
     if(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID)
@@ -465,6 +507,9 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
         if(nError != ERROR_SUCCESS)
             nResultError = nError;
     }
+
+    // We are no longer saving internal MPQ structures
+    ha->dwFlags &= ~MPQ_FLAG_SAVING_TABLES;
 
     // Return the error
     if(nResultError != ERROR_SUCCESS)
