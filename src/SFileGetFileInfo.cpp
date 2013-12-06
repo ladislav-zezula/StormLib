@@ -16,12 +16,13 @@
 // Local defines
 
 // Information types for SFileGetFileInfo
-#define SFILE_INFO_TYPE_UNKNOWN         0
-#define SFILE_INFO_TYPE_DIRECT_POINTER  1
-#define SFILE_INFO_TYPE_ALLOCATED       2
-#define SFILE_INFO_TYPE_READ_FROM_FILE  3
-#define SFILE_INFO_TYPE_TABLE_POINTER   4
-#define SFILE_INFO_TYPE_FILE_ENTRY      5
+#define SFILE_INFO_TYPE_INVALID_HANDLE  0
+#define SFILE_INFO_TYPE_NOT_FOUND       1
+#define SFILE_INFO_TYPE_DIRECT_POINTER  2
+#define SFILE_INFO_TYPE_ALLOCATED       3
+#define SFILE_INFO_TYPE_READ_FROM_FILE  4
+#define SFILE_INFO_TYPE_TABLE_POINTER   5
+#define SFILE_INFO_TYPE_FILE_ENTRY      6
 
 //-----------------------------------------------------------------------------
 // Local functions
@@ -146,8 +147,8 @@ bool WINAPI SFileGetFileInfo(
     void * pvSrcFileInfo = NULL;
     DWORD cbSrcFileInfo = 0;
     DWORD dwInt32Value = 0;
-    int nInfoType = SFILE_INFO_TYPE_UNKNOWN;
-    int nError = ERROR_INVALID_PARAMETER;
+    int nInfoType = SFILE_INFO_TYPE_INVALID_HANDLE;
+    int nError = ERROR_SUCCESS;
 
     switch(InfoClass)
     {
@@ -163,31 +164,43 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqUserDataOffset:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && ha->pUserData != NULL)
+            if(ha != NULL)
             {
-                pvSrcFileInfo = &ha->UserDataPos;
-                cbSrcFileInfo = sizeof(ULONGLONG);
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pUserData != NULL)
+                {
+                    pvSrcFileInfo = &ha->UserDataPos;
+                    cbSrcFileInfo = sizeof(ULONGLONG);
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
         case SFileMpqUserDataHeader:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && ha->pUserData != NULL)
+            if(ha != NULL)
             {
-                ByteOffset = ha->UserDataPos;
-                cbSrcFileInfo = sizeof(TMPQUserData);
-                nInfoType = SFILE_INFO_TYPE_READ_FROM_FILE;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pUserData != NULL)
+                {
+                    ByteOffset = ha->UserDataPos;
+                    cbSrcFileInfo = sizeof(TMPQUserData);
+                    nInfoType = SFILE_INFO_TYPE_READ_FROM_FILE;
+                }
             }
             break;
 
         case SFileMpqUserData:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && ha->pUserData != NULL)
+            if(ha != NULL)
             {
-                ByteOffset = ha->UserDataPos + sizeof(TMPQUserData);
-                cbSrcFileInfo = ha->pUserData->dwHeaderOffs - sizeof(TMPQUserData);
-                nInfoType = SFILE_INFO_TYPE_READ_FROM_FILE;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pUserData != NULL)
+                {
+                    ByteOffset = ha->UserDataPos + sizeof(TMPQUserData);
+                    cbSrcFileInfo = ha->pUserData->dwHeaderOffs - sizeof(TMPQUserData);
+                    nInfoType = SFILE_INFO_TYPE_READ_FROM_FILE;
+                }
             }
             break;
 
@@ -245,9 +258,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
                 pvSrcFileInfo = LoadExtTable(ha, ha->pHeader->HetTablePos64, (size_t)ha->pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
-                cbSrcFileInfo = sizeof(TMPQHetHeader);
-                nInfoType = SFILE_INFO_TYPE_ALLOCATED;
+                if(pvSrcFileInfo != NULL)
+                {
+                    cbSrcFileInfo = sizeof(TMPQHetHeader);
+                    nInfoType = SFILE_INFO_TYPE_ALLOCATED;
+                }
             }
             break;
 
@@ -255,9 +272,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
                 pvSrcFileInfo = LoadHetTable(ha);
-                cbSrcFileInfo = sizeof(void *);
-                nInfoType = SFILE_INFO_TYPE_TABLE_POINTER;
+                if(pvSrcFileInfo != NULL)
+                {
+                    cbSrcFileInfo = sizeof(void *);
+                    nInfoType = SFILE_INFO_TYPE_TABLE_POINTER;
+                }
             }
             break;
 
@@ -285,6 +306,7 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
                 pvSrcFileInfo = LoadExtTable(ha, ha->pHeader->BetTablePos64, (size_t)ha->pHeader->BetTableSize64, BET_TABLE_SIGNATURE, MPQ_KEY_BLOCK_TABLE);
                 if(pvSrcFileInfo != NULL)
                 {
@@ -301,9 +323,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
                 pvSrcFileInfo = LoadBetTable(ha);
-                cbSrcFileInfo = sizeof(void *);
-                nInfoType = SFILE_INFO_TYPE_TABLE_POINTER;
+                if(pvSrcFileInfo != NULL)
+                {
+                    cbSrcFileInfo = sizeof(void *);
+                    nInfoType = SFILE_INFO_TYPE_TABLE_POINTER;
+                }
             }
             break;
 
@@ -342,9 +368,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
-                cbSrcFileInfo = ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
-                pvSrcFileInfo = ha->pHashTable;
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pHashTable != NULL)
+                {
+                    pvSrcFileInfo = ha->pHashTable;
+                    cbSrcFileInfo = ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
@@ -383,10 +413,14 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
-                cbSrcFileInfo = ha->pHeader->dwBlockTableSize * sizeof(TMPQBlock);
-                if(cbFileInfo >= cbSrcFileInfo)
-                    pvSrcFileInfo = LoadBlockTable(ha, true);
-                nInfoType = SFILE_INFO_TYPE_ALLOCATED;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(MAKE_OFFSET64(ha->pHeader->wBlockTablePosHi, ha->pHeader->dwBlockTablePos) != 0)
+                {
+                    cbSrcFileInfo = ha->pHeader->dwBlockTableSize * sizeof(TMPQBlock);
+                    if(cbFileInfo >= cbSrcFileInfo)
+                        pvSrcFileInfo = LoadBlockTable(ha, true);
+                    nInfoType = SFILE_INFO_TYPE_ALLOCATED;
+                }
             }
             break;
 
@@ -411,7 +445,15 @@ bool WINAPI SFileGetFileInfo(
             break;
 
         case SFileMpqHiBlockTable:
-            assert(false);
+            ha = IsValidMpqHandle(hMpqOrFile);
+            if(ha != NULL)
+            {
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pHeader->HiBlockTablePos64 && ha->pHeader->HiBlockTableSize64)
+                {
+                    assert(false);
+                }
+            }
             break;
 
         case SFileMpqSignatures:
@@ -426,10 +468,10 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqStrongSignatureOffset:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && QueryMpqSignatureInfo(ha, &SignatureInfo))
+            if(ha != NULL)
             {
-                // Is a strong signature present?
-                if(SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG)
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(QueryMpqSignatureInfo(ha, &SignatureInfo) && (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG))
                 {
                     pvSrcFileInfo = &SignatureInfo.EndMpqData;
                     cbSrcFileInfo = sizeof(ULONGLONG);
@@ -440,10 +482,10 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqStrongSignatureSize:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && QueryMpqSignatureInfo(ha, &SignatureInfo))
+            if(ha != NULL)
             {
-                // Is a strong signature present?
-                if(SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG)
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(QueryMpqSignatureInfo(ha, &SignatureInfo) && (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG))
                 {
                     dwInt32Value = MPQ_STRONG_SIGNATURE_SIZE + 4;
                     pvSrcFileInfo = &dwInt32Value;
@@ -455,10 +497,10 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqStrongSignature:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && QueryMpqSignatureInfo(ha, &SignatureInfo))
+            if(ha != NULL)
             {
-                // Is a strong signature present?
-                if(SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG)
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(QueryMpqSignatureInfo(ha, &SignatureInfo) && (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG))
                 {
                     pvSrcFileInfo = SignatureInfo.Signature;
                     cbSrcFileInfo = MPQ_STRONG_SIGNATURE_SIZE + 4;
@@ -469,22 +511,30 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqBitmapOffset:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && ha->pBitmap != NULL)
+            if(ha != NULL)
             {
-                Int64Value = MAKE_OFFSET64(ha->pBitmap->dwMapOffsetHi, ha->pBitmap->dwMapOffsetLo);
-                pvSrcFileInfo = &Int64Value;
-                cbSrcFileInfo = sizeof(ULONGLONG);
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pBitmap != NULL)
+                {
+                    Int64Value = MAKE_OFFSET64(ha->pBitmap->dwMapOffsetHi, ha->pBitmap->dwMapOffsetLo);
+                    pvSrcFileInfo = &Int64Value;
+                    cbSrcFileInfo = sizeof(ULONGLONG);
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
         case SFileMpqBitmapSize:
             ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL && ha->pBitmap != NULL)
+            if(ha != NULL)
             {
-                pvSrcFileInfo = &ha->dwBitmapSize;
-                cbSrcFileInfo = sizeof(DWORD);
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pBitmap != NULL)
+                {
+                    pvSrcFileInfo = &ha->dwBitmapSize;
+                    cbSrcFileInfo = sizeof(DWORD);
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
@@ -492,9 +542,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
-                pvSrcFileInfo = ha->pBitmap;
-                cbSrcFileInfo = ha->dwBitmapSize;
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pBitmap != NULL)
+                {
+                    pvSrcFileInfo = ha->pBitmap;
+                    cbSrcFileInfo = ha->dwBitmapSize;
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
@@ -563,9 +617,13 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
-                pvSrcFileInfo = &ha->pHeader->dwRawChunkSize;
-                cbSrcFileInfo = sizeof(DWORD);
-                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
+                if(ha->pHeader->dwRawChunkSize != 0)
+                {
+                    pvSrcFileInfo = &ha->pHeader->dwRawChunkSize;
+                    cbSrcFileInfo = sizeof(DWORD);
+                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                }
             }
             break;
 
@@ -760,7 +818,7 @@ bool WINAPI SFileGetFileInfo(
     }
 
     // If we validated the handle and info class, give as much info as possible
-    if(nInfoType != SFILE_INFO_TYPE_UNKNOWN)
+    if(nInfoType >= SFILE_INFO_TYPE_DIRECT_POINTER)
     {
         // Give the length needed, if wanted
         if(pcbLengthNeeded != NULL)
@@ -777,24 +835,21 @@ bool WINAPI SFileGetFileInfo(
                     case SFILE_INFO_TYPE_DIRECT_POINTER:
                     case SFILE_INFO_TYPE_ALLOCATED:
                         memcpy(pvFileInfo, pvSrcFileInfo, cbSrcFileInfo);
-                        nError = ERROR_SUCCESS;
                         break;
 
                     case SFILE_INFO_TYPE_READ_FROM_FILE:
-                        if(FileStream_Read(ha->pStream, &ByteOffset, pvFileInfo, cbSrcFileInfo))
-                            nError = ERROR_SUCCESS;
+                        if(!FileStream_Read(ha->pStream, &ByteOffset, pvFileInfo, cbSrcFileInfo))
+                            nError = GetLastError();
                         break;
 
                     case SFILE_INFO_TYPE_TABLE_POINTER:
                         *(void **)pvFileInfo = pvSrcFileInfo;
                         pvSrcFileInfo = NULL;
-                        nError = ERROR_SUCCESS;
                         break;
 
                     case SFILE_INFO_TYPE_FILE_ENTRY:
                         assert(pFileEntry != NULL);
                         ConvertFileEntryToSelfRelative((TFileEntry *)pvFileInfo, pFileEntry);
-                        nError = ERROR_SUCCESS;
                         break;
                 }
             }
@@ -803,16 +858,20 @@ bool WINAPI SFileGetFileInfo(
                 nError = ERROR_INSUFFICIENT_BUFFER;
             }
         }
-        else
-        {
-            nError = ERROR_SUCCESS;
-        }
 
         // Free the file info if needed
         if(nInfoType == SFILE_INFO_TYPE_ALLOCATED && pvSrcFileInfo != NULL)
             STORM_FREE(pvSrcFileInfo);
         if(nInfoType == SFILE_INFO_TYPE_TABLE_POINTER && pvSrcFileInfo != NULL)
             SFileFreeFileInfo(pvSrcFileInfo, InfoClass);
+    }
+    else
+    {
+        // Handle error cases
+        if(nInfoType == SFILE_INFO_TYPE_INVALID_HANDLE)
+            nError = ERROR_INVALID_HANDLE;
+        if(nInfoType == SFILE_INFO_TYPE_NOT_FOUND)
+            nError = ERROR_FILE_NOT_FOUND;
     }
 
     // Set the last error value, if needed

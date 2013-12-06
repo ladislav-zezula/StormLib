@@ -182,7 +182,7 @@ static bool BaseFile_Read(
         // we have to update the file position
         if(ByteOffset != pStream->Base.File.FilePos)
         {
-            lseek((intptr_t)pStream->Base.File.hFile, (off_t)(ByteOffset), SEEK_SET);
+            lseek64((intptr_t)pStream->Base.File.hFile, (__off64_t)(ByteOffset), SEEK_SET);
             pStream->Base.File.FilePos = ByteOffset;
         }
 
@@ -271,7 +271,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
         // we have to update the file position
         if(ByteOffset != pStream->Base.File.FilePos)
         {
-            lseek((intptr_t)pStream->Base.File.hFile, (off_t)(ByteOffset), SEEK_SET);
+            lseek64((intptr_t)pStream->Base.File.hFile, (__off64_t)(ByteOffset), SEEK_SET);
             pStream->Base.File.FilePos = ByteOffset;
         }
 
@@ -346,7 +346,7 @@ static bool BaseFile_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
     
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
     {
-        if(ftruncate((intptr_t)pStream->Base.File.hFile, (off_t)NewFileSize) == -1)
+        if(ftruncate64((intptr_t)pStream->Base.File.hFile, (__off64_t)NewFileSize) == -1)
         {
             nLastError = errno;
             return false;
@@ -429,7 +429,7 @@ static bool BaseFile_Create(
     {
         intptr_t handle;
         
-        handle = open(szFileName, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        handle = open(szFileName, O_RDWR | O_CREAT | O_TRUNC | O_LARGEFILE, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if(handle == -1)
         {
             nLastError = errno;
@@ -489,12 +489,12 @@ static bool BaseFile_Open(
 
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
     {
-        struct stat fileinfo;
+        struct stat64 fileinfo;
         int oflag = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? O_RDONLY : O_RDWR;
         intptr_t handle;
 
         // Open the file
-        handle = open(szFileName, oflag);
+        handle = open(szFileName, oflag | O_LARGEFILE);
         if(handle == -1)
         {
             nLastError = errno;
@@ -502,7 +502,7 @@ static bool BaseFile_Open(
         }
 
         // Get the file size
-        if(fstat(handle, &fileinfo) == -1)
+        if(fstat64(handle, &fileinfo) == -1)
         {
             nLastError = errno;
             return false;
@@ -650,7 +650,7 @@ static bool BaseMap_Open(
 #endif
 
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
-    struct stat fileinfo;
+    struct stat64 fileinfo;
     intptr_t handle;
     bool bResult = false;
 
@@ -659,7 +659,7 @@ static bool BaseMap_Open(
     if(handle != -1)
     {
         // Get the file size
-        if(fstat(handle, &fileinfo) != -1)
+        if(fstat64(handle, &fileinfo) != -1)
         {
             pStream->Base.Map.pbFile = (LPBYTE)mmap(NULL, (size_t)fileinfo.st_size, PROT_READ, MAP_PRIVATE, handle, 0);
             if(pStream->Base.Map.pbFile != NULL)

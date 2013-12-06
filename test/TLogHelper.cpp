@@ -41,6 +41,10 @@ class TLogHelper
 
     protected:
 
+#if defined(UNICODE) || defined(UNICODE)
+    TCHAR * CopyFormatCharacter(TCHAR * szBuffer, const TCHAR *& szFormat);
+#endif    
+    char * CopyFormatCharacter(char * szBuffer, const char *& szFormat);
     int  GetConsoleWidth();
 
     const char * szMainTitle;                       // Title of the text (usually name)
@@ -48,6 +52,17 @@ class TLogHelper
     size_t nTextLength;                             // Length of the previous progress message
     bool bMessagePrinted;
 };
+
+//-----------------------------------------------------------------------------
+// String replacements for format strings
+
+#ifdef _MSC_VER
+#define I64u_t _T("%I64u");
+#define I64u_a "%I64u";
+#else
+#define I64u_t "%llu";
+#define I64u_a "%llu";
+#endif
 
 //-----------------------------------------------------------------------------
 // Constructor and destructor
@@ -124,21 +139,8 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
     // Copy the message format itself. Replace %s with "%s", unless it's (%s)
     if(szFormat != NULL)
     {
-        while(szFormat[0] != 0)
-        {
-            if(szFormat[0] == '%' && szFormat[1] == 's' && szFormat[2] != ')')
-            {
-                *szBuffer++ = '\"';
-                *szBuffer++ = '%';
-                *szBuffer++ = 's';
-                *szBuffer++ = '\"';
-                szFormat += 2;
-            }
-            else
-            {
-                *szBuffer++ = *szFormat++;
-            }
-        }
+        szBuffer = CopyFormatCharacter(szBuffer, szFormat);
+        szFormat += nLength;
     }
 
     // Append the last error
@@ -235,18 +237,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
     {
         while(szFormat[0] != 0)
         {
-            if(szFormat[0] == '%' && szFormat[1] == 's' && szFormat[2] != ')')
-            {
-                *szBuffer++ = '\"';
-                *szBuffer++ = '%';
-                *szBuffer++ = 's';
-                *szBuffer++ = '\"';
-                szFormat += 2;
-            }
-            else
-            {
-                *szBuffer++ = *szFormat++;
-            }
+            szBuffer = CopyFormatCharacter(szBuffer, szFormat);
         }
     }
 
@@ -324,6 +315,66 @@ int TLogHelper::PrintError(const char * szFormat, const char * szFileName)
 //-----------------------------------------------------------------------------
 // Protected functions
 
+#ifdef _UNICODE
+TCHAR * TLogHelper::CopyFormatCharacter(TCHAR * szBuffer, const TCHAR *& szFormat)
+{
+    static const TCHAR * szStringFormat = _T("\"%s\"");
+    static const TCHAR * szUint64Format = I64u_t;
+
+    // String format
+    if(szFormat[0] == '%')
+    {
+        if(szFormat[1] == 's' && szFormat[2] != ')')
+        {
+            _tcscpy(szBuffer, szStringFormat);
+            szFormat += 2;
+            return szBuffer + _tcslen(szStringFormat);
+        }
+
+        // Replace %I64u with the proper platform-dependent suffix
+        if(szFormat[1] == 'I' && szFormat[2] == '6' && szFormat[3] == '4' && szFormat[4] == 'u')
+        {
+            _tcscpy(szBuffer, szUint64Format);
+            szFormat += 5;
+            return szBuffer + _tcslen(szUint64Format);
+        }
+    }
+
+    // Copy the character as-is
+    *szBuffer++ = *szFormat++;
+    return szBuffer;
+}
+#endif
+
+char * TLogHelper::CopyFormatCharacter(char * szBuffer, const char *& szFormat)
+{
+    static const char * szStringFormat = "\"%s\"";
+    static const char * szUint64Format = I64u_a;
+
+    // String format
+    if(szFormat[0] == '%')
+    {
+        if(szFormat[1] == 's' && szFormat[2] != ')')
+        {
+            strcpy(szBuffer, szStringFormat);
+            szFormat += 2;
+            return szBuffer + strlen(szStringFormat);
+        }
+
+        // Replace %I64u with the proper platform-dependent suffix
+        if(szFormat[1] == 'I' && szFormat[2] == '6' && szFormat[3] == '4' && szFormat[4] == 'u')
+        {
+            strcpy(szBuffer, szUint64Format);
+            szFormat += 5;
+            return szBuffer + strlen(szUint64Format);
+        }
+    }
+
+    // Copy the character as-is
+    *szBuffer++ = *szFormat++;
+    return szBuffer;
+}
+
 int TLogHelper::GetConsoleWidth()
 {
 #ifdef PLATFORM_WINDOWS
@@ -336,7 +387,7 @@ int TLogHelper::GetConsoleWidth()
 
     // On non-Windows platforms, we assume that width of the console line
     // is 80 characters
-    return 80;
+    return 120;
 
 #endif
 }

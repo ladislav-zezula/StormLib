@@ -382,19 +382,13 @@ int SListFileSaveToMpq(TMPQArchive * ha)
 
     // At this point, we expect to have at least one reserved entry in the file table
     assert(ha->dwReservedFiles >= 1);
+    ha->dwReservedFiles--;
 
     // Create the raw data that is to be written to (listfile)
     // Note: Creating the raw data before the (listfile) has been created in the MPQ
     // causes that the name of the listfile will not be included in the listfile itself.
     // That is OK, because (listfile) in Blizzard MPQs does not contain it either.
     pbListFile = CreateListFile(ha, &cbListFile);
-
-    // Now we decrement the number of reserved files.
-    // This frees one slot in the file table, so the subsequent file create operation should succeed
-    // This must happen even if the listfile cannot be created
-    ha->dwReservedFiles--;
-
-    // If the listfile create succeeded, we write it to the MPQ
     if(pbListFile != NULL)
     {
         // We expect it to be nonzero size

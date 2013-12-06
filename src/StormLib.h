@@ -413,7 +413,7 @@ typedef enum _SFileInfoClass
     SFileInfoNameHash2,                     // The second name hash in the hash table (DWORD)
     SFileInfoNameHash3,                     // 64-bit file name hash for the HET/BET tables (ULONGLONG)
     SFileInfoLocale,                        // File locale (DWORD)
-    SFileInfoFileIndex,                    // Block index (DWORD)
+    SFileInfoFileIndex,                     // Block index (DWORD)
     SFileInfoByteOffset,                    // File position in the archive (ULONGLONG)
     SFileInfoFileTime,                      // File time (ULONGLONG)
     SFileInfoFileSize,                      // Size of the file (DWORD)

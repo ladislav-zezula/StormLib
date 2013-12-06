@@ -219,7 +219,7 @@ static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const ch
     // Append the subdirectory, if any
     if(szSubDir != NULL && (nLength = strlen(szSubDir)) != 0)
     {
-        // No leading or trailing separator must be there
+        // No leading or trailing separators allowed
         assert(szSubDir[0] != '/' && szSubDir[0] != '\\');
         assert(szSubDir[nLength - 1] != '/' && szSubDir[nLength - 1] != '\\');
 
@@ -228,6 +228,12 @@ static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const ch
 
         // Copy the subdirectory
         mbstowcs(szBuffer, szSubDir, nLength);
+        
+        // Fix the path separators
+        for(size_t i = 0; i < nLength; i++)
+            szBuffer[i] = (szBuffer[i] != '\\' && szBuffer[i] != '/') ? szBuffer[i] : PATH_SEPARATOR;
+        
+        // Move the buffer pointer
         szBuffer += nLength;
     }
 
@@ -241,7 +247,7 @@ static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const ch
         // Append file path separator
         *szBuffer++ = PATH_SEPARATOR;
 
-        // Copy the subdirectory
+        // Copy the file name
         mbstowcs(szBuffer, szFileName, nLength);
         szBuffer += nLength;
     }
@@ -309,6 +315,12 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
 
         // Copy the subdirectory
         memcpy(szBuffer, szSubDir, nLength);
+
+        // Fix the path separators
+        for(size_t i = 0; i < nLength; i++)
+            szBuffer[i] = (szBuffer[i] != '\\' && szBuffer[i] != '/') ? szBuffer[i] : PATH_SEPARATOR;
+        
+        // Move the buffer pointer
         szBuffer += nLength;
     }
 
@@ -322,7 +334,7 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
         // Append file path separator
         *szBuffer++ = PATH_SEPARATOR;
 
-        // Copy the subdirectory
+        // Copy file name
         memcpy(szBuffer, szFileName, nLength);
         szBuffer += nLength;
     }
@@ -1045,7 +1057,7 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFileName, co
     TCHAR szMpqName[MAX_PATH];
     HANDLE hMpq = NULL;
     DWORD dwFlags = 0;
-    int nError;
+    int nError = ERROR_SUCCESS;
 
     // We expect MPQ directory to be already prepared by InitializeMpqDirectory
     assert(szMpqDirectory[0] != 0);
@@ -1088,7 +1100,7 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFileName, co
         SFileCloseArchive(hMpq);
     else
         *phMpq = hMpq;
-    return ERROR_SUCCESS;
+    return nError;
 }
 
 static int OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, const char * PatchList[])
@@ -1126,7 +1138,7 @@ static int OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, const char *
         SFileCloseArchive(hMpq);
     else
         *phMpq = hMpq;
-    return ERROR_SUCCESS;
+    return nError;
 }
 
 static int AddFileToMpq(
@@ -1648,6 +1660,7 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
 static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * szPlainName4)
 {
     TLogHelper Logger("GetFileInfoTest");
+    HANDLE hFile;
     HANDLE hMpq4;
     HANDLE hMpq1;
     DWORD cbLength;
@@ -1660,12 +1673,18 @@ static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * s
     nError4 = OpenExistingArchive(&Logger, szPlainName4, NULL, &hMpq4);
     if(nError1 == ERROR_SUCCESS && nError4 == ERROR_SUCCESS)
     {
-        // Invalid handle - expected (false, ERROR_INVALID_PARAMETER)
-        TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_PARAMETER);
+        // Invalid handle - expected (false, ERROR_INVALID_HANDLE)
+        TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+
+        // Valid handle but invalid value of file info class (false, ERROR_INVALID_PARAMETER)
+        TestGetFileInfo(&Logger, NULL, (SFileInfoClass)0xFFF, NULL, 0, NULL, false, ERROR_INVALID_PARAMETER);
+
+        // Valid archive handle but file info class is for file (false, ERROR_INVALID_HANDLE)
+        TestGetFileInfo(&Logger, NULL, SFileInfoNameHash1, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
 
         // Valid handle and all parameters NULL
         // Returns (true, ERROR_SUCCESS), if BET table is present, otherwise (false, ERROR_CAN_NOT_COMPLETE)
-        TestGetFileInfo(&Logger, hMpq1, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_PARAMETER);
+        TestGetFileInfo(&Logger, hMpq1, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_FILE_NOT_FOUND);
         TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, NULL, 0, NULL, true, ERROR_SUCCESS);
 
         // Now try to retrieve the required size of the BET table header
@@ -1685,7 +1704,7 @@ static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * s
 
         // Try to retrieve strong signature from the MPQ
         TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, NULL, 0, NULL, true, ERROR_SUCCESS);
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqStrongSignature, NULL, 0, NULL, false, ERROR_INVALID_PARAMETER);
+        TestGetFileInfo(&Logger, hMpq4, SFileMpqStrongSignature, NULL, 0, NULL, false, ERROR_FILE_NOT_FOUND);
 
         // Strong signature is returned including the signature ID
         TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, NULL, 0, &cbLength, true, ERROR_SUCCESS);
@@ -1694,6 +1713,18 @@ static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * s
         // Retrieve the signature
         TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
         assert(memcmp(DataBuff, "NGIS", 4) == 0);
+
+        // Check SFileGetFileInfo on 
+        if(SFileOpenFileEx(hMpq4, LISTFILE_NAME, 0, &hFile))
+        {
+            // Valid parameters but the handle should be file handle 
+            TestGetFileInfo(&Logger, hMpq4, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, false, ERROR_INVALID_HANDLE);
+
+            // Valid parameters
+            TestGetFileInfo(&Logger, hFile, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
+
+            SFileCloseFile(hFile);
+        }
     }
 
     if(hMpq4 != NULL)

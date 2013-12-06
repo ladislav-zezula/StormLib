@@ -41,8 +41,10 @@ static DWORD GetSizeOfAttributesFile(DWORD dwAttrFlags, DWORD dwFileTableSize)
     if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
         cbAttrFile += dwFileTableSize * MD5_DIGEST_SIZE;
     
-    // Weird: When there's 1 extra bit in the patch bit array, it's ignored
-    // wow-update-13164.MPQ: BlockTableSize = 0x62E1, but there's only 0xC5C bytes
+    // The bit array has been create without the last bit belonging to (attributes)
+    // When the number of files is a multiplier of 8 plus one, then the size of (attributes)
+    // if 1 byte less than expected.
+    // Example: wow-update-13164.MPQ: BlockTableSize = 0x62E1, but there's only 0xC5C bytes
     if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
         cbAttrFile += (dwFileTableSize + 6) / 8;
     
@@ -165,7 +167,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
     LPBYTE pbAttrFile;
     LPBYTE pbAttrPtr;
     size_t cbAttrFile;
-    DWORD dwFinalEntries = ha->dwFileTableSize + ha->dwReservedFiles;
+    DWORD dwFinalEntries = ha->dwFileTableSize + ha->dwReservedFiles + 1;
 
     // Check if we need patch bits in the (attributes) file
     for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
@@ -202,7 +204,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 *pArrayCRC32++ = BSWAP_INT32_UNSIGNED(pFileEntry->dwCrc32);
 
             // Skip the reserved entries
-            pbAttrPtr = (LPBYTE)(pArrayCRC32 + ha->dwReservedFiles);
+            pbAttrPtr = (LPBYTE)(pArrayCRC32 + ha->dwReservedFiles + 1);
         }
 
         // Write the array of file time
@@ -215,7 +217,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 *pArrayFileTime++ = BSWAP_INT64_UNSIGNED(pFileEntry->FileTime);
 
             // Skip the reserved entries
-            pbAttrPtr = (LPBYTE)(pArrayFileTime + ha->dwReservedFiles);
+            pbAttrPtr = (LPBYTE)(pArrayFileTime + ha->dwReservedFiles + 1);
         }
 
         // Write the array of MD5s
@@ -231,16 +233,15 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
             }
 
             // Skip the reserved items
-            pbAttrPtr = pbArrayMD5 + (ha->dwReservedFiles * MD5_DIGEST_SIZE);
+            pbAttrPtr = pbArrayMD5 + ((ha->dwReservedFiles + 1) * MD5_DIGEST_SIZE);
         }
 
         // Write the array of patch bits
         if(ha->dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
         {
             LPBYTE pbBitArray = pbAttrPtr;
-            DWORD dwByteSize = (dwFinalEntries + 7) / 8;
             DWORD dwByteIndex = 0;
-            DWORD dwBitMask = 0x80;
+            BYTE dwBitMask = 0x80;
 
             // Copy from file table
             for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
@@ -254,14 +255,18 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 dwBitMask = (dwBitMask << 0x07) | (dwBitMask >> 0x01);
             }
 
+            // Note: Do not increment the array by the last bit that belongs to (attributes).
+            // This might create the array one byte less (if the number of files a multiplier of 8).
+            // Blizzard MPQs have the same feature.
+
             // Move past the bit array
-            pbAttrPtr = (pbBitArray + dwByteSize);
+            pbAttrPtr = (pbBitArray + dwByteIndex) + ((dwBitMask & 0x7F) ? 1 : 0);
         }
 
         // Now we expect that current position matches the estimated size
         // Note that if there is 1 extra bit above the byte size,
         // the table is actually 1 byte shorted in Blizzard MPQs. See GetSizeOfAttributesFile
-        assert((size_t)(pbAttrPtr - pbAttrFile) == cbAttrFile + ((dwFinalEntries & 0x07) == 1) ? 1 : 0);
+        assert((size_t)(pbAttrPtr - pbAttrFile) == cbAttrFile);
     }
 
     // Give away the attributes file
@@ -329,18 +334,12 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
 
     // We expect at least one reserved entry to be there
     assert(ha->dwReservedFiles >= 1);
+    ha->dwReservedFiles--;
 
     // Create the raw data that is to be written to (attributes)
     // Note: Blizzard MPQs have entries for (listfile) and (attributes),
     // but they are filled empty
     pbAttrFile = CreateAttributesFile(ha, &cbAttrFile);
-
-    // Now we decrement the number of reserved files.
-    // This frees one slot in the file table, so the subsequent file create operation should succeed
-    // This must happen even if CreateAttributesFile failed
-    ha->dwReservedFiles--;
-
-    // If we created something, write the attributes to the MPQ
     if(pbAttrFile != NULL)
     {
         // We expect it to be nonzero size
