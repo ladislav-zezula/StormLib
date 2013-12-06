@@ -208,7 +208,7 @@ static const TCHAR * GetShortPlainName(const TCHAR * szFileName)
     return szPlainName;
 }
 
-static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const char * szFileName)
+static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const char * szNamePart1, const char * szNamePart2 = NULL)
 {
     size_t nLength;
 
@@ -238,17 +238,25 @@ static void CreateFullPathName(TCHAR * szBuffer, const char * szSubDir, const ch
     }
 
     // Copy the file name, if any
-    if(szFileName != NULL && (nLength = strlen(szFileName)) != 0)
+    if(szNamePart1 != NULL && (nLength = strlen(szNamePart1)) != 0)
     {
         // No path separator can be there
-        assert(strchr(szFileName, '\\') == NULL);
-        assert(strchr(szFileName, '/') == NULL);
+        assert(strchr(szNamePart1, '\\') == NULL);
+        assert(strchr(szNamePart1, '/') == NULL);
 
         // Append file path separator
         *szBuffer++ = PATH_SEPARATOR;
 
         // Copy the file name
-        mbstowcs(szBuffer, szFileName, nLength);
+        mbstowcs(szBuffer, szNamePart1, nLength);
+        szBuffer += nLength;
+    }
+
+    // Append the second part of the name
+    if(szNamePart2 != NULL && (nLength = strlen(szNamePart2)) != 0)
+    {
+        // Copy the file name
+        mbstowcs(szBuffer, szNamePart2, nLength);
         szBuffer += nLength;
     }
 
@@ -295,7 +303,7 @@ static const char * GetShortPlainName(const char * szFileName)
     return szPlainName;
 }
 
-static void CreateFullPathName(char * szBuffer, const char * szSubDir, const char * szFileName)
+static void CreateFullPathName(char * szBuffer, const char * szSubDir, const char * szNamePart1, const char * szNamePart2 = NULL)
 {
     size_t nLength;
 
@@ -325,17 +333,25 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
     }
 
     // Copy the file name, if any
-    if(szFileName != NULL && (nLength = strlen(szFileName)) != 0)
+    if(szNamePart1 != NULL && (nLength = strlen(szNamePart1)) != 0)
     {
         // No path separator can be there
-        assert(strchr(szFileName, '\\') == NULL);
-        assert(strchr(szFileName, '/') == NULL);
+        assert(strchr(szNamePart1, '\\') == NULL);
+        assert(strchr(szNamePart1, '/') == NULL);
 
         // Append file path separator
         *szBuffer++ = PATH_SEPARATOR;
 
-        // Copy file name
-        memcpy(szBuffer, szFileName, nLength);
+        // Copy the file name
+        memcpy(szBuffer, szNamePart1, nLength);
+        szBuffer += nLength;
+    }
+
+    // Append the second part of the name
+    if(szNamePart2 != NULL && (nLength = strlen(szNamePart2)) != 0)
+    {
+        // Copy the file name
+        memcpy(szBuffer, szNamePart2, nLength);
         szBuffer += nLength;
     }
 
@@ -1037,7 +1053,7 @@ static int CreateNewArchive(TLogHelper * pLogger, const TCHAR * szPlainName, DWO
 {
     TCHAR szMpqName[MAX_PATH];
 
-    CreateFullPathName(szMpqName, "StormLibTest_", NULL);
+    CreateFullPathName(szMpqName, NULL, "StormLibTest_", NULL);
     _tcscat(szMpqName, szPlainName);
     return CreateNewArchive_FullPath(pLogger, szMpqName, dwCreateFlags, dwMaxFileCount, phMpq);
 }
@@ -1047,7 +1063,7 @@ static int CreateNewArchive(TLogHelper * pLogger, const char * szPlainName, DWOR
 {
     TCHAR szMpqName[MAX_PATH];
 
-    CreateFullPathName(szMpqName, NULL, szPlainName);
+    CreateFullPathName(szMpqName, NULL, "StormLibTest_", szPlainName);
     return CreateNewArchive_FullPath(pLogger, szMpqName, dwCreateFlags, dwMaxFileCount, phMpq);
 }
 #endif
@@ -2699,19 +2715,19 @@ int main(int argc, char * argv[])
 
     // Create an empty archive v2
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2);
+        nError = TestCreateArchive_EmptyMpq("EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2);
 
     // Create an empty archive v4
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4);
+        nError = TestCreateArchive_EmptyMpq("EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4);
 
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq");
+        nError = TestCreateArchive_FillArchive("FileTableFull.mpq");
 
     // Create an archive, and increment max file count several times
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_IncMaxFileCount("StormLibTest_IncMaxFileCount.mpq");
+        nError = TestCreateArchive_IncMaxFileCount("IncMaxFileCount.mpq");
 
     // Create a MPQ archive with UNICODE names
     if(nError == ERROR_SUCCESS)
@@ -2719,19 +2735,19 @@ int main(int argc, char * argv[])
 
     // Create a MPQ file, add files with various flags
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FileFlagTest("StormLibTest_FileFlagTest.mpq");
+        nError = TestCreateArchive_FileFlagTest("FileFlagTest.mpq");
 
     // Create a MPQ file, add files with various compressions
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_CompressionsTest("StormLibTest_CompressionTest.mpq");
+        nError = TestCreateArchive_CompressionsTest("CompressionTest.mpq");
 
     // Check if the listfile is always created at the end of the file table in the archive
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_ListFilePos("StormLibTest_ListFilePos.mpq");
+        nError = TestCreateArchive_ListFilePos("ListFilePos.mpq");
 
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
+        nError = TestCreateArchive_BigArchive("BigArchive_v4.mpq");
 
     return nError;
 }
