@@ -106,7 +106,7 @@
 			OutputDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"

@@ -1049,24 +1049,31 @@ static int CreateNewArchive_FullPath(TLogHelper * pLogger, const TCHAR * szMpqNa
     return ERROR_SUCCESS;
 }
 
-static int CreateNewArchive(TLogHelper * pLogger, const TCHAR * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
+static int CreateNewArchive_AddPrefix(TLogHelper * pLogger, const wchar_t * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
 {
-    TCHAR szMpqName[MAX_PATH];
+#ifdef _UNICODE
+    wchar_t szMpqName[MAX_PATH];
 
-    CreateFullPathName(szMpqName, NULL, "StormLibTest_", NULL);
+    CreateFullPathName(szMpqName, NULL, "StormLibTest_");
     _tcscat(szMpqName, szPlainName);
     return CreateNewArchive_FullPath(pLogger, szMpqName, dwCreateFlags, dwMaxFileCount, phMpq);
+#else
+    pLogger = pLogger;
+    szPlainName = szPlainName;
+    dwCreateFlags = dwCreateFlags;
+    dwMaxFileCount = dwMaxFileCount;
+    phMpq = phMpq;
+    return ERROR_SUCCESS;
+#endif
 }
 
-#ifdef _UNICODE
 static int CreateNewArchive(TLogHelper * pLogger, const char * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
 {
     TCHAR szMpqName[MAX_PATH];
 
-    CreateFullPathName(szMpqName, NULL, "StormLibTest_", szPlainName);
+    CreateFullPathName(szMpqName, NULL, szPlainName);
     return CreateNewArchive_FullPath(pLogger, szMpqName, dwCreateFlags, dwMaxFileCount, phMpq);
 }
-#endif
 
 static int OpenExistingArchive(TLogHelper * pLogger, const char * szFileName, const char * szCopyName, HANDLE * phMpq)
 {
@@ -2127,29 +2134,30 @@ static int TestCreateArchive_UnicodeNames()
     TLogHelper Logger("MpqUnicodeName");
     int nError = ERROR_SUCCESS;
 
-#ifdef _UNICODE
-    nError = CreateNewArchive(&Logger, szUnicodeName1, MPQ_CREATE_ARCHIVE_V1, 15, NULL);
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName1, MPQ_CREATE_ARCHIVE_V1, 15, NULL);
     if(nError != ERROR_SUCCESS)
         return nError;
 
-    nError = CreateNewArchive(&Logger, szUnicodeName2, MPQ_CREATE_ARCHIVE_V2, 58, NULL);
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName2, MPQ_CREATE_ARCHIVE_V2, 58, NULL);
     if(nError != ERROR_SUCCESS)
         return nError;
 
-    nError = CreateNewArchive(&Logger, szUnicodeName3, MPQ_CREATE_ARCHIVE_V3, 15874, NULL);
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName3, MPQ_CREATE_ARCHIVE_V3, 15874, NULL);
     if(nError != ERROR_SUCCESS)
         return nError;
 
-    nError = CreateNewArchive(&Logger, szUnicodeName4, MPQ_CREATE_ARCHIVE_V4, 87541, NULL);
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName4, MPQ_CREATE_ARCHIVE_V4, 87541, NULL);
     if(nError != ERROR_SUCCESS)
         return nError;
 
-    nError = CreateNewArchive(&Logger, szUnicodeName5, MPQ_CREATE_ARCHIVE_V3, 87541, NULL);
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName5, MPQ_CREATE_ARCHIVE_V3, 87541, NULL);
     if(nError != ERROR_SUCCESS)
         return nError;
 
-    nError = CreateNewArchive(&Logger, szUnicodeName5, MPQ_CREATE_ARCHIVE_V2, 87541, NULL);
-#endif  // _UNICODE
+    nError = CreateNewArchive_AddPrefix(&Logger, szUnicodeName5, MPQ_CREATE_ARCHIVE_V2, 87541, NULL);
+    if(nError != ERROR_SUCCESS)
+        return nError;
+
     return nError;
 }
 
@@ -2592,7 +2600,7 @@ int main(int argc, char * argv[])
     // Initialize storage and mix the random number generator
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
-
+/*
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = TestForEachArchive(TestVerifyFileChecksum, NULL, NULL);
@@ -2715,19 +2723,19 @@ int main(int argc, char * argv[])
 
     // Create an empty archive v2
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq("EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2);
-
+        nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2);
+                                                            
     // Create an empty archive v4
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq("EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4);
+        nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4);
 
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive("FileTableFull.mpq");
+        nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq");
 
     // Create an archive, and increment max file count several times
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_IncMaxFileCount("IncMaxFileCount.mpq");
+        nError = TestCreateArchive_IncMaxFileCount("StormLibTest_IncMaxFileCount.mpq");
 
     // Create a MPQ archive with UNICODE names
     if(nError == ERROR_SUCCESS)
@@ -2735,19 +2743,19 @@ int main(int argc, char * argv[])
 
     // Create a MPQ file, add files with various flags
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FileFlagTest("FileFlagTest.mpq");
+        nError = TestCreateArchive_FileFlagTest("StormLibTest_FileFlagTest.mpq");
 
     // Create a MPQ file, add files with various compressions
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_CompressionsTest("CompressionTest.mpq");
+        nError = TestCreateArchive_CompressionsTest("StormLibTest_CompressionTest.mpq");
 
     // Check if the listfile is always created at the end of the file table in the archive
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_ListFilePos("ListFilePos.mpq");
-
+        nError = TestCreateArchive_ListFilePos("StormLibTest_ListFilePos.mpq");
+*/
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_BigArchive("BigArchive_v4.mpq");
+        nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
 
     return nError;
 }
