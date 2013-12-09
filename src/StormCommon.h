@@ -74,20 +74,21 @@
 // MPQ signature information
 
 // Size of each signature type
-#define MPQ_WEAK_SIGNATURE_SIZE        64
-#define MPQ_STRONG_SIGNATURE_SIZE     256 
+#define MPQ_WEAK_SIGNATURE_SIZE                 64
+#define MPQ_STRONG_SIGNATURE_SIZE              256 
+#define MPQ_STRONG_SIGNATURE_ID         0x5349474E      // ID of the strong signature ("NGIS")
 
 // MPQ signature info
 typedef struct _MPQ_SIGNATURE_INFO
 {
-    ULONGLONG BeginMpqData;                 // File offset where the hashing starts
-    ULONGLONG BeginExclude;                 // Begin of the excluded area (used for (signature) file)
-    ULONGLONG EndExclude;                   // End of the excluded area (used for (signature) file)
-    ULONGLONG EndMpqData;                   // File offset where the hashing ends
-    ULONGLONG EndOfFile;                    // Size of the entire file
+    ULONGLONG BeginMpqData;                     // File offset where the hashing starts
+    ULONGLONG BeginExclude;                     // Begin of the excluded area (used for (signature) file)
+    ULONGLONG EndExclude;                       // End of the excluded area (used for (signature) file)
+    ULONGLONG EndMpqData;                       // File offset where the hashing ends
+    ULONGLONG EndOfFile;                        // Size of the entire file
     BYTE  Signature[MPQ_STRONG_SIGNATURE_SIZE + 0x10];
-    DWORD cbSignatureSize;                  // Length of the signature
-    DWORD SignatureTypes;                   // See SIGNATURE_TYPE_XXX
+    DWORD cbSignatureSize;                      // Length of the signature
+    DWORD SignatureTypes;                       // See SIGNATURE_TYPE_XXX
 
 } MPQ_SIGNATURE_INFO, *PMPQ_SIGNATURE_INFO;
 
@@ -167,7 +168,7 @@ TMPQFile * IsValidFileHandle(HANDLE hFile);
 //-----------------------------------------------------------------------------
 // Support for MPQ file tables
 
-int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFlags);
+int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags);
 
 TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);

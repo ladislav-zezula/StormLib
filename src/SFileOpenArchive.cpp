@@ -213,7 +213,7 @@ bool WINAPI SFileOpenArchive(
     // Initialize handle structure and allocate structure for MPQ header
     if(nError == ERROR_SUCCESS)
     {
-        ULONGLONG SearchPos = 0;
+        ULONGLONG SearchOffset = 0;
         DWORD dwHeaderID;
 
         memset(ha, 0, sizeof(TMPQArchive));
@@ -230,23 +230,23 @@ bool WINAPI SFileOpenArchive(
             ha->dwFlags |= MPQ_FLAG_CHECK_SECTOR_CRC;
 
         // Find the offset of MPQ header within the file
-        while(SearchPos < FileSize)
+        while(SearchOffset < FileSize)
         {
             DWORD dwBytesAvailable = MPQ_HEADER_SIZE_V4;
 
             // Cut the bytes available, if needed
-            if((FileSize - SearchPos) < MPQ_HEADER_SIZE_V4)
-                dwBytesAvailable = (DWORD)(FileSize - SearchPos);
+            if((FileSize - SearchOffset) < MPQ_HEADER_SIZE_V4)
+                dwBytesAvailable = (DWORD)(FileSize - SearchOffset);
 
             // Read the eventual MPQ header
-            if(!FileStream_Read(ha->pStream, &SearchPos, ha->HeaderData, dwBytesAvailable))
+            if(!FileStream_Read(ha->pStream, &SearchOffset, ha->HeaderData, dwBytesAvailable))
             {
                 nError = GetLastError();
                 break;
             }
 
             // There are AVI files from Warcraft III with 'MPQ' extension.
-            if(SearchPos == 0 && IsAviFile(ha->HeaderData))
+            if(SearchOffset == 0 && IsAviFile(ha->HeaderData))
             {
                 nError = ERROR_AVI_FILE;
                 break;
@@ -257,16 +257,16 @@ bool WINAPI SFileOpenArchive(
             if(dwHeaderID == ID_MPQ_USERDATA && ha->pUserData == NULL && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
             {
                 // Verify if this looks like a valid user data
-                pUserData = IsValidMpqUserData(SearchPos, FileSize, ha->HeaderData);
+                pUserData = IsValidMpqUserData(SearchOffset, FileSize, ha->HeaderData);
                 if(pUserData != NULL)
                 {
                     // Fill the user data header
-                    ha->UserDataPos = SearchPos;
+                    ha->UserDataPos = SearchOffset;
                     ha->pUserData = &ha->UserData;
                     memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
 
                     // Continue searching from that position
-                    SearchPos += ha->pUserData->dwHeaderOffs;
+                    SearchOffset += ha->pUserData->dwHeaderOffs;
                     continue;
                 }
             }
@@ -275,7 +275,7 @@ bool WINAPI SFileOpenArchive(
             if(dwHeaderID == ID_MPQ)
             {
                 // Now convert the header to version 4
-                nError = ConvertMpqHeaderToFormat4(ha, FileSize, dwFlags);
+                nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags);
                 break;
             }
 
@@ -295,7 +295,7 @@ bool WINAPI SFileOpenArchive(
             }
 
             // Move to the next possible offset
-            SearchPos += 0x200;
+            SearchOffset += 0x200;
         }
 
         // Did we identify one of the supported headers?
@@ -303,11 +303,11 @@ bool WINAPI SFileOpenArchive(
         {
             // Set the user data position to the MPQ header, if none
             if(ha->pUserData == NULL)
-                ha->UserDataPos = SearchPos;
+                ha->UserDataPos = SearchOffset;
 
             // Set the position of the MPQ header
             ha->pHeader = (TMPQHeader *)ha->HeaderData;
-            ha->MpqPos = SearchPos;
+            ha->MpqPos = SearchOffset;
 
             // Sector size must be nonzero.
             if(ha->pHeader->wSectorSize == 0)
@@ -376,8 +376,8 @@ bool WINAPI SFileOpenArchive(
         nError = BuildFileTable(ha);
     }
 
-    // Verify the file table, if no kind of protection was detected
-    if(nError == ERROR_SUCCESS && (ha->dwFlags & MPQ_FLAG_PROTECTED) == 0)
+    // Verify the file table, if no kind of malformation was detected
+    if(nError == ERROR_SUCCESS && (ha->dwFlags & MPQ_FLAG_MALFORMED) == 0)
     {
         TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
         ULONGLONG RawFilePos;

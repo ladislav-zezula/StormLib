@@ -174,7 +174,7 @@ extern "C" {
 // Flags for TMPQArchive::dwFlags
 #define MPQ_FLAG_READ_ONLY          0x00000001  // If set, the MPQ has been open for read-only access
 #define MPQ_FLAG_CHANGED            0x00000002  // If set, the MPQ tables have been changed
-#define MPQ_FLAG_PROTECTED          0x00000004  // Some kind of protector detected (W3M maps)
+#define MPQ_FLAG_MALFORMED          0x00000004  // Malformed data structure detected (W3M map protectors)
 #define MPQ_FLAG_CHECK_SECTOR_CRC   0x00000008  // Checking sector CRC when reading files
 #define MPQ_FLAG_LISTFILE_INVALID   0x00000020  // If set, it means that the (listfile) has been invalidated
 #define MPQ_FLAG_ATTRIBUTES_INVALID 0x00000040  // If set, it means that the (attributes) has been invalidated
@@ -286,6 +286,7 @@ extern "C" {
 // Deprecated
 #define MPQ_OPEN_READ_ONLY          STREAM_FLAG_READ_ONLY
 #define MPQ_OPEN_ENCRYPTED          STREAM_PROVIDER_ENCRYPTED
+#define MPQ_OPEN_PARTIAL            STREAM_PROVIDER_PARTIAL
 
 // Flags for SFileCreateArchive
 #define MPQ_CREATE_LISTFILE         0x00100000  // Also add the (listfile) file

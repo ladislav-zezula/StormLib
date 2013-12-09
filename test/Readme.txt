@@ -46,7 +46,7 @@ MPQ_1997_v1_Diablo1_single_0.sha                           201  // Single player
 MPQ_1997_v1_Diablo1_single_0.sv                         98 980
 MPQ_1999_v1_WeakSignature.exe                        1 031 826  // War2Patch_202.exe from Warcraft II Bnet Edition
 MPQ_1999_v1_WeakSignature.sha                              260
-MPQ_2002_v1_BlockTableCut.MPQ                       27 765 301  // Cut file War3Patch.mpq from Warcraft III
+MPQ_2002_v1_BlockTableCut.MPQ                       27 498 436  // Cut file War3Patch.mpq from Warcraft III
 MPQ_2002_v1_BlockTableCut.sha                              250
 MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.sha         1 067  
 MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x     1 089 638  // Protected Warcraft III map
@@ -58,6 +58,8 @@ MPQ_2002_v1_StrongSignature.sha                            250
 MPQ_2002_v1_StrongSignature.w3m                        306 818  // (10)DustwallowKeys.w3m from Warcraft III
 MPQ_2009_v2_WoW_patch.MPQ.part                      31 396 380  // patch.MPQ.part from trial WoW build 10958
 MPQ_2009_v2_WoW_patch.MPQ.sha                              226
+MPQ_2010_v2_HashTableCompressed.MPQ.part            14 546 972  // interface.MPQ.part from WoW build 10958
+MPQ_2010_v2_HashTableCompressed.MPQ.sha                    277
 MPQ_2010_v2_HasUserData.s2ma                         1 972 177  // (4) - AI - Kulas Ravine (1x).s2ma from Starcraft II Beta
 MPQ_2010_v2_HasUserData.sha                                261
 MPQ_2010_v3_expansion-locale-frFR.MPQ                2 980 489  // expansion-locale-frFR.MPQ from WoW 12911

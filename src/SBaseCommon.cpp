@@ -710,8 +710,7 @@ void * LoadMpqTable(
     pbMpqTable = pbToRead = STORM_ALLOC(BYTE, dwTableSize);
     if(pbMpqTable != NULL)
     {
-        // "interface.MPQ.part" in trial version of World of Warcraft
-        // has block table and hash table compressed.
+        // Check if the MPQ table is encrypted
         if(dwCompressedSize < dwTableSize)
         {
             // Allocate temporary buffer for holding compressed data

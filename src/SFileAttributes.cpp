@@ -40,16 +40,39 @@ static DWORD GetSizeOfAttributesFile(DWORD dwAttrFlags, DWORD dwFileTableSize)
         cbAttrFile += dwFileTableSize * sizeof(ULONGLONG);
     if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
         cbAttrFile += dwFileTableSize * MD5_DIGEST_SIZE;
-    
-    // The bit array has been create without the last bit belonging to (attributes)
+
+    // The bit array has been created without the last bit belonging to (attributes)
     // When the number of files is a multiplier of 8 plus one, then the size of (attributes)
     // if 1 byte less than expected.
     // Example: wow-update-13164.MPQ: BlockTableSize = 0x62E1, but there's only 0xC5C bytes
     if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
         cbAttrFile += (dwFileTableSize + 6) / 8;
+
+    return cbAttrFile;
+}
+
+#ifdef _DEBUG
+static DWORD GetSizeOfAttributesFile_v2(DWORD dwAttrFlags, DWORD dwFileTableSize)
+{
+    DWORD cbAttrFile = sizeof(MPQ_ATTRIBUTES_HEADER);
+
+    // Calculate size of the (attributes) file
+    if(dwAttrFlags & MPQ_ATTRIBUTE_CRC32)
+        cbAttrFile += dwFileTableSize * sizeof(DWORD);
+    if(dwAttrFlags & MPQ_ATTRIBUTE_FILETIME)
+        cbAttrFile += dwFileTableSize * sizeof(ULONGLONG);
+    if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
+        cbAttrFile += dwFileTableSize * MD5_DIGEST_SIZE;
+
+    // interface.MPQ.part from WoW build 10958 has
+    // the MPQ_ATTRIBUTE_PATCH_BIT set, but there's an array of DWORDs instead.
+    // The array is filled with zeros, so we don't know what it should contain
+    if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
+        cbAttrFile += dwFileTableSize * sizeof(DWORD);
     
     return cbAttrFile;
 }
+#endif
 
 static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrFile)
 {
@@ -67,9 +90,14 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
         if(pAttrHeader->dwVersion != MPQ_ATTRIBUTES_V1)
             return ERROR_BAD_FORMAT;
 
-        // Verify the flags and size of the file
+        // Verify the size of the file
         assert((pAttrHeader->dwFlags & ~MPQ_ATTRIBUTE_ALL) == 0);
-        assert(GetSizeOfAttributesFile(pAttrHeader->dwFlags, dwBlockTableSize) == cbAttrFile);
+
+        // Verify the size of the file
+#ifdef _DEBUG
+        assert(cbAttrFile == GetSizeOfAttributesFile(pAttrHeader->dwFlags, dwBlockTableSize) ||
+               cbAttrFile == GetSizeOfAttributesFile_v2(pAttrHeader->dwFlags, dwBlockTableSize));
+#endif
 
         ha->dwAttrFlags = pAttrHeader->dwFlags;
         pbAttrPtr = (LPBYTE)(pAttrHeader + 1);

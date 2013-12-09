@@ -332,14 +332,13 @@ static int CopyMpqFileSectors(
     {
         // At this point, number of bytes written should be exactly
         // the same like the compressed file size. If it isn't,
-        // there's something wrong (an unknown archive version, MPQ protection, ...)
+        // there's something wrong (an unknown archive version, MPQ malformation, ...)
         // 
         // Note: Diablo savegames have very weird layout, and the file "hero"
         // seems to have improper compressed size. Instead of real compressed size,
         // the "dwCmpSize" member of the block table entry contains
         // uncompressed size of file data + size of the sector table.
         // If we compact the archive, Diablo will refuse to load the game
-        // Seems like some sort of protection to me.
         //
         // Note: Some patch files in WOW patches don't count the patch header
         // into compressed size
