@@ -229,12 +229,10 @@ void SetBits(
 //-----------------------------------------------------------------------------
 // Support for MPQ header
 
-static DWORD GetMaxFileOffset32(TMPQArchive * ha, TMPQBlock * pBlockTable, DWORD dwBlockTableSize)
+static DWORD GetMaxFileOffset32(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
     DWORD dwMaxFileOffset = ha->pHeader->dwArchiveSize;
-    DWORD dwByteOffset;
-    DWORD dwBlockIndex;
 
     // We can call this only for malformed archives v 1.0
     assert(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
@@ -2230,7 +2228,7 @@ static void FixCompressedFileSize(
     if(SortTable != NULL)
     {
         // Calculate the end of the archive
-        dwMaxFileOffs = GetMaxFileOffset32(ha, pBlockTable, pHeader->dwBlockTableSize);
+        dwMaxFileOffs = GetMaxFileOffset32(ha);
 
         // Put all blocks to a sort table
         for(pBlock = pBlockTable; pBlock < pBlockTableEnd; pBlock++)
@@ -2751,7 +2749,7 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
                 }
 
                 // Move the file entry by one
-                *pFileEntry++;
+                pFileEntry++;
             }
         }
 

@@ -57,11 +57,11 @@ class TLogHelper
 // String replacements for format strings
 
 #ifdef _MSC_VER
-#define I64u_t _T("%I64u");
-#define I64u_a "%I64u";
+#define I64u_t _T("%I64u")
+#define I64u_a "%I64u"
 #else
-#define I64u_t "%llu";
-#define I64u_a "%llu";
+#define I64u_t "%llu"
+#define I64u_a "%llu"
 #endif
 
 //-----------------------------------------------------------------------------

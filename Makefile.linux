@@ -31,6 +31,7 @@ OBJS =  src/adpcm/adpcm.o \
 	src/FileStream.o \
 	src/huffman/huff.o \
 	src/SBaseCommon.o \
+        src/SBaseDumpData.o \
 	src/SBaseFileTable.o \
 	src/SBaseSubTypes.o \
 	src/SCompression.o \

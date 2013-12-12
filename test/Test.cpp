@@ -345,7 +345,7 @@ static int InitializeMpqDirectory(char * argv[], int argc)
     cchMpqDirectory = strlen(szMpqDirectory);
 
     // Cut trailing slashes and/or backslashes
-    while(cchMpqDirectory > 0 && szMpqDirectory[cchMpqDirectory - 1] == '/' || szMpqDirectory[cchMpqDirectory - 1] == '\\')
+    while((cchMpqDirectory > 0) && (szMpqDirectory[cchMpqDirectory - 1] == '/' || szMpqDirectory[cchMpqDirectory - 1] == '\\'))
         cchMpqDirectory--;
     szMpqDirectory[cchMpqDirectory] = 0;
 
@@ -714,7 +714,7 @@ static void WINAPI CompactCallback(void * pvUserData, DWORD dwWork, ULONGLONG By
         if(pLogger != NULL)
             pLogger->PrintProgress("%s (%I64u of %I64u) ...", szWork, BytesDone, TotalBytes);
         else
-            printf("%s (%I64u of %I64u) ...     \r", szWork, (DWORD)BytesDone, (DWORD)TotalBytes);
+            printf("%s (" I64u_a " of " I64u_a ") ...     \r", szWork, (DWORD)BytesDone, (DWORD)TotalBytes);
     }
 }
 
@@ -2221,7 +2221,7 @@ static int TestCreateArchive_FileFlagTest(const char * szPlainName)
         dwMaxFileCount = SFileGetMaxFileCount(hMpq);
         for(i = 0; AddFlags[i] != 0xFFFFFFFF; i++)
         {
-            sprintf(szArchivedName, "FileTest_%02u.exe", i);
+            sprintf(szArchivedName, "FileTest_%02u.exe", (unsigned int)i);
             nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName1, AddFlags[i], 0);
             if(nError != ERROR_SUCCESS)
                 break;
@@ -2355,7 +2355,7 @@ static int TestCreateArchive_CompressionsTest(const char * szPlainName)
     DWORD dwCmprCount = sizeof(Compressions) / sizeof(DWORD);
     DWORD dwAddedFiles = 0;
     DWORD dwFoundFiles = 0;
-    size_t i;
+    DWORD i;
     int nError;
 
     // Create paths for local file to be added

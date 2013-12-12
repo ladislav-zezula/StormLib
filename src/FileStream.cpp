@@ -713,7 +713,7 @@ static const TCHAR * BaseHttp_ExtractServerName(const TCHAR * szFileName, TCHAR 
     else
     {
         while(szFileName[0] != 0 && szFileName[0] != _T('/'))
-            *szFileName++;
+            szFileName++;
     }
 
     // Return the remainder

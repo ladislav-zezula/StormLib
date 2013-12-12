@@ -158,7 +158,6 @@ int ConvertSqpHeaderToFormat4(
 
 void * LoadSqpTable(TMPQArchive * ha, DWORD dwByteOffset, DWORD cbTableSize, DWORD dwKey)
 {
-    TMPQHeader * pHeader = ha->pHeader;
     ULONGLONG ByteOffset;
     LPBYTE pbSqpTable;
 

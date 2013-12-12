@@ -13,6 +13,7 @@ set(SRC_FILES
            src/sparse/sparse.cpp
            src/FileStream.cpp
            src/SBaseCommon.cpp
+           src/SBaseDumpData.cpp
            src/SBaseFileTable.cpp
            src/SBaseSubTypes.cpp
            src/SCompression.cpp

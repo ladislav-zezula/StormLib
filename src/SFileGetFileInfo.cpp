@@ -891,6 +891,9 @@ bool WINAPI SFileFreeFileInfo(void * pvFileInfo, SFileInfoClass InfoClass)
         case SFileMpqBetTable:
             FreeBetTable((TMPQBetTable *)pvFileInfo);
             return true;
+
+        default:
+            break;
     }
 
     SetLastError(ERROR_INVALID_PARAMETER);

@@ -70,6 +70,12 @@
 		225FACB50E53BAB400DA2CAE /* SFileListFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00B40D03542A00AB0B4E /* SFileListFile.cpp */; };
 		225FADD40E53C06600DA2CAE /* libbz2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D20A8A0CF3902D00230E7A /* libbz2.dylib */; settings = {ATTRIBUTES = (Required, ); }; };
 		225FADD50E53C06600DA2CAE /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D20A8B0CF3902D00230E7A /* libz.dylib */; settings = {ATTRIBUTES = (Required, ); }; };
+		226C7CA71857DE9400AB689C /* SBaseDumpData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CA61857DE9400AB689C /* SBaseDumpData.cpp */; };
+		226C7CA81857DE9400AB689C /* SBaseDumpData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CA61857DE9400AB689C /* SBaseDumpData.cpp */; };
+		226C7CAA1857DEAC00AB689C /* SBaseSubTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CA91857DEAC00AB689C /* SBaseSubTypes.cpp */; };
+		226C7CAB1857DEAC00AB689C /* SBaseSubTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CA91857DEAC00AB689C /* SBaseSubTypes.cpp */; };
+		226C7CAD1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CAC1857DEEB00AB689C /* SFileGetFileInfo.cpp */; };
+		226C7CAE1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 226C7CAC1857DEEB00AB689C /* SFileGetFileInfo.cpp */; };
 		228B538411BF7D0D001A58DA /* FileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 228B538311BF7D0D001A58DA /* FileStream.cpp */; };
 		228B538511BF7D0D001A58DA /* FileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 228B538311BF7D0D001A58DA /* FileStream.cpp */; };
 		22954AD211D463AB0064B264 /* Test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2295488911D45A820064B264 /* Test.cpp */; };
@@ -509,6 +515,9 @@
 		225C73531257CD0C0009E8DA /* SBaseFileTable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBaseFileTable.cpp; path = src/SBaseFileTable.cpp; sourceTree = "<group>"; };
 		225FAC940E53B7F800DA2CAE /* StormLib.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = StormLib.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		225FAC950E53B7F800DA2CAE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		226C7CA61857DE9400AB689C /* SBaseDumpData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBaseDumpData.cpp; path = src/SBaseDumpData.cpp; sourceTree = "<group>"; };
+		226C7CA91857DEAC00AB689C /* SBaseSubTypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBaseSubTypes.cpp; path = src/SBaseSubTypes.cpp; sourceTree = "<group>"; };
+		226C7CAC1857DEEB00AB689C /* SFileGetFileInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SFileGetFileInfo.cpp; path = src/SFileGetFileInfo.cpp; sourceTree = "<group>"; };
 		228B538311BF7D0D001A58DA /* FileStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileStream.cpp; path = src/FileStream.cpp; sourceTree = "<group>"; };
 		2295488911D45A820064B264 /* Test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Test.cpp; path = test/Test.cpp; sourceTree = "<group>"; };
 		22954ACE11D463A30064B264 /* StormLib_Test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = StormLib_Test; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1164,7 +1173,9 @@
 				228B538311BF7D0D001A58DA /* FileStream.cpp */,
 				22EC6043154B28A000679228 /* FileStream.h */,
 				32ED00AA0D03542A00AB0B4E /* SBaseCommon.cpp */,
+				226C7CA61857DE9400AB689C /* SBaseDumpData.cpp */,
 				225C73531257CD0C0009E8DA /* SBaseFileTable.cpp */,
+				226C7CA91857DEAC00AB689C /* SBaseSubTypes.cpp */,
 				32ED00AC0D03542A00AB0B4E /* SCompression.cpp */,
 				2299DA4D1167FD16005C19BF /* SFileAddFile.cpp */,
 				32ED00A90D03542A00AB0B4E /* SFileAttributes.cpp */,
@@ -1172,6 +1183,7 @@
 				32ED00AE0D03542A00AB0B4E /* SFileCreateArchive.cpp */,
 				32ED00AF0D03542A00AB0B4E /* SFileExtractFile.cpp */,
 				32ED00B00D03542A00AB0B4E /* SFileFindFile.cpp */,
+				226C7CAC1857DEEB00AB689C /* SFileGetFileInfo.cpp */,
 				32ED00B40D03542A00AB0B4E /* SFileListFile.cpp */,
 				32ED00B10D03542A00AB0B4E /* SFileOpenArchive.cpp */,
 				32ED00B20D03542A00AB0B4E /* SFileOpenFileEx.cpp */,
@@ -1344,7 +1356,7 @@
 		0867D690FE84028FC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0500;
 			};
 			buildConfigurationList = 1DEB916408733D950010E9CD /* Build configuration list for PBXProject "StormLib" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -1382,8 +1394,10 @@
 			files = (
 				225530E31056BC8700FA646A /* huff.cpp in Sources */,
 				225530E61056BC8700FA646A /* explode.c in Sources */,
+				226C7CA71857DE9400AB689C /* SBaseDumpData.cpp in Sources */,
 				225530E71056BC8700FA646A /* implode.c in Sources */,
 				225530E81056BC8700FA646A /* SFileAttributes.cpp in Sources */,
+				226C7CAA1857DEAC00AB689C /* SBaseSubTypes.cpp in Sources */,
 				225530E91056BC8700FA646A /* SBaseCommon.cpp in Sources */,
 				225530EA1056BC8700FA646A /* SCompression.cpp in Sources */,
 				225530EB1056BC8700FA646A /* SFileCompactArchive.cpp in Sources */,
@@ -1391,6 +1405,7 @@
 				225530ED1056BC8700FA646A /* SFileExtractFile.cpp in Sources */,
 				225530EE1056BC8700FA646A /* SFileFindFile.cpp in Sources */,
 				225530EF1056BC8700FA646A /* SFileOpenArchive.cpp in Sources */,
+				226C7CAD1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */,
 				225530F01056BC8700FA646A /* SFileOpenFileEx.cpp in Sources */,
 				225530F11056BC8700FA646A /* SFileReadFile.cpp in Sources */,
 				225530F21056BC8700FA646A /* SFileListFile.cpp in Sources */,
@@ -1593,8 +1608,10 @@
 			files = (
 				225FACA50E53BAB400DA2CAE /* huff.cpp in Sources */,
 				225FACA90E53BAB400DA2CAE /* explode.c in Sources */,
+				226C7CA81857DE9400AB689C /* SBaseDumpData.cpp in Sources */,
 				225FACAA0E53BAB400DA2CAE /* implode.c in Sources */,
 				225FACAB0E53BAB400DA2CAE /* SFileAttributes.cpp in Sources */,
+				226C7CAB1857DEAC00AB689C /* SBaseSubTypes.cpp in Sources */,
 				225FACAC0E53BAB400DA2CAE /* SBaseCommon.cpp in Sources */,
 				225FACAD0E53BAB400DA2CAE /* SCompression.cpp in Sources */,
 				225FACAE0E53BAB400DA2CAE /* SFileCompactArchive.cpp in Sources */,
@@ -1602,6 +1619,7 @@
 				225FACB00E53BAB400DA2CAE /* SFileExtractFile.cpp in Sources */,
 				225FACB10E53BAB400DA2CAE /* SFileFindFile.cpp in Sources */,
 				225FACB20E53BAB400DA2CAE /* SFileOpenArchive.cpp in Sources */,
+				226C7CAE1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */,
 				225FACB30E53BAB400DA2CAE /* SFileOpenFileEx.cpp in Sources */,
 				225FACB40E53BAB400DA2CAE /* SFileReadFile.cpp in Sources */,
 				225FACB50E53BAB400DA2CAE /* SFileListFile.cpp in Sources */,
@@ -1824,16 +1842,17 @@
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = c89;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = (
 					_7ZIP_ST,
 					_DEBUG,
 				);
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1848,12 +1867,13 @@
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = c89;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = _7ZIP_ST;
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -1866,6 +1886,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = "";
 				INSTALL_PATH = /usr/local/lib;
 				PRODUCT_NAME = StormLib;
 			};
@@ -1875,6 +1896,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
+				GCC_VERSION = "";
 				INSTALL_PATH = /usr/local/lib;
 				PRODUCT_NAME = StormLib;
 			};
@@ -1883,15 +1905,13 @@
 		225FAC960E53B7F900DA2CAE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXPORTED_SYMBOLS_FILE = "$(PROJECT_DIR)/stormlib_dll/StormLib.exp";
 				FRAMEWORK_VERSION = A;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/usr/lib/clang/3.1/lib/darwin,
-				);
 				PRODUCT_NAME = StormLib;
 			};
 			name = Debug;
@@ -1899,14 +1919,12 @@
 		225FAC970E53B7F900DA2CAE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXPORTED_SYMBOLS_FILE = "$(PROJECT_DIR)/stormlib_dll/StormLib.exp";
 				FRAMEWORK_VERSION = A;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/usr/lib/clang/3.1/lib/darwin,
-				);
 				PRODUCT_NAME = StormLib;
 			};
 			name = Release;
@@ -1923,11 +1941,8 @@
 					_DEBUG,
 					__STORMLIB_TEST__,
 				);
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/bin;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/usr/lib/clang/3.1/lib/darwin,
-				);
 				PRODUCT_NAME = StormLib_Test;
 			};
 			name = Debug;
@@ -1938,11 +1953,8 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/bin;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/usr/lib/clang/3.1/lib/darwin,
-				);
 				PRODUCT_NAME = StormLib_Test;
 			};
 			name = Release;
