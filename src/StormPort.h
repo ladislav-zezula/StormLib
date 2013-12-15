@@ -186,6 +186,7 @@
   #define stat64  stat
   #define fstat64 fstat
   #define lseek64 lseek
+  #define ftruncate64 ftruncate
   #define off64_t off_t
   #define O_LARGEFILE 0
 #endif

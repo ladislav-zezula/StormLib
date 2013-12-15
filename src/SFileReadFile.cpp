@@ -301,7 +301,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         }
         else
         {
-            if(pbRawData != hf->pbFileSector)
+            if(hf->pbFileSector != NULL && pbRawData != hf->pbFileSector)
                 memcpy(hf->pbFileSector, pbRawData, hf->dwDataSize);
         }
 

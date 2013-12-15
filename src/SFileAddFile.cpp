@@ -276,7 +276,7 @@ static int RecryptFileData(
     if(hf->SectorOffsets != NULL)
     {
         // Allocate secondary buffer for sectors copy
-        DWORD * SectorOffsetsCopy = (DWORD *)STORM_ALLOC(BYTE, hf->SectorOffsets[0]);
+        DWORD * SectorOffsetsCopy = STORM_ALLOC(DWORD, hf->SectorOffsets[0] / sizeof(DWORD));
         DWORD dwSectorOffsLen = hf->SectorOffsets[0];
 
         if(SectorOffsetsCopy == NULL)

@@ -138,7 +138,7 @@ static DWORD ReloadListFileCache(TListFileCache * pCache)
 
         // Load the next data chunk to the cache
         SFileSetFilePointer(pCache->hFile, pCache->dwFilePos, NULL, FILE_BEGIN);
-        SFileReadFile(pCache->hFile, pCache->Buffer, CACHE_BUFFER_SIZE, &dwBytesRead, NULL);
+        SFileReadFile(pCache->hFile, pCache->Buffer, dwBytesToRead, &dwBytesRead, NULL);
 
         // If we didn't read anything, it might mean that the block
         // of the file is not available (in case of partial MPQs).
@@ -327,7 +327,6 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
     TFileEntry * pFileEntry;
     TMPQHash * pFirstHash;
     TMPQHash * pHash;
-    bool bNameEntryCreated = false;
 
     // If we have HET table, use that one
     if(ha->pHetTable != NULL)
@@ -337,14 +336,13 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
         {
             // Allocate file name for the file entry
             AllocateFileName(ha, pFileEntry, szFileName);
-            bNameEntryCreated = true;
         }
 
         return ERROR_SUCCESS;
     }
 
     // If we have hash table, we use it
-    if(bNameEntryCreated == false && ha->pHashTable != NULL)
+    if(ha->pHashTable != NULL)
     {
         // Look for the first hash table entry for the file
         pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
@@ -357,7 +355,6 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
             {
                 // Allocate file name for the file entry
                 AllocateFileName(ha, ha->pFileTable + pHash->dwBlockIndex, szFileName);
-                bNameEntryCreated = true;
             }
 
             // Now find the next language version of the file
@@ -599,17 +596,20 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
         }
     }
 
+    // Close the listfile
+    if(hListFile != NULL)
+        SFileCloseFile(hListFile);
+
     // Cleanup & exit
     if(nError != ERROR_SUCCESS)
     {
+        if(pCache != NULL)
+            FreeListFileCache(pCache);
+        pCache = NULL;
+
         memset(lpFindFileData, 0, sizeof(SFILE_FIND_DATA));
         SetLastError(nError);
     }
-
-    if(pCache != NULL)
-        FreeListFileCache(pCache);
-    if(hListFile != NULL)
-        SFileCloseFile(hListFile);
     return (HANDLE)pCache;
 }
 

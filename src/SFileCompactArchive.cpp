@@ -118,7 +118,7 @@ static int CopyNonMpqData(
         DataSize -= dwToRead;
     }
 
-    return ERROR_SUCCESS;
+    return nError;
 }
 
 // Copies all file sectors into another archive.
@@ -167,7 +167,7 @@ static int CopyMpqFileSectors(
     // If we have to save sector offset table, do it.
     if(nError == ERROR_SUCCESS && hf->SectorOffsets != NULL)
     {
-        DWORD * SectorOffsetsCopy = (DWORD *)STORM_ALLOC(BYTE, hf->SectorOffsets[0]);
+        DWORD * SectorOffsetsCopy = STORM_ALLOC(DWORD, hf->SectorOffsets[0] / sizeof(DWORD));
         DWORD dwSectorOffsLen = hf->SectorOffsets[0];
 
         assert((pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT) == 0);
@@ -311,7 +311,6 @@ static int CopyMpqFileSectors(
 
             // Include these extra data in the compressed size
             dwCmpSize += dwBytesToCopy;
-            dwBytesToCopy = 0;
             STORM_FREE(pbExtraData);
         }
         else

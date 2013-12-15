@@ -38,6 +38,7 @@ class TLogHelper
     const char * UserString;
     unsigned int UserCount;
     unsigned int UserTotal;
+    bool bDontPrintResult;
 
     protected:
 
@@ -78,14 +79,15 @@ TLogHelper::TLogHelper(const char * szNewTestTitle, const char * szNewSubTitle)
     szSubTitle = szNewSubTitle;
     nTextLength = 0;
     bMessagePrinted = false;
+    bDontPrintResult = false;
 
     // Print the initial information
     if(szMainTitle != NULL)
     {
         if(szSubTitle != NULL)
-            printf("Running test %s (%s) ...", szMainTitle, szSubTitle);
+            printf("Running %s (%s) ...", szMainTitle, szSubTitle);
         else
-            printf("Running test %s ...", szMainTitle);
+            printf("Running %s ...", szMainTitle);
     }
 }
 
@@ -101,10 +103,18 @@ TLogHelper::~TLogHelper()
     // Print the final information
     if(szSaveMainTitle != NULL && bMessagePrinted == false)
     {
-        if(szSaveSubTitle != NULL)
-            PrintMessage("The test %s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle);
+        if(bDontPrintResult == false)
+        {
+            if(szSaveSubTitle != NULL)
+                PrintMessage("%s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle);
+            else
+                PrintMessage("%s succeeded.", szSaveMainTitle);
+        }
         else
-            PrintMessage("The test %s succeeded.", szSaveMainTitle);
+        {
+            PrintProgress(" ");
+            printf("\r");
+        }
     }
 }
 

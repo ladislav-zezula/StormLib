@@ -143,6 +143,7 @@ bool WINAPI SFileGetFileInfo(
     TFileEntry * pFileEntry = NULL;
     ULONGLONG Int64Value = 0;
     ULONGLONG ByteOffset = 0;
+    TMPQHash * pHash;
     TMPQFile * hf = NULL;
     void * pvSrcFileInfo = NULL;
     DWORD cbSrcFileInfo = 0;
@@ -691,7 +692,8 @@ bool WINAPI SFileGetFileInfo(
             hf = IsValidFileHandle(hMpqOrFile);
             if(hf != NULL && hf->ha != NULL && hf->ha->pHashTable != NULL)
             {
-                pvSrcFileInfo = &ha->pHashTable[hf->pFileEntry->dwHashIndex].dwName1;
+                pHash = hf->ha->pHashTable + hf->pFileEntry->dwHashIndex;
+                pvSrcFileInfo = &pHash->dwName1;
                 cbSrcFileInfo = sizeof(DWORD);
                 nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
             }
@@ -701,7 +703,8 @@ bool WINAPI SFileGetFileInfo(
             hf = IsValidFileHandle(hMpqOrFile);
             if(hf != NULL && hf->ha != NULL && hf->ha->pHashTable != NULL)
             {
-                pvSrcFileInfo = &ha->pHashTable[hf->pFileEntry->dwHashIndex].dwName2;
+                pHash = hf->ha->pHashTable + hf->pFileEntry->dwHashIndex;
+                pvSrcFileInfo = &pHash->dwName2;
                 cbSrcFileInfo = sizeof(DWORD);
                 nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
             }
@@ -825,7 +828,7 @@ bool WINAPI SFileGetFileInfo(
             pcbLengthNeeded[0] = cbSrcFileInfo;
 
         // If the caller entered an output buffer, the output size must also be entered
-        if(pvFileInfo != NULL && cbFileInfo != 0)
+        if(pvSrcFileInfo != NULL && pvFileInfo != NULL && cbFileInfo != 0)
         {
             // Check if there is enough space in the output buffer
             if(cbSrcFileInfo <= cbFileInfo)

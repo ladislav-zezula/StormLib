@@ -65,7 +65,6 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
 
     // Cut the initial DWORD from the compressed chunk
     pbCompressed += sizeof(DWORD);
-    cbCompressed -= sizeof(DWORD);
 
     // Pre-fill decompressed buffer with zeros
     memset(pbDecompressed, 0, cbDecompressed);

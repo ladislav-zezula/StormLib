@@ -182,7 +182,7 @@ static bool BaseFile_Read(
         // we have to update the file position
         if(ByteOffset != pStream->Base.File.FilePos)
         {
-            lseek64((intptr_t)pStream->Base.File.hFile, (__off64_t)(ByteOffset), SEEK_SET);
+            lseek64((intptr_t)pStream->Base.File.hFile, (off64_t)(ByteOffset), SEEK_SET);
             pStream->Base.File.FilePos = ByteOffset;
         }
 
@@ -271,7 +271,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
         // we have to update the file position
         if(ByteOffset != pStream->Base.File.FilePos)
         {
-            lseek64((intptr_t)pStream->Base.File.hFile, (__off64_t)(ByteOffset), SEEK_SET);
+            lseek64((intptr_t)pStream->Base.File.hFile, (off64_t)(ByteOffset), SEEK_SET);
             pStream->Base.File.FilePos = ByteOffset;
         }
 
@@ -346,7 +346,7 @@ static bool BaseFile_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
     
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
     {
-        if(ftruncate64((intptr_t)pStream->Base.File.hFile, (__off64_t)NewFileSize) == -1)
+        if(ftruncate64((intptr_t)pStream->Base.File.hFile, (off64_t)NewFileSize) == -1)
         {
             nLastError = errno;
             return false;
@@ -1134,7 +1134,6 @@ static bool PartialStream_Read(
     DWORD dwPartIndex;
     DWORD dwBytesRead = 0;
     DWORD dwBlockSize = pStream->BlockSize;
-    bool bResult = false;
     int nFailReason = ERROR_HANDLE_EOF;             // Why it failed if not enough bytes was read
 
     // If the byte offset is not entered, use the current position
@@ -1172,7 +1171,6 @@ static bool PartialStream_Read(
         if((PartMap->Flags & 3) == 0)
         {
             nFailReason = ERROR_FILE_CORRUPT;
-            bResult = false;
             break;
         }
 
@@ -1188,7 +1186,6 @@ static bool PartialStream_Read(
         if(RawByteOffset == 0)
         {
             nFailReason = ERROR_FILE_CORRUPT;
-            bResult = false;
             break;
         }
 
@@ -1201,7 +1198,6 @@ static bool PartialStream_Read(
         if(!pStream->BaseRead(pStream, &RawByteOffset, pbBuffer, dwBytesInPart))
         {
             nFailReason = ERROR_FILE_CORRUPT;
-            bResult = false;
             break;
         }
 

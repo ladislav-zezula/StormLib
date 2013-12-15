@@ -44,10 +44,11 @@
 #endif
 
 // Global for the work MPQ
-static const char * szMpqSubDir   = "1996 - Test MPQs";
-static const char * szMpqPatchDir = "1996 - Test MPQs\\patches";
+static const char * szMpqSubDir   = "1995 - Test MPQs";
+static const char * szMpqPatchDir = "1995 - Test MPQs\\patches";
 
-typedef int (*ARCHIVE_TEST)(const char * szMpqName);
+typedef int (*FIND_FILE_CALLBACK)(const char * szFullPath);
+typedef int (*FIND_PAIR_CALLBACK)(const char * szFullPath1, const char * szFullPath2);
 
 //-----------------------------------------------------------------------------
 // Testing data
@@ -195,18 +196,11 @@ static bool IsMpqExtension(const char * szFileName)
             return true;
         if(!_stricmp(szExtension, ".SC2Map"))
             return true;
+        if(!_stricmp(szExtension, ".link"))
+            return true;
     }
     
     return false;
-}
-
-static bool IsUnicodeNameConvertableToAnsi(const TCHAR * szFileNameT, const char * szFileNameA)
-{
-    TCHAR szUnicodeName[MAX_PATH];
-
-    // Convert the ANSI to UNICODE and compare them
-    CopyFileName(szUnicodeName, szFileNameA, strlen(szFileNameA));
-    return (_tcsicmp(szUnicodeName, szFileNameT) == 0);
 }
 
 static size_t ConvertSha1ToText(const unsigned char * sha1_digest, char * szSha1Text)
@@ -224,23 +218,117 @@ static size_t ConvertSha1ToText(const unsigned char * sha1_digest, char * szSha1
     return (SHA1_DIGEST_SIZE * 2);
 }
 
+static int GetPathSeparatorCount(const char * szPath)
+{
+    int nSeparatorCount = 0;
+
+    while(szPath[0] != 0)
+    {
+        if(szPath[0] == '\\' || szPath[0] == '/')
+            nSeparatorCount++;
+        szPath++;
+    }
+
+    return nSeparatorCount;
+}
+
+static const char * FindNextPathPart(const char * szPath, size_t nPartCount)
+{
+    const char * szPathPart = szPath;
+
+    while(szPath[0] != 0 && nPartCount > 0)
+    {
+        // Is there path separator?
+        if(szPath[0] == '\\' || szPath[0] == '/')
+        {
+            szPathPart = szPath + 1;
+            nPartCount--;
+        }
+
+        // Move to the next letter
+        szPath++;
+    }
+
+    return szPathPart;
+}
+
 static const char * GetShortPlainName(const char * szFileName)
 {
-    const char * szPlainName = szFileName;
+    const char * szPlainName = FindNextPathPart(szFileName, 1000);
     const char * szPlainEnd = szFileName + strlen(szFileName);
-
-    // If there is terminating slash or backslash, move to it
-    while(szFileName < szPlainEnd)
-    {
-        if(szFileName[0] == '\\' || szFileName[0] == '/')
-            szPlainName = szFileName + 1;
-        szFileName++;
-    }
 
     // If the name is still too long, cut it
     if((szPlainEnd - szPlainName) > 50)
         szPlainName = szPlainEnd - 50;
     return szPlainName;
+}
+
+static void CopyPathPart(char * szBuffer, const char * szPath)
+{
+    while(szPath[0] != 0)
+    {
+        szBuffer[0] = (szPath[0] == '\\' || szPath[0] == '/') ? '/' : szPath[0];
+        szBuffer++;
+        szPath++;
+    }
+
+    *szBuffer = 0;
+}
+
+static void CalculateRelativePath(const char * szFullPath1, const char * szFullPath2, char * szBuffer)
+{
+    const char * szPathPart1 = szFullPath1;
+    const char * szPathPart2 = szFullPath2;
+    const char * szNextPart1;
+    const char * szNextPart2;
+    int nEqualParts = 0;
+    int nStepsUp = 0;
+
+    // Parse both paths and find all path parts that are equal
+    for(;;)
+    {
+        // Find the next part of the first path
+        szNextPart1 = FindNextPathPart(szPathPart1, 1);
+        if(szNextPart1 == szPathPart1)
+            break;
+
+        szNextPart2 = FindNextPathPart(szPathPart2, 1);
+        if(szNextPart2 == szPathPart2)
+            break;
+
+        // Are these equal?
+        if((szNextPart2 - szPathPart2) != (szNextPart1 - szPathPart1))
+            break;
+        if(_strnicmp(szPathPart1, szPathPart2, (szNextPart1 - szPathPart1 - 1)))
+            break;
+
+        // Increment the number of path parts that are equal
+        szPathPart1 = szNextPart1;
+        szPathPart2 = szNextPart2;
+        nEqualParts++;
+    }
+
+    // If we found at least one equal part, we can create relative path
+    if(nEqualParts != 0)
+    {
+        // Calculate how many steps up we need to go
+        nStepsUp = GetPathSeparatorCount(szPathPart2);
+
+        // Append "../" nStepsUp-times
+        for(int i = 0; i < nStepsUp; i++)
+        {
+            *szBuffer++ = '.';
+            *szBuffer++ = '.';
+            *szBuffer++ = '/';
+        }
+
+        // Append the rest of the path. Also change DOS backslashes to slashes
+        CopyPathPart(szBuffer, szPathPart1);
+        return;
+    }
+
+    // Failed. Just copy the source path as it is
+    strcpy(szBuffer, szFullPath1);
 }
 
 static void CreateFullPathName(char * szBuffer, const char * szSubDir, const char * szNamePart1, const char * szNamePart2 = NULL)
@@ -299,6 +387,133 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
     *szBuffer = 0;
 }
 
+static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, char * szDirectory)
+{
+    char * szPlainName;
+    int nError = ERROR_SUCCESS;
+
+    // Setup the search masks
+    strcat(szDirectory, "\\*");
+    szPlainName = strrchr(szDirectory, '*');
+
+    if(szDirectory != NULL && szPlainName != NULL)
+    {
+#ifdef PLATFORM_WINDOWS
+        WIN32_FIND_DATAA wf;
+        HANDLE hFind;
+
+        // Initiate search. Use ANSI function only
+        hFind = FindFirstFileA(szDirectory, &wf);
+        if(hFind != INVALID_HANDLE_VALUE)
+        {
+            // Skip the first entry, since it's always "." or ".."
+            while(FindNextFileA(hFind, &wf) && nError == ERROR_SUCCESS)
+            {
+                // Found a directory?
+                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    if(wf.cFileName[0] != '.')
+                    {
+                        strcpy(szPlainName, wf.cFileName);
+                        nError = FindFilesInternal(pfnTest, szDirectory);
+                    }
+                }
+                else
+                {
+                    if(pfnTest != NULL)
+                    {
+                        strcpy(szPlainName, wf.cFileName);
+                        nError = pfnTest(szDirectory);
+                    }
+                }
+            }
+
+            FindClose(hFind);
+        }
+#endif
+    }
+
+    // Free the path buffer, if any
+    return nError;
+}
+
+static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, const char * szSubDirectory)
+{
+    char szWorkBuff[MAX_PATH];
+
+    CreateFullPathName(szWorkBuff, szSubDirectory, NULL);
+    return FindFilesInternal(pfnFindFile, szWorkBuff);
+}
+
+static int FindFilePairsInternal(
+    FIND_PAIR_CALLBACK pfnFilePair, 
+    char * szSource,
+    char * szTarget)
+{
+    char * szPlainName1;
+    char * szPlainName2;
+    int nError = ERROR_SUCCESS;
+
+    // Setup the search masks
+    strcat(szSource, "\\*");
+    szPlainName1 = strrchr(szSource, '*');
+    strcat(szTarget, "\\*");
+    szPlainName2 = strrchr(szTarget, '*');
+
+    // If both paths are OK, perform the search
+    if(szPlainName1 != NULL && szPlainName2 != NULL)
+    {
+#ifdef PLATFORM_WINDOWS
+        WIN32_FIND_DATAA wf;
+        HANDLE hFind;
+
+        // Search the second directory
+        hFind = FindFirstFileA(szTarget, &wf);
+        if(hFind != INVALID_HANDLE_VALUE)
+        {
+            // Skip the first entry, since it's always "." or ".."
+            while(FindNextFileA(hFind, &wf) && nError == ERROR_SUCCESS)
+            {
+                // Found a directory?
+                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    if(wf.cFileName[0] != '.')
+                    {
+                        strcpy(szPlainName1, wf.cFileName);
+                        strcpy(szPlainName2, wf.cFileName);
+                        nError = FindFilePairsInternal(pfnFilePair, szSource, szTarget);
+                    }
+                }
+                else
+                {
+                    if(pfnFilePair != NULL)
+                    {
+                        strcpy(szPlainName1, wf.cFileName);
+                        strcpy(szPlainName2, wf.cFileName);
+                        nError = pfnFilePair(szSource, szTarget);
+                    }
+                }
+            }
+
+            FindClose(hFind);
+        }
+#endif
+    }
+
+    return nError;
+}
+
+static int FindFilePairs(FIND_PAIR_CALLBACK pfnFindPair, const char * szSourceSubDir, const char * szTargetSubDir)
+{
+    char szSource[MAX_PATH];
+    char szTarget[MAX_PATH];
+
+    // Create the source search mask
+    CreateFullPathName(szSource, szSourceSubDir, NULL);
+    CreateFullPathName(szTarget, szTargetSubDir, NULL);
+    return FindFilePairsInternal(pfnFindPair, szSource, szTarget);
+}
+
 TFileStream * OpenLocalFile(const char * szFileName, DWORD dwStreamFlags)
 {
     TCHAR szFileNameT[MAX_PATH];
@@ -313,6 +528,76 @@ TFileStream * CreateLocalFile(const char * szFileName, DWORD dwStreamFlags)
 
     CopyFileName(szFileNameT, szFileName, strlen(szFileName));
     return FileStream_CreateFile(szFileNameT, dwStreamFlags);
+}
+
+static int CalculateFileSha1(TLogHelper * pLogger, const char * szFullPath, char * szFileSha1)
+{
+    TFileStream * pStream;
+    unsigned char sha1_digest[SHA1_DIGEST_SIZE];
+    const char * szShortPlainName = GetShortPlainName(szFullPath);
+    hash_state sha1_state;
+    ULONGLONG ByteOffset = 0;
+    ULONGLONG FileSize = 0;
+    BYTE * pbFileBlock;
+    DWORD cbBytesToRead;
+    DWORD cbFileBlock = 0x100000;
+    int nError = ERROR_SUCCESS;
+
+    // Notify the user
+    pLogger->PrintProgress("Hashing file %s", szShortPlainName);
+    szFileSha1[0] = 0;
+
+    // Open the file to be verified
+    pStream = OpenLocalFile(szFullPath, STREAM_FLAG_READ_ONLY);
+    if(pStream != NULL)
+    {
+        // Retrieve the size of the file
+        FileStream_GetSize(pStream, &FileSize);
+
+        // Allocate the buffer for loading file parts
+        pbFileBlock = STORM_ALLOC(BYTE, cbFileBlock);
+        if(pbFileBlock != NULL)
+        {
+            // Initialize SHA1 calculation
+            sha1_init(&sha1_state);
+
+            // Calculate the SHA1 of the file
+            while(ByteOffset < FileSize)
+            {
+                // Notify the user
+                pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
+
+                // Load the file block
+                cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
+                if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
+                {
+                    nError = GetLastError();
+                    break;
+                }
+
+                // Add to SHA1
+                sha1_process(&sha1_state, pbFileBlock, cbBytesToRead);
+                ByteOffset += cbBytesToRead;
+            }
+
+            // Notify the user
+            pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
+
+            // Finalize SHA1
+            sha1_done(&sha1_state, sha1_digest);
+
+            // Convert the SHA1 to ANSI text
+            ConvertSha1ToText(sha1_digest, szFileSha1);
+            STORM_FREE(pbFileBlock);
+        }
+
+        FileStream_Close(pStream);
+    }
+
+    // If we calculated something, return OK
+    if(nError == ERROR_SUCCESS && szFileSha1[0] == 0)
+        nError = ERROR_CAN_NOT_COMPLETE;
+    return nError;
 }
 
 static int InitializeMpqDirectory(char * argv[], int argc)
@@ -714,7 +999,7 @@ static void WINAPI CompactCallback(void * pvUserData, DWORD dwWork, ULONGLONG By
         if(pLogger != NULL)
             pLogger->PrintProgress("%s (%I64u of %I64u) ...", szWork, BytesDone, TotalBytes);
         else
-            printf("%s (" I64u_a " of " I64u_a ") ...     \r", szWork, (DWORD)BytesDone, (DWORD)TotalBytes);
+            printf("%s (" I64u_a " of " I64u_a ") ...     \r", szWork, BytesDone, TotalBytes);
     }
 }
 
@@ -1307,104 +1592,6 @@ static void TestGetFileInfo(
         pLogger->PrintMessage("Different error from SFileGetFileInfo (expected %u, returned %u)", nExpectedError, nError);
 }
 
-static int TestVerifyFileChecksum(const char * szFullPath)
-{
-    const char * szShortPlainName = GetShortPlainName(szFullPath);
-    unsigned char sha1_digest[SHA1_DIGEST_SIZE];
-    TFileStream * pStream;
-    TFileData * pFileData;
-    hash_state sha1_state;
-    ULONGLONG ByteOffset = 0;
-    ULONGLONG FileSize = 0;
-    char * szExtension;
-    LPBYTE pbFileBlock;
-    char szShaFileName[MAX_PATH];
-    char Sha1Text[0x40];
-    DWORD cbBytesToRead;
-    DWORD cbFileBlock = 0x10000;
-    size_t nLength;
-    int nError = ERROR_SUCCESS;
-
-    // Try to load the file with the SHA extension
-    strcpy(szShaFileName, szFullPath);
-    szExtension = strrchr(szShaFileName, '.');
-    if(szExtension == NULL)
-        return ERROR_SUCCESS;
-
-    // Skip .SHA and .TXT files
-    if(!_stricmp(szExtension, ".sha") || !_stricmp(szExtension, ".txt"))
-        return ERROR_SUCCESS;
-
-    // Load the local file to memory
-    strcpy(szExtension, ".sha");
-    pFileData = LoadLocalFile(NULL, szShaFileName, false);
-    if(pFileData != NULL)
-    {
-        TLogHelper Logger("VerifyFileHash", szShortPlainName);
-
-        // Open the file to be verified
-        pStream = OpenLocalFile(szFullPath, STREAM_FLAG_READ_ONLY);
-        if(pStream != NULL)
-        {
-            // Notify the user
-            Logger.PrintProgress("Verifying file %s", szShortPlainName);
-
-            // Retrieve the size of the file
-            FileStream_GetSize(pStream, &FileSize);
-
-            // Allocate the buffer for loading file parts
-            pbFileBlock = STORM_ALLOC(BYTE, cbFileBlock);
-            if(pbFileBlock != NULL)
-            {
-                // Initialize SHA1 calculation
-                sha1_init(&sha1_state);
-
-                // Calculate the SHA1 of the file
-                while(ByteOffset < FileSize)
-                {
-                    // Notify the user
-                    Logger.PrintProgress("Verifying file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
-
-                    // Load the file block
-                    cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
-                    if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
-                    {
-                        nError = GetLastError();
-                        break;
-                    }
-
-                    // Add to SHA1
-                    sha1_process(&sha1_state, pbFileBlock, cbBytesToRead);
-                    ByteOffset += cbBytesToRead;
-                }
-
-                // Finalize SHA1
-                sha1_done(&sha1_state, sha1_digest);
-                STORM_FREE(pbFileBlock);
-
-                // Compare with what we loaded from the file
-                if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
-                {
-                    // Compare the Sha1
-                    nLength = ConvertSha1ToText(sha1_digest, Sha1Text);
-                    if(_strnicmp(Sha1Text, (char *)pFileData->FileData, nLength))
-                    {
-                        Logger.PrintError("File CRC check failed: %s", szFullPath);
-                        nError = ERROR_FILE_CORRUPT;
-                    }
-                }
-            }
-
-            // Close the file
-            FileStream_Close(pStream);
-        }
-
-        STORM_FREE(pFileData);
-    }
-
-    return nError;
-}
-
 // StormLib is able to open local files (as well as the original Storm.dll)
 // I want to keep this for occasional use
 static int TestOpenLocalFile(const char * szPlainName)
@@ -1630,7 +1817,7 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
 {
     const char * szCopyName;
     TLogHelper Logger("ReadOnlyTest", szPlainName);
-    HANDLE hMpq;
+    HANDLE hMpq = NULL;
     char  szFullPathName[MAX_PATH];
     DWORD dwFlags = bReadOnly ? MPQ_OPEN_READ_ONLY : 0;;
     bool bMustSucceed;
@@ -1872,9 +2059,56 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
     return nError;
 }
 
+static int ForEachFile_VerifyFileChecksum(const char * szFullPath)
+{
+    const char * szShortPlainName = GetShortPlainName(szFullPath);
+    TFileData * pFileData;
+    char * szExtension;
+    char szShaFileName[MAX_PATH];
+    char szSha1Text[0x40];
+    int nError = ERROR_SUCCESS;
 
-// Searches a direcroty
-static int TestOpenEachArchive_EachFile(const char * szFullPath)
+    // Try to load the file with the SHA extension
+    strcpy(szShaFileName, szFullPath);
+    szExtension = strrchr(szShaFileName, '.');
+    if(szExtension == NULL)
+        return ERROR_SUCCESS;
+
+    // Skip .SHA and .TXT files
+    if(!_stricmp(szExtension, ".sha") || !_stricmp(szExtension, ".txt"))
+        return ERROR_SUCCESS;
+
+    // Load the local file to memory
+    strcpy(szExtension, ".sha");
+    pFileData = LoadLocalFile(NULL, szShaFileName, false);
+    if(pFileData != NULL)
+    {
+        TLogHelper Logger("VerifyFileHash", szShortPlainName);
+
+        // Calculate SHA1 of the entire file
+        nError = CalculateFileSha1(&Logger, szFullPath, szSha1Text);
+        if(nError == ERROR_SUCCESS)
+        {
+            // Compare with what we loaded from the file
+            if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
+            {
+                // Compare the SHA1
+                if(_strnicmp(szSha1Text, (char *)pFileData->FileData, (SHA1_DIGEST_SIZE * 2)))
+                {
+                    Logger.PrintError("File CRC check failed: %s", szFullPath);
+                    nError = ERROR_FILE_CORRUPT;
+                }
+            }
+        }
+
+        STORM_FREE(pFileData);
+    }
+
+    return nError;
+}
+
+// Opens a found archive
+static int ForEachFile_OpenArchive(const char * szFullPath)
 {
     HANDLE hMpq = NULL;
     DWORD dwFileCount = 0;
@@ -2342,7 +2576,8 @@ static int TestCreateArchive_FileFlagTest(const char * szPlainName)
     hMpq = NULL;
 
     // Try to reopen the archive
-    nError = OpenExistingArchive(&Logger, szFullPath, 0, NULL);
+    if(nError == ERROR_SUCCESS)
+        nError = OpenExistingArchive(&Logger, szFullPath, 0, NULL);
     return nError;
 }
 
@@ -2547,90 +2782,67 @@ static int TestCreateArchive_BigArchive(const char * szPlainName)
     return nError;
 }
 
-static int TestForEachArchive(ARCHIVE_TEST pfnTest, TCHAR * szSearchMask, TCHAR * szPlainName)
+//-----------------------------------------------------------------------------
+// Comparing two directories, creating links
+
+#define LINK_COMPARE_BLOCK_SIZE 0x200
+
+static int CreateArchiveLinkFile(const char * szFullPath1, const char * szFullPath2, const char * szFileHash)
 {
-    TCHAR szPathBuffT[MAX_PATH];
-    char szPathBuffA[MAX_PATH];
-    char szFullPath[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    TFileStream * pStream;
+    char szLinkData[MAX_PATH + 0x80];
+    char szLinkFile[MAX_PATH];
+    char szLinkPath[MAX_PATH];
+    int nLength;
 
-    // If the name was not entered, construct new one
-    if(szSearchMask == NULL)
-    {
-        CreateFullPathName(szPathBuffA, szMpqSubDir, "*");
-        CopyFileName(szPathBuffT, szPathBuffA, strlen(szPathBuffA));
-        szSearchMask = szPathBuffT;
-    }
+    // Construct the link file name
+    CalculateRelativePath(szFullPath1, szFullPath2, szLinkPath);
+    sprintf(szLinkFile, "%s.link", szFullPath2);
 
-    // Get the position of the plain name
-    if(szPlainName == NULL)
-    {
-        szPlainName = _tcsrchr(szSearchMask, _T('*'));
-        if(szPlainName == NULL)
-            return ERROR_SUCCESS;
-    }
+    // Format the content of the link file
+    nLength = sprintf(szLinkData, "LINK:%s\x0D\x0ASHA1:%s", szLinkPath, szFileHash);
 
-    // At this point, both pointers must be valid
-    assert(szSearchMask != NULL && szPlainName != NULL);
+    // Create the link file
+    pStream = CreateLocalFile(szLinkFile, 0);
+    if(pStream == NULL)
+        return GetLastError();
 
-    // Now both must be entered
-    if(szSearchMask != NULL && szPlainName != NULL)
-    {
-#ifdef PLATFORM_WINDOWS
-        WIN32_FIND_DATA wf;
-        HANDLE hFind;
-
-        // Initiate search. Use ANSI function only
-        hFind = FindFirstFile(szSearchMask, &wf);
-        if(hFind != INVALID_HANDLE_VALUE)
-        {
-            // Skip the first entry, since it's always "." or ".."
-            while(FindNextFile(hFind, &wf) && nError == ERROR_SUCCESS)
-            {
-                // Found a directory?
-                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                {
-                    if(wf.cFileName[0] != '.')
-                    {
-                        _stprintf(szPlainName, _T("%s\\*"), wf.cFileName);
-                        nError = TestForEachArchive(pfnTest, szSearchMask, NULL);
-                    }
-                }
-                else
-                {
-                    if(pfnTest != NULL)
-                    {
-                        // Create the full path as TCHAR
-                        _tcscpy(szPlainName, wf.cFileName);
-                        CopyFileName(szFullPath, szSearchMask, _tcslen(szSearchMask));
-
-                        // Check for UNICODE names
-                        if(IsUnicodeNameConvertableToAnsi(szSearchMask, szFullPath))
-                            nError = pfnTest(szFullPath);
-                    }
-                }
-            }
-
-            FindClose(hFind);
-        }
-#endif
-    }
-
-    // Free the path buffer, if any
-    return nError;
+    // Write the content of the link file
+    FileStream_Write(pStream, NULL, szLinkData, (DWORD)nLength);
+    FileStream_Close(pStream);
+    return ERROR_SUCCESS;
 }
 
-static int TestOpenArchive_EachArchive()
+static int ForEachFile_CreateArchiveLink(const char * szFullPath1, const char * szFullPath2)
 {
-    TCHAR szSearchMaskT[MAX_PATH];
-    char szSearchMaskA[MAX_PATH];
+    TLogHelper Logger("CreateMpqLink", GetShortPlainName(szFullPath2));
+    char szFileHash1[0x40];
+    char szFileHash2[0x40];
+    int nError;
 
-    // Create the TCHAR name of search mask
-    CreateFullPathName(szSearchMaskA, NULL, "*");
-    CopyFileName(szSearchMaskT, szSearchMaskA, strlen(szSearchMaskA));
+    // Prevent logger from witing any result messages
+    Logger.bDontPrintResult = true;
 
-    // Invoke the searching function
-    return TestForEachArchive(TestOpenEachArchive_EachFile, szSearchMaskT, NULL);
+    // Create SHA1 of both files
+    nError = CalculateFileSha1(&Logger, szFullPath1, szFileHash1);
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = CalculateFileSha1(&Logger, szFullPath2, szFileHash2);
+        if(nError == ERROR_SUCCESS)
+        {
+            // If the hashes are identical, we can create link
+            if(!strcmp(szFileHash1, szFileHash2))
+            {
+                nError = CreateArchiveLinkFile(szFullPath1, szFullPath2, szFileHash1);
+                if(nError == ERROR_SUCCESS)
+                {
+                    Logger.PrintMessage("Created link to %s", szFullPath2);
+                }
+            }
+        }
+    }
+
+    return ERROR_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
@@ -2648,10 +2860,14 @@ int main(int argc, char * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
+    // Not a test, but rather a tool for creating links to duplicated files
+    if(nError == ERROR_SUCCESS)
+        nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\16965", "2004 - WoW\\17658");
+
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
-        nError = TestForEachArchive(TestVerifyFileChecksum, NULL, NULL);
-
+        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqDirectory);
+                                                                                                                        
     // Test opening local file with SFileOpenFileEx
     if(nError == ERROR_SUCCESS)
         nError = TestOpenLocalFile("ListFile_Blizzard.txt");
@@ -2720,6 +2936,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2010_v2_HashTableCompressed.MPQ.part");
 
+    // Open every MPQ that we have in the storage
+    if(nError == ERROR_SUCCESS)
+        nError = FindFiles(ForEachFile_OpenArchive, szMpqDirectory);
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -2763,10 +2983,6 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
-
-    // Open every MPQ that we have in the storage
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_EachArchive();
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)

@@ -499,7 +499,7 @@ int ConvertMpqHeaderToFormat4(
             if(pHeader->HetTablePos64)
             {
                 pHeader->HetTableSize64 = ByteOffset - pHeader->HetTablePos64;
-                ByteOffset = pHeader->HetTablePos64;
+//              ByteOffset = pHeader->HetTablePos64;
             }
             break;
 
@@ -1479,7 +1479,7 @@ static TMPQBetTable * TranslateBetTable(
                 LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
                 if(pBetTable->pNameHashes != NULL)
                     memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
-                pbSrcData += pBetHeader->dwNameHashArraySize;
+//              pbSrcData += pBetHeader->dwNameHashArraySize;
 
                 // Dump both tables
 //              DumpHetAndBetTable(ha->pHetTable, pBetTable);
@@ -1592,7 +1592,7 @@ TMPQExtHeader * TranslateBetTable(
             // Write the array of BET hashes
             LengthInBytes = (pBitArray->NumberOfBits + 7) / 8;
             memcpy(pbTrgData, pBitArray->Elements, LengthInBytes);
-            pbTrgData += LengthInBytes;
+//          pbTrgData += LengthInBytes;
 
             // Free the bit array
             STORM_FREE(pBitArray);
@@ -2726,6 +2726,7 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
         // Set the new tables to the MPQ archive
         ha->pFileTable = pFileTable;
         ha->pHashTable = pHashTable;
+        pFileTable = NULL;
 
         // Set the new limits to the MPQ archive
         ha->pHeader->dwHashTableSize = dwNewHashTableSize;
@@ -2763,6 +2764,8 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
         STORM_FREE(pOldFileTable);
     if(pOldHashTable != NULL)
         STORM_FREE(pOldHashTable);
+    if(pFileTable != NULL)
+        STORM_FREE(pFileTable);
     return nError;
 }
 

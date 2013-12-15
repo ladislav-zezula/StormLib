@@ -371,6 +371,7 @@ DWORD DetectFileKeyByKnownContent(void * pvFileContent, DWORD nDwords, ...)
     // We need at least two DWORDS to detect the file key
     if(nDwords < 0x02 || nDwords > 0x10)
         return 0;
+    memset(dwDecrypted, 0, sizeof(dwDecrypted));
     
     va_start(argList, nDwords);
     for(i = 0; i < nDwords; i++)
@@ -639,7 +640,7 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
     TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
-    TFileEntry * pFileEntry = ha->pFileTable;
+    TFileEntry * pFileEntry;
     ULONGLONG FreeSpacePos = ha->pHeader->dwHeaderSize;
     DWORD dwChunkCount;
 
@@ -952,7 +953,7 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
         __LoadSectorOffsets:
 
         // Allocate the sector offset table
-        hf->SectorOffsets = (DWORD *)STORM_ALLOC(BYTE, dwSectorOffsLen);
+        hf->SectorOffsets = STORM_ALLOC(DWORD, (dwSectorOffsLen / sizeof(DWORD)));
         if(hf->SectorOffsets == NULL)
             return ERROR_NOT_ENOUGH_MEMORY;
 
