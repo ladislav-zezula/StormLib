@@ -50,13 +50,8 @@ static char * CopyListLine(char * szListLine, const char * szFileName)
 static bool FreeListFileCache(TListFileCache * pCache)
 {
     // Valid parameter check
-    if(pCache == NULL)
-        return false;
-
-    // Close the listfile
-    if(pCache->hFile != NULL)
-        SFileCloseFile(pCache->hFile);
-    STORM_FREE(pCache);
+    if(pCache != NULL)
+        STORM_FREE(pCache);
     return true;
 }
 
@@ -575,6 +570,10 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
     // Perform file search
     if(nError == ERROR_SUCCESS)
     {
+        // The listfile handle is in the cache now
+        hListFile = NULL;
+
+        // Iterate through the listfile
         for(;;)
         {
             // Read the (next) line
@@ -601,6 +600,10 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
         memset(lpFindFileData, 0, sizeof(SFILE_FIND_DATA));
         SetLastError(nError);
     }
+
+    // Close remaining unowned listfile handle
+    if(hListFile != NULL)
+        SFileCloseFile(hListFile);
     return (HANDLE)pCache;
 }
 
@@ -639,6 +642,13 @@ bool WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData
 
 bool WINAPI SListFileFindClose(HANDLE hFind)
 {
-    return FreeListFileCache((TListFileCache *)hFind);
+    TListFileCache * pCache = (TListFileCache *)hFind;
+
+    if(pCache == NULL)
+        return false;
+
+    if(pCache->hFile != NULL)
+        SFileCloseFile(pCache->hFile);
+    return FreeListFileCache(pCache);
 }
 

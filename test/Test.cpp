@@ -2911,10 +2911,6 @@ int main(int argc, char * argv[])
 
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("WoW-1.2.4-to-1.3.0-enGB-patch.exe");
-
-    // Open an empty archive (found in WoW cache - it's just a header)
-    if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2012_v2_EmptyMpq.MPQ");
 
     // Open an empty archive (created artificially - it's just a header)
