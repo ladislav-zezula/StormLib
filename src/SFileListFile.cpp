@@ -53,14 +53,9 @@ static bool FreeListFileCache(TListFileCache * pCache)
     if(pCache == NULL)
         return false;
 
-    //
-    // Note: don't close the pCache->hFile handle.
-    // This has to be done by the creator of the listfile cache
-    //
-
-    // Free all allocated buffers
-    if(pCache->szMask != NULL)
-        STORM_FREE(pCache->szMask);
+    // Close the listfile
+    if(pCache->hFile != NULL)
+        SFileCloseFile(pCache->hFile);
     STORM_FREE(pCache);
     return true;
 }
@@ -82,7 +77,7 @@ static TListFileCache * CreateListFileCache(HANDLE hListFile, const char * szMas
         nMaskLength = strlen(szMask) + 1;
 
     // Allocate cache for one file block
-    pCache = (TListFileCache *)STORM_ALLOC(BYTE, sizeof(TListFileCache));
+    pCache = (TListFileCache *)STORM_ALLOC(BYTE, sizeof(TListFileCache) + nMaskLength);
     if(pCache != NULL)
     {
         // Clear the entire structure
@@ -595,10 +590,6 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
                 break;                
         }
     }
-
-    // Close the listfile
-    if(hListFile != NULL)
-        SFileCloseFile(hListFile);
 
     // Cleanup & exit
     if(nError != ERROR_SUCCESS)

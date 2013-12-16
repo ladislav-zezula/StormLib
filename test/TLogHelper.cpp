@@ -185,7 +185,7 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
         bMessagePrinted = true;
 
     // Spit out the text in one single printf
-    _tprintf(szMessage);
+    _tprintf(_T("%s"), szMessage);
     return nError;
 }
 
@@ -283,7 +283,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
         bMessagePrinted = true;
 
     // Spit out the text in one single printf
-    printf(szMessage, 0);
+    printf("%s", szMessage, 0);
     return nError;
 }
 

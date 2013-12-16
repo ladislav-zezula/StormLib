@@ -260,6 +260,7 @@ static const char * GetShortPlainName(const char * szFileName)
     // If the name is still too long, cut it
     if((szPlainEnd - szPlainName) > 50)
         szPlainName = szPlainEnd - 50;
+
     return szPlainName;
 }
 
@@ -1629,6 +1630,30 @@ static int TestOpenLocalFile(const char * szPlainName)
     return ERROR_SUCCESS;
 }
 
+static int TestSearchListFile(const char * szPlainName)
+{
+    SFILE_FIND_DATA sf;
+    TLogHelper Logger("SearchListFile", szPlainName);
+    HANDLE hFind;
+    char szFullPath[MAX_PATH];
+    int nFileCount = 0;
+    
+    CreateFullPathName(szFullPath, szMpqSubDir, szPlainName);
+    hFind = SListFileFindFirstFile(NULL, szFullPath, "*", &sf);
+    if(hFind != NULL)
+    {
+        for(;;)
+        {
+            Logger.PrintProgress("Found file (%04u): %s", nFileCount++, GetShortPlainName(sf.cFileName));
+            if(!SListFileFindNextFile(hFind, &sf))
+                break;
+        }
+
+        SListFileFindClose(hFind);
+    }
+    return ERROR_SUCCESS;
+}
+
 // 
 static int TestPartFileRead(const char * szPlainName)
 {
@@ -2861,8 +2886,8 @@ int main(int argc, char * argv[])
     nError = InitializeMpqDirectory(argv, argc);
 
     // Not a test, but rather a tool for creating links to duplicated files
-    if(nError == ERROR_SUCCESS)
-        nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\16965", "2004 - WoW\\17658");
+//  if(nError == ERROR_SUCCESS)
+//      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
 
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
@@ -2872,6 +2897,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenLocalFile("ListFile_Blizzard.txt");
 
+    // Search in listfile
+    if(nError == ERROR_SUCCESS)
+        nError = TestSearchListFile("ListFile_Blizzard.txt");
+
     // Test reading partial file
     if(nError == ERROR_SUCCESS)
         nError = TestPartFileRead("MPQ_2009_v2_WoW_patch.MPQ.part");
@@ -2879,6 +2908,10 @@ int main(int argc, char * argv[])
     // Test working with an archive that has no listfile
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenById("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
+
+    // Open an empty archive (found in WoW cache - it's just a header)
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("WoW-1.2.4-to-1.3.0-enGB-patch.exe");
 
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
