@@ -240,7 +240,6 @@
     void ConvertUInt16Buffer(void * ptr, size_t length);
     void ConvertUInt32Buffer(void * ptr, size_t length);
     void ConvertUInt64Buffer(void * ptr, size_t length);
-    void ConvertPartHeader(void * partHeader);
     void ConvertTMPQUserData(void *userData);
     void ConvertTMPQHeader(void *header, uint16_t wPart);
     void ConvertTMPKHeader(void *header);
@@ -256,7 +255,6 @@
     #define    BSWAP_ARRAY16_UNSIGNED(a,b)      ConvertUInt16Buffer((a),(b))
     #define    BSWAP_ARRAY32_UNSIGNED(a,b)      ConvertUInt32Buffer((a),(b))
     #define    BSWAP_ARRAY64_UNSIGNED(a,b)      ConvertUInt64Buffer((a),(b))
-    #define    BSWAP_PART_HEADER(a)             ConvertPartHeader(a)
     #define    BSWAP_TMPQHEADER(a,b)            ConvertTMPQHeader((a),(b))
     #define    BSWAP_TMPKHEADER(a)              ConvertTMPKHeader((a))
 #endif

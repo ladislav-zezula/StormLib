@@ -28,9 +28,9 @@ typedef bool (*STREAM_WRITE)(
     DWORD dwBytesToWrite                // Number of bytes to read from the file
     );
 
-typedef bool (*STREAM_GETPOS)(
+typedef bool (*STREAM_SETSIZE)(
     struct TFileStream * pStream,       // Pointer to an open stream
-    ULONGLONG * pByteOffset             // Pointer to store current file position
+    ULONGLONG FileSize                  // New size for the file, in bytes
     );
 
 typedef bool (*STREAM_GETSIZE)(
@@ -38,14 +38,21 @@ typedef bool (*STREAM_GETSIZE)(
     ULONGLONG * pFileSize               // Receives the file size, in bytes
     );
 
-typedef bool (*STREAM_SETSIZE)(
-    struct TFileStream * pStream,       // Pointer to an open stream
-    ULONGLONG FileSize                  // New size for the file, in bytes
-    );
-
 typedef bool (*STREAM_GETTIME)(
     struct TFileStream * pStream,
     ULONGLONG * pFT
+    );
+
+typedef bool (*STREAM_GETPOS)(
+    struct TFileStream * pStream,       // Pointer to an open stream
+    ULONGLONG * pByteOffset             // Pointer to store current file position
+    );
+
+typedef bool (*STREAM_GETBMP)(
+    TFileStream * pStream,
+    void * pvBitmap,
+    DWORD Length,
+    LPDWORD LengthNeeded
     );
 
 typedef bool (*STREAM_SWITCH)(
@@ -53,19 +60,14 @@ typedef bool (*STREAM_SWITCH)(
     struct TFileStream * pNewStream
     );
 
-typedef bool (*STREAM_GETBMP)(
-    TFileStream * pStream,
-    TFileBitmap * pBitmap,
-    DWORD Length,
-    LPDWORD LengthNeeded
-    );
-
 typedef void (*STREAM_CLOSE)(
     struct TFileStream * pStream
     );
 
 //-----------------------------------------------------------------------------
-// Local structures - part file structure
+// Local structures - partial file structure and bitmap footer
+
+#define ID_FILE_BITMAP_FOOTER   0x33767470  // Signature of the file bitmap footer ('ptv3')
 
 typedef struct _PART_FILE_HEADER
 {
@@ -89,6 +91,17 @@ typedef struct _PART_FILE_MAP_ENTRY
 
 } PART_FILE_MAP_ENTRY, *PPART_FILE_MAP_ENTRY;
 
+typedef struct _FILE_BITMAP_FOOTER
+{
+    DWORD dwSignature;                      // 'ptv3' (MPQ_DATA_BITMAP_SIGNATURE)
+    DWORD dwAlways3;                        // Unknown, seems to always have value of 3
+    DWORD dwBuildNumber;                    // Game build number for that MPQ
+    DWORD dwMapOffsetLo;                    // Low 32-bits of the offset of the bit map
+    DWORD dwMapOffsetHi;                    // High 32-bits of the offset of the bit map
+    DWORD dwBlockSize;                      // Size of one block (usually 0x4000 bytes)
+
+} FILE_BITMAP_FOOTER, *PFILE_BITMAP_FOOTER;
+
 //-----------------------------------------------------------------------------
 // Local structures
 
@@ -96,25 +109,16 @@ union TBaseData
 {
     struct
     {
-        ULONGLONG FileSize;                 // Size of the file
-        ULONGLONG FilePos;                  // Current file position
-        ULONGLONG FileTime;                 // Date/time of last modification of the file
         HANDLE hFile;                       // File handle
     } File;
 
     struct
     {
-        ULONGLONG FileSize;                 // Mapped file size
-        ULONGLONG FilePos;                  // Current stream position
-        ULONGLONG FileTime;                 // Date/time of last modification of the file
         LPBYTE pbFile;                      // Pointer to mapped view
     } Map;
 
     struct
     {
-        ULONGLONG FileSize;                 // Size of the internet file
-        ULONGLONG FilePos;                  // Current position in the file
-        ULONGLONG FileTime;                 // Date/time of last modification of the file
         HANDLE hInternet;                   // Internet handle
         HANDLE hConnect;                    // Connection to the internet server
     } Http;
@@ -128,39 +132,39 @@ struct TFileStream
     // Stream provider functions
     STREAM_READ    StreamRead;              // Pointer to stream read function for this archive. Do not use directly.
     STREAM_WRITE   StreamWrite;             // Pointer to stream write function for this archive. Do not use directly.
-    STREAM_GETPOS  StreamGetPos;            // Pointer to function that returns current file position
-    STREAM_GETSIZE StreamGetSize;           // Pointer to function returning file size
     STREAM_SETSIZE StreamSetSize;           // Pointer to function changing file size
+    STREAM_GETSIZE StreamGetSize;           // Pointer to function returning file size
     STREAM_GETTIME StreamGetTime;           // Pointer to function retrieving the file time
+    STREAM_GETPOS  StreamGetPos;            // Pointer to function that returns current file position
     STREAM_GETBMP  StreamGetBmp;            // Pointer to function that retrieves the file bitmap
     STREAM_SWITCH  StreamSwitch;            // Pointer to function changing the stream to another file
     STREAM_CLOSE   StreamClose;             // Pointer to function closing the stream
 
-    // Stream provider data members
-    TCHAR szFileName[MAX_PATH];             // File name
-    DWORD dwFlags;                          // Stream flags
-
     // Base provider functions
     STREAM_READ    BaseRead;
     STREAM_WRITE   BaseWrite;
-    STREAM_GETPOS  BaseGetPos;              // Pointer to function that returns current file position
-    STREAM_GETSIZE BaseGetSize;             // Pointer to function returning file size
     STREAM_SETSIZE BaseSetSize;             // Pointer to function changing file size
-    STREAM_GETTIME BaseGetTime;             // Pointer to function retrieving the file time
     STREAM_CLOSE   BaseClose;               // Pointer to function closing the stream
 
-    // Base provider data members
+    ULONGLONG FileSize;                     // Size of the file
+    ULONGLONG FilePos;                      // Current file position
+    ULONGLONG FileTime;                     // Date/time of last modification of the file
+    TCHAR * szSourceName;                   // Name of the source file (might be HTTP file server or local file)
+    TCHAR * szFileName;                     // File name (self-relative pointer)
+    DWORD dwFlags;                          // Stream flags
+
     TBaseData Base;                         // Base provider data
 
     // Followed by stream provider data, with variable length
 };
 
 //-----------------------------------------------------------------------------
-// Structure for linear stream
+// Structures for linear stream
 
 struct TLinearStream : public TFileStream
 {
-    TFileBitmap * pBitmap;                  // Pointer to the stream bitmap
+    TFileStream * pMaster;                  // Master file for loading missing data blocks
+    TFileBitmap * pBitmap;                  // Pointer to the linear bitmap
 };
 
 //-----------------------------------------------------------------------------

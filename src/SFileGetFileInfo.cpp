@@ -163,6 +163,12 @@ bool WINAPI SFileGetFileInfo(
             }
             break;
 
+        case SFileMpqFileBitmap:
+            ha = IsValidMpqHandle(hMpqOrFile);
+            if(ha != NULL)
+                return FileStream_GetBitmap(ha->pStream, pvFileInfo, cbFileInfo, pcbLengthNeeded);
+            break;
+
         case SFileMpqUserDataOffset:
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
@@ -505,49 +511,6 @@ bool WINAPI SFileGetFileInfo(
                 {
                     pvSrcFileInfo = SignatureInfo.Signature;
                     cbSrcFileInfo = MPQ_STRONG_SIGNATURE_SIZE + 4;
-                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
-                }
-            }
-            break;
-
-        case SFileMpqBitmapOffset:
-            ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL)
-            {
-                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
-                if(ha->pBitmap != NULL)
-                {
-                    Int64Value = MAKE_OFFSET64(ha->pBitmap->dwMapOffsetHi, ha->pBitmap->dwMapOffsetLo);
-                    pvSrcFileInfo = &Int64Value;
-                    cbSrcFileInfo = sizeof(ULONGLONG);
-                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
-                }
-            }
-            break;
-
-        case SFileMpqBitmapSize:
-            ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL)
-            {
-                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
-                if(ha->pBitmap != NULL)
-                {
-                    pvSrcFileInfo = &ha->dwBitmapSize;
-                    cbSrcFileInfo = sizeof(DWORD);
-                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
-                }
-            }
-            break;
-
-        case SFileMpqBitmap:
-            ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL)
-            {
-                nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
-                if(ha->pBitmap != NULL)
-                {
-                    pvSrcFileInfo = ha->pBitmap;
-                    cbSrcFileInfo = ha->dwBitmapSize;
                     nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
                 }
             }

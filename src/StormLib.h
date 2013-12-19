@@ -239,9 +239,6 @@ extern "C" {
 #define MPQ_KEY_HASH_TABLE          0xC3AF3770  // Obtained by HashString("(hash table)", MPQ_HASH_FILE_KEY)
 #define MPQ_KEY_BLOCK_TABLE         0xEC83B3A3  // Obtained by HashString("(block table)", MPQ_HASH_FILE_KEY)
 
-// Block map defines
-#define MPQ_DATA_BITMAP_SIGNATURE   0x33767470  // Signature of the MPQ data bitmap ('ptv3')
-
 #define LISTFILE_NAME             "(listfile)"  // Name of internal listfile
 #define SIGNATURE_NAME           "(signature)"  // Name of internal signature
 #define ATTRIBUTES_NAME         "(attributes)"  // Name of internal attributes file
@@ -274,6 +271,7 @@ extern "C" {
 
 #define STREAM_FLAG_READ_ONLY       0x00000100  // Stream is read only
 #define STREAM_FLAG_WRITE_SHARE     0x00000200  // Allow write sharing when open for write
+#define STREAM_FLAG_USE_BITMAP      0x00000400  // If the file has a file bitmap, load it and use it
 #define STREAM_FLAG_MASK            0x0000FF00  // Mask for stream flags
 #define STREAM_OPTIONS_MASK         0x0000FFFF  // Mask for all stream options
 
@@ -363,6 +361,7 @@ typedef enum _SFileInfoClass
 {
     // Info classes for archives
     SFileMpqFileName,                       // Name of the archive file (TCHAR [])
+    SFileMpqFileBitmap,                     // Bitmap of the archive (TFileBitmap + BYTE[])
     SFileMpqUserDataOffset,                 // Offset of the user data header (ULONGLONG)
     SFileMpqUserDataHeader,                 // Raw (unfixed) user data header (TMPQUserData)
     SFileMpqUserData,                       // MPQ USer data, without the header (BYTE [])
@@ -392,9 +391,6 @@ typedef enum _SFileInfoClass
     SFileMpqStrongSignatureOffset,          // Byte offset of the strong signature, relative to begin of the file (ULONGLONG)
     SFileMpqStrongSignatureSize,            // Size of the strong signature (DWORD)
     SFileMpqStrongSignature,                // The strong signature (BYTE [])
-    SFileMpqBitmapOffset,                   // Byte offset of the MPQ bitmap, relative to begin of the file (ULONGLONG)
-    SFileMpqBitmapSize,                     // Size of the MPQ bitmap (DWORD)
-    SFileMpqBitmap,                         // The MPQ Bitmap (BYTE [])
     SFileMpqArchiveSize64,                  // Archive size from the header (ULONGLONG)
     SFileMpqArchiveSize,                    // Archive size from the header (DWORD)
     SFileMpqMaxFileCount,                   // Max number of files in the archive (DWORD)
@@ -483,19 +479,6 @@ typedef struct _TBitArray
 
 void GetBits(TBitArray * array, unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
 void SetBits(TBitArray * array, unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
-
-// Structure for file bitmap. Used by SFileGetArchiveBitmap
-typedef struct _TFileBitmap
-{
-    ULONGLONG StartOffset;                      // Starting offset of the file, covered by bitmap
-    ULONGLONG EndOffset;                        // Ending offset of the file, covered by bitmap
-    DWORD IsComplete;                           // If nonzero, no blocks are missing
-    DWORD BitmapSize;                           // Size of the file bitmap (in bytes)
-    DWORD BlockSize;                            // Size of one block, in bytes
-    DWORD Reserved;                             // Alignment
-
-    // Followed by file bitmap (variable length), array of BYTEs)
-} TFileBitmap;
 
 //-----------------------------------------------------------------------------
 // Structures related to MPQ format
@@ -712,6 +695,19 @@ typedef struct _TPatchHeader
 
 #define SIZE_OF_XFRM_HEADER  0x0C
 
+// Structure for file bitmap. Used by SFileGetFileInfo(SFileMpqFileBitmap)
+typedef struct _TFileBitmap
+{
+    ULONGLONG StartOffset;                      // Starting offset of the file, covered by bitmap
+    ULONGLONG EndOffset;                        // Ending offset of the file, covered by bitmap
+    DWORD BitmapSize;                           // Size of the file bitmap (in bytes)
+    DWORD BlockSize;                            // Size of one block, in bytes
+    DWORD BlockCount;                           // Number of data blocks in the file
+    DWORD IsComplete;                           // If nonzero, no blocks are missing
+
+    // Followed by file bitmap (variable length), array of BYTEs)
+} TFileBitmap;
+
 // This is the combined file entry for maintaining file list in the MPQ.
 // This structure is combined from block table, hi-block table,
 // (attributes) file and from (listfile).
@@ -786,22 +782,6 @@ typedef struct _TMPQBetHeader
 
 } TMPQBetHeader;
 
-//
-// MPQ data bitmap, can be found at (FileSize - sizeof(TMPQBlockMap))
-//
-// There is bit map of the entire MPQ before TMPQBitmap. Each 0x4000-byte
-// block is represented by one bit (including the last, eventually incomplete block).
-// 
-typedef struct _TMPQBitmap
-{
-    DWORD dwSignature;                          // 'ptv3' (MPQ_BLOCK_MAP_SIGNATURE)
-    DWORD dwAlways3;                            // Unknown, seems to always have value of 3
-    DWORD dwBuildNumber;                        // Game build number for that MPQ
-    DWORD dwMapOffsetLo;                        // Low 32-bits of the offset of the bit map
-    DWORD dwMapOffsetHi;                        // High 32-bits of the offset of the bit map
-    DWORD dwBlockSize;                          // Size of one block (usually 0x4000 bytes)
-} TMPQBitmap;
-
 // Structure for parsed HET table
 typedef struct _TMPQHetTable
 {
@@ -858,7 +838,6 @@ typedef struct _TMPQArchive
 
     TMPQUserData * pUserData;                   // MPQ user data (NULL if not present in the file)
     TMPQHeader   * pHeader;                     // MPQ file header
-    TMPQBitmap   * pBitmap;                     // MPQ bitmap
     TMPQHash     * pHashTable;                  // Hash table
     TMPQHetTable * pHetTable;                   // HET table
     TFileEntry   * pFileTable;                  // File table
@@ -869,7 +848,6 @@ typedef struct _TMPQArchive
 
     DWORD          dwHETBlockSize;
     DWORD          dwBETBlockSize;
-    DWORD          dwBitmapSize;                // sizeof(TMPQBitmap) + size of the bit array
     DWORD          dwMaxFileCount;              // Maximum number of files in the MPQ. Also total size of the file table.
     DWORD          dwFileTableSize;             // Current size of the file table, e.g. index of the entry past the last occupied one
     DWORD          dwReservedFiles;             // Number of entries reserved for internal MPQ files (listfile, attributes)
@@ -968,11 +946,6 @@ TFileStream * FileStream_CreateFile(const TCHAR * szFileName, DWORD dwStreamFlag
 TFileStream * FileStream_OpenFile(const TCHAR * szFileName, DWORD dwStreamFlags);
 const TCHAR * FileStream_GetFileName(TFileStream * pStream);
 
-//#ifdef _UNICODE
-//TFileStream * FileStream_CreateFile(const char * szFileName, DWORD dwStreamFlags);
-//TFileStream * FileStream_OpenFile(const char * szFileName, DWORD dwStreamFlags);
-//#endif
-
 bool FileStream_IsReadOnly(TFileStream * pStream);
 bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead);
 bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite);
@@ -983,8 +956,7 @@ bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize);
 bool FileStream_GetTime(TFileStream * pStream, ULONGLONG * pFT);
 bool FileStream_GetFlags(TFileStream * pStream, LPDWORD pdwStreamFlags);
 bool FileStream_Switch(TFileStream * pStream, TFileStream * pTempStream);
-bool FileStream_SetBitmap(TFileStream * pStream, TFileBitmap * pBitmap);
-bool FileStream_GetBitmap(TFileStream * pStream, TFileBitmap * pBitmap, DWORD Length, LPDWORD LengthNeeded);
+bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD Length, LPDWORD LengthNeeded);
 void FileStream_Close(TFileStream * pStream);
 
 //-----------------------------------------------------------------------------
@@ -1013,7 +985,6 @@ bool   WINAPI SFileOpenArchive(const TCHAR * szMpqName, DWORD dwPriority, DWORD 
 bool   WINAPI SFileCreateArchive(const TCHAR * szMpqName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq);
 bool   WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCreateInfo, HANDLE * phMpq);
 
-bool   WINAPI SFileGetArchiveBitmap(HANDLE hMpq, TFileBitmap * pBitmap, DWORD Length, LPDWORD LengthNeeded);
 bool   WINAPI SFileFlushArchive(HANDLE hMpq);
 bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 

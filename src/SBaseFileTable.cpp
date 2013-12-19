@@ -252,12 +252,22 @@ static DWORD GetMaxFileOffset32(TMPQArchive * ha)
 
 static ULONGLONG DetermineEndOfArchive_V1_V2(
     TMPQArchive * ha,
+    TMPQHeader * pHeader,
     ULONGLONG MpqOffset,
     ULONGLONG FileSize)
 {
     ULONGLONG ByteOffset;
     ULONGLONG EndOfMpq = FileSize;
     DWORD SignatureHeader = 0;
+    DWORD dwArchiveSize32;
+
+    // Check if we can rely on the archive size in the header
+    if((FileSize >> 0x20) == 0)
+    {
+        dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
+        if(pHeader->dwBlockTablePos < pHeader->dwArchiveSize && pHeader->dwArchiveSize <= dwArchiveSize32)
+            return pHeader->dwArchiveSize;
+    }
 
     // Check if there is a signature header
     if((EndOfMpq - MpqOffset) > (MPQ_STRONG_SIGNATURE_SIZE + 4))
@@ -375,7 +385,7 @@ int ConvertMpqHeaderToFormat4(
             // Determine the archive size on malformed MPQs
             if(ha->dwFlags & MPQ_FLAG_MALFORMED)
             {
-                pHeader->ArchiveSize64 = DetermineEndOfArchive_V1_V2(ha, MpqOffset, FileSize);
+                pHeader->ArchiveSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize);
                 pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
             }
             break;
@@ -418,7 +428,7 @@ int ConvertMpqHeaderToFormat4(
                     assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
 
                     // Determine the size of the hi-block table
-                    pHeader->HiBlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, MpqOffset, FileSize) - pHeader->HiBlockTablePos64;
+                    pHeader->HiBlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize) - pHeader->HiBlockTablePos64;
                     assert(pHeader->HiBlockTableSize64 == (pHeader->dwBlockTableSize * sizeof(USHORT)));
 
                     // Recalculate the archive size
@@ -427,7 +437,7 @@ int ConvertMpqHeaderToFormat4(
                 else
                 {
                     // Block table size is the end of the archive minus the block table position
-                    pHeader->BlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, MpqOffset, FileSize) - BlockTablePos64;
+                    pHeader->BlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize) - BlockTablePos64;
                     assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
 
                     // dwArchiveSize in the header v 2.0 is 32-bit only
@@ -1989,96 +1999,6 @@ void InvalidateInternalFiles(TMPQArchive * ha)
 }
 
 //-----------------------------------------------------------------------------
-// Functions that loads and verify MPQ data bitmap
-
-int LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsComplete)
-{
-    TMPQBitmap * pBitmap = NULL;
-    TMPQBitmap DataBitmap;
-    ULONGLONG BitmapOffset;
-    ULONGLONG EndOfMpq;
-    DWORD DataBlockCount = 0;
-    DWORD BitmapByteSize = 0;
-    DWORD WholeByteCount;
-    DWORD ExtraBitsCount;
-
-    // Is there enough space for a MPQ bitmap?
-    // Note: Do not rely on file size when looking for the bitmap.
-    // Battle.net.MPQ from SC2:HOTS (build 22342) has some data appended after the bitmap
-    EndOfMpq = ha->MpqPos + ha->pHeader->ArchiveSize64;
-    if(FileSize > EndOfMpq && ha->pHeader->dwRawChunkSize != 0)
-    {
-        // Calculate the number of extra bytes for data bitmap
-        DataBlockCount = (DWORD)(((ha->pHeader->ArchiveSize64 - 1) / ha->pHeader->dwRawChunkSize) + 1);
-        BitmapByteSize = ((DataBlockCount + 7) / 8);
-        BitmapOffset = EndOfMpq + BitmapByteSize;
-
-        // Try to load the data bitmap from the end of the file
-        if(FileStream_Read(ha->pStream, &BitmapOffset, &DataBitmap, sizeof(TMPQBitmap)))
-        {
-            // Is it a valid data bitmap?
-            BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&DataBitmap), sizeof(TMPQBitmap));
-            if(DataBitmap.dwSignature == MPQ_DATA_BITMAP_SIGNATURE)
-            {
-                // Several sanity checks to ensure integrity of the bitmap
-                assert(ha->MpqPos + MAKE_OFFSET64(DataBitmap.dwMapOffsetHi, DataBitmap.dwMapOffsetLo) == EndOfMpq);
-                assert(ha->pHeader->dwRawChunkSize == DataBitmap.dwBlockSize);
-
-                // Allocate space for the data bitmap
-                pBitmap = (TMPQBitmap *)STORM_ALLOC(BYTE, sizeof(TMPQBitmap) + BitmapByteSize);
-                if(pBitmap != NULL)
-                {
-                    // Copy the bitmap header
-                    memcpy(pBitmap, &DataBitmap, sizeof(TMPQBitmap));
-
-                    // Read the remaining part
-                    if(!FileStream_Read(ha->pStream, &EndOfMpq, (pBitmap + 1), BitmapByteSize))
-                    {
-                        STORM_FREE(pBitmap);
-                        pBitmap = NULL;
-                    }
-                }
-            }
-        }
-    }
-
-    // If the caller asks for file completeness, check it
-    if(pBitmap != NULL && pbFileIsComplete != NULL)
-    {
-        LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
-        DWORD i;
-        bool bFileIsComplete = true;
-
-        // Calculate the number of whole bytes and extra bits of the bitmap
-        WholeByteCount = (DataBlockCount / 8);
-        ExtraBitsCount = (DataBlockCount & 7);
-
-        // Verify the whole bytes - their value must be 0xFF
-        for(i = 0; i < WholeByteCount; i++)
-        {
-            if(pbBitmap[i] != 0xFF)
-                bFileIsComplete = false;
-        }
-
-        // If there are extra bits, calculate the mask
-        if(ExtraBitsCount != 0)
-        {
-            BYTE ExpectedValue = (BYTE)((1 << ExtraBitsCount) - 1);
-            
-            if(pbBitmap[i] != ExpectedValue)
-                bFileIsComplete = false;
-        }
-
-        // Give the result to the caller
-        *pbFileIsComplete = bFileIsComplete;
-    }
-
-    ha->dwBitmapSize = sizeof(TMPQBitmap) + BitmapByteSize;
-    ha->pBitmap = pBitmap;
-    return ERROR_SUCCESS;
-}
-
-//-----------------------------------------------------------------------------
 // Support for file tables - hash table, block table, hi-block table
 
 int CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize)
@@ -2726,7 +2646,6 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
         // Set the new tables to the MPQ archive
         ha->pFileTable = pFileTable;
         ha->pHashTable = pHashTable;
-        pFileTable = NULL;
 
         // Set the new limits to the MPQ archive
         ha->pHeader->dwHashTableSize = dwNewHashTableSize;
@@ -2757,6 +2676,7 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
         // Update the file table size
         ha->dwFileTableSize = (DWORD)(pFileEntry - pFileTable);
         ha->dwFlags |= MPQ_FLAG_CHANGED;
+        pFileTable = NULL;
     }
 
     // Now free the remaining entries

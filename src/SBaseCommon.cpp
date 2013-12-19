@@ -1410,8 +1410,6 @@ void FreeMPQArchive(TMPQArchive *& ha)
             STORM_FREE(ha->pFileTable);
         }
 
-        if(ha->pBitmap != NULL)
-            STORM_FREE(ha->pBitmap);
         if(ha->pHashTable != NULL)
             STORM_FREE(ha->pHashTable);
         if(ha->pHetTable != NULL)

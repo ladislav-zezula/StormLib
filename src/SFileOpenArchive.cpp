@@ -59,34 +59,6 @@ static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSiz
     return NULL;
 }
 
-static TFileBitmap * CreateFileBitmap(TMPQArchive * ha, TMPQBitmap * pMpqBitmap, bool bFileIsComplete)
-{
-    TFileBitmap * pBitmap;
-    size_t nLength;
-
-    // Calculate the length of the bitmap in blocks and in bytes
-    nLength = (size_t)(((ha->pHeader->ArchiveSize64 - 1) / pMpqBitmap->dwBlockSize) + 1);
-    nLength = (size_t)(((nLength - 1) / 8) + 1);
-
-    // Allocate the file bitmap
-    pBitmap = (TFileBitmap *)STORM_ALLOC(BYTE, sizeof(TFileBitmap) + nLength);
-    if(pBitmap != NULL)
-    {
-        // Fill the structure
-        pBitmap->StartOffset = ha->MpqPos;
-        pBitmap->EndOffset = ha->MpqPos + ha->pHeader->ArchiveSize64;
-        pBitmap->IsComplete = bFileIsComplete ? 1 : 0;
-        pBitmap->BitmapSize = (DWORD)nLength;
-        pBitmap->BlockSize = pMpqBitmap->dwBlockSize;
-        pBitmap->Reserved = 0;
-
-        // Copy the file bitmap
-        memcpy((pBitmap + 1), (pMpqBitmap + 1), nLength);
-    }
-
-    return pBitmap;
-}
-
 // This function gets the right positions of the hash table and the block table.
 static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
 {
@@ -190,7 +162,7 @@ bool WINAPI SFileOpenArchive(
     if(nError == ERROR_SUCCESS)
     {
         // Initialize the stream
-        pStream = FileStream_OpenFile(szMpqName, (dwFlags & STREAM_OPTIONS_MASK));
+        pStream = FileStream_OpenFile(szMpqName, (dwFlags & STREAM_OPTIONS_MASK) | STREAM_FLAG_USE_BITMAP);
         if(pStream == NULL)
             nError = GetLastError();
     }
@@ -344,24 +316,6 @@ bool WINAPI SFileOpenArchive(
         nError = VerifyMpqTablePositions(ha, FileSize);
     }
 
-    // Check if the MPQ has data bitmap. If yes, we can verify if the MPQ is complete
-    if(nError == ERROR_SUCCESS && ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_4)
-    {
-        TFileBitmap * pBitmap;
-        bool bFileIsComplete = true;
-
-        LoadMpqDataBitmap(ha, FileSize, &bFileIsComplete);
-        if(ha->pBitmap != NULL && bFileIsComplete == false)
-        {
-            // Convert the MPQ bitmap to the file bitmap
-            pBitmap = CreateFileBitmap(ha, ha->pBitmap, bFileIsComplete);
-
-            // Set the data bitmap into the file stream for additional checks
-            FileStream_SetBitmap(ha->pStream, pBitmap);
-            ha->dwFlags |= MPQ_FLAG_READ_ONLY;
-        }
-    }
-
     // Read the hash table. Ignore the result, as hash table is no longer required
     // Read HET table. Ignore the result, as HET table is no longer required
     if(nError == ERROR_SUCCESS)
@@ -447,16 +401,6 @@ bool WINAPI SFileOpenArchive(
 
     *phMpq = ha;
     return (nError == ERROR_SUCCESS);
-}
-
-//-----------------------------------------------------------------------------
-// SFileGetArchiveBitmap
-
-bool WINAPI SFileGetArchiveBitmap(HANDLE hMpq, TFileBitmap * pBitmap, DWORD Length, LPDWORD LengthNeeded)
-{
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
-
-    return FileStream_GetBitmap(ha->pStream, pBitmap, Length, LengthNeeded);
 }
 
 //-----------------------------------------------------------------------------

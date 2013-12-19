@@ -47,77 +47,89 @@ void SetLastError(int nError)
 }
 #endif
 
-#ifndef PLATFORM_LITTLE_ENDIAN
-void ConvertPartHeader(void * partHeader)
-{
-    PPART_FILE_HEADER theHeader = (PPART_FILE_HEADER)partHeader;
-
-    theHeader->PartialVersion = SwapUInt32(theHeader->PartialVersion);
-    theHeader->Flags          = SwapUInt32(theHeader->Flags);
-    theHeader->FileSizeLo     = SwapUInt32(theHeader->FileSizeLo);
-    theHeader->FileSizeHi     = SwapUInt32(theHeader->FileSizeHi);
-    theHeader->BlockSize      = SwapUInt32(theHeader->BlockSize);
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Preparing file bitmap for a complete file of a given size
 
-#define DEFAULT_BLOCK_SIZE 0x4000
-
-static bool Dummy_GetBitmap(
-    TFileStream * pStream,
+static bool FileBitmap_CheckRange(
     TFileBitmap * pBitmap,
-    DWORD Length,
-    LPDWORD LengthNeeded)
+    ULONGLONG ByteOffset,
+    ULONGLONG EndOffset)
 {
-    ULONGLONG FileSize = 0;
-    DWORD TotalLength;
-    DWORD BlockCount;
-    DWORD BitmapSize;
-    DWORD LastByte;
-    bool bResult = false;
+    LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
+    DWORD BlockIndex = (DWORD)(ByteOffset / pBitmap->BlockSize);
+    DWORD ByteIndex = (BlockIndex / 0x08);
+    BYTE BitMask = (BYTE)(0x01 << (BlockIndex & 0x07));
 
-    // Get file size and calculate bitmap length
-    FileStream_GetSize(pStream, &FileSize);
-    BlockCount = (DWORD)(((FileSize - 1) / DEFAULT_BLOCK_SIZE) + 1);
-    BitmapSize = (DWORD)(((BlockCount - 1) / 8) + 1);
+    // Mask the bye offset down to the begin of the block
+    ByteOffset = ByteOffset & ~((ULONGLONG)pBitmap->BlockSize - 1);
 
-    // Calculate and give the total length
-    TotalLength = sizeof(TFileBitmap) + BitmapSize;
-    if(LengthNeeded != NULL)
-        *LengthNeeded = TotalLength;
-
-    // Has the caller given enough space for storing the structure?
-    if(Length >= sizeof(TFileBitmap))
+    // Check each block
+    while(ByteOffset < EndOffset)
     {
-        memset(pBitmap, 0, sizeof(TFileBitmap));
-        pBitmap->EndOffset  = FileSize;
-        pBitmap->IsComplete = 1;
-        pBitmap->BitmapSize = BitmapSize;
-        pBitmap->BlockSize  = DEFAULT_BLOCK_SIZE;
-        bResult = true;
+        // Check availability of that block
+        if((pbBitmap[ByteIndex] & BitMask) == 0)
+            return false;
+
+        // Move to the next block
+        ByteOffset += pBitmap->BlockSize;
+        ByteIndex += (BitMask >> 0x07);
+        BitMask = (BitMask >> 0x07) | (BitMask << 0x01);
     }
 
-    // Do we have enough space to fill the bitmap as well?
-    if(Length >= TotalLength)
+    // All blocks are present
+    return true;
+}
+
+static void FileBitmap_SetRange(
+    TFileBitmap * pBitmap,
+    ULONGLONG ByteOffset,
+    ULONGLONG EndOffset)
+{
+    LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
+    DWORD BlockIndex = (DWORD)(ByteOffset / pBitmap->BlockSize);
+    DWORD ByteIndex = (BlockIndex / 0x08);
+    BYTE BitMask = (BYTE)(0x01 << (BlockIndex & 0x07));
+
+    // Mask the bye offset down to the begin of the block
+    ByteOffset = ByteOffset & ~((ULONGLONG)pBitmap->BlockSize - 1);
+
+    // Check each block
+    while(ByteOffset < EndOffset)
     {
-        LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
+        // Set that bit
+        pbBitmap[ByteIndex] |= BitMask;
 
-        // Fill the full blocks
-        memset(pbBitmap, 0xFF, (BlockCount / 8));
-        pbBitmap += (BlockCount / 8);
-        bResult = true;
+        // Move to the next block
+        ByteOffset += pBitmap->BlockSize;
+        ByteIndex += (BitMask >> 0x07);
+        BitMask = (BitMask >> 0x07) | (BitMask << 0x01);
+    }
+}
 
-        // Supply the last block
-        if(BlockCount & 7)
-        {
-            LastByte = (1 << (BlockCount & 7)) - 1;
-            pbBitmap[0] = (BYTE)LastByte;
-        }
+static DWORD FileBitmap_CheckFile(TFileBitmap * pBitmap)
+{
+    LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
+    DWORD WholeByteCount = (pBitmap->BlockCount / 8);
+    DWORD ExtraBitsCount = (pBitmap->BlockCount & 7);
+    BYTE ExpectedValue;
+
+    // Verify the whole bytes - their value must be 0xFF
+    for(DWORD i = 0; i < WholeByteCount; i++)
+    {
+        if(pbBitmap[i] != 0xFF)
+            return 0;
     }
 
-    return bResult;
+    // If there are extra bits, calculate the mask
+    if(ExtraBitsCount != 0)
+    {
+        ExpectedValue = (BYTE)((1 << ExtraBitsCount) - 1);
+        if(pbBitmap[WholeByteCount] != ExpectedValue)
+            return 0;
+    }
+
+    // Yes, the file is complete
+    return 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -129,7 +141,7 @@ static bool BaseFile_Read(
     void * pvBuffer,                        // Pointer to data to be read
     DWORD dwBytesToRead)                    // Number of bytes to read from the file
 {
-    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->Base.File.FilePos;
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
     DWORD dwBytesRead = 0;                  // Must be set by platform-specific code
 
 #ifdef PLATFORM_WINDOWS
@@ -140,7 +152,7 @@ static bool BaseFile_Read(
         // one system call to SetFilePointer
 
         // Update the byte offset
-        pStream->Base.File.FilePos = ByteOffset;
+        pStream->FilePos = ByteOffset;
 
         // Read the data
         if(dwBytesToRead != 0)
@@ -153,24 +165,6 @@ static bool BaseFile_Read(
             if(!ReadFile(pStream->Base.File.hFile, pvBuffer, dwBytesToRead, &dwBytesRead, &Overlapped))
                 return false;
         }
-/*
-        // If the byte offset is different from the current file position,
-        // we have to update the file position
-        if(ByteOffset != pStream->Base.File.FilePos)
-        {
-            LONG ByteOffsetHi = (LONG)(ByteOffset >> 32);
-
-            SetFilePointer(pStream->Base.File.hFile, (LONG)ByteOffset, &ByteOffsetHi, FILE_BEGIN);
-            pStream->Base.File.FilePos = ByteOffset;
-        }
-
-        // Read the data
-        if(dwBytesToRead != 0)
-        {
-            if(!ReadFile(pStream->Base.File.hFile, pvBuffer, dwBytesToRead, &dwBytesRead, NULL))
-                return false;
-        }
-*/
     }
 #endif
 
@@ -180,10 +174,10 @@ static bool BaseFile_Read(
 
         // If the byte offset is different from the current file position,
         // we have to update the file position
-        if(ByteOffset != pStream->Base.File.FilePos)
+        if(ByteOffset != pStream->FilePos)
         {
             lseek64((intptr_t)pStream->Base.File.hFile, (off64_t)(ByteOffset), SEEK_SET);
-            pStream->Base.File.FilePos = ByteOffset;
+            pStream->FilePos = ByteOffset;
         }
 
         // Perform the read operation
@@ -203,7 +197,7 @@ static bool BaseFile_Read(
 
     // Increment the current file position by number of bytes read
     // If the number of bytes read doesn't match to required amount, return false
-    pStream->Base.File.FilePos = ByteOffset + dwBytesRead;
+    pStream->FilePos = ByteOffset + dwBytesRead;
     if(dwBytesRead != dwBytesToRead)
         SetLastError(ERROR_HANDLE_EOF);
     return (dwBytesRead == dwBytesToRead);
@@ -218,7 +212,7 @@ static bool BaseFile_Read(
 
 static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite)
 {
-    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->Base.File.FilePos;
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
     DWORD dwBytesWritten = 0;               // Must be set by platform-specific code
 
 #ifdef PLATFORM_WINDOWS
@@ -229,7 +223,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
         // one system call to SetFilePointer
 
         // Update the byte offset
-        pStream->Base.File.FilePos = ByteOffset;
+        pStream->FilePos = ByteOffset;
 
         // Read the data
         if(dwBytesToWrite != 0)
@@ -242,24 +236,6 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
             if(!WriteFile(pStream->Base.File.hFile, pvBuffer, dwBytesToWrite, &dwBytesWritten, &Overlapped))
                 return false;
         }
-/*
-        // If the byte offset is different from the current file position,
-        // we have to update the file position
-        if(ByteOffset != pStream->Base.File.FilePos)
-        {
-            LONG ByteOffsetHi = (LONG)(ByteOffset >> 32);
-
-            SetFilePointer(pStream->Base.File.hFile, (LONG)ByteOffset, &ByteOffsetHi, FILE_BEGIN);
-            pStream->Base.File.FilePos = ByteOffset;
-        }
-
-        // Read the data
-        if(dwBytesToWrite != 0)
-        {
-        if(!WriteFile(pStream->Base.File.hFile, pvBuffer, dwBytesToWrite, &dwBytesWritten, NULL))
-            return false;
-    }
-*/
     }
 #endif
 
@@ -288,31 +264,15 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
 #endif
 
     // Increment the current file position by number of bytes read
-    pStream->Base.File.FilePos = ByteOffset + dwBytesWritten;
+    pStream->FilePos = ByteOffset + dwBytesWritten;
 
     // Also modify the file size, if needed
-    if(pStream->Base.File.FilePos > pStream->Base.File.FileSize)
-        pStream->Base.File.FileSize = pStream->Base.File.FilePos;
+    if(pStream->FilePos > pStream->FileSize)
+        pStream->FileSize = pStream->FilePos;
 
     if(dwBytesWritten != dwBytesToWrite)
         SetLastError(ERROR_DISK_FULL);
     return (dwBytesWritten == dwBytesToWrite);
-}
-
-static bool BaseFile_GetPos(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pByteOffset)                 // Pointer to file byte offset
-{
-    *pByteOffset = pStream->Base.File.FilePos;
-    return true;
-}
-
-static bool BaseFile_GetSize(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pFileSize)                   // Pointer where to store file size
-{
-    *pFileSize = pStream->Base.File.FileSize;
-    return true;
 }
 
 /**
@@ -337,8 +297,8 @@ static bool BaseFile_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
         bResult = (bool)SetEndOfFile(pStream->Base.File.hFile);
 
         // Restore the file position
-        FileSizeHi = (LONG)(pStream->Base.File.FilePos >> 32);
-        FileSizeLo = (LONG)(pStream->Base.File.FilePos);
+        FileSizeHi = (LONG)(pStream->FilePos >> 32);
+        FileSizeLo = (LONG)(pStream->FilePos);
         SetFilePointer(pStream->Base.File.hFile, FileSizeLo, &FileSizeHi, FILE_BEGIN);
         return bResult;
     }
@@ -355,12 +315,6 @@ static bool BaseFile_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
         return true;
     }
 #endif
-}
-
-static bool BaseFile_GetTime(TFileStream * pStream, ULONGLONG * pFileTime)
-{
-    *pFileTime = pStream->Base.File.FileTime;
-    return true;
 }
 
 // Renames the file pointed by pStream so that it contains data from pNewStream
@@ -404,16 +358,13 @@ static void BaseFile_Close(TFileStream * pStream)
     pStream->Base.File.hFile = INVALID_HANDLE_VALUE;
 }
 
-static bool BaseFile_Create(
-    TFileStream * pStream,
-    const TCHAR * szFileName,
-    DWORD dwStreamFlags)
+static bool BaseFile_Create(TFileStream * pStream)
 {
 #ifdef PLATFORM_WINDOWS
     {
-        DWORD dwWriteShare = (dwStreamFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
+        DWORD dwWriteShare = (pStream->dwFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
 
-        pStream->Base.File.hFile = CreateFile(szFileName,
+        pStream->Base.File.hFile = CreateFile(pStream->szFileName,
                                               GENERIC_READ | GENERIC_WRITE,
                                               dwWriteShare | FILE_SHARE_READ,
                                               NULL,
@@ -429,7 +380,7 @@ static bool BaseFile_Create(
     {
         intptr_t handle;
         
-        handle = open(szFileName, O_RDWR | O_CREAT | O_TRUNC | O_LARGEFILE, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        handle = open(pStream->szFileName, O_RDWR | O_CREAT | O_TRUNC | O_LARGEFILE, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if(handle == -1)
         {
             nLastError = errno;
@@ -443,33 +394,26 @@ static bool BaseFile_Create(
     // Fill-in the entry points
     pStream->BaseRead    = BaseFile_Read;
     pStream->BaseWrite   = BaseFile_Write;
-    pStream->BaseGetPos  = BaseFile_GetPos;
-    pStream->BaseGetSize = BaseFile_GetSize;
     pStream->BaseSetSize = BaseFile_SetSize;
-    pStream->BaseGetTime = BaseFile_GetTime;
     pStream->BaseClose   = BaseFile_Close;
 
     // Reset the file position
-    pStream->Base.File.FileSize = 0;
-    pStream->Base.File.FilePos = 0;
-    pStream->dwFlags = dwStreamFlags;
+    pStream->FileSize = 0;
+    pStream->FilePos = 0;
     return true;
 }
 
-static bool BaseFile_Open(
-    TFileStream * pStream,
-    const TCHAR * szFileName,
-    DWORD dwStreamFlags)
+static bool BaseFile_Open(TFileStream * pStream, DWORD dwStreamFlags)
 {
 #ifdef PLATFORM_WINDOWS
     {
         ULARGE_INTEGER FileSize;
-        DWORD dwWriteAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? 0 : GENERIC_READ | GENERIC_WRITE;
+        DWORD dwWriteAccess = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? 0 : FILE_WRITE_DATA | FILE_APPEND_DATA | FILE_WRITE_ATTRIBUTES;
         DWORD dwWriteShare = (dwStreamFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
 
         // Open the file
-        pStream->Base.File.hFile = CreateFile(szFileName,
-                                              FILE_READ_DATA | dwWriteAccess,
+        pStream->Base.File.hFile = CreateFile(pStream->szFileName,
+                                              FILE_READ_DATA | FILE_READ_ATTRIBUTES | dwWriteAccess,
                                               FILE_SHARE_READ | dwWriteShare,
                                               NULL,
                                               OPEN_EXISTING,
@@ -480,10 +424,10 @@ static bool BaseFile_Open(
 
         // Query the file size
         FileSize.LowPart = GetFileSize(pStream->Base.File.hFile, &FileSize.HighPart);
-        pStream->Base.File.FileSize = FileSize.QuadPart;
+        pStream->FileSize = FileSize.QuadPart;
 
         // Query last write time
-        GetFileTime(pStream->Base.File.hFile, NULL, NULL, (LPFILETIME)&pStream->Base.File.FileTime);
+        GetFileTime(pStream->Base.File.hFile, NULL, NULL, (LPFILETIME)&pStream->FileTime);
     }
 #endif
 
@@ -520,15 +464,11 @@ static bool BaseFile_Open(
     // Fill-in the entry points
     pStream->BaseRead    = BaseFile_Read;
     pStream->BaseWrite   = BaseFile_Write;
-    pStream->BaseGetPos  = BaseFile_GetPos;
-    pStream->BaseGetSize = BaseFile_GetSize;
     pStream->BaseSetSize = BaseFile_SetSize;
-    pStream->BaseGetTime = BaseFile_GetTime;
     pStream->BaseClose   = BaseFile_Close;
 
     // Reset the file position
-    pStream->Base.File.FilePos = 0;
-    pStream->dwFlags = dwStreamFlags;
+    pStream->FilePos = 0;
     return true;
 }
 
@@ -541,13 +481,13 @@ static bool BaseMap_Read(
     void * pvBuffer,                        // Pointer to data to be read
     DWORD dwBytesToRead)                    // Number of bytes to read from the file
 {
-    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->Base.Map.FilePos;
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
 
     // Do we have to read anything at all?
     if(dwBytesToRead != 0)
     {
         // Don't allow reading past file size
-        if((ByteOffset + dwBytesToRead) > pStream->Base.Map.FileSize)
+        if((ByteOffset + dwBytesToRead) > pStream->FileSize)
             return false;
 
         // Copy the required data
@@ -555,29 +495,7 @@ static bool BaseMap_Read(
     }
 
     // Move the current file position
-    pStream->Base.Map.FilePos += dwBytesToRead;
-    return true;
-}
-
-static bool BaseMap_GetPos(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pByteOffset)                // Pointer to file byte offset
-{
-    *pByteOffset = pStream->Base.Map.FilePos;
-    return true;
-}
-
-static bool BaseMap_GetSize(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pFileSize)                  // Pointer where to store file size
-{
-    *pFileSize = pStream->Base.Map.FileSize;
-    return true;
-}
-
-static bool BaseMap_GetTime(TFileStream * pStream, ULONGLONG * pFileTime)
-{
-    *pFileTime = pStream->Base.Map.FileTime;
+    pStream->FilePos += dwBytesToRead;
     return true;
 }
 
@@ -590,16 +508,13 @@ static void BaseMap_Close(TFileStream * pStream)
 
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
     if(pStream->Base.Map.pbFile != NULL)
-        munmap(pStream->Base.Map.pbFile, (size_t )pStream->Base.Map.FileSize);
+        munmap(pStream->Base.Map.pbFile, (size_t )pStream->FileSize);
 #endif
 
     pStream->Base.Map.pbFile = NULL;
 }
 
-static bool BaseMap_Open(
-    TFileStream * pStream,
-    const TCHAR * szFileName,
-    DWORD dwStreamFlags)
+static bool BaseMap_Open(TFileStream * pStream)
 {
 #ifdef PLATFORM_WINDOWS
 
@@ -609,7 +524,7 @@ static bool BaseMap_Open(
     bool bResult = false;
 
     // Open the file for read access
-    hFile = CreateFile(szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    hFile = CreateFile(pStream->szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
     if(hFile != NULL)
     {
         // Retrieve file size. Don't allow mapping file of a zero size.
@@ -617,7 +532,7 @@ static bool BaseMap_Open(
         if(FileSize.QuadPart != 0)
         {
             // Retrieve file time
-            GetFileTime(hFile, NULL, NULL, (LPFILETIME)&pStream->Base.Map.FileTime);
+            GetFileTime(hFile, NULL, NULL, (LPFILETIME)&pStream->FileTime);
 
             // Now create mapping object
             hMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
@@ -629,8 +544,8 @@ static bool BaseMap_Open(
                 pStream->Base.Map.pbFile = (LPBYTE)MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
                 if(pStream->Base.Map.pbFile != NULL)
                 {
-                    pStream->Base.Map.FileSize = FileSize.QuadPart;
-                    pStream->Base.Map.FilePos = 0;
+                    pStream->FileSize = FileSize.QuadPart;
+                    pStream->FilePos = 0;
                     bResult = true;
                 }
 
@@ -667,9 +582,9 @@ static bool BaseMap_Open(
                 // time_t is number of seconds since 1.1.1970, UTC.
                 // 1 second = 10000000 (decimal) in FILETIME
                 // Set the start to 1.1.1970 00:00:00
-                pStream->Base.Map.FileTime = 0x019DB1DED53E8000ULL + (10000000 * fileinfo.st_mtime);
-                pStream->Base.Map.FileSize = (ULONGLONG)fileinfo.st_size;
-                pStream->Base.Map.FilePos = 0;
+                pStream->FileTime = 0x019DB1DED53E8000ULL + (10000000 * fileinfo.st_mtime);
+                pStream->FileSize = (ULONGLONG)fileinfo.st_size;
+                pStream->FilePos = 0;
                 bResult = true;
             }
         }
@@ -686,11 +601,7 @@ static bool BaseMap_Open(
 
     // Fill-in entry points
     pStream->BaseRead    = BaseMap_Read;
-    pStream->BaseGetPos  = BaseMap_GetPos;
-    pStream->BaseGetSize = BaseMap_GetSize;
-    pStream->BaseGetTime = BaseMap_GetTime;
     pStream->BaseClose   = BaseMap_Close;
-    pStream->dwFlags = dwStreamFlags;
     return true;
 }
 
@@ -727,7 +638,7 @@ static bool BaseHttp_Read(
     DWORD dwBytesToRead)                    // Number of bytes to read from the file
 {
 #ifdef PLATFORM_WINDOWS
-    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->Base.Http.FilePos;
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
     DWORD dwTotalBytesRead = 0;
 
     // Do we have to read anything at all?
@@ -777,7 +688,7 @@ static bool BaseHttp_Read(
     }
 
     // Increment the current file position by number of bytes read
-    pStream->Base.Http.FilePos = ByteOffset + dwTotalBytesRead;
+    pStream->FilePos = ByteOffset + dwTotalBytesRead;
 
     // If the number of bytes read doesn't match the required amount, return false
     if(dwTotalBytesRead != dwBytesToRead)
@@ -797,28 +708,6 @@ static bool BaseHttp_Read(
 #endif
 }
 
-static bool BaseHttp_GetPos(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pByteOffset)                // Pointer to file byte offset
-{
-    *pByteOffset = pStream->Base.Http.FilePos;
-    return true;
-}
-
-static bool BaseHttp_GetSize(
-    TFileStream * pStream,                  // Pointer to an open stream
-    ULONGLONG * pFileSize)                  // Pointer where to store file size
-{
-    *pFileSize = pStream->Base.Http.FileSize;
-    return true;
-}
-
-static bool BaseHttp_GetTime(TFileStream * pStream, ULONGLONG * pFileTime)
-{
-    *pFileTime = pStream->Base.Http.FileTime;
-    return true;
-}
-
 static void BaseHttp_Close(TFileStream * pStream)
 {
 #ifdef PLATFORM_WINDOWS
@@ -834,13 +723,11 @@ static void BaseHttp_Close(TFileStream * pStream)
 #endif
 }
 
-static bool BaseHttp_Open(
-    TFileStream * pStream,
-    const TCHAR * szFileName,
-    DWORD dwStreamFlags)
+static bool BaseHttp_Open(TFileStream * pStream)
 {
 #ifdef PLATFORM_WINDOWS
 
+    const TCHAR * szFileName;
     HINTERNET hRequest;
     DWORD dwTemp = 0;
     bool bFileAvailable = false;
@@ -869,7 +756,7 @@ static bool BaseHttp_Open(
         DWORD dwFlags = INTERNET_FLAG_KEEP_CONNECTION | INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE;
 
         // Initiate connection with the server
-        szFileName = BaseHttp_ExtractServerName(szFileName, szServerName);
+        szFileName = BaseHttp_ExtractServerName(pStream->szFileName, szServerName);
         pStream->Base.Http.hConnect = InternetConnect(pStream->Base.Http.hInternet,
                                                       szServerName,
                                                       INTERNET_DEFAULT_HTTP_PORT,
@@ -899,7 +786,7 @@ static bool BaseHttp_Open(
                 // Check if the MPQ has Last Modified field
                 dwDataSize = sizeof(ULONGLONG);
                 if(HttpQueryInfo(hRequest, HTTP_QUERY_LAST_MODIFIED | HTTP_QUERY_FLAG_SYSTEMTIME, &FileTime, &dwDataSize, &dwIndex))
-                    pStream->Base.Http.FileTime = FileTime;
+                    pStream->FileTime = FileTime;
 
                 // Verify if the server supports random access
                 dwDataSize = sizeof(DWORD);
@@ -907,8 +794,8 @@ static bool BaseHttp_Open(
                 {
                     if(dwFileSize != 0)
                     {
-                        pStream->Base.Http.FileSize = dwFileSize;
-                        pStream->Base.Http.FilePos = 0;
+                        pStream->FileSize = dwFileSize;
+                        pStream->FilePos = 0;
                         bFileAvailable = true;
                     }
                 }
@@ -927,26 +814,278 @@ static bool BaseHttp_Open(
 
     // Fill-in entry points
     pStream->BaseRead    = BaseHttp_Read;
-    pStream->BaseGetPos  = BaseHttp_GetPos;
-    pStream->BaseGetSize = BaseHttp_GetSize;
-    pStream->BaseGetTime = BaseHttp_GetTime;
     pStream->BaseClose   = BaseHttp_Close;
-    pStream->dwFlags = dwStreamFlags;
     return true;
 
 #else
 
     // Not supported
-    pStream = pStream;
-    szFileName = szFileName;
     SetLastError(ERROR_NOT_SUPPORTED);
+    pStream = pStream;
     return false;
 
 #endif
 }
 
 //-----------------------------------------------------------------------------
+// Local functions - bitmap for a complete file
+
+#define DEFAULT_BLOCK_SIZE 0x4000
+
+static bool CompleteFile_GetBmp(
+    TFileStream * pStream,
+    void * pvBitmap,
+    DWORD Length,
+    LPDWORD LengthNeeded)
+{
+    TFileBitmap * pBitmap = (TFileBitmap *)pvBitmap;
+    ULONGLONG FileSize = pStream->FileSize;
+    DWORD TotalLength;
+    DWORD BlockCount = (DWORD)(((FileSize - 1) / DEFAULT_BLOCK_SIZE) + 1);
+    DWORD BitmapSize = (DWORD)(((BlockCount - 1) / 8) + 1);
+    DWORD LastByte;
+
+    // Calculate and give the total length
+    TotalLength = sizeof(TFileBitmap) + BitmapSize;
+    if(LengthNeeded != NULL)
+        *LengthNeeded = TotalLength;
+
+    // Has the caller given enough space for storing the structure?
+    if(Length >= sizeof(TFileBitmap))
+    {
+        pBitmap->StartOffset = 0;
+        pBitmap->EndOffset   = FileSize;
+        pBitmap->BitmapSize  = BitmapSize;
+        pBitmap->BlockSize   = DEFAULT_BLOCK_SIZE;
+        pBitmap->BlockCount  = BlockCount;
+        pBitmap->IsComplete  = 1;
+
+        // Do we have enough space to fill the bitmap as well?
+        if(Length >= TotalLength)
+        {
+            LPBYTE pbBitmap = (LPBYTE)(pBitmap + 1);
+
+            // Fill the full blocks
+            memset(pbBitmap, 0xFF, (BlockCount / 8));
+            pbBitmap += (BlockCount / 8);
+
+            // Supply the last block
+            if(BlockCount & 7)
+            {
+                LastByte = (1 << (BlockCount & 7)) - 1;
+                pbBitmap[0] = (BYTE)LastByte;
+            }
+        }
+
+        return true;
+    }
+    else
+    {
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
+}
+
+//-----------------------------------------------------------------------------
 // Local functions - linear stream support
+
+typedef struct _DATA_BLOCK_INFO
+{
+    ULONGLONG BlockOffset0;                 // Offset of the first block in the continuous array
+    ULONGLONG BlockOffset;                  // Offset of the current block
+    ULONGLONG ByteOffset;                   // Offset of the loaded data
+    ULONGLONG EndOffset;                    // Offset of the end of the block
+    LPBYTE ReadBuffer;                      // Pointer to the buffer where to read the data
+    DWORD BlockSize;                        // Length of one block, in bytes
+    DWORD ByteIndex0;                       // Byte index of the first block in the continuous array
+    DWORD ByteIndex;                        // Index of the byte in the file bitmap
+    BYTE MirrorUpdated;                     // If set to nonzero, the mirror stream has been updated
+    BYTE BitMask0;                          // Bit mask of the first block in the continuous array
+    BYTE BitMask;                           // Bit mask of the current bit in file bitmap
+
+} DATA_BLOCK_INFO, *PDATA_BLOCK_INFO;
+
+static bool LinearStream_LoadBitmap(
+    TLinearStream * pStream)                // Pointer to an open stream
+{
+    FILE_BITMAP_FOOTER Footer;
+    TFileBitmap * pBitmap;
+    ULONGLONG ByteOffset; 
+    DWORD BlockCount;
+    DWORD BitmapSize;
+
+    // Only if the size is greater than sizeof bitmap footer
+    if(pStream->FileSize > sizeof(FILE_BITMAP_FOOTER))
+    {
+        // Load the bitmap footer
+        ByteOffset = pStream->FileSize - sizeof(FILE_BITMAP_FOOTER);
+        if(pStream->StreamRead(pStream, &ByteOffset, &Footer, sizeof(FILE_BITMAP_FOOTER)))
+        {
+            // Make sure that the array is properly BSWAP-ed
+            BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&Footer), sizeof(FILE_BITMAP_FOOTER));
+
+            // Verify if there is actually a footer
+            if(Footer.dwSignature == ID_FILE_BITMAP_FOOTER && Footer.dwAlways3 == 0x03)
+            {
+                // Get offset of the bitmap, size of the bitmap and check for match
+                ByteOffset = MAKE_OFFSET64(Footer.dwMapOffsetHi, Footer.dwMapOffsetLo);
+                BlockCount = (DWORD)(((ByteOffset - 1) / Footer.dwBlockSize) + 1);
+                BitmapSize = ((BlockCount + 7) / 8);
+
+                // Check if the sizes match
+                if(ByteOffset + BitmapSize + sizeof(FILE_BITMAP_FOOTER) == pStream->FileSize)
+                {
+                    // Allocate space for the linear bitmap
+                    pBitmap = (TFileBitmap *)STORM_ALLOC(BYTE, sizeof(TFileBitmap) + BitmapSize);
+                    if(pBitmap != NULL)
+                    {
+                        // Fill the bitmap header
+                        pBitmap->StartOffset = 0;
+                        pBitmap->EndOffset  = ByteOffset;
+                        pBitmap->BitmapSize = BitmapSize;
+                        pBitmap->BlockSize  = Footer.dwBlockSize;
+                        pBitmap->BlockCount = BlockCount;
+
+                        // Load the bitmap bits
+                        if(!pStream->BaseRead(pStream, &ByteOffset, (pBitmap + 1), BitmapSize))
+                        {
+                            STORM_FREE(pBitmap);
+                            return false;
+                        }
+
+                        // Verify if the file is complete or not
+                        pBitmap->IsComplete = FileBitmap_CheckFile(pBitmap);
+                        
+                        // Set the file bitmap into the file stream
+                        pStream->FileSize = ByteOffset;
+                        pStream->pBitmap = pBitmap;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool LinearStream_LoadMissingBlocks(
+    TLinearStream * pStream,
+    ULONGLONG ByteOffset,
+    ULONGLONG EndOffset,
+    void * pvBuffer)
+{
+    TFileBitmap * pBitmap = pStream->pBitmap;
+    ULONGLONG BlockSizeMask = pStream->pBitmap->BlockSize;
+    ULONGLONG BlockOffset = ByteOffset & ~(BlockSizeMask - 1);
+    ULONGLONG BlockEnd = (EndOffset + (pStream->pBitmap->BlockSize - 1)) & ~(BlockSizeMask - 1);
+    LPBYTE pbDataBlock;
+    DWORD cbBytesToCopy = (DWORD)(EndOffset - ByteOffset);
+    DWORD cbBlockSize = (DWORD)(BlockEnd - BlockOffset);
+    bool bResult = false;
+
+    // Sanity check
+    assert(pStream->pBitmap != NULL);
+    
+    // Cannot load missing blocks if no master file
+    if(pStream->pMaster == NULL)
+        return false;
+
+    // Allocate space for the file block
+    pbDataBlock = STORM_ALLOC(BYTE, cbBlockSize);
+    if(pbDataBlock != NULL)
+    {
+        // Load the entire missing block from the master MPQ
+        if(FileStream_Read(pStream->pMaster, &BlockOffset, pbDataBlock, cbBlockSize))
+        {
+            // We can satisfy the read from the loaded data
+            assert(cbBytesToCopy <= cbBlockSize);
+            memcpy(pvBuffer, pbDataBlock + (DWORD)(ByteOffset - BlockOffset), cbBytesToCopy);
+            bResult = true;
+
+            // Write the file block to the cached archive
+            if(pStream->BaseWrite(pStream, &BlockOffset, pbDataBlock, cbBlockSize))
+            {
+                // Update the file bitmap
+                FileBitmap_SetRange(pStream->pBitmap, BlockOffset, BlockEnd);
+
+                // If this fails, the data blocks will be re-downloaded next time,
+                // but the file is not corrupt
+                ByteOffset = pBitmap->EndOffset;
+                if(!pStream->BaseWrite(pStream, &ByteOffset, pBitmap + 1, pBitmap->BitmapSize))
+                    bResult = false;
+            }
+        }
+
+        // Free the file block
+        STORM_FREE(pbDataBlock);
+    }
+
+    return bResult;
+}
+
+static bool LinearStream_ReadBlocks(
+    TLinearStream * pStream,                // Pointer to an open stream
+    DATA_BLOCK_INFO & bi,
+    bool bBlocksAreAvailable)
+{
+    ULONGLONG EndOffset;
+    LPBYTE pbBlockBuffer;
+    DWORD BlockToRead = 0;
+    DWORD BytesToRead = 0;
+    DWORD ReadOffset;
+    bool bResult = true;
+
+    // Only do something if there is at least one block to be read
+    if(bi.BlockOffset > bi.BlockOffset0)
+    {
+        // Get the read range
+        EndOffset = STORMLIB_MIN(bi.BlockOffset, bi.EndOffset);
+        BytesToRead = (DWORD)(EndOffset - bi.ByteOffset);
+
+        // If the block is not available, we need to load them from the master and store to the mirror
+        if(bBlocksAreAvailable == false)
+        {
+            // If we have no master, we cannot satisfy read request
+            if(pStream->pMaster == NULL)
+                return false;
+
+            // Allocate buffer and read the complete blocks
+            BlockToRead = (DWORD)(bi.BlockOffset - bi.BlockOffset0);
+            pbBlockBuffer = STORM_ALLOC(BYTE, BlockToRead);
+            if(pbBlockBuffer == NULL)
+                return false;
+
+            // Load the block buffer from the master stream
+            if(FileStream_Read(pStream->pMaster, &bi.BlockOffset0, pbBlockBuffer, BlockToRead))
+            {
+                // We can now satisfy the request
+                ReadOffset = (DWORD)(bi.ByteOffset - bi.BlockOffset0);
+                memcpy(bi.ReadBuffer, pbBlockBuffer + ReadOffset, BytesToRead);
+
+                // Store the loaded blocks to the mirror file
+                if(pStream->BaseWrite(pStream, &bi.BlockOffset0, pbBlockBuffer, BlockToRead))
+                    bi.MirrorUpdated = 1;
+            }
+
+            // Free the transfer buffer
+            STORM_FREE(pbBlockBuffer);
+        }
+
+        // If the blocks are available, we just read them from the mirror
+        else
+        {
+            // Perform the file read
+            bResult = pStream->BaseRead(pStream, &bi.ByteOffset, bi.ReadBuffer, BytesToRead);
+        }
+
+        // Move the offsets and bit masks
+        bi.BlockOffset0 = bi.BlockOffset;
+        bi.ByteOffset  += BytesToRead;
+        bi.ReadBuffer  += BytesToRead;
+    }
+    return bResult;
+}
 
 static bool LinearStream_Read(
     TLinearStream * pStream,                // Pointer to an open stream
@@ -954,62 +1093,156 @@ static bool LinearStream_Read(
     void * pvBuffer,                        // Pointer to data to be read
     DWORD dwBytesToRead)                    // Number of bytes to read from the file
 {
-    ULONGLONG ByteOffset;
-    ULONGLONG EndOffset;
-    LPBYTE pbBitmap;
+    DATA_BLOCK_INFO bi;
+    TFileBitmap * pBitmap = pStream->pBitmap;
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
+    LPBYTE FileBitmap;
     DWORD BlockIndex;
-    DWORD ByteIndex;
-    DWORD BitMask;
+    bool bPrevBlockAvailable;
+    bool bBlockAvailable;
 
-    // At this point, we must have a bitmap set
-    assert(pStream->pBitmap != NULL);
+    // NOP reading zero bytes
+    if(dwBytesToRead == 0)
+        return true;
 
-    // If we have data map, we must check if the data block is present in the MPQ
-    if(dwBytesToRead != 0)
+    // Cannot read past the end of the file
+    if((ByteOffset + dwBytesToRead) > pStream->FileSize)
     {
-        DWORD BlockSize = pStream->pBitmap->BlockSize;
-
-        // Get the offset where we read it from
-        if(pByteOffset == NULL)
-            pStream->BaseGetPos(pStream, &ByteOffset);
-        else
-            ByteOffset = *pByteOffset;
-        EndOffset = ByteOffset + dwBytesToRead;
-
-        // If the start of the area is within the region
-        // protected by data map, check each block
-        if(ByteOffset < pStream->pBitmap->EndOffset)
-        {
-            // Cut the end of the stream protected by the data map
-            EndOffset = STORMLIB_MIN(EndOffset, pStream->pBitmap->EndOffset);
-
-            // Calculate the initial block index
-            BlockIndex = (DWORD)(ByteOffset / BlockSize);
-            pbBitmap = (LPBYTE)(pStream->pBitmap + 1);
-
-            // Parse each block
-            while(ByteOffset < EndOffset)
-            {
-                // Prepare byte index and bit mask
-                ByteIndex = BlockIndex / 8;
-                BitMask = 1 << (BlockIndex & 0x07);
-
-                // If that bit is not set, it means that the block is not present
-                if((pbBitmap[ByteIndex] & BitMask) == 0)
-                {
-                    SetLastError(ERROR_FILE_CORRUPT);
-                    return false;
-                }
-
-                // Move to tne next block
-                ByteOffset += BlockSize;
-                BlockIndex++;
-            }
-        }
+        SetLastError(ERROR_HANDLE_EOF);
+        return false;
     }
 
-    // Now if all tests passed, we can call the base read function
-    return pStream->BaseRead(pStream, pByteOffset, pvBuffer, dwBytesToRead);
+    // If we have no data bitmap, we assume that the file is complete.
+    if(pBitmap == NULL)
+        return pStream->BaseRead(pStream, pByteOffset, pvBuffer, dwBytesToRead);
+
+    // Calculate the index of the block
+    FileBitmap = (LPBYTE)(pBitmap + 1);
+    BlockIndex = (DWORD)(ByteOffset / pBitmap->BlockSize);
+
+    // Fill the data block info
+    bi.BlockOffset0 = 
+    bi.BlockOffset  = ByteOffset & ~((ULONGLONG)pBitmap->BlockSize - 1);
+    bi.ByteOffset   = ByteOffset;
+    bi.EndOffset    = ByteOffset + dwBytesToRead;
+    bi.ReadBuffer   = (LPBYTE)pvBuffer;
+    bi.BlockSize    = pBitmap->BlockSize;
+    bi.ByteIndex0   =
+    bi.ByteIndex    = (BlockIndex / 0x08);
+    bi.BitMask0     =
+    bi.BitMask      = (BYTE)(0x01 << (BlockIndex & 0x07));
+    
+    // Check if the current block is available
+    bPrevBlockAvailable = (FileBitmap[bi.ByteIndex] & bi.BitMask) ? true : false;
+
+    // Loop as long as we have something to read
+    while(bi.BlockOffset < bi.EndOffset)
+    {
+        // Determine if that block is available in the mirror file
+        bBlockAvailable = (FileBitmap[bi.ByteIndex] & bi.BitMask) ? true : false;
+
+        // If the availability has changed,
+        // reload all the previous blocks with the same availability
+        if(bBlockAvailable != bPrevBlockAvailable)
+        {
+            if(!LinearStream_ReadBlocks(pStream, bi, bPrevBlockAvailable))
+            {
+                SetLastError(ERROR_CAN_NOT_COMPLETE);
+                return false;
+            }
+
+            bPrevBlockAvailable = bBlockAvailable;
+        }
+
+        // Move to the next block in the stream
+        bi.BlockOffset += bi.BlockSize;
+        bi.ByteIndex += (bi.BitMask >> 0x07);
+        bi.BitMask = (bi.BitMask >> 0x07) | (bi.BitMask << 0x01);
+    }
+
+    // We now need to read the last blocks that weren't loaded in the loop
+    if(!LinearStream_ReadBlocks(pStream, bi, bPrevBlockAvailable))
+    {
+        SetLastError(ERROR_CAN_NOT_COMPLETE);
+        return false;
+    }
+
+    // We also need to update the file bitmap in the file
+    if(bi.MirrorUpdated)
+    {
+        // Update all bits in the bitmap
+        while(bi.ByteIndex0 != bi.ByteIndex || bi.BitMask0 != bi.BitMask)
+        {
+            FileBitmap[bi.ByteIndex0] |= bi.BitMask0;
+            bi.ByteIndex0 += (bi.BitMask0 >> 0x07);
+            bi.BitMask0 = (bi.BitMask0 >> 0x07) | (bi.BitMask0 << 0x01);
+        }
+
+        // Write the updated bitmap to the mirror file
+        pStream->BaseWrite(pStream, &pBitmap->EndOffset, FileBitmap, pBitmap->BitmapSize);
+    }
+
+    // Increment the position
+    pStream->FilePos = ByteOffset + dwBytesToRead;
+    return true;
+}
+
+static bool LinearStream_Write(TLinearStream *, ULONGLONG *, const void *, DWORD)
+{
+    // Writing to linear stream with bitmap is not allowed
+    SetLastError(ERROR_ACCESS_DENIED);
+    return false;
+}
+
+static bool LinearStream_GetSize(TLinearStream * pStream, ULONGLONG * pFileSize)
+{
+    *pFileSize = pStream->FileSize;
+    return true;
+}
+
+static bool LinearStream_GetTime(TLinearStream * pStream, ULONGLONG * pFileTime)
+{
+    *pFileTime = pStream->FileTime;
+    return true;
+}
+
+static bool LinearStream_GetPos(TLinearStream * pStream, ULONGLONG * pByteOffset)
+{
+    *pByteOffset = pStream->FilePos;
+    return true;
+}
+
+static bool LinearStream_GetBmp(
+    TLinearStream * pStream,
+    void * pvBitmap,
+    DWORD Length,
+    LPDWORD LengthNeeded)
+{
+    DWORD TotalLength;
+    DWORD CopyLength = sizeof(TFileBitmap);
+
+    // Assumed that we have bitmap now
+    assert(pStream->pBitmap != NULL);
+
+    // Give the bitmap length
+    TotalLength = sizeof(TFileBitmap) + pStream->pBitmap->BitmapSize;
+    if(LengthNeeded != NULL)
+        *LengthNeeded = TotalLength;
+
+    // Do we have enough space to fill at least the bitmap structure?
+    if(Length >= sizeof(TFileBitmap))
+    {
+        // Enough space for the complete bitmap?
+        if(Length >= TotalLength)
+            CopyLength = TotalLength;
+        memcpy(pvBitmap, pStream->pBitmap, CopyLength);
+        return true;
+    }
+    else
+    {
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
 }
 
 static bool LinearStream_Switch(TLinearStream * pStream, TLinearStream * pNewStream)
@@ -1031,7 +1264,7 @@ static bool LinearStream_Switch(TLinearStream * pStream, TLinearStream * pNewStr
         return false;
 
     // Now we have to open the "pStream" again
-    if(!BaseFile_Open(pStream, pStream->szFileName, pNewStream->dwFlags))
+    if(!BaseFile_Open(pStream, pStream->dwFlags))
         return false;
 
     // We need to cleanup the new data stream
@@ -1039,65 +1272,66 @@ static bool LinearStream_Switch(TLinearStream * pStream, TLinearStream * pNewStr
     return true;
 }
 
-static bool LinearStream_GetBitmap(
-    TLinearStream * pStream,
-    TFileBitmap * pBitmap,
-    DWORD Length,
-    LPDWORD LengthNeeded)
-{
-    DWORD TotalLength;
-    bool bResult = false;
-
-    // Assumed that we have bitmap now
-    assert(pStream->pBitmap != NULL);
-
-    // Give the bitmap length
-    TotalLength = sizeof(TFileBitmap) + pStream->pBitmap->BitmapSize;
-    if(LengthNeeded != NULL)
-        *LengthNeeded = TotalLength;
-
-    // Do we have enough space to fill at least the bitmap structure?
-    if(Length >= sizeof(TFileBitmap))
-    {
-        // Enough space for complete bitmap?
-        if(Length >= TotalLength)
-        {
-            memcpy(pBitmap, pStream->pBitmap, TotalLength);
-            bResult = true;
-        }
-        else
-        {
-            memcpy(pBitmap, pStream->pBitmap, sizeof(TFileBitmap));
-            bResult = true;
-        }
-    }
-
-    return bResult;
-}
-
 static void LinearStream_Close(TLinearStream * pStream)
 {
+    // Free the souce stream, if any
+    if(pStream->pMaster != NULL)
+        FileStream_Close(pStream->pMaster);
+    pStream->pMaster = NULL;
+
     // Free the data map, if any
     if(pStream->pBitmap != NULL)
         STORM_FREE(pStream->pBitmap);
     pStream->pBitmap = NULL;
-    
+
     // Call the base class for closing the stream
-    return pStream->BaseClose(pStream);
+    pStream->BaseClose(pStream);
 }
 
 static bool LinearStream_Open(TLinearStream * pStream)
 {
-    // No extra work here really; just set entry points
+    // Set the entry points
     pStream->StreamRead    = pStream->BaseRead;
     pStream->StreamWrite   = pStream->BaseWrite;
-    pStream->StreamGetPos  = pStream->BaseGetPos;
-    pStream->StreamGetSize = pStream->BaseGetSize;
     pStream->StreamSetSize = pStream->BaseSetSize;
-    pStream->StreamGetTime = pStream->BaseGetTime;
-    pStream->StreamGetBmp  = (STREAM_GETBMP)Dummy_GetBitmap;
+    pStream->StreamGetSize = (STREAM_GETSIZE)LinearStream_GetSize;
+    pStream->StreamGetTime = (STREAM_GETTIME)LinearStream_GetTime;
+    pStream->StreamGetPos  = (STREAM_GETPOS)LinearStream_GetPos;
+    pStream->StreamGetBmp  = (STREAM_GETBMP)CompleteFile_GetBmp;
     pStream->StreamSwitch  = (STREAM_SWITCH)LinearStream_Switch;
     pStream->StreamClose   = (STREAM_CLOSE)LinearStream_Close;
+
+    // If the caller wanted us to load stream bitmap, do it
+    if(pStream->dwFlags & STREAM_FLAG_USE_BITMAP)
+    {
+        // Attempt to load the file bitmap
+        LinearStream_LoadBitmap(pStream);
+
+        // Reset the position to zero after manipulating with file pointer
+        pStream->FilePos = 0;
+        
+        // If there is a file bitmap and the file is not complete,
+        // we need to set the reading function so that it verifies each block
+        if(pStream->pBitmap != NULL)
+        {
+            // Set different function for retrieving file bitmap
+            pStream->StreamGetBmp = (STREAM_GETBMP)LinearStream_GetBmp;
+
+            // If the file is not complete, we also need to set different function for file read+write
+            if(pStream->pBitmap->IsComplete == 0)
+            {
+                // If we also have source file, open that one 
+                if(pStream->szSourceName != NULL)
+                    pStream->pMaster = FileStream_OpenFile(pStream->szSourceName, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
+
+                // Change functions for read+write
+                pStream->StreamWrite = (STREAM_WRITE)LinearStream_Write;
+                pStream->StreamRead = (STREAM_READ)LinearStream_Read;
+                pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -1260,11 +1494,11 @@ static bool PartialStream_GetBitmap(
     {
         // Fill the bitmap header
         pBitmap->StartOffset = 0;
-        pBitmap->EndOffset  = pStream->VirtualSize;
-        pBitmap->IsComplete = 1;
-        pBitmap->BitmapSize = BitmapSize;
-        pBitmap->BlockSize = pStream->BlockSize;
-        pBitmap->Reserved = 0;
+        pBitmap->EndOffset   = pStream->VirtualSize;
+        pBitmap->BitmapSize  = BitmapSize;
+        pBitmap->BlockSize   = pStream->BlockSize;
+        pBitmap->BlockCount  = pStream->BlockCount;
+        pBitmap->IsComplete  = 1;
         
         // Is there at least one incomplete block?
         for(DWORD i = 0; i < pStream->BlockCount; i++)
@@ -1330,7 +1564,7 @@ static bool PartialStream_Open(TPartialStream * pStream)
     if(pStream->BaseRead(pStream, &ByteOffset, &PartHdr, sizeof(PART_FILE_HEADER)))
     {
         // We need to swap PART file header on big-endian platforms
-        BSWAP_PART_HEADER(&PartHdr);
+        BSWAP_ARRAY32_UNSIGNED(&PartHdr, sizeof(PART_FILE_HEADER));
 
         // Verify the PART file header
         if(IsPartHeader(&PartHdr))
@@ -1360,8 +1594,7 @@ static bool PartialStream_Open(TPartialStream * pStream)
                     pStream->StreamRead    = (STREAM_READ)PartialStream_Read;
                     pStream->StreamGetPos  = (STREAM_GETPOS)PartialStream_GetPos;
                     pStream->StreamGetSize = (STREAM_GETSIZE)PartialStream_GetSize;
-                    pStream->StreamGetTime = pStream->BaseGetTime;
-                    pStream->StreamGetTime = pStream->BaseGetTime;
+                    pStream->StreamGetTime = (STREAM_GETTIME)LinearStream_GetTime;
                     pStream->StreamGetBmp  = (STREAM_GETBMP)PartialStream_GetBitmap;
                     pStream->StreamClose   = (STREAM_CLOSE)PartialStream_Close;
                     return true;
@@ -1615,10 +1848,7 @@ static bool EncryptedStream_Read(
     bool bResult = false;
 
     // Get the byte offset
-    if(pByteOffset == NULL)
-        pStream->BaseGetPos(pStream, &ByteOffset);
-    else
-        ByteOffset = *pByteOffset;
+    ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->FilePos;
 
     // Cut it down to MPQE chunk size
     StartOffset = ByteOffset;
@@ -1675,10 +1905,10 @@ static bool EncryptedStream_Open(TEncryptedStream * pStream)
         {
             // Assign functions
             pStream->StreamRead    = (STREAM_READ)EncryptedStream_Read;
-            pStream->StreamGetPos  = pStream->BaseGetPos;
-            pStream->StreamGetSize = pStream->BaseGetSize;
-            pStream->StreamGetTime = pStream->BaseGetTime;
-            pStream->StreamGetBmp  = (STREAM_GETBMP)Dummy_GetBitmap;
+            pStream->StreamGetSize = (STREAM_GETSIZE)LinearStream_GetSize;
+            pStream->StreamGetTime = (STREAM_GETTIME)LinearStream_GetTime;
+            pStream->StreamGetPos  = (STREAM_GETPOS)LinearStream_GetPos;
+            pStream->StreamGetBmp  = (STREAM_GETBMP)CompleteFile_GetBmp;
             pStream->StreamClose   = pStream->BaseClose;
 
             // We need to reset the position back to the begin of the file
@@ -1690,6 +1920,101 @@ static bool EncryptedStream_Open(TEncryptedStream * pStream)
         SetLastError(ERROR_UNKNOWN_FILE_KEY);
     }
     return false;
+}
+
+//-----------------------------------------------------------------------------
+// File stream allocation function
+
+/**
+ * This function allocates an empty structure for the file stream
+ * The stream structure is created as variable length, linear block of data
+ * The file name is placed after the end of the stream structure data
+ *
+ * \a szFileName    Name of the file
+ * \a dwStreamFlags Stream flags telling what kind of stream structure to create
+ */
+
+static TFileStream * AllocateFileStream(
+    const TCHAR * szFileName,
+    DWORD dwStreamFlags)
+{
+    TFileStream * pStream;
+    TCHAR * szSourceName;
+    size_t FileNameSize = (_tcslen(szFileName) + 1) * sizeof(TCHAR);
+    size_t StreamSize = 0;
+    DWORD dwStreamProvider = dwStreamFlags & STREAM_PROVIDER_MASK;
+    DWORD dwBaseProvider = dwStreamFlags & BASE_PROVIDER_MASK;
+
+    // The "file:" prefix forces the BASE_PROVIDER_FILE
+    if(!_tcsicmp(szFileName, _T("file:")))
+    {
+        dwBaseProvider = BASE_PROVIDER_FILE;
+        szFileName += 5;
+    }
+    
+    // The "map:" prefix forces the BASE_PROVIDER_MAP
+    if(!_tcsicmp(szFileName, _T("map:")))
+    {
+        dwBaseProvider = BASE_PROVIDER_MAP;
+        szFileName += 4;
+    }
+    
+    // The "http:" prefix forces the BASE_PROVIDER_HTTP
+    if(!_tcsicmp(szFileName, _T("http:")))
+    {
+        dwBaseProvider = BASE_PROVIDER_HTTP;
+        szFileName += 5;
+    }
+
+    // Re-create the stream flags
+    dwStreamFlags = (dwStreamFlags & STREAM_FLAG_MASK) | dwStreamProvider | dwBaseProvider;
+
+    // Allocate file stream for each stream provider
+    switch(dwStreamFlags & STREAM_PROVIDER_MASK)
+    {
+        case STREAM_PROVIDER_LINEAR:    // Allocate structure for linear stream 
+            StreamSize = sizeof(TLinearStream);
+            break;
+
+        case STREAM_PROVIDER_PARTIAL:
+            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
+            StreamSize = sizeof(TPartialStream);
+            break;
+
+        case STREAM_PROVIDER_ENCRYPTED:
+            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
+            StreamSize = sizeof(TEncryptedStream);
+            break;
+
+        default:
+            return NULL;
+    }
+
+    // Allocate the stream structure for the given stream type
+    pStream = (TFileStream *)STORM_ALLOC(BYTE, StreamSize + FileNameSize);
+    if(pStream == NULL)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+
+    // Fill the stream structure with zeros
+    memset(pStream, 0, StreamSize);
+
+    // Remember the file name
+    pStream->szFileName = (TCHAR *)((BYTE *)pStream + StreamSize);
+    pStream->dwFlags = dwStreamFlags;
+    memcpy(pStream->szFileName, szFileName, FileNameSize);
+
+    // If we have source file name, setup it as well
+    szSourceName = _tcschr(pStream->szFileName, _T('*'));
+    if(szSourceName != NULL)
+    {
+        // Remember the source name and cut these two file names
+        pStream->szSourceName = szSourceName + 1;
+        szSourceName[0] = 0;
+    }
+    return pStream;
 }
 
 //-----------------------------------------------------------------------------
@@ -1726,24 +2051,20 @@ TFileStream * FileStream_CreateFile(
     }
 
     // Allocate file stream structure for linear stream
-    pStream = STORM_ALLOC(TFileStream, 1);
+    pStream = AllocateFileStream(szFileName, dwStreamFlags);
     if(pStream != NULL)
     {
-        // Reset entire structure to zero
-        memset(pStream, 0, sizeof(TFileStream));
-        _tcscpy(pStream->szFileName, szFileName);
-
         // Attempt to create the disk file
-        if(BaseFile_Create(pStream, szFileName, dwStreamFlags))
+        if(BaseFile_Create(pStream))
         {
             // Fill the stream provider functions
             pStream->StreamRead    = pStream->BaseRead;
             pStream->StreamWrite   = pStream->BaseWrite;
-            pStream->StreamGetPos  = pStream->BaseGetPos;
-            pStream->StreamGetSize = pStream->BaseGetSize;
             pStream->StreamSetSize = pStream->BaseSetSize;
-            pStream->StreamGetTime = pStream->BaseGetTime;
-            pStream->StreamGetBmp  = (STREAM_GETBMP)Dummy_GetBitmap;;
+            pStream->StreamGetSize = (STREAM_GETSIZE)LinearStream_GetSize;
+            pStream->StreamGetTime = (STREAM_GETTIME)LinearStream_GetTime;
+            pStream->StreamGetPos  = (STREAM_GETPOS)LinearStream_GetPos;
+            pStream->StreamGetBmp  = (STREAM_GETBMP)CompleteFile_GetBmp;
             pStream->StreamSwitch  = (STREAM_SWITCH)LinearStream_Switch;
             pStream->StreamClose   = pStream->BaseClose;
             return pStream;
@@ -1782,55 +2103,46 @@ TFileStream * FileStream_OpenFile(
     DWORD dwStreamFlags)
 {
     TFileStream * pStream = NULL;
-    size_t StreamSize = 0;
+    DWORD dwClearMask = STREAM_OPTIONS_MASK;
     bool bStreamResult = false;
     bool bBaseResult = false;
 
-    // Allocate file stream for each stream provider
-    switch(dwStreamFlags & STREAM_PROVIDER_MASK)
-    {
-        case STREAM_PROVIDER_LINEAR:    // Allocate structure for linear stream 
-            StreamSize = sizeof(TLinearStream);
-            break;
-
-        case STREAM_PROVIDER_PARTIAL:
-            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
-            StreamSize = sizeof(TPartialStream);
-            break;
-
-        case STREAM_PROVIDER_ENCRYPTED:
-            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
-            StreamSize = sizeof(TEncryptedStream);
-            break;
-
-        default:
-            return NULL;
-    }
-
-    // Allocate the stream for each type
-    pStream = (TFileStream *)STORM_ALLOC(BYTE, StreamSize);
+    // Allocate the stream of the given type
+    pStream = AllocateFileStream(szFileName, dwStreamFlags);
     if(pStream == NULL)
         return NULL;
 
-    // Fill the stream structure with zeros
-    memset(pStream, 0, StreamSize);
-    _tcscpy(pStream->szFileName, szFileName);
+    // Few special checks when we want the stream to be cached from another source,
+    if(pStream->szSourceName != NULL)
+    {
+        // We don't allow other base types than BASE_PROVIDER_FILE
+        if((pStream->dwFlags & BASE_PROVIDER_MASK) != BASE_PROVIDER_FILE)
+        {
+            SetLastError(ERROR_INVALID_PARAMETER);
+            STORM_FREE(pStream);
+            return NULL;
+        }
+
+        // Clear the STREAM_FLAG_READ_ONLY flag for the base file when being open
+        // as local cache of a remote file
+        dwClearMask &= ~STREAM_FLAG_READ_ONLY;
+    }
 
     // Now initialize the respective base provider
-    switch(dwStreamFlags & BASE_PROVIDER_MASK)
+    switch(pStream->dwFlags & BASE_PROVIDER_MASK)
     {
         case BASE_PROVIDER_FILE:
-            bBaseResult = BaseFile_Open(pStream, szFileName, dwStreamFlags);
+            bBaseResult = BaseFile_Open(pStream, pStream->dwFlags & dwClearMask);
             break;
 
         case BASE_PROVIDER_MAP:
-            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
-            bBaseResult = BaseMap_Open(pStream, szFileName, dwStreamFlags);
+            pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+            bBaseResult = BaseMap_Open(pStream);
             break;
 
         case BASE_PROVIDER_HTTP:
-            dwStreamFlags |= STREAM_FLAG_READ_ONLY;
-            bBaseResult = BaseHttp_Open(pStream, szFileName, dwStreamFlags);
+            pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+            bBaseResult = BaseHttp_Open(pStream);
             break;
     }
 
@@ -1842,7 +2154,7 @@ TFileStream * FileStream_OpenFile(
     }
 
     // Now initialize the stream provider
-    switch(dwStreamFlags & STREAM_PROVIDER_MASK)
+    switch(pStream->dwFlags & STREAM_PROVIDER_MASK)
     {
         case STREAM_PROVIDER_LINEAR:
             bStreamResult = LinearStream_Open((TLinearStream *)pStream);
@@ -2019,38 +2331,6 @@ bool FileStream_IsReadOnly(TFileStream * pStream)
 }
 
 /**
- * This function enabled a linear stream to include data bitmap.
- * Used by MPQs v 4.0 from WoW. Each file block is represented by
- * a bit in the bitmap. 1 means the block is present, 0 means it's not.
- *
- * \a pStream Pointer to an open stream
- * \a pBitmap Pointer to file bitmap
- */
-
-bool FileStream_SetBitmap(TFileStream * pStream, TFileBitmap * pBitmap)
-{
-    TLinearStream * pLinearStream;
-
-    // It must be a linear stream.
-    if((pStream->dwFlags & STREAM_PROVIDER_MASK) != STREAM_PROVIDER_LINEAR)
-        return false;
-    pLinearStream = (TLinearStream *)pStream;
-
-    // Two bitmaps are not allowed
-    if(pLinearStream->pBitmap != NULL)
-        return false;
-
-    // We need to change some entry points
-    pLinearStream->StreamRead   = (STREAM_READ)LinearStream_Read;
-    pLinearStream->StreamGetBmp = (STREAM_GETBMP)LinearStream_GetBitmap;
-
-    // Using data bitmap renders the stream to be read only.
-    pLinearStream->dwFlags |= STREAM_FLAG_READ_ONLY;
-    pLinearStream->pBitmap = pBitmap;
-    return true;
-}
-
-/**
  * This function retrieves the file bitmap. A file bitmap is an array
  * of bits, each bit representing one file block. A value of 1 means
  * that the block is present in the file, a value of 0 means that the
@@ -2061,10 +2341,10 @@ bool FileStream_SetBitmap(TFileStream * pStream, TFileBitmap * pBitmap)
  * \a Length  Size of buffer pointed by pBitmap, in bytes
  * \a LengthNeeded If non-NULL, the function supplies the necessary byte size of the buffer
  */
-bool FileStream_GetBitmap(TFileStream * pStream, TFileBitmap * pBitmap, DWORD Length, LPDWORD LengthNeeded)
+bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD Length, LPDWORD LengthNeeded)
 {
     assert(pStream->StreamGetBmp != NULL);
-    return pStream->StreamGetBmp(pStream, pBitmap, Length, LengthNeeded);
+    return pStream->StreamGetBmp(pStream, pvBitmap, Length, LengthNeeded);
 }
 
 /**

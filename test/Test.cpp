@@ -196,11 +196,25 @@ static bool IsMpqExtension(const char * szFileName)
             return true;
         if(!_stricmp(szExtension, ".SC2Map"))
             return true;
-        if(!_stricmp(szExtension, ".link"))
-            return true;
+//      if(!_stricmp(szExtension, ".link"))
+//          return true;
     }
     
     return false;
+}
+
+static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWORD * pdwDifference)
+{
+    for(DWORD i = 0; i < dwLength; i++)
+    {
+        if(pbBlock1[i] != pbBlock2[i])
+        {
+            pdwDifference[0] = i;
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static size_t ConvertSha1ToText(const unsigned char * sha1_digest, char * szSha1Text)
@@ -609,11 +623,6 @@ static int InitializeMpqDirectory(char * argv[], int argc)
     const char * szDirName;
     char szFullPath[MAX_PATH];
 
-#ifdef _MSC_VER
-    // Mix the random number generator
-    srand(GetTickCount());
-#endif
-
     // Retrieve the name of the MPQ directory
     if(argc > 1 && argv[1] != NULL)
     {
@@ -847,9 +856,6 @@ static int CopyFileData(
     {
         while(ByteOffset < EndOffset)
         {
-            // Notify the user
-            pLogger->PrintProgress("Copying %I64u of %I64u ...", BytesCopied, ByteCount);
-
             // Read source
             BytesToRead = ((EndOffset - ByteOffset) > BlockLength) ? BlockLength : (DWORD)(EndOffset - ByteOffset);
             if(!FileStream_Read(pStream1, &ByteOffset, pbCopyBuffer, BytesToRead))
@@ -865,8 +871,12 @@ static int CopyFileData(
                 break;
             }
 
+            // Increment the byte counts
             BytesCopied += BytesToRead;
             ByteOffset += BytesToRead;
+
+            // Notify the user
+            pLogger->PrintProgress("Copying (%I64u of %I64u complete) ...", BytesCopied, ByteCount);
         }
 
         STORM_FREE(pbCopyBuffer);
@@ -876,7 +886,7 @@ static int CopyFileData(
 }
 
 // Support function for copying file
-static int CreateMpqCopy(
+static int CreateFileCopy(
     TLogHelper * pLogger,
     const char * szPlainName,
     const char * szFileCopy,
@@ -950,6 +960,30 @@ static int CreateMpqCopy(
         strcpy(szBuffer, szFileName2);
     if(nError != ERROR_SUCCESS)
         pLogger->PrintError("Failed to create copy of MPQ");
+    return nError;
+}
+
+static int CreateMasterAndMirrorPaths(
+    TLogHelper * pLogger,
+    char * szMirrorPath,
+    char * szMasterPath,
+    const char * szMirrorName,
+    const char * szMasterName)
+{
+    char szCopyPath[MAX_PATH];
+    int nError;
+
+    // Copy the mirrored file from the source to the work directory
+    nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName, szCopyPath);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Create the full path name of the master file
+        CreateFullPathName(szMasterPath, szMpqSubDir, szMasterName);
+
+        // Create the full path name of the mirror file
+        sprintf(szMirrorPath, "%s*%s", szCopyPath, szMasterPath);
+    }
+
     return nError;
 }
 
@@ -1084,6 +1118,81 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, const char * szFileName, 
 
     FileStream_Close(pStream);
     return pFileData;
+}
+
+static int CompareTwoLocalFilesRR(
+    TLogHelper * pLogger, 
+    TFileStream * pStream1,                         // Master file
+    TFileStream * pStream2)                         // Mirror file
+{
+    ULONGLONG RandomNumber = 0x12345678;            // We need pseudo-random number that will repeat each run of the program
+    ULONGLONG RandomSeed;
+    ULONGLONG ByteOffset;
+    ULONGLONG FileSize1 = 1;
+    ULONGLONG FileSize2 = 2;
+    DWORD BytesToRead;
+    DWORD Difference;
+    LPBYTE pbBuffer1;
+    LPBYTE pbBuffer2;
+    DWORD cbBuffer = 0x100000;
+    int nError = ERROR_SUCCESS;
+
+    // Compare file sizes
+    FileStream_GetSize(pStream1, &FileSize1);
+    FileStream_GetSize(pStream2, &FileSize2);
+    if(FileSize1 != FileSize2)
+    {
+        pLogger->PrintMessage("The files have different size");
+        return ERROR_CAN_NOT_COMPLETE;
+    }
+
+    // Allocate both buffers
+    pbBuffer1 = STORM_ALLOC(BYTE, cbBuffer);
+    pbBuffer2 = STORM_ALLOC(BYTE, cbBuffer);
+    if(pbBuffer1 && pbBuffer2)
+    {
+        // Perform many random reads
+        for(int i = 0; i < 0x10000; i++)
+        {
+            // Generate psudo-random offsrt and data size
+            ByteOffset = (RandomNumber % FileSize1);
+            BytesToRead = (DWORD)(RandomNumber % cbBuffer);
+
+            // Show the progress message
+            pLogger->PrintProgress("Comparing file: Offset: " I64u_a ", Length: %u", ByteOffset, BytesToRead);
+
+            // Only perform read if the byte offset is below
+            if(ByteOffset < FileSize1)
+            {
+                if((ByteOffset + BytesToRead) > FileSize1)
+                    BytesToRead = (DWORD)(FileSize1 - ByteOffset);
+
+                memset(pbBuffer1, 0xEE, cbBuffer);
+                memset(pbBuffer2, 0xAA, cbBuffer);
+                
+                FileStream_Read(pStream1, &ByteOffset, pbBuffer1, BytesToRead);
+                FileStream_Read(pStream2, &ByteOffset, pbBuffer2, BytesToRead);
+
+                if(!CompareBlocks(pbBuffer1, pbBuffer2, BytesToRead, &Difference))
+                {
+                    pLogger->PrintMessage("Difference at %u (Offset " I64u_a ", Length %u)", Difference, ByteOffset, BytesToRead);
+                    nError = ERROR_FILE_CORRUPT;
+                    break;
+                }
+
+                // Shuffle the random number
+                memcpy(&RandomSeed, pbBuffer1, sizeof(RandomSeed));
+                RandomNumber = ((RandomNumber >> 0x11) | (RandomNumber << 0x29)) ^ (RandomNumber + RandomSeed);
+            }
+        }
+    }
+
+    // Free both buffers
+    if(pbBuffer2 != NULL)
+        STORM_FREE(pbBuffer2);
+    if(pbBuffer1 != NULL)
+        STORM_FREE(pbBuffer1);
+    return nError;
 }
 
 static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileName)
@@ -1390,7 +1499,7 @@ static int OpenExistingArchiveWithCopy(TLogHelper * pLogger, const char * szFile
     // If both names entered, create a copy
     if(szFileName != NULL && szCopyName != NULL)
     {
-        nError = CreateMpqCopy(pLogger, szFileName, szCopyName, szFullPath);
+        nError = CreateFileCopy(pLogger, szFileName, szCopyName, szFullPath);
         if(nError != ERROR_SUCCESS)
             return nError;
     }
@@ -1654,8 +1763,37 @@ static int TestSearchListFile(const char * szPlainName)
     return ERROR_SUCCESS;
 }
 
+// Open a file stream with mirroring a master file
+static int TestReadFile_MasterMirror(const char * szMirrorName, const char * szMasterName)
+{
+    TFileStream * pStream1;                     // Master file
+    TFileStream * pStream2;                     // Mirror file
+    TLogHelper Logger("OpenMirrorFile", szMasterName);
+    char szMirrorPath[MAX_PATH + MAX_PATH];     
+    char szMasterPath[MAX_PATH];
+    int nError;
+
+    // Create copy of the file to serve as mirror, keep master there
+    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Open both master and mirror file
+        pStream1 = OpenLocalFile(szMasterPath, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
+        pStream2 = OpenLocalFile(szMirrorPath, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
+        if(pStream1 && pStream2)
+            nError = CompareTwoLocalFilesRR(&Logger, pStream1, pStream2);
+
+        if(pStream2 != NULL)
+            FileStream_Close(pStream2);
+        if(pStream1 != NULL)
+            FileStream_Close(pStream1);
+    }
+
+    return nError;
+}
+
 // 
-static int TestPartFileRead(const char * szPlainName)
+static int TestReadFile_Partial(const char * szPlainName)
 {
     TLogHelper Logger("PartFileRead", szPlainName);
     TMPQHeader Header;
@@ -1810,6 +1948,27 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     return nError;
 }
 
+static int TestOpenArchive_Corrupt(const char * szPlainName)
+{
+    TLogHelper Logger("OpenCorruptMpqTest", szPlainName);
+    HANDLE hMpq = NULL;
+    TCHAR szFullPathT[MAX_PATH];
+    char szFullPath[MAX_PATH];
+
+    // Copy the archive so we won't fuck up the original one
+    CreateFullPathName(szFullPath, szMpqSubDir, szPlainName);
+    CopyFileName(szFullPathT, szFullPath, strlen(szFullPath));
+    if(SFileOpenArchive(szFullPathT, 0, STREAM_FLAG_READ_ONLY, &hMpq))
+    {
+        SFileCloseArchive(hMpq);
+        Logger.PrintMessage("Opening archive %s succeeded, but it shouldn't", szFullPath);
+        return ERROR_CAN_NOT_COMPLETE;
+    }
+
+    return ERROR_SUCCESS;
+}
+
+
 // Opens a patched MPQ archive
 static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatchedFile = NULL, int nExpectedPatchCount = 0)
 {
@@ -1850,7 +2009,7 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
 
     // Copy the fiel so we wont screw up something
     szCopyName = bReadOnly ? "StormLibTest_ReadOnly.mpq" : "StormLibTest_ReadWrite.mpq";
-    nError = CreateMpqCopy(&Logger, szPlainName, szCopyName, szFullPathName);
+    nError = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPathName);
 
     // Now open the archive for read-only access
     if(nError == ERROR_SUCCESS)
@@ -1966,6 +2125,62 @@ static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * s
     return ERROR_SUCCESS;
 }
 
+static int TestOpenArchive_MasterMirror(const char * szMirrorName, const char * szMasterName, const char * szFileToExtract)
+{
+    TFileData * pFileData;
+    TLogHelper Logger("OpenServerMirror", szMirrorName);
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
+    DWORD dwVerifyResult;
+    char szMirrorPath[MAX_PATH + MAX_PATH];   // Combined name
+    char szMasterPath[MAX_PATH];              // Original (server) name
+    int nError;
+
+    // Create both paths
+    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName);
+
+    // Now open both archives as local-server pair
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = OpenExistingArchive(&Logger, szMirrorPath, 0, &hMpq);
+    }
+
+    // The MPQ must be read-only. Writing to mirrored MPQ is not allowed 
+    if(nError == ERROR_SUCCESS)
+    {
+        if(SFileCreateFile(hMpq, "AddedFile.bin", 0, 0x10, 0, MPQ_FILE_COMPRESS, &hFile))
+        {
+            SFileCloseFile(hFile);
+            Logger.PrintMessage("The archive is writable, although it should not be");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Verify the file
+    if(nError == ERROR_SUCCESS && szFileToExtract)
+    {
+        dwVerifyResult = SFileVerifyFile(hMpq, szFileToExtract, SFILE_VERIFY_ALL);
+        if(dwVerifyResult & VERIFY_FILE_ERROR_MASK)
+        {
+            Logger.PrintMessage("File verification failed");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Load the file to memory
+    if(nError == ERROR_SUCCESS && szFileToExtract)
+    {
+        pFileData = LoadMpqFile(&Logger, hMpq, szFileToExtract);
+        if(pFileData != NULL)
+            STORM_FREE(pFileData);
+    }
+
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
+
 static int TestOpenArchive_VerifySignature(const char * szPlainName, const char * szOriginalName)
 {
     TLogHelper Logger("VerifySignatureTest", szPlainName);
@@ -2018,7 +2233,7 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
     int nError;
 
     // Create copy of the archive, with interleaving some user data
-    nError = CreateMpqCopy(&Logger, szPlainName, szCopyName, szFullPath, 0x400, 0x531);
+    nError = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, 0x400, 0x531);
     
     // Open the archive and load some files
     if(nError == ERROR_SUCCESS)
@@ -2892,18 +3107,22 @@ int main(int argc, char * argv[])
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqDirectory);
-                                                                                                                        
-    // Test opening local file with SFileOpenFileEx
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenLocalFile("ListFile_Blizzard.txt");
 
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
 
+    // Search in listfile
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ");
+
     // Test reading partial file
     if(nError == ERROR_SUCCESS)
-        nError = TestPartFileRead("MPQ_2009_v2_WoW_patch.MPQ.part");
+        nError = TestReadFile_Partial("MPQ_2009_v2_WoW_patch.MPQ.part");
+
+    // Test opening local file with SFileOpenFileEx
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenLocalFile("ListFile_Blizzard.txt");
 
     // Test working with an archive that has no listfile
     if(nError == ERROR_SUCCESS)
@@ -2969,6 +3188,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_OpenArchive, szMpqDirectory);
 
+    // Test on an archive that has been invalidated by extending an old valid MPQ
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -2992,6 +3215,10 @@ int main(int argc, char * argv[])
     // Check the SFileGetFileInfo function
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_GetFileInfo("MPQ_2002_v1_StrongSignature.w3m", "MPQ_2013_v4_SC2_EmptyMap.SC2Map");
+
+    // Downloadable MPQ archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ", "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp");
 
     // Check archive signature
     if(nError == ERROR_SUCCESS)

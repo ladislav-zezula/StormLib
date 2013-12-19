@@ -185,9 +185,6 @@ TMPQBlock * TranslateBlockTable(TMPQArchive * ha, ULONGLONG * pcbTableSize, bool
 
 ULONGLONG FindFreeMpqSpace(TMPQArchive * ha);
 
-// Functions that loads and verifies MPQ data bitmap
-int  LoadMpqDataBitmap(TMPQArchive * ha, ULONGLONG FileSize, bool * pbFileIsComplete);
-
 // Functions that load the HET and BET tables
 int  CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize);
 int  LoadAnyHashTable(TMPQArchive * ha);
