@@ -272,8 +272,10 @@ extern "C" {
 #define STREAM_FLAG_READ_ONLY       0x00000100  // Stream is read only
 #define STREAM_FLAG_WRITE_SHARE     0x00000200  // Allow write sharing when open for write
 #define STREAM_FLAG_USE_BITMAP      0x00000400  // If the file has a file bitmap, load it and use it
-#define STREAM_FLAG_MASK            0x0000FF00  // Mask for stream flags
-#define STREAM_OPTIONS_MASK         0x0000FFFF  // Mask for all stream options
+#define STREAM_OPTIONS_MASK         0x0000FF00  // Mask for stream options
+
+#define STREAM_PROVIDERS_MASK       0x000000FF  // Mask to get stream providers
+#define STREAM_FLAGS_MASK           0x0000FFFF  // Mask for all stream flags (providers+options)
 
 #define MPQ_OPEN_NO_LISTFILE        0x00010000  // Don't load the internal listfile
 #define MPQ_OPEN_NO_ATTRIBUTES      0x00020000  // Don't open the attributes
@@ -361,7 +363,8 @@ typedef enum _SFileInfoClass
 {
     // Info classes for archives
     SFileMpqFileName,                       // Name of the archive file (TCHAR [])
-    SFileMpqFileBitmap,                     // Bitmap of the archive (TFileBitmap + BYTE[])
+    SFileMpqStreamBlockSize,                // Size of one stream block in bytes (DWORD)
+    SFileMpqStreamBlockAvailable,           // Nonzero if the stream block at the given offset is available (input: ByteOffset, ULONGLONG)
     SFileMpqUserDataOffset,                 // Offset of the user data header (ULONGLONG)
     SFileMpqUserDataHeader,                 // Raw (unfixed) user data header (TMPQUserData)
     SFileMpqUserData,                       // MPQ USer data, without the header (BYTE [])
@@ -695,19 +698,6 @@ typedef struct _TPatchHeader
 
 #define SIZE_OF_XFRM_HEADER  0x0C
 
-// Structure for file bitmap. Used by SFileGetFileInfo(SFileMpqFileBitmap)
-typedef struct _TFileBitmap
-{
-    ULONGLONG StartOffset;                      // Starting offset of the file, covered by bitmap
-    ULONGLONG EndOffset;                        // Ending offset of the file, covered by bitmap
-    DWORD BitmapSize;                           // Size of the file bitmap (in bytes)
-    DWORD BlockSize;                            // Size of one block, in bytes
-    DWORD BlockCount;                           // Number of data blocks in the file
-    DWORD IsComplete;                           // If nonzero, no blocks are missing
-
-    // Followed by file bitmap (variable length), array of BYTEs)
-} TFileBitmap;
-
 // This is the combined file entry for maintaining file list in the MPQ.
 // This structure is combined from block table, hi-block table,
 // (attributes) file and from (listfile).
@@ -949,14 +939,12 @@ const TCHAR * FileStream_GetFileName(TFileStream * pStream);
 bool FileStream_IsReadOnly(TFileStream * pStream);
 bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead);
 bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite);
-bool FileStream_GetPos(TFileStream * pStream, ULONGLONG * pByteOffset);
-bool FileStream_SetPos(TFileStream * pStream, ULONGLONG ByteOffset);
-bool FileStream_GetSize(TFileStream * pStream, ULONGLONG * pFileSize);
 bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize);
+bool FileStream_GetSize(TFileStream * pStream, ULONGLONG * pFileSize);
+bool FileStream_GetPos(TFileStream * pStream, ULONGLONG * pByteOffset);
 bool FileStream_GetTime(TFileStream * pStream, ULONGLONG * pFT);
 bool FileStream_GetFlags(TFileStream * pStream, LPDWORD pdwStreamFlags);
-bool FileStream_Switch(TFileStream * pStream, TFileStream * pTempStream);
-bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD Length, LPDWORD LengthNeeded);
+bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream);
 void FileStream_Close(TFileStream * pStream);
 
 //-----------------------------------------------------------------------------

@@ -575,7 +575,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     // If succeeded, switch the streams
     if(nError == ERROR_SUCCESS)
     {
-        if(FileStream_Switch(ha->pStream, pTempStream))
+        if(FileStream_Replace(ha->pStream, pTempStream))
             pTempStream = NULL;
         else
             nError = ERROR_CAN_NOT_COMPLETE;

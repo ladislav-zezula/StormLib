@@ -770,6 +770,53 @@ static int CreateEmptyFile(TLogHelper * pLogger, const char * szPlainName, ULONG
     return ERROR_SUCCESS;
 }
 
+static int VerifyFilePosition(
+    TLogHelper * pLogger,
+    TFileStream * pStream,
+    ULONGLONG ExpectedPosition)
+{
+    ULONGLONG ByteOffset = 0;
+    int nError = ERROR_SUCCESS;
+
+    // Retrieve the file position
+    if(FileStream_GetPos(pStream, &ByteOffset))
+    {
+        if(ByteOffset != ExpectedPosition)
+        {
+            pLogger->PrintMessage("The file position is different than expected (expected: " I64u_a ", current: "  I64u_a, ExpectedPosition, ByteOffset);
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+    else
+    {
+        nError = pLogger->PrintError("Failed to retrieve the file offset");
+    }
+
+    return nError;
+}
+
+static int VerifyFileMpqHeader(TLogHelper * pLogger, TFileStream * pStream, ULONGLONG * pByteOffset)
+{
+    TMPQHeader Header;
+    int nError = ERROR_SUCCESS;
+
+    memset(&Header, 0xFE, sizeof(TMPQHeader));
+    if(FileStream_Read(pStream, pByteOffset, &Header, sizeof(TMPQHeader)))
+    {
+        if(Header.dwID != ID_MPQ)
+        {
+            pLogger->PrintMessage("Read error - the data is not a MPQ header");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+    else
+    {
+        nError = pLogger->PrintError("Failed to read the MPQ header");
+    }
+
+    return nError;
+}
+
 static int WriteMpqUserDataHeader(
     TLogHelper * pLogger,
     TFileStream * pStream,
@@ -1792,59 +1839,120 @@ static int TestReadFile_MasterMirror(const char * szMirrorName, const char * szM
     return nError;
 }
 
-// 
-static int TestReadFile_Partial(const char * szPlainName)
+// Test of the TFileStream object
+static int TestFileStreamOperations(const char * szPlainName, DWORD dwStreamFlags)
 {
-    TLogHelper Logger("PartFileRead", szPlainName);
-    TMPQHeader Header;
+    TFileStream * pStream;
+    TLogHelper Logger("FileStreamTest", szPlainName);
     ULONGLONG ByteOffset;
     ULONGLONG FileSize = 0;
-    TFileStream * pStream;
-    char szFileName[MAX_PATH];
-    BYTE Buffer[0x100];
+    DWORD dwRequiredFlags = 0;
+    char szFullPath[MAX_PATH];
+    BYTE Buffer[0x10];
     int nError = ERROR_SUCCESS;
 
-    // Open the partial file
-    CreateFullPathName(szFileName, szMpqSubDir, szPlainName);
-    pStream = OpenLocalFile(szFileName, STREAM_PROVIDER_PARTIAL | BASE_PROVIDER_FILE | STREAM_FLAG_READ_ONLY);
+    // Copy the file so we won't screw up
+    CreateFileCopy(&Logger, szPlainName, szPlainName, szFullPath);
+    
+    // Open the file stream
+    pStream = OpenLocalFile(szFullPath, dwStreamFlags);
     if(pStream == NULL)
-        nError = Logger.PrintError("Failed to open %s", szFileName);
+        nError = Logger.PrintError("Failed to open %s", szFullPath);
 
-    // Get the size of the stream
+    // Get the size of the file stream
     if(nError == ERROR_SUCCESS)
     {
+        if(!FileStream_GetFlags(pStream, &dwStreamFlags))
+            nError = Logger.PrintError("Failed to retrieve the stream flags");
+
         if(!FileStream_GetSize(pStream, &FileSize))
-            nError = Logger.PrintError("Failed to retrieve virtual file size");
+            nError = Logger.PrintError("Failed to retrieve the file size");
+
+        // Any other stream except STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE should be read-only
+        if((dwStreamFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE))
+            dwRequiredFlags |= STREAM_FLAG_READ_ONLY;
+//      if(pStream->BlockPresent)
+//          dwRequiredFlags |= STREAM_FLAG_READ_ONLY;
+
+        // Check the flags there
+        if((dwStreamFlags & dwRequiredFlags) != dwRequiredFlags)
+        {
+            Logger.PrintMessage("The stream should be read-only but it isn't");
+            nError = ERROR_FILE_CORRUPT;
+        }
     }
 
-    // Read the MPQ header
+    // After successful open, the stream position must be zero
+    if(nError == ERROR_SUCCESS)
+        nError = VerifyFilePosition(&Logger, pStream, 0);
+
+    // Read the MPQ header from the current file offset.
+    if(nError == ERROR_SUCCESS)
+        nError = VerifyFileMpqHeader(&Logger, pStream, NULL);
+    
+    // After successful open, the stream position must sizeof(TMPQHeader)
+    if(nError == ERROR_SUCCESS)
+        nError = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
+
+    // Now try to read the MPQ header from the offset 0
     if(nError == ERROR_SUCCESS)
     {
         ByteOffset = 0;
-        if(!FileStream_Read(pStream, &ByteOffset, &Header, MPQ_HEADER_SIZE_V2))
-            nError = Logger.PrintError("Failed to read the MPQ header");
-        if(Header.dwID != ID_MPQ || Header.dwHeaderSize != MPQ_HEADER_SIZE_V2)
-            nError = Logger.PrintError("MPQ Header error");
+        nError = VerifyFileMpqHeader(&Logger, pStream, &ByteOffset);
     }
 
-    // Read the last 0x100 bytes
+    // After successful open, the stream position must sizeof(TMPQHeader)
+    if(nError == ERROR_SUCCESS)
+        nError = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
+
+    // Try a write operation
     if(nError == ERROR_SUCCESS)
     {
-        ByteOffset = FileSize - sizeof(Buffer);
-        if(!FileStream_Read(pStream, &ByteOffset, Buffer, sizeof(Buffer)))
-            nError = Logger.PrintError("Failed to read from the file");
+        bool bExpectedResult = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? false : true;
+        bool bResult;
+
+        // Attempt to write to the file
+        ByteOffset = 0;
+        bResult = FileStream_Write(pStream, &ByteOffset, Buffer, sizeof(Buffer));
+
+        // If the result is not expected
+        if(bResult != bExpectedResult)
+        {
+            Logger.PrintMessage("FileStream_Write result is different than expected");
+            nError = ERROR_FILE_CORRUPT;
+        }
     }
 
-    // Read 0x100 bytes from position (FileSize - 0xFF)
-    // This test must fail
+    // Move the position 9 bytes from the end and try to read 10 bytes.
+    // This must fail, because stream reading functions are "all or nothing"
     if(nError == ERROR_SUCCESS)
     {
-        ByteOffset = FileSize - sizeof(Buffer) + 1;
-        if(FileStream_Read(pStream, &ByteOffset, Buffer, sizeof(Buffer)))
-            nError = Logger.PrintError("Test Failed: Reading 0x100 bytes from (FileSize - 0xFF)");
+        ByteOffset = FileSize - 9;
+        if(FileStream_Read(pStream, &ByteOffset, Buffer, 10))
+        {
+            Logger.PrintMessage("FileStream_Read succeeded, but it shouldn't");
+            nError = ERROR_FILE_CORRUPT;
+        }
     }
 
-    FileStream_Close(pStream);
+    // Try again with 9 bytes. This must succeed, unless the file block is not available
+    if(nError == ERROR_SUCCESS)
+    {
+        ByteOffset = FileSize - 9;
+        if(!FileStream_Read(pStream, &ByteOffset, Buffer, 9))
+        {
+            Logger.PrintMessage("FileStream_Read from the end of the file failed");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Verify file position - it must be at the end of the file
+    if(nError == ERROR_SUCCESS)
+        nError = VerifyFilePosition(&Logger, pStream, FileSize);
+
+    // Close the stream
+    if(pStream != NULL)
+        FileStream_Close(pStream);
     return nError;
 }
 
@@ -2157,7 +2265,7 @@ static int TestOpenArchive_MasterMirror(const char * szMirrorName, const char * 
     }
 
     // Verify the file
-    if(nError == ERROR_SUCCESS && szFileToExtract)
+    if(nError == ERROR_SUCCESS && szFileToExtract != NULL)
     {
         dwVerifyResult = SFileVerifyFile(hMpq, szFileToExtract, SFILE_VERIFY_ALL);
         if(dwVerifyResult & VERIFY_FILE_ERROR_MASK)
@@ -3105,20 +3213,36 @@ int main(int argc, char * argv[])
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
 
     // Search all testing archives and verify their SHA1 hash
-    if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqDirectory);
+//  if(nError == ERROR_SUCCESS)
+//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqDirectory);
 
-    // Search in listfile
+    // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
-        nError = TestSearchListFile("ListFile_Blizzard.txt");
+        nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", 0);
+
+    // Test reading linear file without bitmap (read only)
+    if(nError == ERROR_SUCCESS)
+        nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", STREAM_FLAG_READ_ONLY);
+
+    // Test reading linear file with bitmap
+    if(nError == ERROR_SUCCESS)
+        nError = TestFileStreamOperations("MPQ_2013_v4_alternate-downloaded.MPQ", STREAM_FLAG_USE_BITMAP);
+
+    // Test reading partial file
+    if(nError == ERROR_SUCCESS)
+        nError = TestFileStreamOperations("MPQ_2009_v2_WoW_patch.MPQ.part", STREAM_PROVIDER_PARTIAL);
+
+    // Test reading encrypted file
+    if(nError == ERROR_SUCCESS)
+        nError = TestFileStreamOperations("MPQ_2011_v2_EncryptedMpq.MPQE", STREAM_PROVIDER_ENCRYPTED);
 
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ");
 
-    // Test reading partial file
+    // Search in listfile
     if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_Partial("MPQ_2009_v2_WoW_patch.MPQ.part");
+        nError = TestSearchListFile("ListFile_Blizzard.txt");
 
     // Test opening local file with SFileOpenFileEx
     if(nError == ERROR_SUCCESS)

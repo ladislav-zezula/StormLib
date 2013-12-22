@@ -163,10 +163,20 @@ bool WINAPI SFileGetFileInfo(
             }
             break;
 
-        case SFileMpqFileBitmap:
+        case SFileMpqStreamBlockSize:
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
-                return FileStream_GetBitmap(ha->pStream, pvFileInfo, cbFileInfo, pcbLengthNeeded);
+            {
+                // TODO
+            }
+            break;
+
+        case SFileMpqStreamBlockAvailable:
+            ha = IsValidMpqHandle(hMpqOrFile);
+            if(ha != NULL)
+            {
+                // TODO
+            }
             break;
 
         case SFileMpqUserDataOffset:
