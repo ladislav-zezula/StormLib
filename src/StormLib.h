@@ -145,6 +145,7 @@ extern "C" {
 #define ERROR_INTERNAL_FILE              10003  // The given operation is not allowed on internal file
 #define ERROR_BASE_FILE_MISSING          10004  // The file is present as incremental patch file, but base file is missing
 #define ERROR_MARKED_FOR_DELETE          10005  // The file was marked as "deleted" in the MPQ
+#define ERROR_FILE_INCOMPLETE            10006  // The required file part is missing
 
 // Values for SFileCreateArchive
 #define HASH_TABLE_SIZE_MIN         0x00000004  // Verified: If there is 1 file, hash table size is 4
@@ -264,9 +265,10 @@ extern "C" {
 #define BASE_PROVIDER_HTTP          0x00000002  // Base data source is a file on web server
 #define BASE_PROVIDER_MASK          0x0000000F  // Mask for base provider value
 
-#define STREAM_PROVIDER_LINEAR      0x00000000  // Stream is linear with no offset mapping
+#define STREAM_PROVIDER_FLAT        0x00000000  // Stream is linear with no offset mapping
 #define STREAM_PROVIDER_PARTIAL     0x00000010  // Stream is partial file (.part)
-#define STREAM_PROVIDER_ENCRYPTED   0x00000020  // Stream is an encrypted MPQ
+#define STREAM_PROVIDER_MPQE        0x00000020  // Stream is an encrypted MPQ
+#define STREAM_PROVIDER_BLOCK4      0x00000030  // 0x4000 per block, text MD5 after each block, max 0x2000 blocks per file
 #define STREAM_PROVIDER_MASK        0x000000F0  // Mask for stream provider value
 
 #define STREAM_FLAG_READ_ONLY       0x00000100  // Stream is read only
@@ -282,11 +284,7 @@ extern "C" {
 #define MPQ_OPEN_NO_HEADER_SEARCH   0x00040000  // Don't search for the MPQ header past the begin of the file
 #define MPQ_OPEN_FORCE_MPQ_V1       0x00080000  // Always open the archive as MPQ v 1.00, ignore the "wFormatVersion" variable in the header
 #define MPQ_OPEN_CHECK_SECTOR_CRC   0x00100000  // On files with MPQ_FILE_SECTOR_CRC, the CRC will be checked when reading file
-
-// Deprecated
 #define MPQ_OPEN_READ_ONLY          STREAM_FLAG_READ_ONLY
-#define MPQ_OPEN_ENCRYPTED          STREAM_PROVIDER_ENCRYPTED
-#define MPQ_OPEN_PARTIAL            STREAM_PROVIDER_PARTIAL
 
 // Flags for SFileCreateArchive
 #define MPQ_CREATE_LISTFILE         0x00100000  // Also add the (listfile) file
@@ -363,8 +361,7 @@ typedef enum _SFileInfoClass
 {
     // Info classes for archives
     SFileMpqFileName,                       // Name of the archive file (TCHAR [])
-    SFileMpqStreamBlockSize,                // Size of one stream block in bytes (DWORD)
-    SFileMpqStreamBlockAvailable,           // Nonzero if the stream block at the given offset is available (input: ByteOffset, ULONGLONG)
+    SFileMpqStreamBitmap,                   // Array of bits, each bit means availability of one block (BYTE [])
     SFileMpqUserDataOffset,                 // Offset of the user data header (ULONGLONG)
     SFileMpqUserDataHeader,                 // Raw (unfixed) user data header (TMPQUserData)
     SFileMpqUserData,                       // MPQ USer data, without the header (BYTE [])
@@ -426,6 +423,11 @@ typedef enum _SFileInfoClass
 //-----------------------------------------------------------------------------
 // Deprecated flags. These are going to be removed in next releases.
 
+STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_LINEAR, STREAM_PROVIDER_FLAT);
+STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_ENCRYPTED, STREAM_PROVIDER_MPQE);
+STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_OPEN_ENCRYPTED, STREAM_PROVIDER_MPQE);
+STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_OPEN_PARTIAL, STREAM_PROVIDER_PARTIAL);
+
 // MPQ_FILE_COMPRESSED is deprecated. Do not use.
 STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_FILE_COMPRESSED, MPQ_FILE_COMPRESS_MASK);
 
@@ -465,6 +467,7 @@ STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_PATCH_CHAIN, SFileInfoPatchC
 #define CCB_COMPACTING_FILES                4   // Compacting archive (dwParam1 = current, dwParam2 = total)
 #define CCB_CLOSING_ARCHIVE                 5   // Closing archive: No params used
                                       
+typedef void (WINAPI * SFILE_DOWNLOAD_CALLBACK)(void * pvUserData, ULONGLONG ByteOffset, DWORD dwTotalBytes);
 typedef void (WINAPI * SFILE_ADDFILE_CALLBACK)(void * pvUserData, DWORD dwBytesWritten, DWORD dwTotalBytes, bool bFinalCall);
 typedef void (WINAPI * SFILE_COMPACT_CALLBACK)(void * pvUserData, DWORD dwWorkType, ULONGLONG BytesProcessed, ULONGLONG TotalBytes);
 
@@ -931,12 +934,28 @@ typedef struct _SFILE_CREATE_MPQ
 //-----------------------------------------------------------------------------
 // Stream support - functions
 
+// Structure used by FileStream_GetBitmap
+typedef struct _TStreamBitmap
+{
+    ULONGLONG StreamSize;                       // Size of the stream, in bytes
+    DWORD BitmapSize;                           // Size of the block map, in bytes
+    DWORD BlockCount;                           // Number of blocks in the stream
+    DWORD BlockSize;                            // Size of one block
+    DWORD IsComplete;                           // Nonzero if the file is complete
+
+    // Followed by the BYTE array, each bit means availability of one block
+
+} TStreamBitmap;
+
 // UNICODE versions of the file access functions
 TFileStream * FileStream_CreateFile(const TCHAR * szFileName, DWORD dwStreamFlags);
 TFileStream * FileStream_OpenFile(const TCHAR * szFileName, DWORD dwStreamFlags);
 const TCHAR * FileStream_GetFileName(TFileStream * pStream);
+size_t FileStream_Prefix(const TCHAR * szFileName, DWORD * pdwProvider);
 
-bool FileStream_IsReadOnly(TFileStream * pStream);
+bool FileStream_SetCallback(TFileStream * pStream, SFILE_DOWNLOAD_CALLBACK pfnCallback, void * pvUserData);
+
+bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD cbBitmap, LPDWORD pcbLengthNeeded);
 bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead);
 bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite);
 bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize);
@@ -973,6 +992,7 @@ bool   WINAPI SFileOpenArchive(const TCHAR * szMpqName, DWORD dwPriority, DWORD 
 bool   WINAPI SFileCreateArchive(const TCHAR * szMpqName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq);
 bool   WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCreateInfo, HANDLE * phMpq);
 
+bool   WINAPI SFileSetDownloadCallback(HANDLE hMpq, SFILE_DOWNLOAD_CALLBACK DownloadCB, void * pvUserData);
 bool   WINAPI SFileFlushArchive(HANDLE hMpq);
 bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 

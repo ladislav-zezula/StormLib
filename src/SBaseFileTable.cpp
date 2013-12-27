@@ -250,7 +250,7 @@ static DWORD GetMaxFileOffset32(TMPQArchive * ha)
     return dwMaxFileOffset;
 }
 
-static ULONGLONG DetermineEndOfArchive_V1_V2(
+static ULONGLONG DetermineArchiveSize_V1_V2(
     TMPQArchive * ha,
     TMPQHeader * pHeader,
     ULONGLONG MpqOffset,
@@ -264,9 +264,17 @@ static ULONGLONG DetermineEndOfArchive_V1_V2(
     // Check if we can rely on the archive size in the header
     if((FileSize >> 0x20) == 0)
     {
-        dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
-        if(pHeader->dwBlockTablePos < pHeader->dwArchiveSize && pHeader->dwArchiveSize <= dwArchiveSize32)
-            return pHeader->dwArchiveSize;
+        if(pHeader->dwBlockTablePos < pHeader->dwArchiveSize)
+        {
+            // If the block table end matches the archive size, we trust the archive size
+            if(pHeader->dwBlockTablePos + (pHeader->dwBlockTableSize * sizeof(TMPQBlock)) == pHeader->dwArchiveSize)
+                return pHeader->dwArchiveSize;
+
+            // If the archive size in the header is less than real file size
+            dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
+            if(pHeader->dwArchiveSize <= dwArchiveSize32)
+                return pHeader->dwArchiveSize;
+        }
     }
 
     // Check if there is a signature header
@@ -385,7 +393,7 @@ int ConvertMpqHeaderToFormat4(
             // Determine the archive size on malformed MPQs
             if(ha->dwFlags & MPQ_FLAG_MALFORMED)
             {
-                pHeader->ArchiveSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize);
+                pHeader->ArchiveSize64 = DetermineArchiveSize_V1_V2(ha, pHeader, MpqOffset, FileSize);
                 pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
             }
             break;
@@ -423,25 +431,25 @@ int ConvertMpqHeaderToFormat4(
                 if(pHeader->HiBlockTablePos64 != 0)
                 {
                     // BlockTableSize64 may be less than TblSize * sizeof(TMPQBlock).
-                    // That means that the hash table is compressed.
+                    // That means that the hi-block table is compressed.
                     pHeader->BlockTableSize64 = pHeader->HiBlockTablePos64 - BlockTablePos64;
                     assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
 
-                    // Determine the size of the hi-block table
-                    pHeader->HiBlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize) - pHeader->HiBlockTablePos64;
-                    assert(pHeader->HiBlockTableSize64 == (pHeader->dwBlockTableSize * sizeof(USHORT)));
+                    // Determine real archive size
+                    pHeader->ArchiveSize64 = DetermineArchiveSize_V1_V2(ha, pHeader, MpqOffset, FileSize);
 
-                    // Recalculate the archive size
-                    pHeader->ArchiveSize64 = pHeader->HiBlockTablePos64 + pHeader->HiBlockTableSize64;
+                    // Calculate the size of the hi-block table
+                    pHeader->HiBlockTableSize64 = pHeader->ArchiveSize64 - pHeader->HiBlockTablePos64;
+                    assert(pHeader->HiBlockTableSize64 == (pHeader->dwBlockTableSize * sizeof(USHORT)));
                 }
                 else
                 {
-                    // Block table size is the end of the archive minus the block table position
-                    pHeader->BlockTableSize64 = DetermineEndOfArchive_V1_V2(ha, pHeader, MpqOffset, FileSize) - BlockTablePos64;
-                    assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
+                    // Determine real archive size
+                    pHeader->ArchiveSize64 = DetermineArchiveSize_V1_V2(ha, pHeader, MpqOffset, FileSize);
 
-                    // dwArchiveSize in the header v 2.0 is 32-bit only
-                    pHeader->ArchiveSize64 = BlockTablePos64 + pHeader->BlockTableSize64;
+                    // Calculate size of the block table
+                    pHeader->BlockTableSize64 = pHeader->ArchiveSize64 - BlockTablePos64;
+                    assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
                 }
             }
             else
@@ -1041,7 +1049,7 @@ static void CreateHetHeader(
                               pHetHeader->dwIndexTableSize;
 }
 
-TMPQHetTable * CreateHetTable(DWORD dwFileCount, DWORD dwNameHashBitSize, LPBYTE pbSrcData)
+TMPQHetTable * CreateHetTable(DWORD dwEntryCount, DWORD dwTotalCount, DWORD dwNameHashBitSize, LPBYTE pbSrcData)
 {
     TMPQHetTable * pHetTable;
 
@@ -1058,33 +1066,37 @@ TMPQHetTable * CreateHetTable(DWORD dwFileCount, DWORD dwNameHashBitSize, LPBYTE
         pHetTable->AndMask64 = ((dwNameHashBitSize != 0x40) ? ((ULONGLONG)1 << dwNameHashBitSize) : 0) - 1;
         pHetTable->OrMask64 = (ULONGLONG)1 << (dwNameHashBitSize - 1);
 
+        // If the total count is not entered, use default
+        if(dwTotalCount == 0)
+            dwTotalCount = (dwEntryCount * 4) / 3;
+
         // Store the HET table parameters
-        pHetTable->dwEntryCount        = dwFileCount;
-        pHetTable->dwTotalCount        = (dwFileCount * 4) / 3;
+        pHetTable->dwEntryCount        = dwEntryCount;
+        pHetTable->dwTotalCount        = dwTotalCount;
         pHetTable->dwNameHashBitSize   = dwNameHashBitSize;
-        pHetTable->dwIndexSizeTotal    = GetNecessaryBitCount(dwFileCount);
+        pHetTable->dwIndexSizeTotal    = GetNecessaryBitCount(dwEntryCount);
         pHetTable->dwIndexSizeExtra    = 0;
         pHetTable->dwIndexSize         = pHetTable->dwIndexSizeTotal;
 
         // Allocate array of hashes
-        pHetTable->pNameHashes = STORM_ALLOC(BYTE, pHetTable->dwTotalCount);
+        pHetTable->pNameHashes = STORM_ALLOC(BYTE, dwTotalCount);
         if(pHetTable->pNameHashes != NULL)
         {
             // Make sure the data are initialized
-            memset(pHetTable->pNameHashes, 0, pHetTable->dwTotalCount);
+            memset(pHetTable->pNameHashes, 0, dwTotalCount);
 
             // Allocate the bit array for file indexes
-            pHetTable->pBetIndexes = CreateBitArray(pHetTable->dwTotalCount * pHetTable->dwIndexSizeTotal, 0xFF);
+            pHetTable->pBetIndexes = CreateBitArray(dwTotalCount * pHetTable->dwIndexSizeTotal, 0xFF);
             if(pHetTable->pBetIndexes != NULL)
             {
                 // Initialize the HET table from the source data (if given)
                 if(pbSrcData != NULL)
                 {
                     // Copy the name hashes
-                    memcpy(pHetTable->pNameHashes, pbSrcData, pHetTable->dwTotalCount);
+                    memcpy(pHetTable->pNameHashes, pbSrcData, dwTotalCount);
 
                     // Copy the file indexes
-                    memcpy(pHetTable->pBetIndexes->Elements, pbSrcData + pHetTable->dwTotalCount, pHetTable->pBetIndexes->NumberOfBytes);
+                    memcpy(pHetTable->pBetIndexes->Elements, pbSrcData + dwTotalCount, pHetTable->pBetIndexes->NumberOfBytes);
                 }
                 
                 // Return the result HET table
@@ -1152,7 +1164,7 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
     assert(pHetHeader->ExtHdr.dwVersion == 1);
 
     // Verify size of the HET table
-    if(pHetHeader->ExtHdr.dwDataSize >= sizeof(TMPQHetHeader))
+    if(pHetHeader->ExtHdr.dwDataSize >= (sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader)))
     {
         // Verify the size of the table in the header
         if(pHetHeader->dwTableSize == pHetHeader->ExtHdr.dwDataSize)
@@ -1161,7 +1173,8 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
             assert((sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader) + pHetHeader->dwTotalCount + pHetHeader->dwIndexTableSize) == pHetHeader->dwTableSize);
 
             // So far, all MPQs with HET Table have had total number of entries equal to 4/3 of file count
-            assert(((pHetHeader->dwEntryCount * 4) / 3) == pHetHeader->dwTotalCount);
+            // Exception: "2010 - Starcraft II\!maps\Tya's Zerg Defense (unprotected).SC2Map"
+//          assert(((pHetHeader->dwEntryCount * 4) / 3) == pHetHeader->dwTotalCount);
 
             // The size of one index is predictable as well
             assert(GetNecessaryBitCount(pHetHeader->dwEntryCount) == pHetHeader->dwIndexSizeTotal);
@@ -1171,7 +1184,7 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
             assert(((pHetHeader->dwTotalCount * pHetHeader->dwIndexSizeTotal) + 7) / 8 == pHetHeader->dwIndexTableSize);
             
             // Create translated table
-            pHetTable = CreateHetTable(pHetHeader->dwEntryCount, pHetHeader->dwNameHashBitSize, pbSrcData);
+            pHetTable = CreateHetTable(pHetHeader->dwEntryCount, pHetHeader->dwTotalCount, pHetHeader->dwNameHashBitSize, pbSrcData);
             if(pHetTable != NULL)
             {
                 // Now the sizes in the hash table should be already set
@@ -1422,7 +1435,7 @@ static TMPQBetTable * TranslateBetTable(
     ha = ha;
 
     // Verify size of the HET table
-    if(pBetHeader->ExtHdr.dwDataSize >= sizeof(TMPQBetHeader))
+    if(pBetHeader->ExtHdr.dwDataSize >= (sizeof(TMPQBetHeader) - sizeof(TMPQExtHeader)))
     {
         // Verify the size of the table in the header
         if(pBetHeader->dwTableSize == pBetHeader->ExtHdr.dwDataSize)
@@ -2263,9 +2276,8 @@ TMPQHetTable * LoadHetTable(TMPQArchive * ha)
     TMPQHetTable * pHetTable = NULL;
     TMPQHeader * pHeader = ha->pHeader;
 
-    // If the HET table position is not NULL, we expect
-    // both HET and BET tables to be present.
-    if(pHeader->HetTablePos64 != 0)
+    // If the HET table position is not 0, we expect the table to be present
+    if(pHeader->HetTablePos64 != 0 && pHeader->HetTableSize64 != 0)
     {
         // Attempt to load the HET table (Hash Extended Table)
         pExtTable = LoadExtTable(ha, pHeader->HetTablePos64, (size_t)pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
@@ -2286,9 +2298,8 @@ TMPQBetTable * LoadBetTable(TMPQArchive * ha)
     TMPQBetTable * pBetTable = NULL;
     TMPQHeader * pHeader = ha->pHeader;
 
-    // If the HET table position is not NULL, we expect
-    // both HET and BET tables to be present.
-    if(pHeader->BetTablePos64 != 0)
+    // If the BET table position is not 0, we expect the table to be present
+    if(pHeader->BetTablePos64 != 0 && pHeader->BetTableSize64 != 0)
     {
         // Attempt to load the HET table (Hash Extended Table)
         pExtTable = LoadExtTable(ha, pHeader->BetTablePos64, (size_t)pHeader->BetTableSize64, BET_TABLE_SIGNATURE, MPQ_KEY_BLOCK_TABLE);
@@ -2312,9 +2323,15 @@ int LoadAnyHashTable(TMPQArchive * ha)
     if(pHeader->dwHashTableSize == 0 && pHeader->HetTableSize64 == 0)
         return CreateHashTable(ha, HASH_TABLE_SIZE_DEFAULT);
 
-    // Try to load HET table (the new hash table) and the classic HASH table
-    ha->pHetTable = LoadHetTable(ha);
-    ha->pHashTable = LoadHashTable(ha);
+    // Try to load HET table
+    if(pHeader->HetTablePos64 != 0)
+        ha->pHetTable = LoadHetTable(ha);
+
+    // Try to load the hash table
+    if(pHeader->wHashTablePosHi || pHeader->dwHashTablePos)
+        ha->pHashTable = LoadHashTable(ha);
+
+    // At least one of the tables must be present
     if(ha->pHetTable == NULL && ha->pHashTable == NULL)
         return ERROR_FILE_CORRUPT;
 
@@ -2580,7 +2597,7 @@ int RebuildHetTable(TMPQArchive * ha)
 
     // Create new HET table based on the total number of entries in the file table
     // Note that if we fail to create it, we just stop using HET table
-    ha->pHetTable = CreateHetTable(ha->dwFileTableSize, 0x40, NULL);
+    ha->pHetTable = CreateHetTable(ha->dwFileTableSize, 0, 0x40, NULL);
     if(ha->pHetTable != NULL)
     {
         // Go through the file table again and insert all existing files

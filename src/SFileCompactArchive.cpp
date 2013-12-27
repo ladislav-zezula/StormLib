@@ -504,7 +504,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
         else
             _tcscat(szTempFile, _T("_"));
 
-        pTempStream = FileStream_CreateFile(szTempFile, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
+        pTempStream = FileStream_CreateFile(szTempFile, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
         if(pTempStream == NULL)
             nError = GetLastError();
     }

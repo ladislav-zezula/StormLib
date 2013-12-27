@@ -51,8 +51,7 @@ static DWORD GetSizeOfAttributesFile(DWORD dwAttrFlags, DWORD dwFileTableSize)
     return cbAttrFile;
 }
 
-#ifdef _DEBUG
-static DWORD GetSizeOfAttributesFile_v2(DWORD dwAttrFlags, DWORD dwFileTableSize)
+static bool CheckSizeOfAttributesFile(DWORD cbSizeOfAttr, DWORD dwAttrFlags, DWORD dwFileTableSize)
 {
     DWORD cbAttrFile = sizeof(MPQ_ATTRIBUTES_HEADER);
 
@@ -64,15 +63,31 @@ static DWORD GetSizeOfAttributesFile_v2(DWORD dwAttrFlags, DWORD dwFileTableSize
     if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
         cbAttrFile += dwFileTableSize * MD5_DIGEST_SIZE;
 
-    // interface.MPQ.part from WoW build 10958 has
-    // the MPQ_ATTRIBUTE_PATCH_BIT set, but there's an array of DWORDs instead.
-    // The array is filled with zeros, so we don't know what it should contain
+    // Various variants with the patch bit
     if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
-        cbAttrFile += dwFileTableSize * sizeof(DWORD);
-    
-    return cbAttrFile;
+    {
+        // Check for expected size
+        if(cbSizeOfAttr == (cbAttrFile + (dwFileTableSize + 6) / 8))
+            return true;
+
+        // Zenith.SC2MAP has the MPQ_ATTRIBUTE_PATCH_BIT set, but the bit array is missing
+        if(cbSizeOfAttr == cbSizeOfAttr)
+            return false;
+
+        // interface.MPQ.part from WoW build 10958 has
+        // the MPQ_ATTRIBUTE_PATCH_BIT set, but there's an array of DWORDs instead.
+        // The array is filled with zeros, so we don't know what it should contain
+        if(cbSizeOfAttr == (cbAttrFile + dwFileTableSize * sizeof(DWORD)))
+            return false;
+
+        // Size mismatch
+        assert(false);
+        return false;
+    }
+
+    assert(cbSizeOfAttr == cbAttrFile);
+    return false;
 }
-#endif
 
 static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrFile)
 {
@@ -80,6 +95,7 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     LPBYTE pbAttrPtr = pbAttrFile;
     DWORD dwBlockTableSize = ha->pHeader->dwBlockTableSize;
     DWORD i;
+    bool bPatchBitsValid;
 
     // Load and verify the header
     if((pbAttrPtr + sizeof(MPQ_ATTRIBUTES_HEADER)) <= pbAttrFileEnd)
@@ -90,15 +106,10 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
         if(pAttrHeader->dwVersion != MPQ_ATTRIBUTES_V1)
             return ERROR_BAD_FORMAT;
 
-        // Verify the size of the file
+        // Verify the flags and of the file
         assert((pAttrHeader->dwFlags & ~MPQ_ATTRIBUTE_ALL) == 0);
 
-        // Verify the size of the file
-#ifdef _DEBUG
-        assert(cbAttrFile == GetSizeOfAttributesFile(pAttrHeader->dwFlags, dwBlockTableSize) ||
-               cbAttrFile == GetSizeOfAttributesFile_v2(pAttrHeader->dwFlags, dwBlockTableSize));
-#endif
-
+        bPatchBitsValid = CheckSizeOfAttributesFile(cbAttrFile, pAttrHeader->dwFlags, dwBlockTableSize);
         ha->dwAttrFlags = pAttrHeader->dwFlags;
         pbAttrPtr = (LPBYTE)(pAttrHeader + 1);
     }
@@ -154,7 +165,7 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     }
 
     // Read the patch bit for each file (if present)
-    if(ha->dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
+    if((ha->dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT) && bPatchBitsValid)
     {
         LPBYTE pbBitArray = pbAttrPtr;
         DWORD cbArraySize = (dwBlockTableSize + 7) / 8;

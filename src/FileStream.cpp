@@ -97,7 +97,7 @@ static bool BaseFile_Create(TFileStream * pStream)
     return true;
 }
 
-static bool BaseFile_Open(TFileStream * pStream, DWORD dwStreamFlags)
+static bool BaseFile_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD dwStreamFlags)
 {
 #ifdef PLATFORM_WINDOWS
     {
@@ -106,7 +106,7 @@ static bool BaseFile_Open(TFileStream * pStream, DWORD dwStreamFlags)
         DWORD dwWriteShare = (dwStreamFlags & STREAM_FLAG_WRITE_SHARE) ? FILE_SHARE_WRITE : 0;
 
         // Open the file
-        pStream->Base.File.hFile = CreateFile(pStream->szFileName,
+        pStream->Base.File.hFile = CreateFile(szFileName,
                                               FILE_READ_DATA | FILE_READ_ATTRIBUTES | dwWriteAccess,
                                               FILE_SHARE_READ | dwWriteShare,
                                               NULL,
@@ -417,7 +417,7 @@ static void BaseFile_Init(TFileStream * pStream)
 //-----------------------------------------------------------------------------
 // Local functions - base memory-mapped file support
 
-static bool BaseMap_Open(TFileStream * pStream, DWORD dwStreamFlags)
+static bool BaseMap_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD dwStreamFlags)
 {
 #ifdef PLATFORM_WINDOWS
 
@@ -430,7 +430,7 @@ static bool BaseMap_Open(TFileStream * pStream, DWORD dwStreamFlags)
     dwStreamFlags = dwStreamFlags;
 
     // Open the file for read access
-    hFile = CreateFile(pStream->szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    hFile = CreateFile(szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
     if(hFile != NULL)
     {
         // Retrieve file size. Don't allow mapping file of a zero size.
@@ -588,11 +588,10 @@ static const TCHAR * BaseHttp_ExtractServerName(const TCHAR * szFileName, TCHAR 
     return szFileName;
 }
 
-static bool BaseHttp_Open(TFileStream * pStream, DWORD dwStreamFlags)
+static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD dwStreamFlags)
 {
 #ifdef PLATFORM_WINDOWS
 
-    const TCHAR * szFileName;
     HINTERNET hRequest;
     DWORD dwTemp = 0;
     bool bFileAvailable = false;
@@ -624,7 +623,7 @@ static bool BaseHttp_Open(TFileStream * pStream, DWORD dwStreamFlags)
         DWORD dwFlags = INTERNET_FLAG_KEEP_CONNECTION | INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE;
 
         // Initiate connection with the server
-        szFileName = BaseHttp_ExtractServerName(pStream->szFileName, szServerName);
+        szFileName = BaseHttp_ExtractServerName(szFileName, szServerName);
         pStream->Base.Http.hConnect = InternetConnect(pStream->Base.Http.hInternet,
                                                       szServerName,
                                                       INTERNET_DEFAULT_HTTP_PORT,
@@ -821,11 +820,11 @@ static bool BlockStream_Read(
     DWORD BlockSize = pStream->BlockSize;
     DWORD BlockCount;
     bool bPrevBlockAvailable;
+    bool bCallbackCalled = false;
     bool bBlockAvailable;
     bool bResult = true;
 
     // The base block read function must be present
-    assert(pStream->BlockCheck != NULL);
     assert(pStream->BlockRead != NULL);
 
     // NOP reading of zero bytes
@@ -837,7 +836,7 @@ static bool BlockStream_Read(
     EndOffset = ByteOffset + dwBytesToRead;
     if(EndOffset > pStream->StreamSize)
     {
-        SetLastError(ERROR_CAN_NOT_COMPLETE);
+        SetLastError(ERROR_HANDLE_EOF);
         return false;
     }
 
@@ -863,6 +862,7 @@ static bool BlockStream_Read(
     {
         // Now parse the blocks and send the block read request
         // to all blocks with the same availability
+        assert(pStream->BlockCheck != NULL);
         bPrevBlockAvailable = pStream->BlockCheck(pStream, BlockOffset);
 
         // Loop as long as we have something to read
@@ -874,6 +874,13 @@ static bool BlockStream_Read(
             // If the availability has changed, read all blocks up to this one
             if(bBlockAvailable != bPrevBlockAvailable)
             {
+                // Call the file stream callback, if the block is not available
+                if(pStream->pMaster && pStream->pfnCallback && bPrevBlockAvailable == false)
+                {
+                    pStream->pfnCallback(pStream->UserData, BlockOffset0, (DWORD)(BlockOffset - BlockOffset0));
+                    bCallbackCalled = true;
+                }
+
                 // Load the continuous blocks with the same availability
                 assert(BlockOffset > BlockOffset0);
                 bResult = pStream->BlockRead(pStream, BlockOffset0, BlockOffset, BlockBuffer, BytesNeeded, bPrevBlockAvailable);
@@ -894,6 +901,13 @@ static bool BlockStream_Read(
         // If there is a block(s) remaining to be read, do it
         if(BlockOffset > BlockOffset0)
         {
+            // Call the file stream callback, if the block is not available
+            if(pStream->pMaster && pStream->pfnCallback && bPrevBlockAvailable == false)
+            {
+                pStream->pfnCallback(pStream->UserData, BlockOffset0, (DWORD)(BlockOffset - BlockOffset0));
+                bCallbackCalled = true;
+            }
+
             // Read the complete blocks from the file
             if(BlockOffset > pStream->StreamSize)
                 BlockOffset = pStream->StreamSize;
@@ -914,6 +928,15 @@ static bool BlockStream_Read(
         memcpy(pvBuffer, TransferBuffer + BlockBufferOffset, dwBytesToRead);
         pStream->StreamPos = ByteOffset + dwBytesToRead;
     }
+    else
+    {
+        // If the block read failed, set the last error
+        SetLastError(ERROR_FILE_INCOMPLETE);
+    }
+
+    // Call the callback to indicate we are done
+    if(bCallbackCalled)
+        pStream->pfnCallback(pStream->UserData, 0, 0);
 
     // Free the block buffer and return
     STORM_FREE(TransferBuffer);
@@ -955,7 +978,7 @@ static STREAM_INIT StreamBaseInit[4] =
 };
 
 // This function allocates an empty structure for the file stream
-// The stream structure is created as variable length, linear block of data
+// The stream structure is created as flat block, variable length
 // The file name is placed after the end of the stream structure data
 static TFileStream * AllocateFileStream(
     const TCHAR * szFileName,
@@ -1015,9 +1038,9 @@ static TFileStream * AllocateFileStream(
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - linear stream support
+// Local functions - flat stream support
 
-static DWORD LinearStream_CheckFile(TBlockStream * pStream)
+static DWORD FlatStream_CheckFile(TBlockStream * pStream)
 {
     LPBYTE FileBitmap = (LPBYTE)pStream->FileBitmap;
     DWORD WholeByteCount = (pStream->BlockCount / 8);
@@ -1043,7 +1066,7 @@ static DWORD LinearStream_CheckFile(TBlockStream * pStream)
     return 1;
 }
 
-static bool LinearStream_LoadBitmap(TBlockStream * pStream)
+static bool FlatStream_LoadBitmap(TBlockStream * pStream)
 {
     FILE_BITMAP_FOOTER Footer;
     ULONGLONG ByteOffset; 
@@ -1060,7 +1083,7 @@ static bool LinearStream_LoadBitmap(TBlockStream * pStream)
     {
         // Load the bitmap footer
         ByteOffset = pStream->Base.File.FileSize - sizeof(FILE_BITMAP_FOOTER);
-        if(pStream->StreamRead(pStream, &ByteOffset, &Footer, sizeof(FILE_BITMAP_FOOTER)))
+        if(pStream->BaseRead(pStream, &ByteOffset, &Footer, sizeof(FILE_BITMAP_FOOTER)))
         {
             // Make sure that the array is properly BSWAP-ed
             BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&Footer), sizeof(FILE_BITMAP_FOOTER));
@@ -1076,7 +1099,7 @@ static bool LinearStream_LoadBitmap(TBlockStream * pStream)
                 // Check if the sizes match
                 if(ByteOffset + BitmapSize + sizeof(FILE_BITMAP_FOOTER) == pStream->Base.File.FileSize)
                 {
-                    // Allocate space for the linear bitmap
+                    // Allocate space for the bitmap
                     FileBitmap = STORM_ALLOC(BYTE, BitmapSize);
                     if(FileBitmap != NULL)
                     {
@@ -1095,7 +1118,7 @@ static bool LinearStream_LoadBitmap(TBlockStream * pStream)
                         pStream->BitmapSize = BitmapSize;
                         pStream->BlockSize  = Footer.BlockSize;
                         pStream->BlockCount = BlockCount;
-                        pStream->IsComplete = LinearStream_CheckFile(pStream);
+                        pStream->IsComplete = FlatStream_CheckFile(pStream);
                         return true;
                     }
                 }
@@ -1106,7 +1129,7 @@ static bool LinearStream_LoadBitmap(TBlockStream * pStream)
     return false;
 }
 
-static void LinearStream_UpdateBitmap(
+static void FlatStream_UpdateBitmap(
     TBlockStream * pStream,                // Pointer to an open stream
     ULONGLONG StartOffset,
     ULONGLONG EndOffset)
@@ -1137,9 +1160,12 @@ static void LinearStream_UpdateBitmap(
         ByteIndex += (BitMask >> 0x07);
         BitMask = (BitMask >> 0x07) | (BitMask << 0x01);
     }
+
+    // Increment the bitmap update count
+    pStream->IsModified = 1;
 }
 
-static bool LinearStream_BlockCheck(
+static bool FlatStream_BlockCheck(
     TBlockStream * pStream,                // Pointer to an open stream
     ULONGLONG BlockOffset)
 {
@@ -1159,7 +1185,7 @@ static bool LinearStream_BlockCheck(
     return (FileBitmap[BlockIndex / 0x08] & BitMask) ? true : false;
 }
 
-static bool LinearStream_BlockRead(
+static bool FlatStream_BlockRead(
     TBlockStream * pStream,                // Pointer to an open stream
     ULONGLONG StartOffset,
     ULONGLONG EndOffset,
@@ -1170,7 +1196,7 @@ static bool LinearStream_BlockRead(
     DWORD BytesToRead = (DWORD)(EndOffset - StartOffset);
 
     // The starting offset must be aligned to size of the block
-    assert(pStream->FileBitmap != NULL && pStream->IsComplete == 0);
+    assert(pStream->FileBitmap != NULL);
     assert((StartOffset & (pStream->BlockSize - 1)) == 0);
     assert(StartOffset < EndOffset);
 
@@ -1190,8 +1216,8 @@ static bool LinearStream_BlockRead(
 
         // Store the loaded blocks to the mirror file.
         // Note that this operation is not required to succeed
-        if(pStream->BaseWrite(pStream, &StartOffset, BlockBuffer, BytesToRead) && bAvailable == false)
-            LinearStream_UpdateBitmap(pStream, StartOffset, EndOffset);
+        if(pStream->BaseWrite(pStream, &StartOffset, BlockBuffer, BytesToRead))
+            FlatStream_UpdateBitmap(pStream, StartOffset, EndOffset);
 
         return true;
     }
@@ -1203,16 +1229,107 @@ static bool LinearStream_BlockRead(
     }
 }
 
-static bool LinearStream_CreateMirror(TBlockStream * pStream)
+static void FlatStream_Close(TBlockStream * pStream)
 {
+    FILE_BITMAP_FOOTER Footer;
+
+    if(pStream->FileBitmap && pStream->IsModified)
+    {
+        // Write the file bitmap
+        pStream->BaseWrite(pStream, &pStream->StreamSize, pStream->FileBitmap, pStream->BitmapSize);
+        
+        // Prepare and write the file footer
+        Footer.Signature   = ID_FILE_BITMAP_FOOTER;
+        Footer.Version     = 3;
+        Footer.BuildNumber = 10958;     // BUGBUG: What build number shall we set???
+        Footer.MapOffsetLo = (DWORD)(pStream->StreamSize & 0xFFFFFFFF);
+        Footer.MapOffsetHi = (DWORD)(pStream->StreamSize >> 0x20);
+        Footer.BlockSize   = pStream->BlockSize;
+        BSWAP_ARRAY32_UNSIGNED(&Footer, sizeof(FILE_BITMAP_FOOTER));
+        pStream->BaseWrite(pStream, NULL, &Footer, sizeof(FILE_BITMAP_FOOTER));
+    }
+
+    // Close the base class
+    BlockStream_Close(pStream);
+}
+
+static bool FlatStream_CreateMirror(TBlockStream * pStream)
+{
+    ULONGLONG MasterSize = 0;
+    ULONGLONG MirrorSize = 0;
+    LPBYTE FileBitmap = NULL;
+    DWORD dwBitmapSize;
+    DWORD dwBlockCount;
+    bool bNeedCreateMirrorStream = true;
+    bool bNeedResizeMirrorStream = true;
+
     // Do we have master function and base creation function?
     if(pStream->pMaster == NULL || pStream->BaseCreate == NULL)
         return false;
 
-    return false;
+    // Retrieve the master file size, block count and bitmap size
+    FileStream_GetSize(pStream->pMaster, &MasterSize);
+    dwBlockCount = (DWORD)((MasterSize + DEFAULT_BLOCK_SIZE - 1) / DEFAULT_BLOCK_SIZE);
+    dwBitmapSize = (DWORD)((dwBlockCount + 7) / 8);
+
+    // Setup stream size and position
+    pStream->StreamSize = MasterSize;
+    pStream->StreamPos = 0;
+
+    // Open the base stream for write access
+    if(pStream->BaseOpen(pStream, pStream->szFileName, 0))
+    {
+        // If the file open succeeded, check if the file size matches required size
+        pStream->BaseGetSize(pStream, &MirrorSize);
+        if(MirrorSize == MasterSize + dwBitmapSize + sizeof(FILE_BITMAP_FOOTER))
+        {
+            // Attempt to load an existing file bitmap
+            if(FlatStream_LoadBitmap(pStream))
+                return true;
+
+            // We need to create new file bitmap
+            bNeedResizeMirrorStream = false;
+        }
+
+        // We need to create mirror stream
+        bNeedCreateMirrorStream = false;
+    }
+
+    // Create a new stream, if needed
+    if(bNeedCreateMirrorStream)
+    {
+        if(!pStream->BaseCreate(pStream))
+            return false;
+    }
+
+    // If we need to, then resize the mirror stream
+    if(bNeedResizeMirrorStream)
+    {
+        if(!pStream->BaseResize(pStream, MasterSize + dwBitmapSize + sizeof(FILE_BITMAP_FOOTER)))
+            return false;
+    }
+
+    // Allocate the bitmap array
+    FileBitmap = STORM_ALLOC(BYTE, dwBitmapSize);
+    if(FileBitmap == NULL)
+        return false;
+
+    // Initialize the bitmap
+    memset(FileBitmap, 0, dwBitmapSize);
+    pStream->FileBitmap = FileBitmap;
+    pStream->BitmapSize = dwBitmapSize;
+    pStream->BlockSize  = DEFAULT_BLOCK_SIZE;
+    pStream->BlockCount = dwBlockCount;
+    pStream->IsComplete = 0;
+    pStream->IsModified = 1;
+
+    // Note: Don't write the stream bitmap right away.
+    // Doing so would cause sparse file resize on NTFS,
+    // which would take long time on larger files.
+    return true;
 }
 
-static TFileStream * LinearStream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
+static TFileStream * FlatStream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
 {
     TBlockStream * pStream;    
 
@@ -1221,53 +1338,63 @@ static TFileStream * LinearStream_Open(const TCHAR * szFileName, DWORD dwStreamF
     if(pStream == NULL)
         return NULL;
 
-    // Attempt to open the base stream. If this fails
-    // and we have a master stream, we can create new mirror
-    assert(pStream->BaseOpen != NULL);
-    if(!pStream->BaseOpen(pStream, dwStreamFlags))
+    // Do we have a master stream?
+    if(pStream->pMaster != NULL)
     {
-        // Do we have base create function and master stream?
-//      if(!LinearStream_CreateMirror(pStream))
+        if(!FlatStream_CreateMirror(pStream))
         {
             FileStream_Close(pStream);
             SetLastError(ERROR_FILE_NOT_FOUND);
             return NULL;
         }
     }
+    else
+    {
+        // Attempt to open the base stream
+        if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
+            return false;
 
-    // Set the stream function as if this was linear file without bitmap
-    pStream->StreamRead    = pStream->BaseRead;
-    pStream->StreamWrite   = pStream->BaseWrite;
-    pStream->StreamResize  = pStream->BaseResize;
-    pStream->StreamGetSize = pStream->BaseGetSize;
-    pStream->StreamGetPos  = pStream->BaseGetPos;
-    pStream->StreamClose   = pStream->BaseClose;
+        // Load the bitmap, if required to
+        if(dwStreamFlags & STREAM_FLAG_USE_BITMAP)
+            FlatStream_LoadBitmap(pStream);
 
-    // Setup the stream size
-    pStream->StreamSize = pStream->Base.File.FileSize;
+        // Setup the stream size
+        if(pStream->FileBitmap == NULL)
+            pStream->StreamSize = pStream->Base.File.FileSize;
+        pStream->StreamPos = 0;
+    }
 
-    // If we load the bitmap and find out that it's an incomplete file,
-    // We set the reading functions which check presence of each file block
-    if(LinearStream_LoadBitmap(pStream))
+    // If we have a stream bitmap, set the reading functions
+    // which check presence of each file block
+    if(pStream->FileBitmap != NULL)
     {
         // Set the stream position to zero. Stream size is already set
         assert(pStream->StreamSize != 0);
         pStream->StreamPos = 0;
         pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
 
-        // Set the reading function
-        if(pStream->IsComplete == 0)
-        {
-            // Supply the reading function
-            pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
-            pStream->StreamGetSize = BlockStream_GetSize;
-            pStream->StreamGetPos  = BlockStream_GetPos;
-            pStream->StreamClose   = (STREAM_CLOSE)BlockStream_Close;
+        // Supply the stream functions
+        pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
+        pStream->StreamGetSize = BlockStream_GetSize;
+        pStream->StreamGetPos  = BlockStream_GetPos;
+        pStream->StreamClose   = (STREAM_CLOSE)FlatStream_Close;
 
-            // Supply the block functions
-            pStream->BlockCheck    = (BLOCK_CHECK)LinearStream_BlockCheck;
-            pStream->BlockRead     = (BLOCK_READ)LinearStream_BlockRead;
-        }
+        // Supply the block functions
+        pStream->BlockCheck    = (BLOCK_CHECK)FlatStream_BlockCheck;
+        pStream->BlockRead     = (BLOCK_READ)FlatStream_BlockRead;
+    }
+    else
+    {
+        // Reset the file position to zero
+        pStream->Base.File.FilePos = 0;
+
+        // Set the base functions
+        pStream->StreamRead    = pStream->BaseRead;
+        pStream->StreamWrite   = pStream->BaseWrite;
+        pStream->StreamResize  = pStream->BaseResize;
+        pStream->StreamGetSize = pStream->BaseGetSize;
+        pStream->StreamGetPos  = pStream->BaseGetPos;
+        pStream->StreamClose   = pStream->BaseClose;
     }
 
     return pStream;
@@ -1440,7 +1567,7 @@ static TFileStream * PartialStream_Open(const TCHAR * szFileName, DWORD dwStream
     // Attempt to open the base stream. If this fails
     // and we have a master stream, we can create new mirror
     assert(pStream->BaseOpen != NULL);
-    if(!pStream->BaseOpen(pStream, dwStreamFlags))
+    if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
     {
         // Do we have base create function and master stream?
 //      if(!PartialStream_CreateMirror(pStream))
@@ -1478,7 +1605,7 @@ static TFileStream * PartialStream_Open(const TCHAR * szFileName, DWORD dwStream
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - encrypted stream support
+// Local functions - MPQE stream support
 
 static const char * szKeyTemplate = "expand 32-byte k000000000000000000000000000000000000000000000000";
 
@@ -1672,7 +1799,7 @@ static void DecryptFileChunk(
     }
 }
 
-static bool EncryptedStream_DetectFileKey(TEncryptedStream * pStream)
+static bool MpqeStream_DetectFileKey(TEncryptedStream * pStream)
 {
     ULONGLONG ByteOffset = 0;
     BYTE EncryptedHeader[MPQE_CHUNK_SIZE];
@@ -1712,12 +1839,7 @@ static bool EncryptedStream_DetectFileKey(TEncryptedStream * pStream)
     return false;
 }
 
-static bool EncryptedStream_BlockCheck(TEncryptedStream *, ULONGLONG)
-{
-    return true;
-}
-
-static bool EncryptedStream_BlockRead(
+static bool MpqeStream_BlockRead(
     TEncryptedStream * pStream,
     ULONGLONG StartOffset,
     ULONGLONG EndOffset,
@@ -1731,6 +1853,7 @@ static bool EncryptedStream_BlockRead(
     assert(StartOffset < EndOffset);
     assert(bAvailable != false);
     BytesNeeded = BytesNeeded;
+    bAvailable = bAvailable;
 
     // Read the file from the stream as-is
     // Limit the reading to number of blocks really needed
@@ -1744,67 +1867,7 @@ static bool EncryptedStream_BlockRead(
     return true;
 }
 
-/*
-static bool EncryptedStream_Read(
-    TEncryptedStream * pStream,             // Pointer to an open stream
-    ULONGLONG * pByteOffset,                // Pointer to file byte offset. If NULL, it reads from the current position
-    void * pvBuffer,                        // Pointer to data to be read
-    DWORD dwBytesToRead)                    // Number of bytes to read from the file
-{
-    ULONGLONG StartOffset;                  // Offset of the first byte to be read from the file
-    ULONGLONG ByteOffset;                   // Offset that the caller wants
-    ULONGLONG EndOffset;                    // End offset that is to be read from the file
-    DWORD dwBytesToAllocate;
-    DWORD dwBytesToDecrypt;
-    DWORD dwOffsetInCache;
-    LPBYTE pbMpqData = NULL;
-    bool bResult = false;
-
-    // Get the byte offset
-    ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->StreamPos;
-
-    // Cut it down to MPQE chunk size
-    StartOffset = ByteOffset;
-    StartOffset = StartOffset & ~(MPQE_CHUNK_SIZE - 1);
-    EndOffset = ByteOffset + dwBytesToRead;
-
-    // Calculate number of bytes to decrypt
-    dwBytesToDecrypt = (DWORD)(EndOffset - StartOffset);
-    dwBytesToAllocate = (dwBytesToDecrypt + MPQE_CHUNK_SIZE - 1) & ~(MPQE_CHUNK_SIZE - 1);
-
-    // Allocate buffers for encrypted and decrypted data
-    pbMpqData = STORM_ALLOC(BYTE, dwBytesToAllocate);
-    if(pbMpqData)
-    {
-        // Get the offset of the desired data in the cache
-        dwOffsetInCache = (DWORD)(ByteOffset - StartOffset);
-
-        // Read the file from the stream as-is
-        if(pStream->BaseRead(pStream, &StartOffset, pbMpqData, dwBytesToDecrypt))
-        {
-            // Decrypt the data
-            DecryptFileChunk((LPDWORD)pbMpqData, pStream->Key, StartOffset, dwBytesToAllocate);
-
-            // Copy the decrypted data
-            memcpy(pvBuffer, pbMpqData + dwOffsetInCache, dwBytesToRead);
-            bResult = true;
-        }
-        else
-        {
-            assert(false);
-        }
-
-        // Free decryption buffer        
-        STORM_FREE(pbMpqData);
-    }
-
-    // Update stream position
-    pStream->StreamPos = ByteOffset + dwBytesToRead;
-    return bResult;
-}
-*/
-
-static TFileStream * EncryptedStream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
+static TFileStream * MpqeStream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
 {
     TEncryptedStream * pStream;
 
@@ -1815,11 +1878,11 @@ static TFileStream * EncryptedStream_Open(const TCHAR * szFileName, DWORD dwStre
 
     // Attempt to open the base stream
     assert(pStream->BaseOpen != NULL);
-    if(!pStream->BaseOpen(pStream, dwStreamFlags))
+    if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
         return NULL;
 
     // Determine the encryption key for the MPQ
-    if(EncryptedStream_DetectFileKey(pStream))
+    if(MpqeStream_DetectFileKey(pStream))
     {
         // Set the stream position and size
         assert(pStream->StreamSize != 0);
@@ -1833,8 +1896,7 @@ static TFileStream * EncryptedStream_Open(const TCHAR * szFileName, DWORD dwStre
         pStream->StreamClose   = pStream->BaseClose;
 
         // Supply the block functions
-        pStream->BlockCheck    = (BLOCK_CHECK)EncryptedStream_BlockCheck;
-        pStream->BlockRead     = (BLOCK_READ)EncryptedStream_BlockRead;
+        pStream->BlockRead     = (BLOCK_READ)MpqeStream_BlockRead;
         return pStream;
     }
 
@@ -1842,6 +1904,203 @@ static TFileStream * EncryptedStream_Open(const TCHAR * szFileName, DWORD dwStre
     FileStream_Close(pStream);
     SetLastError(ERROR_UNKNOWN_FILE_KEY);
     return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Local functions - Block4 stream support
+
+#define BLOCK4_BLOCK_SIZE   0x4000          // Size of one block
+#define BLOCK4_HASH_SIZE    0x20            // Size of MD5 hash that is after each block
+#define BLOCK4_MAX_BLOCKS   0x00002000      // Maximum amount of blocks per file
+#define BLOCK4_MAX_FSIZE    0x08040000      // Max size of one file
+
+static bool Block4Stream_BlockRead(
+    TBlockStream * pStream,                // Pointer to an open stream
+    ULONGLONG StartOffset,
+    ULONGLONG EndOffset,
+    LPBYTE BlockBuffer,
+    DWORD BytesNeeded,
+    bool bAvailable)
+{
+    TBaseProviderData * BaseArray = (TBaseProviderData *)pStream->FileBitmap;
+    ULONGLONG ByteOffset;
+    DWORD BytesToRead;
+    DWORD StreamIndex;
+    DWORD BlockIndex;
+
+    // The starting offset must be aligned to size of the block
+    assert(pStream->FileBitmap != NULL);
+    assert((StartOffset & (pStream->BlockSize - 1)) == 0);
+    assert(StartOffset < EndOffset);
+    assert(bAvailable == true);
+
+    while(BytesNeeded != 0)
+    {
+        // Calculate the block index and the file index
+        StreamIndex = (DWORD)((StartOffset / pStream->BlockSize) / BLOCK4_MAX_BLOCKS);
+        BlockIndex  = (DWORD)((StartOffset / pStream->BlockSize) % BLOCK4_MAX_BLOCKS);
+        if(StreamIndex > pStream->BitmapSize)
+            return false;
+
+        // Prepare the appropriate stream to the base variables
+        memcpy(&pStream->Base, BaseArray + StreamIndex, sizeof(TBaseProviderData));
+
+        // Calculate the block offset
+        ByteOffset = ((ULONGLONG)BlockIndex * (BLOCK4_BLOCK_SIZE + BLOCK4_HASH_SIZE));
+        BytesToRead = min(BytesNeeded, BLOCK4_BLOCK_SIZE);
+
+        // Read from the base stream
+        if(!pStream->BaseRead(pStream, &ByteOffset, BlockBuffer, BytesToRead))
+            return false;
+
+        // Move pointers
+        StartOffset += BytesToRead;
+        BlockBuffer += BytesToRead;
+        BytesNeeded -= BytesToRead;
+    }
+
+    return true;
+}
+
+
+static void Block4Stream_Close(TBlockStream * pStream)
+{
+    TBaseProviderData * BaseArray = (TBaseProviderData *)pStream->FileBitmap;
+
+    // If we have a non-zero count of base streams,
+    // we have to close them all
+    if(BaseArray != NULL)
+    {
+        // Close all base streams
+        for(DWORD i = 0; i < pStream->BitmapSize; i++)
+        {
+            memcpy(&pStream->Base, BaseArray + i, sizeof(TBaseProviderData));
+            pStream->BaseClose(pStream);
+        }
+    }
+
+    // Free the data map, if any
+    if(pStream->FileBitmap != NULL)
+        STORM_FREE(pStream->FileBitmap);
+    pStream->FileBitmap = NULL;
+
+    // Do not call the BaseClose function,
+    // we closed all handles already
+    return;
+}
+
+static TFileStream * Block4Stream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
+{
+    TBaseProviderData * NewBaseArray = NULL;
+    ULONGLONG RemainderBlock;
+    ULONGLONG BlockCount;
+    ULONGLONG FileSize;
+    TBlockStream * pStream;
+    TCHAR * szNameBuff;
+    size_t nNameLength;
+    DWORD dwBaseFiles = 0;
+    DWORD dwBaseFlags;
+
+    // Create new empty stream
+    pStream = (TBlockStream *)AllocateFileStream(szFileName, sizeof(TBlockStream), dwStreamFlags);
+    if(pStream == NULL)
+        return NULL;
+
+    // Sanity check
+    assert(pStream->BaseOpen != NULL);
+
+    // Get the length of the file name without numeric suffix
+    nNameLength = _tcslen(pStream->szFileName);
+    if(pStream->szFileName[nNameLength - 2] == '.' && pStream->szFileName[nNameLength - 1] == '0')
+        nNameLength -= 2;
+    pStream->szFileName[nNameLength] = 0;
+
+    // Supply the stream functions
+    pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
+    pStream->StreamGetSize = BlockStream_GetSize;
+    pStream->StreamGetPos  = BlockStream_GetPos;
+    pStream->StreamClose   = (STREAM_CLOSE)Block4Stream_Close;
+    pStream->BlockRead     = (BLOCK_READ)Block4Stream_BlockRead;
+
+    // Allocate work space for numeric names
+    szNameBuff = STORM_ALLOC(TCHAR, nNameLength + 4);
+    if(szNameBuff != NULL)
+    {
+        // Set the base flags
+        dwBaseFlags = (dwStreamFlags & STREAM_PROVIDERS_MASK) | STREAM_FLAG_READ_ONLY;
+
+        // Go all suffixes from 0 to 30
+        for(int nSuffix = 0; nSuffix < 30; nSuffix++)
+        {
+            // Open the n-th file
+            _stprintf(szNameBuff, _T("%s.%u"), pStream->szFileName, nSuffix);
+            if(!pStream->BaseOpen(pStream, szNameBuff, dwBaseFlags))
+                break;
+
+            // If the open succeeded, we re-allocate the base provider array
+            NewBaseArray = STORM_ALLOC(TBaseProviderData, dwBaseFiles + 1);
+            if(NewBaseArray == NULL)
+            {
+                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+                return false;
+            }
+
+            // Copy the old base data array to the new base data array
+            if(pStream->FileBitmap != NULL)
+            {
+                memcpy(NewBaseArray, pStream->FileBitmap, sizeof(TBaseProviderData) * dwBaseFiles);
+                STORM_FREE(pStream->FileBitmap);
+            }
+
+            // Also copy the opened base array
+            memcpy(NewBaseArray + dwBaseFiles, &pStream->Base, sizeof(TBaseProviderData));
+            pStream->FileBitmap = NewBaseArray;
+            dwBaseFiles++;
+
+            // Get the size of the base stream
+            pStream->BaseGetSize(pStream, &FileSize);
+            assert(FileSize <= BLOCK4_MAX_FSIZE);
+            RemainderBlock = FileSize % (BLOCK4_BLOCK_SIZE + BLOCK4_HASH_SIZE);
+            BlockCount = FileSize / (BLOCK4_BLOCK_SIZE + BLOCK4_HASH_SIZE);
+            
+            // Increment the stream size and number of blocks            
+            pStream->StreamSize += (BlockCount * BLOCK4_BLOCK_SIZE);
+            pStream->BlockCount += (DWORD)BlockCount;
+
+            // Is this the last file?
+            if(FileSize < BLOCK4_MAX_FSIZE)
+            {
+                if(RemainderBlock)
+                {
+                    pStream->StreamSize += (RemainderBlock - BLOCK4_HASH_SIZE);
+                    pStream->BlockCount++;
+                }
+                break;
+            }
+        }
+
+        // Fill the remainining block stream variables
+        pStream->BitmapSize = dwBaseFiles;
+        pStream->BlockSize  = BLOCK4_BLOCK_SIZE;
+        pStream->IsComplete = 1;
+        pStream->IsModified = 0;
+
+        // Fill the remaining stream variables
+        pStream->StreamPos = 0;
+        pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+
+        STORM_FREE(szNameBuff);
+    }
+
+    // If we opened something, return success
+    if(dwBaseFiles == 0)
+    {
+        FileStream_Close(pStream);
+        SetLastError(ERROR_FILE_NOT_FOUND);
+        pStream = NULL;
+    }
+
+    return pStream;
 }
 
 //-----------------------------------------------------------------------------
@@ -1870,14 +2129,14 @@ TFileStream * FileStream_CreateFile(
 {
     TFileStream * pStream;
 
-    // We only support creation of linear, local file
-    if((dwStreamFlags & (STREAM_PROVIDERS_MASK)) != (STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE))
+    // We only support creation of flat, local file
+    if((dwStreamFlags & (STREAM_PROVIDERS_MASK)) != (STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE))
     {
         SetLastError(ERROR_NOT_SUPPORTED);
         return NULL;
     }
 
-    // Allocate file stream structure for linear stream
+    // Allocate file stream structure for flat stream
     pStream = AllocateFileStream(szFileName, sizeof(TBlockStream), dwStreamFlags);
     if(pStream != NULL)
     {
@@ -1924,46 +2183,241 @@ TFileStream * FileStream_OpenFile(
     const TCHAR * szFileName,
     DWORD dwStreamFlags)
 {
-    DWORD dwBaseProvider = dwStreamFlags & BASE_PROVIDER_MASK;
-
-    // The "file:" prefix forces the BASE_PROVIDER_FILE
-    if(!_tcsicmp(szFileName, _T("file:")))
-    {
-        dwBaseProvider = BASE_PROVIDER_FILE;
-        szFileName += 5;
-    }
-    
-    // The "map:" prefix forces the BASE_PROVIDER_MAP
-    if(!_tcsicmp(szFileName, _T("map:")))
-    {
-        dwBaseProvider = BASE_PROVIDER_MAP;
-        szFileName += 4;
-    }
-    
-    // The "http:" prefix forces the BASE_PROVIDER_HTTP
-    if(!_tcsicmp(szFileName, _T("http:")))
-    {
-        dwBaseProvider = BASE_PROVIDER_HTTP;
-        szFileName += 5;
-    }
+    DWORD dwProvider = dwStreamFlags & STREAM_PROVIDERS_MASK;
+    size_t nPrefixLength = FileStream_Prefix(szFileName, &dwProvider);
 
     // Re-assemble the stream flags
-    dwStreamFlags = (dwStreamFlags & STREAM_OPTIONS_MASK) | (dwStreamFlags & STREAM_PROVIDER_MASK) | dwBaseProvider;
+    dwStreamFlags = (dwStreamFlags & STREAM_OPTIONS_MASK) | dwProvider;
+    szFileName += nPrefixLength;
+
+    // Perform provider-specific open
     switch(dwStreamFlags & STREAM_PROVIDER_MASK)
     {
-        case STREAM_PROVIDER_LINEAR:
-            return LinearStream_Open(szFileName, dwStreamFlags);
+        case STREAM_PROVIDER_FLAT:
+            return FlatStream_Open(szFileName, dwStreamFlags);
 
         case STREAM_PROVIDER_PARTIAL:
             return PartialStream_Open(szFileName, dwStreamFlags);
 
-        case STREAM_PROVIDER_ENCRYPTED:
-            return EncryptedStream_Open(szFileName, dwStreamFlags);
+        case STREAM_PROVIDER_MPQE:
+            return MpqeStream_Open(szFileName, dwStreamFlags);
+
+        case STREAM_PROVIDER_BLOCK4:
+            return Block4Stream_Open(szFileName, dwStreamFlags);
 
         default:
             SetLastError(ERROR_INVALID_PARAMETER);
             return NULL;
     }
+}
+
+/**
+ * Returns the file name of the stream
+ *
+ * \a pStream Pointer to an open stream
+ */
+const TCHAR * FileStream_GetFileName(TFileStream * pStream)
+{
+    assert(pStream != NULL);
+    return pStream->szFileName;
+}
+
+/**
+ * Returns the length of the provider prefix. Returns zero if no prefix
+ *
+ * \a szFileName Pointer to a stream name (file, mapped file, URL)
+ * \a pdwStreamProvider Pointer to a DWORD variable that receives stream provider (STREAM_PROVIDER_XXX)
+ */
+
+size_t FileStream_Prefix(const TCHAR * szFileName, DWORD * pdwProvider)
+{
+    size_t nPrefixLength1 = 0;
+    size_t nPrefixLength2 = 0;
+    DWORD dwProvider = 0;
+
+    if(szFileName != NULL)
+    {
+        //
+        // Determine the stream provider
+        //
+
+        if(!_tcsnicmp(szFileName, _T("flat-"), 5))
+        {
+            dwProvider |= STREAM_PROVIDER_FLAT;
+            nPrefixLength1 = 5;
+        }
+
+        if(!_tcsnicmp(szFileName, _T("part-"), 5))
+        {
+            dwProvider |= STREAM_PROVIDER_PARTIAL;
+            nPrefixLength1 = 5;
+        }
+
+        if(!_tcsnicmp(szFileName, _T("mpqe-"), 5))
+        {
+            dwProvider |= STREAM_PROVIDER_MPQE;
+            nPrefixLength1 = 5;
+        }
+
+        if(!_tcsnicmp(szFileName, _T("blk4-"), 5))
+        {
+            dwProvider |= STREAM_PROVIDER_BLOCK4;
+            nPrefixLength1 = 5;
+        }
+
+        //
+        // Determine the base provider
+        //
+
+        if(!_tcsnicmp(szFileName+nPrefixLength1, _T("file:"), 5))
+        {
+            dwProvider |= BASE_PROVIDER_FILE;
+            nPrefixLength2 = 5;
+        }
+
+        if(!_tcsnicmp(szFileName+nPrefixLength1, _T("map:"), 4))
+        {
+            dwProvider |= BASE_PROVIDER_MAP;
+            nPrefixLength2 = 4;
+        }
+        
+        if(!_tcsnicmp(szFileName+nPrefixLength1, _T("http:"), 5))
+        {
+            dwProvider |= BASE_PROVIDER_HTTP;
+            nPrefixLength2 = 5;
+        }
+
+        // Only accept stream provider if we recognized the base provider
+        if(nPrefixLength2 != 0)
+        {
+            // It is also allowed to put "//" after the base provider, e.g. "file://", "http://"
+            if(szFileName[nPrefixLength1+nPrefixLength2] == '/' && szFileName[nPrefixLength1+nPrefixLength2+1] == '/')
+                nPrefixLength2 += 2;
+
+            if(pdwProvider != NULL)
+                *pdwProvider = dwProvider;
+            return nPrefixLength1 + nPrefixLength2;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Sets a download callback. Whenever the stream needs to download one or more blocks
+ * from the server, the callback is called
+ *
+ * \a pStream Pointer to an open stream
+ * \a pfnCallback Pointer to callback function
+ * \a pvUserData Arbitrary user pointer passed to the download callback
+ */
+
+bool FileStream_SetCallback(TFileStream * pStream, SFILE_DOWNLOAD_CALLBACK pfnCallback, void * pvUserData)
+{
+    TBlockStream * pBlockStream = (TBlockStream *)pStream;
+
+    if(pStream->BlockRead == NULL)
+    {
+        SetLastError(ERROR_NOT_SUPPORTED);
+        return false;
+    }
+
+    pBlockStream->pfnCallback = pfnCallback;
+    pBlockStream->UserData = pvUserData;
+    return true;
+}
+
+/**
+ * This function gives the block map. The 'pvBitmap' pointer must point to a buffer
+ * of at least sizeof(STREAM_BLOCK_MAP) size. It can also have size of the complete
+ * block map (i.e. sizeof(STREAM_BLOCK_MAP) + BitmapSize). In that case, the function
+ * also copies the bit-based block map.
+ *
+ * \a pStream Pointer to an open stream
+ * \a pvBitmap Pointer to buffer where the block map will be stored
+ * \a cbBitmap Length of the buffer, of the block map
+ * \a cbLengthNeeded Length of the bitmap, in bytes
+ */
+
+bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD cbBitmap, PDWORD pcbLengthNeeded)
+{
+    TStreamBitmap * pBitmap = (TStreamBitmap *)pvBitmap;
+    TBlockStream * pBlockStream = (TBlockStream *)pStream;
+    ULONGLONG BlockOffset;
+    LPBYTE Bitmap = (LPBYTE)(pBitmap + 1);
+    DWORD BitmapSize;
+    DWORD BlockCount;
+    DWORD BlockSize;
+    bool bResult = false;
+
+    // Retrieve the size of one block
+    if(pStream->BlockCheck != NULL)
+    {
+        BlockCount = pBlockStream->BlockCount;
+        BlockSize = pBlockStream->BlockSize;
+    }
+    else
+    {
+        BlockCount = (DWORD)((pStream->StreamSize + DEFAULT_BLOCK_SIZE - 1) / DEFAULT_BLOCK_SIZE);
+        BlockSize = DEFAULT_BLOCK_SIZE;
+    }
+
+    // Fill-in the variables
+    BitmapSize = (BlockCount + 7) / 8;
+
+    // Give the number of blocks
+    if(pcbLengthNeeded != NULL)
+        pcbLengthNeeded[0] = sizeof(TStreamBitmap) + BitmapSize;
+
+    // If the length of the buffer is not enough
+    if(pvBitmap != NULL && cbBitmap != 0)
+    {
+        // Give the STREAM_BLOCK_MAP structure
+        if(cbBitmap >= sizeof(TStreamBitmap))
+        {
+            pBitmap->StreamSize = pStream->StreamSize;
+            pBitmap->BitmapSize = BitmapSize;
+            pBitmap->BlockCount = BlockCount;
+            pBitmap->BlockSize  = BlockSize;
+            pBitmap->IsComplete = (pStream->BlockCheck != NULL) ? pBlockStream->IsComplete : 1;
+            bResult = true;
+        }
+
+        // Give the block bitmap, if enough space
+        if(cbBitmap >= sizeof(TStreamBitmap) + BitmapSize)
+        {
+            // Version with bitmap present
+            if(pStream->BlockCheck != NULL)
+            {
+                DWORD ByteIndex = 0;
+                BYTE BitMask = 0x01;
+
+                // Initialize the map with zeros
+                memset(Bitmap, 0, BitmapSize);
+
+                // Fill the map
+                for(BlockOffset = 0; BlockOffset < pStream->StreamSize; BlockOffset += BlockSize)
+                {
+                    // Set the bit if the block is present
+                    if(pBlockStream->BlockCheck(pStream, BlockOffset))
+                        Bitmap[ByteIndex] |= BitMask;
+
+                    // Move bit position
+                    ByteIndex += (BitMask >> 0x07);
+                    BitMask = (BitMask >> 0x07) | (BitMask << 0x01);
+                }
+            }
+            else
+            {
+                memset(Bitmap, 0xFF, BitmapSize);
+            }
+        }
+    }
+
+    // Set last error value and return
+    if(bResult == false)
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+    return bResult;
 }
 
 /**
@@ -2094,8 +2548,8 @@ bool FileStream_GetFlags(TFileStream * pStream, LPDWORD pdwStreamFlags)
  */
 bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream)
 {
-    // Only supported on linear files
-    if((pStream->dwFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE))
+    // Only supported on flat files
+    if((pStream->dwFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE))
     {
         SetLastError(ERROR_NOT_SUPPORTED);
         return false;
@@ -2117,33 +2571,12 @@ bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream)
         return false;
 
     // Now open the base file again
-    if(BaseFile_Open(pStream, pStream->dwFlags))
+    if(BaseFile_Open(pStream, pStream->szFileName, pStream->dwFlags))
         return false;
 
     // Cleanup the new stream
     FileStream_Close(pNewStream);
     return true;
-}
-
-/**
- * Returns the file name of the stream
- *
- * \a pStream Pointer to an open stream
- */
-const TCHAR * FileStream_GetFileName(TFileStream * pStream)
-{
-    assert(pStream != NULL);
-    return pStream->szFileName;
-}
-
-/**
- * Returns true if the stream is read-only
- *
- * \a pStream Pointer to an open stream
- */
-bool FileStream_IsReadOnly(TFileStream * pStream)
-{
-    return (pStream->dwFlags & STREAM_FLAG_READ_ONLY) ? true : false;
 }
 
 /**

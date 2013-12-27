@@ -24,6 +24,7 @@ typedef bool (*STREAM_CREATE)(
 
 typedef bool (*STREAM_OPEN)(
     struct TFileStream * pStream,       // Pointer to an unopened stream
+    const TCHAR * szFileName,           // Pointer to file name to be open
     DWORD dwStreamFlags                 // Stream flags
     );
 
@@ -57,11 +58,11 @@ typedef bool (*STREAM_GETPOS)(
     );
 
 typedef void (*STREAM_CLOSE)(
-    struct TFileStream * pStream
+    struct TFileStream * pStream        // Pointer to an open stream
     );
 
 typedef bool (*BLOCK_READ)(
-    struct TFileStream * pStream,       // Pointer to an opened block stream
+    struct TFileStream * pStream,       // Pointer to a block-oriented stream
     ULONGLONG StartOffset,              // Byte offset of start of the block array
     ULONGLONG EndOffset,                // End offset (either end of the block or end of the file)
     LPBYTE BlockBuffer,                 // Pointer to block-aligned buffer
@@ -70,8 +71,12 @@ typedef bool (*BLOCK_READ)(
     );
 
 typedef DWORD (*BLOCK_CHECK)(
-    struct TFileStream * pStream,
-    ULONGLONG BlockOffset
+    struct TFileStream * pStream,       // Pointer to a block-oriented stream
+    ULONGLONG BlockOffset               // Offset of the file to check
+    );
+
+typedef void (*BLOCK_SAVEMAP)(
+    struct TFileStream * pStream        // Pointer to a block-oriented stream
     );
 
 //-----------------------------------------------------------------------------
@@ -187,12 +192,15 @@ struct TFileStream
 
 struct TBlockStream : public TFileStream
 {
+    SFILE_DOWNLOAD_CALLBACK pfnCallback;    // Callback for downloading
     void * FileBitmap;                      // Array of bits for file blocks
+    void * UserData;                        // User data to be passed to the download callback
     DWORD BitmapSize;                       // Size of the file bitmap (in bytes)
     DWORD BlockSize;                        // Size of one block, in bytes
     DWORD BlockCount;                       // Number of data blocks in the file
     DWORD IsComplete;                       // If nonzero, no blocks are missing
-};
+    DWORD IsModified;                       // nonzero if the bitmap has been modified
+};        
 
 //-----------------------------------------------------------------------------
 // Structure for encrypted stream

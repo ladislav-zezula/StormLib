@@ -519,7 +519,7 @@ bool WINAPI SFileOpenPatchArchive(
 
     if(nError == ERROR_SUCCESS)
     {
-        if(!FileStream_IsReadOnly(ha->pStream))
+        if(!(ha->dwFlags & MPQ_FLAG_READ_ONLY))
             nError = ERROR_ACCESS_DENIED;
     }
 

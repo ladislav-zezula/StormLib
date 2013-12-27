@@ -77,7 +77,7 @@ bool WINAPI SFileCreateArchive(const TCHAR * szMpqName, DWORD dwCreateFlags, DWO
     memset(&CreateInfo, 0, sizeof(SFILE_CREATE_MPQ));
     CreateInfo.cbSize         = sizeof(SFILE_CREATE_MPQ);
     CreateInfo.dwMpqVersion   = (dwCreateFlags & MPQ_CREATE_ARCHIVE_VMASK) >> FLAGS_TO_FORMAT_SHIFT;
-    CreateInfo.dwStreamFlags  = STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE;
+    CreateInfo.dwStreamFlags  = STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE;
     CreateInfo.dwFileFlags1   = (dwCreateFlags & MPQ_CREATE_LISTFILE)   ? MPQ_FILE_EXISTS : 0;
     CreateInfo.dwFileFlags2   = (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? MPQ_FILE_EXISTS : 0;
     CreateInfo.dwAttrFlags    = (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? (MPQ_ATTRIBUTE_CRC32 | MPQ_ATTRIBUTE_FILETIME | MPQ_ATTRIBUTE_MD5) : 0;
@@ -133,7 +133,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
 
     // We verify if the file already exists and if it's a MPQ archive.
     // If yes, we won't allow to overwrite it.
-    if(SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE | MPQ_OPEN_NO_ATTRIBUTES | MPQ_OPEN_NO_LISTFILE, &hMpq))
+    if(SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE | MPQ_OPEN_NO_ATTRIBUTES | MPQ_OPEN_NO_LISTFILE, &hMpq))
     {
         SFileCloseArchive(hMpq);
         SetLastError(ERROR_ALREADY_EXISTS);
@@ -227,7 +227,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     // Create initial HET table, if the caller required an MPQ format 3.0 or newer
     if(nError == ERROR_SUCCESS && pCreateInfo->dwMpqVersion >= MPQ_FORMAT_VERSION_3 && pCreateInfo->dwMaxFileCount != 0)
     {
-        ha->pHetTable = CreateHetTable(ha->dwFileTableSize, 0x40, NULL);
+        ha->pHetTable = CreateHetTable(ha->dwFileTableSize, 0, 0x40, NULL);
         if(ha->pHetTable == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }

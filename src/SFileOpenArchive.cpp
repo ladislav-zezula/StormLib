@@ -177,7 +177,7 @@ bool WINAPI SFileOpenArchive(
     {
         FileStream_GetSize(pStream, &FileSize);
         if(FileSize < MPQ_HEADER_SIZE_V1)
-            nError = ERROR_FILE_CORRUPT;
+            nError = ERROR_BAD_FORMAT;
     }
 
     // Allocate the MPQhandle
@@ -191,6 +191,7 @@ bool WINAPI SFileOpenArchive(
     if(nError == ERROR_SUCCESS)
     {
         ULONGLONG SearchOffset = 0;
+        DWORD dwStreamFlags = 0;
         DWORD dwHeaderID;
 
         memset(ha, 0, sizeof(TMPQArchive));
@@ -198,9 +199,9 @@ bool WINAPI SFileOpenArchive(
         ha->pStream = pStream;
         pStream = NULL;
 
-        // Remember if the archive is open for write
-        if(FileStream_IsReadOnly(ha->pStream))
-            ha->dwFlags |= MPQ_FLAG_READ_ONLY;
+        // Set the archive read only if the stream is read-only
+        FileStream_GetFlags(ha->pStream, &dwStreamFlags);
+        ha->dwFlags |= (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? MPQ_FLAG_READ_ONLY : 0;
 
         // Also remember if we shall check sector CRCs when reading file
         if(dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC)
@@ -287,7 +288,7 @@ bool WINAPI SFileOpenArchive(
             ha->MpqPos = SearchOffset;
 
             // Sector size must be nonzero.
-            if(ha->pHeader->wSectorSize == 0)
+            if(SearchOffset >= FileSize || ha->pHeader->wSectorSize == 0)
                 nError = ERROR_BAD_FORMAT;
         }
     }
@@ -406,6 +407,26 @@ bool WINAPI SFileOpenArchive(
 
     *phMpq = ha;
     return (nError == ERROR_SUCCESS);
+}
+
+//-----------------------------------------------------------------------------
+// bool WINAPI SFileSetDownloadCallback(HANDLE, SFILE_DOWNLOAD_CALLBACK, void *);
+//
+// Sets a callback that is called when content is downloaded from the master MPQ
+//
+
+bool WINAPI SFileSetDownloadCallback(HANDLE hMpq, SFILE_DOWNLOAD_CALLBACK DownloadCB, void * pvUserData)
+{
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
+
+    // Do nothing if 'hMpq' is bad parameter
+    if(!IsValidMpqHandle(hMpq))
+    {
+        SetLastError(ERROR_INVALID_HANDLE);
+        return false;
+    }
+
+    return FileStream_SetCallback(ha->pStream, DownloadCB, pvUserData);
 }
 
 //-----------------------------------------------------------------------------

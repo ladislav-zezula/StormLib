@@ -193,7 +193,7 @@ int  RebuildHetTable(TMPQArchive * ha);
 int  RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxFileCount);
 int  SaveMPQTables(TMPQArchive * ha);
 
-TMPQHetTable * CreateHetTable(DWORD dwFileCount, DWORD dwHashBitSize, LPBYTE pbSrcData);
+TMPQHetTable * CreateHetTable(DWORD dwEntryCount, DWORD dwTotalCount, DWORD dwHashBitSize, LPBYTE pbSrcData);
 void FreeHetTable(TMPQHetTable * pHetTable);
 
 TMPQBetTable * CreateBetTable(DWORD dwMaxFileCount);

@@ -46,7 +46,7 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
     CopyFileName(szFileNameT, szFileName, strlen(szFileName));
 
     // Open the file and create the TMPQFile structure
-    pStream = FileStream_OpenFile(szFileNameT, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE | STREAM_FLAG_READ_ONLY);
+    pStream = FileStream_OpenFile(szFileNameT, STREAM_FLAG_READ_ONLY);
     if(pStream != NULL)
     {
         // Allocate and initialize file handle

@@ -174,6 +174,19 @@ static const char * PatchList_WoW16965[] =
 static char szMpqDirectory[MAX_PATH];
 size_t cchMpqDirectory = 0;
 
+static bool IsFullPath(const char * szFileName)
+{
+#ifdef PLATFORM_WINDOWS
+    if(('A' <= szFileName[0] && szFileName[0] <= 'Z') || ('a' <= szFileName[0] && szFileName[0] <= 'z'))
+    {
+        return (szFileName[1] == ':' && szFileName[2] == PATH_SEPARATOR);
+    }
+#endif
+
+    szFileName = szFileName;
+    return false;
+}
+
 static bool IsMpqExtension(const char * szFileName)
 {
     const char * szExtension = strrchr(szFileName, '.');
@@ -195,6 +208,8 @@ static bool IsMpqExtension(const char * szFileName)
         if(!_stricmp(szExtension, ".s2ma"))
             return true;
         if(!_stricmp(szExtension, ".SC2Map"))
+            return true;
+        if(!_stricmp(szExtension, ".0"))        // .MPQ.0
             return true;
 //      if(!_stricmp(szExtension, ".link"))
 //          return true;
@@ -290,6 +305,19 @@ static void CopyPathPart(char * szBuffer, const char * szPath)
     *szBuffer = 0;
 }
 
+static bool CopyStringAndVerifyConversion(
+    const TCHAR * szFoundFile,
+    TCHAR * szBufferT,
+    char * szBufferA)
+{
+    // Convert the TCHAR name to ANSI name
+    CopyFileName(szBufferA, szFoundFile, _tcslen(szFoundFile));
+    CopyFileName(szBufferT, szBufferA, strlen(szBufferA));
+
+    // Compare both TCHAR strings
+    return (_tcsicmp(szBufferT, szFoundFile) == 0) ? true : false;
+}
+
 static void CalculateRelativePath(const char * szFullPath1, const char * szFullPath2, char * szBuffer)
 {
     const char * szPathPart1 = szFullPath1;
@@ -346,44 +374,98 @@ static void CalculateRelativePath(const char * szFullPath1, const char * szFullP
     strcpy(szBuffer, szFullPath1);
 }
 
+static TFileStream * FileStream_OpenFileA(const char * szFileName, DWORD dwStreamFlags)
+{
+    TCHAR szFileNameT[MAX_PATH];
+
+    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
+    return FileStream_OpenFile(szFileNameT, dwStreamFlags);
+}
+
+static TFileStream * FileStream_CreateFileA(const char * szFileName, DWORD dwStreamFlags)
+{
+    TCHAR szFileNameT[MAX_PATH];
+
+    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
+    return FileStream_CreateFile(szFileNameT, dwStreamFlags);
+}
+
+static size_t FileStream_PrefixA(const char * szFileName, DWORD * pdwProvider)
+{
+    TCHAR szFileNameT[MAX_PATH];
+
+    if(szFileName != NULL)
+    {
+        CopyFileName(szFileNameT, szFileName, strlen(szFileName));
+        return FileStream_Prefix(szFileNameT, pdwProvider);
+    }
+    return 0;
+}
+
 static void CreateFullPathName(char * szBuffer, const char * szSubDir, const char * szNamePart1, const char * szNamePart2 = NULL)
 {
+    char * szSaveBuffer = szBuffer;
+    size_t nPrefixLength = 0;
     size_t nLength;
+    DWORD dwProvider = 0;
+    bool bIsFullPath = false;
+    char chSeparator = PATH_SEPARATOR;
 
-    // Copy the master MPQ directory
-    memcpy(szBuffer, szMpqDirectory, cchMpqDirectory);
-    szBuffer += cchMpqDirectory;
-
-    // Append the subdirectory, if any
-    if(szSubDir != NULL && (nLength = strlen(szSubDir)) != 0)
+    // Determine the path prefix
+    if(szNamePart1 != NULL)
     {
-        // No leading or trailing separator must be there
-        assert(szSubDir[0] != '/' && szSubDir[0] != '\\');
-        assert(szSubDir[nLength - 1] != '/' && szSubDir[nLength - 1] != '\\');
+        nPrefixLength = FileStream_PrefixA(szNamePart1, &dwProvider);
+        if((dwProvider & BASE_PROVIDER_MASK) == BASE_PROVIDER_HTTP)
+        {
+            bIsFullPath = true;
+            chSeparator = '/';
+        }
+        else
+            bIsFullPath = IsFullPath(szNamePart1 + nPrefixLength);
+    }
 
-        // Append file path separator
-        *szBuffer++ = PATH_SEPARATOR;
+    // Copy the MPQ prefix, if any
+    if(nPrefixLength > 0)
+    {
+        memcpy(szBuffer, szNamePart1, nPrefixLength);
+        szSaveBuffer += nPrefixLength;
+        szNamePart1 += nPrefixLength;
+        szBuffer += nPrefixLength;
+    }
 
-        // Copy the subdirectory
-        memcpy(szBuffer, szSubDir, nLength);
+    // If the given name is not a full path, copy the MPQ directory
+    if(bIsFullPath == false)
+    {
+        // Copy the master MPQ directory
+        memcpy(szBuffer, szMpqDirectory, cchMpqDirectory);
+        szBuffer += cchMpqDirectory;
 
-        // Fix the path separators
-        for(size_t i = 0; i < nLength; i++)
-            szBuffer[i] = (szBuffer[i] != '\\' && szBuffer[i] != '/') ? szBuffer[i] : PATH_SEPARATOR;
-        
-        // Move the buffer pointer
-        szBuffer += nLength;
+        // Append the subdirectory, if any
+        if(szSubDir != NULL && (nLength = strlen(szSubDir)) != 0)
+        {
+            // No leading or trailing separator are allowed
+            assert(szSubDir[0] != '/' && szSubDir[0] != '\\');
+            assert(szSubDir[nLength - 1] != '/' && szSubDir[nLength - 1] != '\\');
+
+            // Append file path separator
+            *szBuffer++ = PATH_SEPARATOR;
+
+            // Append the subdirectory
+            memcpy(szBuffer, szSubDir, nLength);
+            szBuffer += nLength;
+        }
     }
 
     // Copy the file name, if any
     if(szNamePart1 != NULL && (nLength = strlen(szNamePart1)) != 0)
     {
-        // No path separator can be there
-        assert(strchr(szNamePart1, '\\') == NULL);
-        assert(strchr(szNamePart1, '/') == NULL);
+        // Path separators are not allowed in the name part
+        assert(szNamePart1[0] != '\\' && szNamePart1[0] != '/');
+        assert(szNamePart1[nLength - 1] != '/' && szNamePart1[nLength - 1] != '\\');
 
         // Append file path separator
-        *szBuffer++ = PATH_SEPARATOR;
+        if(bIsFullPath == false)
+            *szBuffer++ = PATH_SEPARATOR;
 
         // Copy the file name
         memcpy(szBuffer, szNamePart1, nLength);
@@ -398,47 +480,61 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
         szBuffer += nLength;
     }
 
+    // Normalize the path separators
+    while(szSaveBuffer < szBuffer)
+    {
+        szSaveBuffer[0] = (szSaveBuffer[0] != '/' && szSaveBuffer[0] != '\\') ? szSaveBuffer[0] : chSeparator;
+        szSaveBuffer++;
+    }
+
     // Terminate the buffer with zero
     *szBuffer = 0;
 }
 
-static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, char * szDirectory)
+static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectoryT, char * szDirectoryA)
 {
-    char * szPlainName;
     int nError = ERROR_SUCCESS;
 
-    // Setup the search masks
-    strcat(szDirectory, "\\*");
-    szPlainName = strrchr(szDirectory, '*');
-
-    if(szDirectory != NULL && szPlainName != NULL)
+    if(szDirectoryT != NULL && szDirectoryA != NULL)
     {
 #ifdef PLATFORM_WINDOWS
-        WIN32_FIND_DATAA wf;
+        WIN32_FIND_DATA wf;
         HANDLE hFind;
+        TCHAR * szPlainNameT;
+        char * szPlainNameA;
+        size_t nLength = strlen(szDirectoryA);
+
+        // Setup the search masks
+        _tcscat(szDirectoryT, _T("\\*"));
+        szPlainNameT = szDirectoryT + nLength + 1; 
+
+        strcat(szDirectoryA, "\\*");
+        szPlainNameA = szDirectoryA + nLength + 1; 
 
         // Initiate search. Use ANSI function only
-        hFind = FindFirstFileA(szDirectory, &wf);
+        hFind = FindFirstFile(szDirectoryT, &wf);
         if(hFind != INVALID_HANDLE_VALUE)
         {
             // Skip the first entry, since it's always "." or ".."
-            while(FindNextFileA(hFind, &wf) && nError == ERROR_SUCCESS)
+            while(FindNextFile(hFind, &wf) && nError == ERROR_SUCCESS)
             {
-                // Found a directory?
-                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                // If the file name can be converted to UNICODE and back
+                if(CopyStringAndVerifyConversion(wf.cFileName, szPlainNameT, szPlainNameA))
                 {
-                    if(wf.cFileName[0] != '.')
+                    // Found a directory?
+                    if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                     {
-                        strcpy(szPlainName, wf.cFileName);
-                        nError = FindFilesInternal(pfnTest, szDirectory);
+                        if(wf.cFileName[0] != '.')
+                        {
+                            nError = FindFilesInternal(pfnTest, szDirectoryT, szDirectoryA);
+                        }
                     }
-                }
-                else
-                {
-                    if(pfnTest != NULL)
+                    else
                     {
-                        strcpy(szPlainName, wf.cFileName);
-                        nError = pfnTest(szDirectory);
+                        if(pfnTest != NULL)
+                        {
+                            nError = pfnTest(szDirectoryA);
+                        }
                     }
                 }
             }
@@ -454,10 +550,12 @@ static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, char * szDirectory)
 
 static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, const char * szSubDirectory)
 {
-    char szWorkBuff[MAX_PATH];
+    TCHAR szWorkBuffT[MAX_PATH];
+    char szWorkBuffA[MAX_PATH];
 
-    CreateFullPathName(szWorkBuff, szSubDirectory, NULL);
-    return FindFilesInternal(pfnFindFile, szWorkBuff);
+    CreateFullPathName(szWorkBuffA, szSubDirectory, NULL);
+    CopyFileName(szWorkBuffT, szWorkBuffA, strlen(szWorkBuffA));
+    return FindFilesInternal(pfnFindFile, szWorkBuffT, szWorkBuffA);
 }
 
 static int FindFilePairsInternal(
@@ -529,22 +627,6 @@ static int FindFilePairs(FIND_PAIR_CALLBACK pfnFindPair, const char * szSourceSu
     return FindFilePairsInternal(pfnFindPair, szSource, szTarget);
 }
 
-TFileStream * OpenLocalFile(const char * szFileName, DWORD dwStreamFlags)
-{
-    TCHAR szFileNameT[MAX_PATH];
-
-    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
-    return FileStream_OpenFile(szFileNameT, dwStreamFlags);
-}
-
-TFileStream * CreateLocalFile(const char * szFileName, DWORD dwStreamFlags)
-{
-    TCHAR szFileNameT[MAX_PATH];
-
-    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
-    return FileStream_CreateFile(szFileNameT, dwStreamFlags);
-}
-
 static int CalculateFileSha1(TLogHelper * pLogger, const char * szFullPath, char * szFileSha1)
 {
     TFileStream * pStream;
@@ -563,7 +645,7 @@ static int CalculateFileSha1(TLogHelper * pLogger, const char * szFullPath, char
     szFileSha1[0] = 0;
 
     // Open the file to be verified
-    pStream = OpenLocalFile(szFullPath, STREAM_FLAG_READ_ONLY);
+    pStream = FileStream_OpenFileA(szFullPath, STREAM_FLAG_READ_ONLY);
     if(pStream != NULL)
     {
         // Retrieve the size of the file
@@ -626,7 +708,7 @@ static int InitializeMpqDirectory(char * argv[], int argc)
     // Retrieve the name of the MPQ directory
     if(argc > 1 && argv[1] != NULL)
     {
-        szWhereFrom = "entered at command line";
+        szWhereFrom = "command line";
         szDirName = argv[1];
     }
     else
@@ -649,16 +731,17 @@ static int InitializeMpqDirectory(char * argv[], int argc)
 
     // Verify if the work MPQ directory is writable
     CreateFullPathName(szFullPath, NULL, "TestFile.bin");
-    pStream = CreateLocalFile(szFullPath, 0);
+    pStream = FileStream_CreateFileA(szFullPath, 0);
     if(pStream == NULL)
-        return Logger.PrintError("MPQ subdirectory is not writable");
+        return Logger.PrintError("MPQ subdirectory doesn't exist or is not writable");
 
     // Close the stream
     FileStream_Close(pStream);
+    remove(szFullPath);
 
     // Verify if the working directory exists and if there is a subdirectory with the file name
     CreateFullPathName(szFullPath, szMpqSubDir, "ListFile_Blizzard.txt");
-    pStream = OpenLocalFile(szFullPath, STREAM_FLAG_READ_ONLY);
+    pStream = FileStream_OpenFileA(szFullPath, STREAM_FLAG_READ_ONLY);
     if(pStream == NULL)
         return Logger.PrintError("The main listfile (%s) was not found. Check your paths", GetShortPlainName(szFullPath));
 
@@ -756,7 +839,7 @@ static int CreateEmptyFile(TLogHelper * pLogger, const char * szPlainName, ULONG
 
     // Construct the full path and crete the file
     CreateFullPathName(szFullPath, NULL, szPlainName);
-    pStream = CreateLocalFile(szFullPath, STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
+    pStream = FileStream_CreateFileA(szFullPath, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
     if(pStream == NULL)
         return pLogger->PrintError("Failed to create file %s", szBuffer);
 
@@ -962,7 +1045,7 @@ static int CreateFileCopy(
     }
 
     // Open the source file
-    pStream1 = OpenLocalFile(szFileName1, STREAM_FLAG_READ_ONLY);
+    pStream1 = FileStream_OpenFileA(szFileName1, STREAM_FLAG_READ_ONLY);
     if(pStream1 == NULL)
     {
         pLogger->PrintError("Failed to open the source file %s", szFileName1);
@@ -970,7 +1053,7 @@ static int CreateFileCopy(
     }
 
     // Create the destination file
-    pStream2 = CreateLocalFile(szFileName2, 0);
+    pStream2 = FileStream_CreateFileA(szFileName2, 0);
     if(pStream2 != NULL)
     {
         // If we should write some pre-MPQ data to the target file, do it
@@ -1015,13 +1098,21 @@ static int CreateMasterAndMirrorPaths(
     char * szMirrorPath,
     char * szMasterPath,
     const char * szMirrorName,
-    const char * szMasterName)
+    const char * szMasterName,
+    bool bCopyMirrorFile)
 {
     char szCopyPath[MAX_PATH];
-    int nError;
+    int nError = ERROR_SUCCESS;
 
     // Copy the mirrored file from the source to the work directory
-    nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName, szCopyPath);
+    if(bCopyMirrorFile)
+        nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName, szCopyPath);
+    else
+    {
+        CreateFullPathName(szCopyPath, NULL, szMirrorName);
+        remove(szCopyPath);
+    }
+    
     if(nError == ERROR_SUCCESS)
     {
         // Create the full path name of the master file
@@ -1133,7 +1224,7 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, const char * szFileName, 
         pLogger->PrintProgress("Loading local file ...");
 
     // Attempt to open the file
-    pStream = OpenLocalFile(szFileName, STREAM_FLAG_READ_ONLY);
+    pStream = FileStream_OpenFileA(szFileName, STREAM_FLAG_READ_ONLY);
     if(pStream == NULL)
     {
         if(pLogger != NULL && bMustSucceed == true)
@@ -1170,7 +1261,8 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, const char * szFileName, 
 static int CompareTwoLocalFilesRR(
     TLogHelper * pLogger, 
     TFileStream * pStream1,                         // Master file
-    TFileStream * pStream2)                         // Mirror file
+    TFileStream * pStream2,                         // Mirror file
+    int nIterations)                                // Number of iterations
 {
     ULONGLONG RandomNumber = 0x12345678;            // We need pseudo-random number that will repeat each run of the program
     ULONGLONG RandomSeed;
@@ -1199,7 +1291,7 @@ static int CompareTwoLocalFilesRR(
     if(pbBuffer1 && pbBuffer2)
     {
         // Perform many random reads
-        for(int i = 0; i < 0x10000; i++)
+        for(int i = 0; i < nIterations; i++)
         {
             // Generate psudo-random offsrt and data size
             ByteOffset = (RandomNumber % FileSize1);
@@ -1495,18 +1587,25 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFullPath, DW
 
     // Is it an encrypted MPQ ?
     if(strstr(szFullPath, ".MPQE") != NULL)
-        dwFlags |= STREAM_PROVIDER_ENCRYPTED;
+        dwFlags |= STREAM_PROVIDER_MPQE;
     if(strstr(szFullPath, ".MPQ.part") != NULL)
         dwFlags |= STREAM_PROVIDER_PARTIAL;
+    if(strstr(szFullPath, ".mpq.part") != NULL)
+        dwFlags |= STREAM_PROVIDER_PARTIAL;
+    if(strstr(szFullPath, ".MPQ.0") != NULL)
+        dwFlags |= STREAM_PROVIDER_BLOCK4;
 
     // Open the copied archive
     pLogger->PrintProgress("Opening archive %s ...", GetShortPlainName(szFullPath));
     CopyFileName(szMpqName, szFullPath, strlen(szFullPath));
     if(!SFileOpenArchive(szMpqName, 0, dwFlags, &hMpq))
     {
-        // Ignore the error if it's an AVI file
-        if(GetLastError() == ERROR_AVI_FILE)
-            return ERROR_AVI_FILE;
+        // Ignore the error if it's an AVI file or if the file is incomplete
+        nError = GetLastError();
+        if(nError == ERROR_AVI_FILE || nError == ERROR_FILE_INCOMPLETE)
+            return nError;
+
+        // Show the open error to the user
         return pLogger->PrintError("Failed to open archive %s", szFullPath);
     }
 
@@ -1810,25 +1909,55 @@ static int TestSearchListFile(const char * szPlainName)
     return ERROR_SUCCESS;
 }
 
+static void WINAPI TestReadFile_DownloadCallback(
+    void * UserData,
+    ULONGLONG ByteOffset,
+    DWORD DataLength)
+{
+    TLogHelper * pLogger = (TLogHelper *)UserData;
+
+    if(ByteOffset != 0 && DataLength != 0)
+        pLogger->PrintProgress("Downloading data (offset: " I64X_a ", length: %X)", ByteOffset, DataLength);
+    else
+        pLogger->PrintProgress("Download complete.");
+}
+
 // Open a file stream with mirroring a master file
-static int TestReadFile_MasterMirror(const char * szMirrorName, const char * szMasterName)
+static int TestReadFile_MasterMirror(const char * szMirrorName, const char * szMasterName, bool bCopyMirrorFile)
 {
     TFileStream * pStream1;                     // Master file
     TFileStream * pStream2;                     // Mirror file
-    TLogHelper Logger("OpenMirrorFile", szMasterName);
+    TLogHelper Logger("OpenMirrorFile", szMirrorName);
+    DWORD dwProvider = 0;    
     char szMirrorPath[MAX_PATH + MAX_PATH];     
     char szMasterPath[MAX_PATH];
+    int nIterations = 0x10000;
     int nError;
 
+    // Retrieve the provider
+    FileStream_PrefixA(szMasterName, &dwProvider); 
+
+#ifndef PLATFORM_WINDOWS
+    if((dwProvider & BASE_PROVIDER_MASK) == BASE_PROVIDER_HTTP)
+        return ERROR_SUCCESS;
+#endif
+
     // Create copy of the file to serve as mirror, keep master there
-    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName);
+    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
     if(nError == ERROR_SUCCESS)
     {
         // Open both master and mirror file
-        pStream1 = OpenLocalFile(szMasterPath, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
-        pStream2 = OpenLocalFile(szMirrorPath, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
+        pStream1 = FileStream_OpenFileA(szMasterPath, STREAM_FLAG_READ_ONLY);
+        pStream2 = FileStream_OpenFileA(szMirrorPath, STREAM_FLAG_READ_ONLY | STREAM_FLAG_USE_BITMAP);
         if(pStream1 && pStream2)
-            nError = CompareTwoLocalFilesRR(&Logger, pStream1, pStream2);
+        {
+            // For internet based files, we limit the number of operations
+            if((dwProvider & BASE_PROVIDER_MASK) == BASE_PROVIDER_HTTP)
+                nIterations = 0x80;
+
+            FileStream_SetCallback(pStream2, TestReadFile_DownloadCallback, &Logger);
+            nError = CompareTwoLocalFilesRR(&Logger, pStream1, pStream2, nIterations);
+        }
 
         if(pStream2 != NULL)
             FileStream_Close(pStream2);
@@ -1852,12 +1981,18 @@ static int TestFileStreamOperations(const char * szPlainName, DWORD dwStreamFlag
     int nError = ERROR_SUCCESS;
 
     // Copy the file so we won't screw up
-    CreateFileCopy(&Logger, szPlainName, szPlainName, szFullPath);
+    if((dwStreamFlags & STREAM_PROVIDER_MASK) == STREAM_PROVIDER_BLOCK4)
+        CreateFullPathName(szFullPath, szMpqSubDir, szPlainName);
+    else
+        nError = CreateFileCopy(&Logger, szPlainName, szPlainName, szFullPath);
     
     // Open the file stream
-    pStream = OpenLocalFile(szFullPath, dwStreamFlags);
-    if(pStream == NULL)
-        nError = Logger.PrintError("Failed to open %s", szFullPath);
+    if(nError == ERROR_SUCCESS)
+    {
+        pStream = FileStream_OpenFileA(szFullPath, dwStreamFlags);
+        if(pStream == NULL)
+            nError = Logger.PrintError("Failed to open %s", szFullPath);
+    }
 
     // Get the size of the file stream
     if(nError == ERROR_SUCCESS)
@@ -1868,8 +2003,8 @@ static int TestFileStreamOperations(const char * szPlainName, DWORD dwStreamFlag
         if(!FileStream_GetSize(pStream, &FileSize))
             nError = Logger.PrintError("Failed to retrieve the file size");
 
-        // Any other stream except STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE should be read-only
-        if((dwStreamFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE))
+        // Any other stream except STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE should be read-only
+        if((dwStreamFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE))
             dwRequiredFlags |= STREAM_FLAG_READ_ONLY;
 //      if(pStream->BlockPresent)
 //          dwRequiredFlags |= STREAM_FLAG_READ_ONLY;
@@ -2233,7 +2368,7 @@ static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * s
     return ERROR_SUCCESS;
 }
 
-static int TestOpenArchive_MasterMirror(const char * szMirrorName, const char * szMasterName, const char * szFileToExtract)
+static int TestOpenArchive_MasterMirror(const char * szMirrorName, const char * szMasterName, const char * szFileToExtract, bool bCopyMirrorFile)
 {
     TFileData * pFileData;
     TLogHelper Logger("OpenServerMirror", szMirrorName);
@@ -2245,7 +2380,7 @@ static int TestOpenArchive_MasterMirror(const char * szMirrorName, const char * 
     int nError;
 
     // Create both paths
-    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName);
+    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
 
     // Now open both archives as local-server pair
     if(nError == ERROR_SUCCESS)
@@ -2469,7 +2604,7 @@ static int ForEachFile_OpenArchive(const char * szFullPath)
 
         // Open the MPQ name
         nError = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(nError == ERROR_AVI_FILE)
+        if(nError == ERROR_AVI_FILE || nError == ERROR_FILE_CORRUPT || nError == ERROR_BAD_FORMAT)
             return ERROR_SUCCESS;
 
         // Search the archive and load every file
@@ -2480,6 +2615,9 @@ static int ForEachFile_OpenArchive(const char * szFullPath)
         }
     }
 
+    // Correct some errors
+    if(nError == ERROR_FILE_CORRUPT || nError == ERROR_FILE_INCOMPLETE)
+        return ERROR_SUCCESS;
     return nError;
 }
 
@@ -3151,7 +3289,7 @@ static int CreateArchiveLinkFile(const char * szFullPath1, const char * szFullPa
     nLength = sprintf(szLinkData, "LINK:%s\x0D\x0ASHA1:%s", szLinkPath, szFileHash);
 
     // Create the link file
-    pStream = CreateLocalFile(szLinkFile, 0);
+    pStream = FileStream_CreateFileA(szLinkFile, 0);
     if(pStream == NULL)
         return GetLastError();
 
@@ -3226,19 +3364,35 @@ int main(int argc, char * argv[])
 
     // Test reading linear file with bitmap
     if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations("MPQ_2013_v4_alternate-downloaded.MPQ", STREAM_FLAG_USE_BITMAP);
+        nError = TestFileStreamOperations("MPQ_2013_v4_alternate-complete.MPQ", STREAM_FLAG_USE_BITMAP);
 
     // Test reading partial file
     if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations("MPQ_2009_v2_WoW_patch.MPQ.part", STREAM_PROVIDER_PARTIAL);
+        nError = TestFileStreamOperations("part-file://MPQ_2009_v2_WoW_patch.MPQ.part", 0);
+
+    // Test reading Block4K file
+    if(nError == ERROR_SUCCESS)
+        nError = TestFileStreamOperations("blk4-file://streaming/model.MPQ.0", STREAM_PROVIDER_BLOCK4);
 
     // Test reading encrypted file
     if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations("MPQ_2011_v2_EncryptedMpq.MPQE", STREAM_PROVIDER_ENCRYPTED);
+        nError = TestFileStreamOperations("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE", STREAM_PROVIDER_MPQE);
 
-    // Search in listfile
+    // Open a stream, paired with local master
     if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ");
+        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-created.MPQ", "MPQ_2013_v4_alternate-original.MPQ", false);
+
+    // Open a stream, paired with local master
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-incomplete.MPQ", "MPQ_2013_v4_alternate-incomplete.MPQ", true);
+
+    // Open a stream, paired with local master
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-complete.MPQ", "MPQ_2013_v4_alternate-original.MPQ", true);
+
+    // Open a stream, paired with remote master (takes hell lot of time!)
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
 
     // Search in listfile
     if(nError == ERROR_SUCCESS)
@@ -3264,7 +3418,7 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2013_v4_patch-base-16357.MPQ");
 
-    // Open an empty archive (found in WoW cache - it's just a header)
+    // Open an empty archive (A buggy MPQ with invalid HET entry count)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2011_v4_InvalidHetEntryCount.MPQ");
 
@@ -3294,7 +3448,7 @@ int main(int argc, char * argv[])
 
     // Open an encrypted archive from Starcraft II installer
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2011_v2_EncryptedMpq.MPQE");
+        nError = TestOpenArchive("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE");
 
     // Open a MPK archive from Longwu online
     if(nError == ERROR_SUCCESS)
@@ -3306,11 +3460,15 @@ int main(int argc, char * argv[])
 
     // Open a partial MPQ with compressed hash table
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2010_v2_HashTableCompressed.MPQ.part");
+        nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
+
+    // Open an archive that is merged with multiple files
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0");
 
     // Open every MPQ that we have in the storage
     if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_OpenArchive, szMpqDirectory);
+        nError = FindFiles(ForEachFile_OpenArchive, NULL);
 
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
@@ -3342,7 +3500,7 @@ int main(int argc, char * argv[])
 
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ", "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp");
+        nError = TestOpenArchive_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ", "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
 
     // Check archive signature
     if(nError == ERROR_SUCCESS)

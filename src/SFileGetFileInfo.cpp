@@ -163,20 +163,10 @@ bool WINAPI SFileGetFileInfo(
             }
             break;
 
-        case SFileMpqStreamBlockSize:
+        case SFileMpqStreamBitmap:
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
-            {
-                // TODO
-            }
-            break;
-
-        case SFileMpqStreamBlockAvailable:
-            ha = IsValidMpqHandle(hMpqOrFile);
-            if(ha != NULL)
-            {
-                // TODO
-            }
+                return FileStream_GetBitmap(ha->pStream, pvFileInfo, cbFileInfo, pcbLengthNeeded);
             break;
 
         case SFileMpqUserDataOffset:
@@ -616,7 +606,7 @@ bool WINAPI SFileGetFileInfo(
             ha = IsValidMpqHandle(hMpqOrFile);
             if(ha != NULL)
             {
-                dwInt32Value = (FileStream_IsReadOnly(ha->pStream) || (ha->dwFlags & MPQ_FLAG_READ_ONLY));
+                dwInt32Value  = (ha->dwFlags & MPQ_FLAG_READ_ONLY) ? 1 : 0;
                 pvSrcFileInfo = &dwInt32Value;
                 cbSrcFileInfo = sizeof(DWORD);
                 nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
@@ -954,7 +944,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
         }
     }
 
-    return ERROR_NOT_SUPPORTED;
+    return ERROR_CAN_NOT_COMPLETE;
 }
 
 bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)

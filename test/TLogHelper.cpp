@@ -60,9 +60,13 @@ class TLogHelper
 #ifdef _MSC_VER
 #define I64u_t _T("%I64u")
 #define I64u_a "%I64u"
+#define I64X_t _T("%I64X")
+#define I64X_a "%I64X"
 #else
-#define I64u_t "%llu"
+#define I64u_t _T("%llu")
 #define I64u_a "%llu"
+#define I64X_t _T("%llX")
+#define I64X_a "%llX"
 #endif
 
 //-----------------------------------------------------------------------------

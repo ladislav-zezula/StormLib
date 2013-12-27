@@ -815,7 +815,7 @@ bool WINAPI SFileAddFileEx(
     // Open added file
     if(nError == ERROR_SUCCESS)
     {
-        pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY | STREAM_PROVIDER_LINEAR | BASE_PROVIDER_FILE);
+        pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY | STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
         if(pStream == NULL)
             nError = GetLastError();
     }
