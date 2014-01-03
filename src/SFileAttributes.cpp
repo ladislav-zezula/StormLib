@@ -95,7 +95,7 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     LPBYTE pbAttrPtr = pbAttrFile;
     DWORD dwBlockTableSize = ha->pHeader->dwBlockTableSize;
     DWORD i;
-    bool bPatchBitsValid;
+    bool bPatchBitsValid = false;
 
     // Load and verify the header
     if((pbAttrPtr + sizeof(MPQ_ATTRIBUTES_HEADER)) <= pbAttrFileEnd)

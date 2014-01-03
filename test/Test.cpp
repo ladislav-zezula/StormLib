@@ -28,6 +28,10 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
+#ifdef PLATFORM_LINUX
+#include <dirent.h>
+#endif
+
 //------------------------------------------------------------------------------
 // Defines
 
@@ -393,13 +397,15 @@ static TFileStream * FileStream_CreateFileA(const char * szFileName, DWORD dwStr
 static size_t FileStream_PrefixA(const char * szFileName, DWORD * pdwProvider)
 {
     TCHAR szFileNameT[MAX_PATH];
+    size_t nPrefixLength = 0;
 
     if(szFileName != NULL)
     {
         CopyFileName(szFileNameT, szFileName, strlen(szFileName));
-        return FileStream_Prefix(szFileNameT, pdwProvider);
+        nPrefixLength = FileStream_Prefix(szFileNameT, pdwProvider);
     }
-    return 0;
+    
+    return nPrefixLength;
 }
 
 static void CreateFullPathName(char * szBuffer, const char * szSubDir, const char * szNamePart1, const char * szNamePart2 = NULL)
@@ -491,57 +497,205 @@ static void CreateFullPathName(char * szBuffer, const char * szSubDir, const cha
     *szBuffer = 0;
 }
 
-static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectoryT, char * szDirectoryA)
+static int CalculateFileSha1(TLogHelper * pLogger, const char * szFullPath, char * szFileSha1)
 {
+    TFileStream * pStream;
+    unsigned char sha1_digest[SHA1_DIGEST_SIZE];
+    const char * szShortPlainName = GetShortPlainName(szFullPath);
+    hash_state sha1_state;
+    ULONGLONG ByteOffset = 0;
+    ULONGLONG FileSize = 0;
+    BYTE * pbFileBlock;
+    DWORD cbBytesToRead;
+    DWORD cbFileBlock = 0x100000;
     int nError = ERROR_SUCCESS;
 
-    if(szDirectoryT != NULL && szDirectoryA != NULL)
+    // Notify the user
+    pLogger->PrintProgress("Hashing file %s", szShortPlainName);
+    szFileSha1[0] = 0;
+
+    // Open the file to be verified
+    pStream = FileStream_OpenFileA(szFullPath, STREAM_FLAG_READ_ONLY);
+    if(pStream != NULL)
     {
-#ifdef PLATFORM_WINDOWS
-        WIN32_FIND_DATA wf;
-        HANDLE hFind;
-        TCHAR * szPlainNameT;
-        char * szPlainNameA;
-        size_t nLength = strlen(szDirectoryA);
+        // Retrieve the size of the file
+        FileStream_GetSize(pStream, &FileSize);
 
-        // Setup the search masks
-        _tcscat(szDirectoryT, _T("\\*"));
-        szPlainNameT = szDirectoryT + nLength + 1; 
-
-        strcat(szDirectoryA, "\\*");
-        szPlainNameA = szDirectoryA + nLength + 1; 
-
-        // Initiate search. Use ANSI function only
-        hFind = FindFirstFile(szDirectoryT, &wf);
-        if(hFind != INVALID_HANDLE_VALUE)
+        // Allocate the buffer for loading file parts
+        pbFileBlock = STORM_ALLOC(BYTE, cbFileBlock);
+        if(pbFileBlock != NULL)
         {
-            // Skip the first entry, since it's always "." or ".."
-            while(FindNextFile(hFind, &wf) && nError == ERROR_SUCCESS)
+            // Initialize SHA1 calculation
+            sha1_init(&sha1_state);
+
+            // Calculate the SHA1 of the file
+            while(ByteOffset < FileSize)
             {
-                // If the file name can be converted to UNICODE and back
-                if(CopyStringAndVerifyConversion(wf.cFileName, szPlainNameT, szPlainNameA))
+                // Notify the user
+                pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
+
+                // Load the file block
+                cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
+                if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
                 {
-                    // Found a directory?
-                    if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                    nError = GetLastError();
+                    break;
+                }
+
+                // Add to SHA1
+                sha1_process(&sha1_state, pbFileBlock, cbBytesToRead);
+                ByteOffset += cbBytesToRead;
+            }
+
+            // Notify the user
+            pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
+
+            // Finalize SHA1
+            sha1_done(&sha1_state, sha1_digest);
+
+            // Convert the SHA1 to ANSI text
+            ConvertSha1ToText(sha1_digest, szFileSha1);
+            STORM_FREE(pbFileBlock);
+        }
+
+        FileStream_Close(pStream);
+    }
+
+    // If we calculated something, return OK
+    if(nError == ERROR_SUCCESS && szFileSha1[0] == 0)
+        nError = ERROR_CAN_NOT_COMPLETE;
+    return nError;
+}
+
+//-----------------------------------------------------------------------------
+// Directory search
+
+static HANDLE InitDirectorySearch(const char * szDirectory)
+{
+#ifdef PLATFORM_WINDOWS
+
+    WIN32_FIND_DATA wf;
+    HANDLE hFind;
+    TCHAR szSearchMask[MAX_PATH];
+
+    // Keep compilers happy
+    CopyFileName(szSearchMask, szDirectory, strlen(szDirectory));
+    _tcscat(szSearchMask, _T("\\*"));
+
+    // Construct the directory mask
+    hFind = FindFirstFile(szSearchMask, &wf);
+    return (hFind != INVALID_HANDLE_VALUE) ? hFind : NULL;
+
+#endif
+
+#ifdef PLATFORM_LINUX
+
+    // Keep compilers happy
+    return (HANDLE)opendir(szDirectory);
+
+#endif
+}
+
+static bool SearchDirectory(HANDLE hFind, char * szDirEntry, bool & IsDirectory)
+{
+#ifdef PLATFORM_WINDOWS
+
+    WIN32_FIND_DATA wf;
+    TCHAR szDirEntryT[MAX_PATH];
+    char szDirEntryA[MAX_PATH];
+
+    __SearchNextEntry:
+
+    // Search for the hnext entry.
+    if(FindNextFile(hFind, &wf))
+    {
+        // Verify if the directory entry is an UNICODE name that would be destroyed
+        // by Unicode->ANSI->Unicode conversion
+        if(CopyStringAndVerifyConversion(wf.cFileName, szDirEntryT, szDirEntryA) == false)
+            goto __SearchNextEntry;
+
+        IsDirectory = (wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? true : false;
+        CopyFileName(szDirEntry, wf.cFileName, _tcslen(wf.cFileName));
+        return true;
+    }
+
+    return false;
+
+#endif
+
+#ifdef PLATFORM_LINUX
+
+    struct dirent * directory_entry;
+
+    directory_entry = readdir((DIR *)hFind);
+    if(directory_entry != NULL)
+    {
+        IsDirectory = (directory_entry->d_type == DT_DIR) ? true : false;
+        strcpy(szDirEntry, directory_entry->d_name);
+        return true;
+    }
+
+    return false;
+
+#endif
+}
+
+static void FreeDirectorySearch(HANDLE hFind)
+{
+#ifdef PLATFORM_WINDOWS
+    FindClose(hFind);
+#endif
+
+#ifdef PLATFORM_LINUX
+    closedir((DIR *)hFind);
+#endif
+}
+
+static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, char * szDirectory)
+{
+    HANDLE hFind;
+    char * szPlainName;
+    size_t nLength;
+    char szDirEntry[MAX_PATH];
+    bool IsDirectory = false;
+    int nError = ERROR_SUCCESS;
+
+    if(szDirectory != NULL)
+    {
+        // Initiate directory search
+        hFind = InitDirectorySearch(szDirectory);
+        if(hFind != NULL)
+        {
+            // Append slash at the end of the directory name
+            nLength = strlen(szDirectory);
+            szDirectory[nLength++] = PATH_SEPARATOR;
+            szPlainName = szDirectory + nLength;
+
+            // Skip the first entry, since it's always "." or ".."
+            while(SearchDirectory(hFind, szDirEntry, IsDirectory) && nError == ERROR_SUCCESS)
+            {
+                // Copy the directory entry name to both names
+                strcpy(szPlainName, szDirEntry);
+
+                // Found a directory?
+                if(IsDirectory)
+                {
+                    if(szDirEntry[0] != '.')
                     {
-                        if(wf.cFileName[0] != '.')
-                        {
-                            nError = FindFilesInternal(pfnTest, szDirectoryT, szDirectoryA);
-                        }
+                        nError = FindFilesInternal(pfnTest, szDirectory);
                     }
-                    else
+                }
+                else
+                {
+                    if(pfnTest != NULL)
                     {
-                        if(pfnTest != NULL)
-                        {
-                            nError = pfnTest(szDirectoryA);
-                        }
+                        nError = pfnTest(szDirectory);
                     }
                 }
             }
 
-            FindClose(hFind);
+            FreeDirectorySearch(hFind);
         }
-#endif
     }
 
     // Free the path buffer, if any
@@ -550,12 +704,10 @@ static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectoryT, c
 
 static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, const char * szSubDirectory)
 {
-    TCHAR szWorkBuffT[MAX_PATH];
-    char szWorkBuffA[MAX_PATH];
+    char szWorkBuff[MAX_PATH];
 
-    CreateFullPathName(szWorkBuffA, szSubDirectory, NULL);
-    CopyFileName(szWorkBuffT, szWorkBuffA, strlen(szWorkBuffA));
-    return FindFilesInternal(pfnFindFile, szWorkBuffT, szWorkBuffA);
+    CreateFullPathName(szWorkBuff, szSubDirectory, NULL);
+    return FindFilesInternal(pfnFindFile, szWorkBuff);
 }
 
 static int FindFilePairsInternal(
@@ -625,76 +777,6 @@ static int FindFilePairs(FIND_PAIR_CALLBACK pfnFindPair, const char * szSourceSu
     CreateFullPathName(szSource, szSourceSubDir, NULL);
     CreateFullPathName(szTarget, szTargetSubDir, NULL);
     return FindFilePairsInternal(pfnFindPair, szSource, szTarget);
-}
-
-static int CalculateFileSha1(TLogHelper * pLogger, const char * szFullPath, char * szFileSha1)
-{
-    TFileStream * pStream;
-    unsigned char sha1_digest[SHA1_DIGEST_SIZE];
-    const char * szShortPlainName = GetShortPlainName(szFullPath);
-    hash_state sha1_state;
-    ULONGLONG ByteOffset = 0;
-    ULONGLONG FileSize = 0;
-    BYTE * pbFileBlock;
-    DWORD cbBytesToRead;
-    DWORD cbFileBlock = 0x100000;
-    int nError = ERROR_SUCCESS;
-
-    // Notify the user
-    pLogger->PrintProgress("Hashing file %s", szShortPlainName);
-    szFileSha1[0] = 0;
-
-    // Open the file to be verified
-    pStream = FileStream_OpenFileA(szFullPath, STREAM_FLAG_READ_ONLY);
-    if(pStream != NULL)
-    {
-        // Retrieve the size of the file
-        FileStream_GetSize(pStream, &FileSize);
-
-        // Allocate the buffer for loading file parts
-        pbFileBlock = STORM_ALLOC(BYTE, cbFileBlock);
-        if(pbFileBlock != NULL)
-        {
-            // Initialize SHA1 calculation
-            sha1_init(&sha1_state);
-
-            // Calculate the SHA1 of the file
-            while(ByteOffset < FileSize)
-            {
-                // Notify the user
-                pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
-
-                // Load the file block
-                cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
-                if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
-                {
-                    nError = GetLastError();
-                    break;
-                }
-
-                // Add to SHA1
-                sha1_process(&sha1_state, pbFileBlock, cbBytesToRead);
-                ByteOffset += cbBytesToRead;
-            }
-
-            // Notify the user
-            pLogger->PrintProgress("Hashing file %s (%I64u of %I64u)", szShortPlainName, ByteOffset, FileSize);
-
-            // Finalize SHA1
-            sha1_done(&sha1_state, sha1_digest);
-
-            // Convert the SHA1 to ANSI text
-            ConvertSha1ToText(sha1_digest, szFileSha1);
-            STORM_FREE(pbFileBlock);
-        }
-
-        FileStream_Close(pStream);
-    }
-
-    // If we calculated something, return OK
-    if(nError == ERROR_SUCCESS && szFileSha1[0] == 0)
-        nError = ERROR_CAN_NOT_COMPLETE;
-    return nError;
 }
 
 static int InitializeMpqDirectory(char * argv[], int argc)
@@ -1033,11 +1115,12 @@ static int CreateFileCopy(
     int nError = ERROR_SUCCESS;
 
     // Notify the user
+    szPlainName += FileStream_PrefixA(szPlainName, NULL);
     pLogger->PrintProgress("Creating copy of %s ...", szPlainName);
 
     // Construct both file names. Check if they are not the same
     CreateFullPathName(szFileName1, szMpqSubDir, szPlainName);
-    CreateFullPathName(szFileName2, NULL, szFileCopy);
+    CreateFullPathName(szFileName2, NULL, szFileCopy + FileStream_PrefixA(szFileCopy, NULL));
     if(!_stricmp(szFileName1, szFileName2))
     {
         pLogger->PrintError("Failed to create copy of MPQ (the copy name is the same like the original name)");
@@ -1087,7 +1170,7 @@ static int CreateFileCopy(
     FileStream_Close(pStream1);
 
     if(szBuffer != NULL)
-        strcpy(szBuffer, szFileName2);
+        CreateFullPathName(szBuffer, NULL, szFileCopy);
     if(nError != ERROR_SUCCESS)
         pLogger->PrintError("Failed to create copy of MPQ");
     return nError;
@@ -1104,23 +1187,18 @@ static int CreateMasterAndMirrorPaths(
     char szCopyPath[MAX_PATH];
     int nError = ERROR_SUCCESS;
 
+    // Always delete the mirror file
+    CreateFullPathName(szMasterPath, szMpqSubDir, szMasterName);
+    CreateFullPathName(szCopyPath, NULL, szMirrorName);
+    remove(szCopyPath + FileStream_PrefixA(szCopyPath, NULL));
+
     // Copy the mirrored file from the source to the work directory
     if(bCopyMirrorFile)
-        nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName, szCopyPath);
-    else
-    {
-        CreateFullPathName(szCopyPath, NULL, szMirrorName);
-        remove(szCopyPath);
-    }
+        nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName, NULL);
     
+    // Create the mirror*master path
     if(nError == ERROR_SUCCESS)
-    {
-        // Create the full path name of the master file
-        CreateFullPathName(szMasterPath, szMpqSubDir, szMasterName);
-
-        // Create the full path name of the mirror file
         sprintf(szMirrorPath, "%s*%s", szCopyPath, szMasterPath);
-    }
 
     return nError;
 }
@@ -1314,7 +1392,7 @@ static int CompareTwoLocalFilesRR(
 
                 if(!CompareBlocks(pbBuffer1, pbBuffer2, BytesToRead, &Difference))
                 {
-                    pLogger->PrintMessage("Difference at %u (Offset " I64u_a ", Length %u)", Difference, ByteOffset, BytesToRead);
+                    pLogger->PrintMessage("Difference at %u (Offset " I64X_a ", Length %X)", Difference, ByteOffset, BytesToRead);
                     nError = ERROR_FILE_CORRUPT;
                     break;
                 }
@@ -3351,8 +3429,8 @@ int main(int argc, char * argv[])
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
 
     // Search all testing archives and verify their SHA1 hash
-//  if(nError == ERROR_SUCCESS)
-//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqDirectory);
+    if(nError == ERROR_SUCCESS)
+        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
@@ -3377,6 +3455,18 @@ int main(int argc, char * argv[])
     // Test reading encrypted file
     if(nError == ERROR_SUCCESS)
         nError = TestFileStreamOperations("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE", STREAM_PROVIDER_MPQE);
+
+    // Open a stream, paired with local master. The mirror file is created new
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("part-file://MPQ_2009_v1_patch-created.MPQ.part", "MPQ_2009_v1_patch-original.MPQ", false);
+
+    // Open a stream, paired with local master. Only part of the mirror exists
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("part-file://MPQ_2009_v1_patch-partial.MPQ.part", "MPQ_2009_v1_patch-original.MPQ", true);
+
+    // Open a stream, paired with local master. Only part of the mirror exists
+    if(nError == ERROR_SUCCESS)
+        nError = TestReadFile_MasterMirror("part-file://MPQ_2009_v1_patch-complete.MPQ.part", "MPQ_2009_v1_patch-original.MPQ", true);
 
     // Open a stream, paired with local master
     if(nError == ERROR_SUCCESS)
@@ -3497,6 +3587,10 @@ int main(int argc, char * argv[])
     // Check the SFileGetFileInfo function
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_GetFileInfo("MPQ_2002_v1_StrongSignature.w3m", "MPQ_2013_v4_SC2_EmptyMap.SC2Map");
+
+    // Downloadable MPQ archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_MasterMirror("part-file://MPQ_2009_v1_patch-partial.MPQ.part", "MPQ_2009_v1_patch-original.MPQ", "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
 
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)

@@ -441,7 +441,7 @@ int ConvertMpkHeaderToFormat4(
 // Attempts to search a free hash entry in the hash table being converted.
 // The created hash table must always be of nonzero size,
 // should have no duplicated items and no deleted entries
-TMPQHash * FindFreeHashEntry(TMPQHash * pHashTable, DWORD dwHashTableSize, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2)
+TMPQHash * FindFreeHashEntry(TMPQHash * pHashTable, DWORD dwHashTableSize, DWORD dwStartIndex)
 {
     TMPQHash * pHash;
     DWORD dwIndex;
@@ -456,7 +456,6 @@ TMPQHash * FindFreeHashEntry(TMPQHash * pHashTable, DWORD dwHashTableSize, DWORD
         // We are not expecting to find matching entry in the hash table being built
         // We are not expecting to find deleted entry either
         pHash = pHashTable + dwIndex;
-        assert(pHash->dwName1 != dwName1 || pHash->dwName2 != dwName2);
 
         // If we found a free entry, we need to stop searching
         if(pHash->dwBlockIndex == HASH_ENTRY_FREE)
@@ -542,8 +541,8 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
             for(DWORD i = 0; i < dwHashTableSize; i++)
             {
                 // Finds the free hash entry in the hash table
-                // We don;t expect any errors here, because we are putting files to empty hash table
-                pHash = FindFreeHashEntry(pHashTable, pHeader->dwHashTableSize, pMpkHash[i].dwName1, pMpkHash[i].dwName2, pMpkHash[i].dwName3);
+                // We don't expect any errors here, because we are putting files to empty hash table
+                pHash = FindFreeHashEntry(pHashTable, pHeader->dwHashTableSize, pMpkHash[i].dwName1);
                 assert(pHash->dwBlockIndex == HASH_ENTRY_FREE);
 
                 // Copy the MPK hash entry to the hash table

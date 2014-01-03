@@ -13,7 +13,6 @@ EXPORTS
 
     SFileOpenArchive
     SFileCreateArchive
-    SFileGetArchiveBitmap
     SFileFlushArchive
     SFileCloseArchive
 

@@ -270,6 +270,10 @@ static ULONGLONG DetermineArchiveSize_V1_V2(
             if(pHeader->dwBlockTablePos + (pHeader->dwBlockTableSize * sizeof(TMPQBlock)) == pHeader->dwArchiveSize)
                 return pHeader->dwArchiveSize;
 
+            // If both block table and archive size seem to be out of the file size
+            if(pHeader->dwBlockTablePos > FileSize && pHeader->dwArchiveSize > FileSize)
+                return pHeader->dwArchiveSize;
+
             // If the archive size in the header is less than real file size
             dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
             if(pHeader->dwArchiveSize <= dwArchiveSize32)

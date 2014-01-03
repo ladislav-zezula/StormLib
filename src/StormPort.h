@@ -168,6 +168,7 @@
   #define _tcslen   strlen
   #define _tcscpy   strcpy
   #define _tcscat   strcat
+  #define _tcschr   strchr
   #define _tcsrchr  strrchr
   #define _tcsstr   strstr
   #define _tprintf  printf

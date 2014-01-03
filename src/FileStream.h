@@ -70,7 +70,7 @@ typedef bool (*BLOCK_READ)(
     bool bAvailable                     // true if the block is available
     );
 
-typedef DWORD (*BLOCK_CHECK)(
+typedef bool (*BLOCK_CHECK)(
     struct TFileStream * pStream,       // Pointer to a block-oriented stream
     ULONGLONG BlockOffset               // Offset of the file to check
     );
@@ -84,6 +84,7 @@ typedef void (*BLOCK_SAVEMAP)(
 
 #define ID_FILE_BITMAP_FOOTER   0x33767470  // Signature of the file bitmap footer ('ptv3')
 #define DEFAULT_BLOCK_SIZE      0x00004000  // Default size of the stream block
+#define DEFAULT_BUILD_NUMBER         10958  // Build number for newly created partial MPQs
 
 typedef struct _PART_FILE_HEADER
 {
@@ -182,6 +183,7 @@ struct TFileStream
 
     ULONGLONG StreamSize;                   // Stream size (can be less than file size)
     ULONGLONG StreamPos;                    // Stream position
+    DWORD BuildNumber;                      // Game build number
     DWORD dwFlags;                          // Stream flags
 
     // Followed by stream provider data, with variable length
