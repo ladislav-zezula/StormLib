@@ -3552,6 +3552,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
 
+    // Open the multi-file archive with wrong prefix to see how StormLib deals with it
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("flat-file://streaming/model.MPQ.0");
+
     // Open an archive that is merged with multiple files
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0");
