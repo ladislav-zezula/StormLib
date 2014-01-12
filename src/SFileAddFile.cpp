@@ -685,16 +685,19 @@ bool WINAPI SFileCreateFile(
         nError = ERROR_INVALID_PARAMETER;
     
     // Don't allow to add file if the MPQ is open for read only
-    if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
-        nError = ERROR_ACCESS_DENIED;
+    if(nError == ERROR_SUCCESS)
+    {
+        if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
+            nError = ERROR_ACCESS_DENIED;
 
-    // Don't allow to add a file under pseudo-file name
-    if(IsPseudoFileName(szArchivedName, NULL))
-        nError = ERROR_INVALID_PARAMETER;
+        // Don't allow to add a file under pseudo-file name
+        if(IsPseudoFileName(szArchivedName, NULL))
+            nError = ERROR_INVALID_PARAMETER;
 
-    // Don't allow to add any of the internal files
-    if(IsInternalMpqFileName(szArchivedName))
-        nError = ERROR_INTERNAL_FILE;
+        // Don't allow to add any of the internal files
+        if(IsInternalMpqFileName(szArchivedName))
+            nError = ERROR_INTERNAL_FILE;
+    }
 
     // Perform validity check of the MPQ flags
     if(nError == ERROR_SUCCESS)
