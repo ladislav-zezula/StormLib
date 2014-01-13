@@ -79,7 +79,7 @@ class TADPCMStream
     bool ReadWordSample(short & OneSample)
     {
         // Check if we have enough space in the output buffer
-        if((pbBufferEnd - pbBuffer) < sizeof(short))
+        if((size_t)(pbBufferEnd - pbBuffer) < sizeof(short))
             return false;
 
         // Write the sample
@@ -91,7 +91,7 @@ class TADPCMStream
     bool WriteWordSample(short OneSample)
     {
         // Check if we have enough space in the output buffer
-        if((pbBufferEnd - pbBuffer) < sizeof(short))
+        if((size_t)(pbBufferEnd - pbBuffer) < sizeof(short))
             return false;
 
         // Write the sample

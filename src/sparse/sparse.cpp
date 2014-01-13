@@ -260,7 +260,7 @@ int DecompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, 
     cbOutBuffer |= (OneByte << 0x00);
 
     // Verify the size of the stream against the output buffer size
-    if(cbOutBuffer > *pcbOutBuffer)
+    if(cbOutBuffer > (unsigned int)*pcbOutBuffer)
         return 0;
 
     // Put the output size to the buffer

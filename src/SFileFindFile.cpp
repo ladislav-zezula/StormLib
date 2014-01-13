@@ -289,7 +289,7 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
                     {
                         // Open the file by its pseudo-name.
                         // This also generates the file name with a proper extension
-                        sprintf(szPseudoName, "File%08u.xxx", dwBlockIndex);
+                        sprintf(szPseudoName, "File%08u.xxx", (unsigned int)dwBlockIndex);
                         if(SFileOpenFileEx((HANDLE)hs->ha, szPseudoName, SFILE_OPEN_BASE_FILE, &hFile))
                         {
                             szFileName = (pFileEntry->szFileName != NULL) ? pFileEntry->szFileName : szPseudoName;

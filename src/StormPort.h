@@ -270,7 +270,11 @@
     #define STORMLIB_DEPRECATED(_Text) __declspec(deprecated)
   #endif
 #else
-  #define STORMLIB_DEPRECATED(_Text) __attribute__((deprecated(_Text)))
+  #ifdef __GNUC__
+    #define STORMLIB_DEPRECATED(_Text) __attribute__((deprecated))
+  #else
+    #define STORMLIB_DEPRECATED(_Text) __attribute__((deprecated(_Text)))
+  #endif
 #endif
 
 // When a flag is deprecated, use this macro

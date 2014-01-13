@@ -2820,7 +2820,7 @@ static int TestCreateArchive_FillArchive(const char * szPlainName)
     // Now we should be able to add 6 files
     if(nError == ERROR_SUCCESS)
     {
-        for(DWORD i = 0; i < dwMaxFileCount; i++)
+        for(unsigned int i = 0; i < dwMaxFileCount; i++)
         {
             sprintf(szFileName, "AddedFile%03u.txt", i);
             nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression);
@@ -2922,7 +2922,7 @@ static int TestCreateArchive_IncMaxFileCount(const char * szPlainName)
     // we increment the max file count
     if(nError == ERROR_SUCCESS)
     {
-        for(DWORD i = 0; i < 10; i++)
+        for(unsigned int i = 0; i < 10; i++)
         {
             // Open the archive again
             nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
@@ -3154,7 +3154,6 @@ static int TestCreateArchive_CompressionsTest(const char * szPlainName)
     DWORD dwCmprCount = sizeof(Compressions) / sizeof(DWORD);
     DWORD dwAddedFiles = 0;
     DWORD dwFoundFiles = 0;
-    DWORD i;
     int nError;
 
     // Create paths for local file to be added
@@ -3167,7 +3166,7 @@ static int TestCreateArchive_CompressionsTest(const char * szPlainName)
     if(nError == ERROR_SUCCESS)
     {
         Logger.UserTotal = dwCmprCount;
-        for(i = 0; i < dwCmprCount; i++)
+        for(unsigned int i = 0; i < dwCmprCount; i++)
         {
             sprintf(szArchivedName, "WaveFile_%02u.wav", i + 1);
             nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName, MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_SECTOR_CRC, Compressions[i]);

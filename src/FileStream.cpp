@@ -734,7 +734,7 @@ static bool BaseHttp_Read(
         {
             // Add range request to the HTTP headers
             // http://www.clevercomponents.com/articles/article015/resuming.asp
-            _stprintf(szRangeRequest, _T("Range: bytes=%d-%d"), dwStartOffset, dwEndOffset);
+            _stprintf(szRangeRequest, _T("Range: bytes=%u-%u"), (unsigned int)dwStartOffset, (unsigned int)dwEndOffset);
             HttpAddRequestHeaders(hRequest, szRangeRequest, 0xFFFFFFFF, HTTP_ADDREQ_FLAG_ADD_IF_NEW); 
 
             // Send the request to the server
@@ -1669,7 +1669,7 @@ static void PartStream_Close(TBlockStream * pStream)
         
         // Make sure that the header is properly BSWAPed
         BSWAP_ARRAY32_UNSIGNED(&PartHeader, sizeof(PART_FILE_HEADER));
-        sprintf(PartHeader.GameBuildNumber, "%u", pStream->BuildNumber);
+        sprintf(PartHeader.GameBuildNumber, "%u", (unsigned int)pStream->BuildNumber);
 
         // Write the part header
         pStream->BaseWrite(pStream, &ByteOffset, &PartHeader, sizeof(PART_FILE_HEADER));
