@@ -328,6 +328,10 @@ int SAttrLoadAttributes(TMPQArchive * ha)
     // File table must be initialized
     assert(ha->pFileTable != NULL);
 
+    // Don't load the attributes file from malformer Warcraft III maps
+    if(ha->dwFlags & MPQ_FLAG_MALFORMED)
+        return ERROR_FILE_CORRUPT;
+
     // Attempt to open the "(attributes)" file.
     // If it's not there, then the archive doesn't support attributes
     if(SFileOpenFileEx((HANDLE)ha, ATTRIBUTES_NAME, SFILE_OPEN_ANY_LOCALE, &hFile))

@@ -382,6 +382,7 @@ int ConvertMpqHeaderToFormat4(
     ULONGLONG HashTablePos64 = 0;
     ULONGLONG ByteOffset;
     USHORT wFormatVersion = BSWAP_INT16_UNSIGNED(pHeader->wFormatVersion);
+    DWORD dwByteOffset32;
     DWORD dwTableSize;
     int nError = ERROR_SUCCESS;
 
@@ -430,6 +431,16 @@ int ConvertMpqHeaderToFormat4(
                 pHeader->ArchiveSize64 = DetermineArchiveSize_V1(ha, pHeader, MpqOffset, FileSize);
                 pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
 
+                // Handle case when the block table is placed before the MPQ header
+                // Used by BOBA protector
+                dwByteOffset32 = (DWORD)MpqOffset + pHeader->dwBlockTablePos;
+                if(dwByteOffset32 < MpqOffset)
+                {
+                    pHeader->BlockTableSize64 = (DWORD)MpqOffset - dwByteOffset32;
+                    pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
+                    break;
+                }
+
                 // Handle case when either the MPQ is cut in the middle of the block table
                 // or the MPQ is malformed so that block table size is greater than should be
                 ByteOffset = MpqOffset + pHeader->dwBlockTablePos;
@@ -438,6 +449,7 @@ int ConvertMpqHeaderToFormat4(
                 {
                     pHeader->BlockTableSize64 = FileSize - ByteOffset;
                     pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
+                    break;
                 }
             }
             break;
@@ -577,8 +589,15 @@ int ConvertMpqHeaderToFormat4(
 
         default:
 
-            // Last resort: Check if it's a War of the Immortal data file (SQP)
-            nError = ConvertSqpHeaderToFormat4(ha, FileSize, dwFlags);
+            // Check if it's a War of the Immortal data file (SQP)
+            // If not, we treat it as malformed MPQ version 1.0
+            if(ConvertSqpHeaderToFormat4(ha, FileSize, dwFlags) != ERROR_SUCCESS)
+            {
+                pHeader->wFormatVersion = MPQ_FORMAT_VERSION_1;
+                pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V1;
+                ha->dwFlags |= MPQ_FLAG_MALFORMED;
+                goto Label_ArchiveVersion1;
+            }
             break;
     }
 
@@ -2262,12 +2281,14 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries)
     {
         case MPQ_SUBTYPE_MPQ:
 
-            // Calculate sizes of both tables
+            // Calculate byte position of the block table
             ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+            if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
+                ByteOffset = (DWORD)ha->MpqPos + pHeader->dwBlockTablePos;
+            
+            // Calculate full and compressed size of the block table
             dwTableSize = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
             dwCmpSize = (DWORD)pHeader->BlockTableSize64;
-
-            // If the the block table size was invalid, it should be fixed by now
             assert((ByteOffset + dwCmpSize) <= (ha->MpqPos + ha->pHeader->ArchiveSize64));
 
             //

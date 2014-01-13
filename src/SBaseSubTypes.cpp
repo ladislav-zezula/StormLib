@@ -129,7 +129,6 @@ int ConvertSqpHeaderToFormat4(
     Header.dwBlockTableSize = BSWAP_INT32_UNSIGNED(pSqpHeader->dwBlockTableSize);
     Header.wFormatVersion = BSWAP_INT16_UNSIGNED(pSqpHeader->wFormatVersion);
     Header.wSectorSize = BSWAP_INT16_UNSIGNED(pSqpHeader->wSectorSize);
-    assert(Header.dwHeaderSize == sizeof(TSQPHeader));
 
     // Verify the SQP header
     if(Header.dwID == ID_MPQ && Header.dwHeaderSize == sizeof(TSQPHeader) && Header.dwArchiveSize == FileSize)

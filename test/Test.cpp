@@ -3427,9 +3427,6 @@ int main(int argc, char * argv[])
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
 
-    HANDLE hFile = NULL;
-    SFileCreateFile(NULL, "huhu", 0, 260, 0, MPQ_FILE_COMPRESS, &hFile);
-
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -3537,6 +3534,10 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by the Spazzler protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_Spazzler.w3x");
+
+    // Open an Warcraft III map locked by the Spazzler protector
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
 
     // Open a MPQ archive v 3.0
     if(nError == ERROR_SUCCESS)

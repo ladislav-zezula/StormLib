@@ -91,9 +91,18 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     // Check the begin of block table
     if(pHeader->wBlockTablePosHi || pHeader->dwBlockTablePos)
     {
-        ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
-        if(ByteOffset > FileSize)
-            return ERROR_BAD_FORMAT;
+        if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
+        {
+            ByteOffset = (DWORD)ha->MpqPos + pHeader->dwBlockTablePos;
+            if(ByteOffset > FileSize)
+                return ERROR_BAD_FORMAT;
+        }
+        else
+        {
+            ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+            if(ByteOffset > FileSize)
+                return ERROR_BAD_FORMAT;
+        }
     }
 
     // Check the begin of hi-block table
@@ -252,7 +261,7 @@ bool WINAPI SFileOpenArchive(
             // There must be MPQ header signature. Note that STORM.dll from Warcraft III actually
             // tests the MPQ header size. It must be at least 0x20 bytes in order to load it
             // Abused by Spazzler Map protector. Note that the size check is not present
-            //  in Storm.dll v 1.00, so Diablo I code would load the MPQ anyway.
+            // in Storm.dll v 1.00, so Diablo I code would load the MPQ anyway.
             dwHeaderSize = BSWAP_INT32_UNSIGNED(ha->HeaderData[1]);
             if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
             {
