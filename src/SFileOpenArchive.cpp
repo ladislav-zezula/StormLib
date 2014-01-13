@@ -21,12 +21,11 @@
 /* Local functions                                                           */
 /*****************************************************************************/
 
-static bool IsAviFile(void * pvFileBegin)
+static bool IsAviFile(DWORD * HeaderData)
 {
-    LPDWORD AviHeader = (DWORD *)pvFileBegin;
-    DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(AviHeader[0]);
-    DWORD DwordValue2 = BSWAP_INT32_UNSIGNED(AviHeader[2]);
-    DWORD DwordValue3 = BSWAP_INT32_UNSIGNED(AviHeader[3]);
+    DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(HeaderData[0]);
+    DWORD DwordValue2 = BSWAP_INT32_UNSIGNED(HeaderData[2]);
+    DWORD DwordValue3 = BSWAP_INT32_UNSIGNED(HeaderData[3]);
 
     // Test for 'RIFF', 'AVI ' or 'LIST'
     return (DwordValue0 == 0x46464952 && DwordValue2 == 0x20495641 && DwordValue3 == 0x5453494C);
@@ -192,6 +191,7 @@ bool WINAPI SFileOpenArchive(
     {
         ULONGLONG SearchOffset = 0;
         DWORD dwStreamFlags = 0;
+        DWORD dwHeaderSize;
         DWORD dwHeaderID;
 
         memset(ha, 0, sizeof(TMPQArchive));
@@ -231,7 +231,7 @@ bool WINAPI SFileOpenArchive(
             }
 
             // If there is the MPQ user data signature, process it
-            dwHeaderID = BSWAP_INT32_UNSIGNED(*(LPDWORD)ha->HeaderData);
+            dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
             if(dwHeaderID == ID_MPQ_USERDATA && ha->pUserData == NULL && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
             {
                 // Verify if this looks like a valid user data
@@ -249,8 +249,12 @@ bool WINAPI SFileOpenArchive(
                 }
             }
 
-            // There must be MPQ header signature
-            if(dwHeaderID == ID_MPQ)
+            // There must be MPQ header signature. Note that STORM.dll from Warcraft III actually
+            // tests the MPQ header size. It must be at least 0x20 bytes in order to load it
+            // Abused by Spazzler Map protector. Note that the size check is not present
+            //  in Storm.dll v 1.00, so Diablo I code would load the MPQ anyway.
+            dwHeaderSize = BSWAP_INT32_UNSIGNED(ha->HeaderData[1]);
+            if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
             {
                 // Now convert the header to version 4
                 nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags);

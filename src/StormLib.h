@@ -500,6 +500,7 @@ void SetBits(TBitArray * array, unsigned int nBitPosition, unsigned int nBitLeng
 #define MPQ_HEADER_SIZE_V2    0x2C
 #define MPQ_HEADER_SIZE_V3    0x44
 #define MPQ_HEADER_SIZE_V4    0xD0
+#define MPQ_HEADER_DWORDS     (MPQ_HEADER_SIZE_V4 / 0x04)
 
 typedef struct _TMPQUserData
 {
@@ -837,7 +838,7 @@ typedef struct _TMPQArchive
     HASH_STRING    pfnHashString;               // Hashing function that will convert the file name into hash
     
     TMPQUserData   UserData;                    // MPQ user data. Valid only when ID_MPQ_USERDATA has been found
-    BYTE           HeaderData[MPQ_HEADER_SIZE_V4];  // Storage for MPQ header
+    DWORD          HeaderData[MPQ_HEADER_DWORDS];  // Storage for MPQ header
 
     DWORD          dwHETBlockSize;
     DWORD          dwBETBlockSize;

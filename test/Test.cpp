@@ -3534,6 +3534,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2010_v2_HasUserData.s2ma");
 
+    // Open an Warcraft III map locked by the Spazzler protector
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_Spazzler.w3x");
+
     // Open a MPQ archive v 3.0
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2010_v3_expansion-locale-frFR.MPQ");
