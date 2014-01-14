@@ -2,6 +2,13 @@
   StormLib history
   ================
 
+ Version 9.00
+
+ - Support for streaming (master-mirror)
+ - Support for multi-file MPQs used by some WoW versions
+ - Opening maps protected by Spazzler protector
+ - Opening maps protected by BOBA protector
+
  Version 8.02
 
  - Support for UNICODE encoding for on-disk files
