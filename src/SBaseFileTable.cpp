@@ -298,23 +298,21 @@ static ULONGLONG DetermineArchiveSize_V2(
     ULONGLONG EndOfMpq = FileSize;
     DWORD dwArchiveSize32;
 
+    // This could only be called for MPQs version 2.0
+    assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_2);
+
     // Check if we can rely on the archive size in the header
     if((FileSize >> 0x20) == 0)
     {
         if(pHeader->dwBlockTablePos < pHeader->dwArchiveSize)
         {
-            // MPQs version 2.0: The block table can be compressed,
-            // so block table size could be less than dwBlockTableSize * sizeof(TMPQBlock)
-            if(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_2)
-            {
-                if((pHeader->dwArchiveSize - pHeader->dwBlockTablePos) <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)))
-                    return pHeader->dwArchiveSize;
+            if((pHeader->dwArchiveSize - pHeader->dwBlockTablePos) <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)))
+                return pHeader->dwArchiveSize;
 
-                // If the archive size in the header is less than real file size
-                dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
-                if(pHeader->dwArchiveSize <= dwArchiveSize32)
-                    return pHeader->dwArchiveSize;
-            }
+            // If the archive size in the header is less than real file size
+            dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
+            if(pHeader->dwArchiveSize <= dwArchiveSize32)
+                return pHeader->dwArchiveSize;
         }
     }
 
@@ -380,10 +378,9 @@ int ConvertMpqHeaderToFormat4(
     TMPQHeader * pHeader = (TMPQHeader *)ha->HeaderData;
     ULONGLONG BlockTablePos64 = 0;
     ULONGLONG HashTablePos64 = 0;
+    ULONGLONG BlockTableMask = (ULONGLONG)-1;
     ULONGLONG ByteOffset;
     USHORT wFormatVersion = BSWAP_INT16_UNSIGNED(pHeader->wFormatVersion);
-    DWORD dwByteOffset32;
-    DWORD dwTableSize;
     int nError = ERROR_SUCCESS;
 
     // If version 1.0 is forced, then the format version is forced to be 1.0
@@ -424,33 +421,17 @@ int ConvertMpqHeaderToFormat4(
             pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
             pHeader->ArchiveSize64 = pHeader->dwArchiveSize;
             
+            // Block table position must be calculated as 32-bit value
+            // Note: BOBA protector puts block table before the MPQ header, so it is negative
+            BlockTablePos64 = (ULONGLONG)((DWORD)MpqOffset + pHeader->dwBlockTablePos);
+            BlockTableMask = 0xFFFFFFF0;
+
             // Determine the archive size on malformed MPQs
             if(ha->dwFlags & MPQ_FLAG_MALFORMED)
             {
                 // Calculate the archive size
                 pHeader->ArchiveSize64 = DetermineArchiveSize_V1(ha, pHeader, MpqOffset, FileSize);
                 pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
-
-                // Handle case when the block table is placed before the MPQ header
-                // Used by BOBA protector
-                dwByteOffset32 = (DWORD)MpqOffset + pHeader->dwBlockTablePos;
-                if(dwByteOffset32 < MpqOffset)
-                {
-                    pHeader->BlockTableSize64 = (DWORD)MpqOffset - dwByteOffset32;
-                    pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
-                    break;
-                }
-
-                // Handle case when either the MPQ is cut in the middle of the block table
-                // or the MPQ is malformed so that block table size is greater than should be
-                ByteOffset = MpqOffset + pHeader->dwBlockTablePos;
-                dwTableSize = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
-                if((ByteOffset + dwTableSize) > FileSize)
-                {
-                    pHeader->BlockTableSize64 = FileSize - ByteOffset;
-                    pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
-                    break;
-                }
             }
             break;
 
@@ -514,6 +495,9 @@ int ConvertMpqHeaderToFormat4(
                 pHeader->ArchiveSize64 = pHeader->dwArchiveSize;
                 ha->dwFlags |= MPQ_FLAG_MALFORMED;
             }
+
+            // Add the MPQ Offset
+            BlockTablePos64 += MpqOffset;
             break;
 
         case MPQ_FORMAT_VERSION_3:
@@ -540,6 +524,8 @@ int ConvertMpqHeaderToFormat4(
 
             // Fill the rest of the header with zeros
             memset((LPBYTE)pHeader + MPQ_HEADER_SIZE_V3, 0, sizeof(TMPQHeader) - MPQ_HEADER_SIZE_V3);
+            BlockTablePos64 = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+            HashTablePos64 = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
             ByteOffset = pHeader->ArchiveSize64;
 
             // Size of the hi-block table
@@ -550,17 +536,17 @@ int ConvertMpqHeaderToFormat4(
             }
 
             // Size of the block table
-            if(pHeader->wBlockTablePosHi || pHeader->dwBlockTablePos)
+            if(BlockTablePos64)
             {
-                pHeader->BlockTableSize64 = ByteOffset - MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
-                ByteOffset = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+                pHeader->BlockTableSize64 = ByteOffset - BlockTablePos64;
+                ByteOffset = BlockTablePos64;
             }
 
             // Size of the hash table
-            if(pHeader->wHashTablePosHi || pHeader->dwHashTablePos)
+            if(HashTablePos64)
             {
-                pHeader->HashTableSize64 = ByteOffset - MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
-                ByteOffset = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
+                pHeader->HashTableSize64 = ByteOffset - HashTablePos64;
+                ByteOffset = HashTablePos64;
             }
 
             // Size of the BET table
@@ -576,6 +562,9 @@ int ConvertMpqHeaderToFormat4(
                 pHeader->HetTableSize64 = ByteOffset - pHeader->HetTablePos64;
 //              ByteOffset = pHeader->HetTablePos64;
             }
+            
+            // Add the MPQ Offset
+            BlockTablePos64 += MpqOffset;
             break;
 
         case MPQ_FORMAT_VERSION_4:
@@ -585,6 +574,9 @@ int ConvertMpqHeaderToFormat4(
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_4);
             if(!VerifyDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader))
                 nError = ERROR_FILE_CORRUPT;
+
+            // Calculate the block table position
+            BlockTablePos64 = MpqOffset + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
             break;
 
         default:
@@ -598,7 +590,26 @@ int ConvertMpqHeaderToFormat4(
                 ha->dwFlags |= MPQ_FLAG_MALFORMED;
                 goto Label_ArchiveVersion1;
             }
+
+            // Calculate the block table position
+            BlockTablePos64 = MpqOffset + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
             break;
+    }
+
+    // Handle case when block table is placed before the MPQ header
+    // Used by BOBA protector
+    if(BlockTablePos64 < MpqOffset)
+    {
+        pHeader->BlockTableSize64 = (MpqOffset - BlockTablePos64) & BlockTableMask;
+        pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
+    }
+
+    // Handle case when either the MPQ is cut in the middle of the block table
+    // or the MPQ is malformed so that block table size is greater than should be
+    if((BlockTablePos64 + pHeader->BlockTableSize64) > FileSize)
+    {
+        pHeader->BlockTableSize64 = (FileSize - BlockTablePos64) & BlockTableMask;
+        pHeader->dwBlockTableSize = (DWORD)(pHeader->BlockTableSize64 / sizeof(TMPQBlock));
     }
 
     return nError;

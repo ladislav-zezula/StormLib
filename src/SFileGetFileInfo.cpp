@@ -791,7 +791,7 @@ bool WINAPI SFileGetFileInfo(
             pcbLengthNeeded[0] = cbSrcFileInfo;
 
         // If the caller entered an output buffer, the output size must also be entered
-        if(pvSrcFileInfo != NULL && pvFileInfo != NULL && cbFileInfo != 0)
+        if(pvFileInfo != NULL && cbFileInfo != 0)
         {
             // Check if there is enough space in the output buffer
             if(cbSrcFileInfo <= cbFileInfo)
@@ -800,6 +800,7 @@ bool WINAPI SFileGetFileInfo(
                 {
                     case SFILE_INFO_TYPE_DIRECT_POINTER:
                     case SFILE_INFO_TYPE_ALLOCATED:
+                        assert(pvSrcFileInfo != NULL);
                         memcpy(pvFileInfo, pvSrcFileInfo, cbSrcFileInfo);
                         break;
 
@@ -809,6 +810,7 @@ bool WINAPI SFileGetFileInfo(
                         break;
 
                     case SFILE_INFO_TYPE_TABLE_POINTER:
+                        assert(pvSrcFileInfo != NULL);
                         *(void **)pvFileInfo = pvSrcFileInfo;
                         pvSrcFileInfo = NULL;
                         break;

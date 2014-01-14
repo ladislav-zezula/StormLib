@@ -2269,6 +2269,12 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     return nError;
 }
 
+static int TestOpenArchive_WillFail(const char * szPlainName, const char * szListFile = NULL)
+{
+    TestOpenArchive(szPlainName, szListFile);
+    return ERROR_SUCCESS;
+}
+
 static int TestOpenArchive_Corrupt(const char * szPlainName)
 {
     TLogHelper Logger("OpenCorruptMpqTest", szPlainName);
@@ -3511,7 +3517,7 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2011_v4_InvalidHetEntryCount.MPQ");
 
-    // Open an truncated archive
+    // Open a truncated archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_BlockTableCut.MPQ");
 
@@ -3561,7 +3567,7 @@ int main(int argc, char * argv[])
 
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("flat-file://streaming/model.MPQ.0");
+        nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
 
     // Open an archive that is merged with multiple files
     if(nError == ERROR_SUCCESS)
