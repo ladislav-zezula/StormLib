@@ -2626,6 +2626,31 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
     return nError;
 }
 
+
+static int TestOpenArchive_CompactingTest(const char * szPlainName)
+{
+    TLogHelper Logger("CompactingTest", szPlainName);
+    HANDLE hMpq = NULL;
+    int nError;
+
+    // Create copy of the archive, with interleaving some user data
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Compact the archive
+        Logger.PrintProgress("Compacting archive %s ...", szPlainName);
+        if(!SFileSetCompactCallback(hMpq, CompactCallback, &Logger))
+            nError = Logger.PrintError("Failed to set the compact callback");
+
+        if(!SFileCompactArchive(hMpq, NULL, false))
+            nError = Logger.PrintError("Failed to compact archive %s", szPlainName);
+        
+        SFileCloseArchive(hMpq);
+    }
+
+    return nError;
+}
+
 static int ForEachFile_VerifyFileChecksum(const char * szFullPath)
 {
     const char * szShortPlainName = GetShortPlainName(szFullPath);
@@ -3432,7 +3457,7 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-
+/*
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -3632,7 +3657,10 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
-
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_MapToCompact.w3x");
+/*
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)
         nError = TestAddFile_ListFileTest("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", false, false);
@@ -3641,6 +3669,7 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestAddFile_ListFileTest("MPQ_2013_v4_SC2_EmptyMap.SC2Map", true, true);
 
+    // Test archive compacting
     // Create an empty archive v2
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2);
@@ -3676,6 +3705,6 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
-
+*/
     return nError;
 }

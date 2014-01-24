@@ -2792,7 +2792,7 @@ bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream)
         return false;
 
     // Now open the base file again
-    if(BaseFile_Open(pStream, pStream->szFileName, pStream->dwFlags))
+    if(!BaseFile_Open(pStream, pStream->szFileName, pStream->dwFlags))
         return false;
 
     // Cleanup the new stream
