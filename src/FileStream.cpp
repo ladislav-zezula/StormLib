@@ -1371,7 +1371,7 @@ static TFileStream * FlatStream_Open(const TCHAR * szFileName, DWORD dwStreamFla
     {
         // Attempt to open the base stream
         if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
-            return false;
+            return NULL;
 
         // Load the bitmap, if required to
         if(dwStreamFlags & STREAM_FLAG_USE_BITMAP)
@@ -2263,7 +2263,7 @@ static TFileStream * Block4Stream_Open(const TCHAR * szFileName, DWORD dwStreamF
             if(NewBaseArray == NULL)
             {
                 SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-                return false;
+                return NULL;
             }
 
             // Copy the old base data array to the new base data array
