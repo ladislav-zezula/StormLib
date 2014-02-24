@@ -87,7 +87,7 @@ static DWORD AddFlags[] =
     0xFFFFFFFF
 };
 
-static DWORD Compressions[] = 
+static DWORD WaveCompressions[] = 
 {
     MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_HUFFMANN,
     MPQ_COMPRESSION_ADPCM_STEREO | MPQ_COMPRESSION_HUFFMANN,
@@ -3176,22 +3176,22 @@ static int TestCreateArchive_FileFlagTest(const char * szPlainName)
     return nError;
 }
 
-static int TestCreateArchive_CompressionsTest(const char * szPlainName)
+static int TestCreateArchive_WaveCompressionsTest(const char * szPlainName, const char * szWaveFile)
 {
     TLogHelper Logger("CompressionsTest", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive 
     char szFileName[MAX_PATH];          // Source file to be added
     char szArchivedName[MAX_PATH];
-    DWORD dwCmprCount = sizeof(Compressions) / sizeof(DWORD);
+    DWORD dwCmprCount = sizeof(WaveCompressions) / sizeof(DWORD);
     DWORD dwAddedFiles = 0;
     DWORD dwFoundFiles = 0;
     int nError;
 
     // Create paths for local file to be added
-    CreateFullPathName(szFileName, szMpqSubDir, "AddFile.wav");
+    CreateFullPathName(szFileName, szMpqSubDir, szWaveFile);
 
     // Create new archive
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4, 0x40, &hMpq); 
+    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1, 0x40, &hMpq); 
 
     // Add the same file multiple times
     if(nError == ERROR_SUCCESS)
@@ -3200,7 +3200,7 @@ static int TestCreateArchive_CompressionsTest(const char * szPlainName)
         for(unsigned int i = 0; i < dwCmprCount; i++)
         {
             sprintf(szArchivedName, "WaveFile_%02u.wav", i + 1);
-            nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName, MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_SECTOR_CRC, Compressions[i]);
+            nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName, MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_SECTOR_CRC, WaveCompressions[i]);
             if(nError != ERROR_SUCCESS)
                 break;
 
@@ -3694,10 +3694,18 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FileFlagTest("StormLibTest_FileFlagTest.mpq");
 
-    // Create a MPQ file, add files with various compressions
+    // Create a MPQ file, add a mono-WAVE file with various compressions
     if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_CompressionsTest("StormLibTest_CompressionTest.mpq");
+        nError = TestCreateArchive_WaveCompressionsTest("StormLibTest_AddWaveMonoTest.mpq", "AddFile-Mono.wav");
 
+    // Create a MPQ file, add a mono-WAVE with 8 bits per sample file with various compressions
+    if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_WaveCompressionsTest("StormLibTest_AddWaveMonoBadTest.mpq", "AddFile-MonoBad.wav");
+
+    // Create a MPQ file, add a stereo-WAVE file with various compressions
+    if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_WaveCompressionsTest("StormLibTest_AddWaveStereoTest.mpq", "AddFile-Stereo.wav");
+/*
     // Check if the listfile is always created at the end of the file table in the archive
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_ListFilePos("StormLibTest_ListFilePos.mpq");
@@ -3705,6 +3713,6 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
-
+*/
     return nError;
 }
