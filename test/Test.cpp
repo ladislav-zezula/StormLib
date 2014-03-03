@@ -3511,8 +3511,8 @@ int main(int argc, char * argv[])
         nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-complete.MPQ", "MPQ_2013_v4_alternate-original.MPQ", true);
 
     // Open a stream, paired with remote master (takes hell lot of time!)
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
 
     // Search in listfile
     if(nError == ERROR_SUCCESS)
@@ -3566,9 +3566,13 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_Spazzler.w3x");
 
-    // Open an Warcraft III map locked by the Spazzler protector
+    // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
+
+    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
 
     // Open a MPQ archive v 3.0
     if(nError == ERROR_SUCCESS)
@@ -3705,7 +3709,7 @@ int main(int argc, char * argv[])
     // Create a MPQ file, add a stereo-WAVE file with various compressions
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_WaveCompressionsTest("StormLibTest_AddWaveStereoTest.mpq", "AddFile-Stereo.wav");
-/*
+
     // Check if the listfile is always created at the end of the file table in the archive
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_ListFilePos("StormLibTest_ListFilePos.mpq");
@@ -3713,6 +3717,6 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
-*/
+
     return nError;
 }

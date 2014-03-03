@@ -51,65 +51,111 @@ static DWORD GetSizeOfAttributesFile(DWORD dwAttrFlags, DWORD dwFileTableSize)
     return cbAttrFile;
 }
 
-static bool CheckSizeOfAttributesFile(DWORD cbSizeOfAttr, DWORD dwAttrFlags, DWORD dwFileTableSize)
+static DWORD CheckSizeOfAttributesFile(DWORD cbAttrFile, DWORD dwAttrFlags, DWORD dwFileTableSize)
 {
-    DWORD cbAttrFile = sizeof(MPQ_ATTRIBUTES_HEADER);
+    DWORD cbHeaderSize = sizeof(MPQ_ATTRIBUTES_HEADER);
+    DWORD cbChecksumSize1 = 0;
+    DWORD cbChecksumSize2 = 0;
+    DWORD cbFileTimeSize1 = 0;
+    DWORD cbFileTimeSize2 = 0;
+    DWORD cbFileHashSize1 = 0;
+    DWORD cbFileHashSize2 = 0;
+    DWORD cbPatchBitSize1 = 0;
+    DWORD cbPatchBitSize2 = 0;
+    DWORD cbPatchBitSize3 = 0;
 
-    // Calculate size of the (attributes) file
-    if(dwAttrFlags & MPQ_ATTRIBUTE_CRC32)
-        cbAttrFile += dwFileTableSize * sizeof(DWORD);
-    if(dwAttrFlags & MPQ_ATTRIBUTE_FILETIME)
-        cbAttrFile += dwFileTableSize * sizeof(ULONGLONG);
-    if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
-        cbAttrFile += dwFileTableSize * MD5_DIGEST_SIZE;
-
+    //
     // Various variants with the patch bit
-    if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
+    //
+    // interface.MPQ.part from WoW build 10958 has
+    // the MPQ_ATTRIBUTE_PATCH_BIT set, but there's an array of DWORDs instead.
+    // The array is filled with zeros, so we don't know what it should contain
+    //
+    // Zenith.SC2MAP has the MPQ_ATTRIBUTE_PATCH_BIT set, but the bit array is missing
+    //
+    // Elimination Tournament 2.w3x's (attributes) have one entry less
+    //
+    // There may be two variants: Either the (attributes) file has full
+    // number of entries, or has one entry less
+    //
+
+    // Get the expected size of CRC32 array
+    if(dwAttrFlags & MPQ_ATTRIBUTE_CRC32)
     {
-        // Check for expected size
-        if(cbSizeOfAttr == (cbAttrFile + (dwFileTableSize + 6) / 8))
-            return true;
-
-        // Zenith.SC2MAP has the MPQ_ATTRIBUTE_PATCH_BIT set, but the bit array is missing
-        if(cbSizeOfAttr == cbSizeOfAttr)
-            return false;
-
-        // interface.MPQ.part from WoW build 10958 has
-        // the MPQ_ATTRIBUTE_PATCH_BIT set, but there's an array of DWORDs instead.
-        // The array is filled with zeros, so we don't know what it should contain
-        if(cbSizeOfAttr == (cbAttrFile + dwFileTableSize * sizeof(DWORD)))
-            return false;
-
-        // Size mismatch
-        assert(false);
-        return false;
+        cbChecksumSize1 += dwFileTableSize * sizeof(DWORD);
+        cbChecksumSize2 += cbChecksumSize1 - sizeof(DWORD);
     }
 
-    assert(cbSizeOfAttr == cbAttrFile);
-    return false;
+    // Get the expected size of FILETIME array
+    if(dwAttrFlags & MPQ_ATTRIBUTE_FILETIME)
+    {
+        cbFileTimeSize1 += dwFileTableSize * sizeof(ULONGLONG);
+        cbFileTimeSize2 += cbFileTimeSize1 - sizeof(ULONGLONG);
+    }
+
+    // Get the expected size of MD5 array
+    if(dwAttrFlags & MPQ_ATTRIBUTE_MD5)
+    {
+        cbFileHashSize1 += dwFileTableSize * MD5_DIGEST_SIZE;
+        cbFileHashSize2 += cbFileHashSize1 - MD5_DIGEST_SIZE;
+    }
+
+    // Get the expected size of patch bit array
+    if(dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
+    {
+        cbPatchBitSize1 =
+        cbPatchBitSize2 = ((dwFileTableSize + 6) / 8);
+        cbPatchBitSize3 = dwFileTableSize * sizeof(DWORD);
+    }
+
+    // Check if the (attributes) file entry count is equal to our file table size
+    if(cbAttrFile == (cbHeaderSize + cbChecksumSize1 + cbFileTimeSize1 + cbFileHashSize1 + cbPatchBitSize1))
+        return dwFileTableSize;
+
+    // Check if the (attributes) file entry count is equal to our file table size minus one
+    if(cbAttrFile == (cbHeaderSize + cbChecksumSize2 + cbFileTimeSize2 + cbFileHashSize2 + cbPatchBitSize2))
+        return dwFileTableSize - 1;
+
+    // Zenith.SC2MAP has the MPQ_ATTRIBUTE_PATCH_BIT set, but the bit array is missing
+    if(cbAttrFile == (cbHeaderSize + cbChecksumSize1 + cbFileTimeSize1 + cbFileHashSize1))
+        return dwFileTableSize;
+
+    // interface.MPQ.part (WoW build 10958) has the MPQ_ATTRIBUTE_PATCH_BIT set
+    // but there's an array of DWORDs (filled with zeros) instead of array of bits
+    if(cbAttrFile == (cbHeaderSize + cbChecksumSize1 + cbFileTimeSize1 + cbFileHashSize1 + cbPatchBitSize3))
+        return dwFileTableSize;
+
+    // Invalid size of the (attributes) file
+    assert(false);
+    return 0;
 }
 
 static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrFile)
 {
     LPBYTE pbAttrFileEnd = pbAttrFile + cbAttrFile;
     LPBYTE pbAttrPtr = pbAttrFile;
-    DWORD dwBlockTableSize = ha->pHeader->dwBlockTableSize;
+    DWORD dwAttributesEntries = 0;
     DWORD i;
-    bool bPatchBitsValid = false;
 
     // Load and verify the header
     if((pbAttrPtr + sizeof(MPQ_ATTRIBUTES_HEADER)) <= pbAttrFileEnd)
     {
         PMPQ_ATTRIBUTES_HEADER pAttrHeader = (PMPQ_ATTRIBUTES_HEADER)pbAttrPtr;
         
+        // Verify the header version
         BSWAP_ARRAY32_UNSIGNED(pAttrHeader, sizeof(MPQ_ATTRIBUTES_HEADER));
         if(pAttrHeader->dwVersion != MPQ_ATTRIBUTES_V1)
             return ERROR_BAD_FORMAT;
 
-        // Verify the flags and of the file
-        assert((pAttrHeader->dwFlags & ~MPQ_ATTRIBUTE_ALL) == 0);
+        // Verify the flags
+        if(pAttrHeader->dwFlags & ~MPQ_ATTRIBUTE_ALL)
+            return ERROR_BAD_FORMAT;
 
-        bPatchBitsValid = CheckSizeOfAttributesFile(cbAttrFile, pAttrHeader->dwFlags, dwBlockTableSize);
+        // Verify whether file size of (attributes) is expected
+        dwAttributesEntries = CheckSizeOfAttributesFile(cbAttrFile, pAttrHeader->dwFlags, ha->pHeader->dwBlockTableSize);
+        if(dwAttributesEntries == 0)
+            return ERROR_BAD_FORMAT;
+
         ha->dwAttrFlags = pAttrHeader->dwFlags;
         pbAttrPtr = (LPBYTE)(pAttrHeader + 1);
     }
@@ -118,14 +164,14 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     if(ha->dwAttrFlags & MPQ_ATTRIBUTE_CRC32)
     {
         LPDWORD ArrayCRC32 = (LPDWORD)pbAttrPtr;
-        DWORD cbArraySize = dwBlockTableSize * sizeof(DWORD);
+        DWORD cbArraySize = dwAttributesEntries * sizeof(DWORD);
 
         // Verify if there's enough data
         if((pbAttrPtr + cbArraySize) > pbAttrFileEnd)
             return ERROR_FILE_CORRUPT;
 
         BSWAP_ARRAY32_UNSIGNED(ArrayCRC32, cbCRC32Size);
-        for(i = 0; i < dwBlockTableSize; i++)
+        for(i = 0; i < dwAttributesEntries; i++)
             ha->pFileTable[i].dwCrc32 = ArrayCRC32[i];
         pbAttrPtr += cbArraySize;
     }
@@ -134,14 +180,14 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     if(ha->dwAttrFlags & MPQ_ATTRIBUTE_FILETIME)
     {
         ULONGLONG * ArrayFileTime = (ULONGLONG *)pbAttrPtr;
-        DWORD cbArraySize = dwBlockTableSize * sizeof(ULONGLONG);
+        DWORD cbArraySize = dwAttributesEntries * sizeof(ULONGLONG);
 
         // Verify if there's enough data
         if((pbAttrPtr + cbArraySize) > pbAttrFileEnd)
             return ERROR_FILE_CORRUPT;
 
         BSWAP_ARRAY64_UNSIGNED(ArrayFileTime, cbFileTimeSize);
-        for(i = 0; i < dwBlockTableSize; i++)
+        for(i = 0; i < dwAttributesEntries; i++)
             ha->pFileTable[i].FileTime = ArrayFileTime[i];
         pbAttrPtr += cbArraySize;
     }
@@ -150,13 +196,13 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     if(ha->dwAttrFlags & MPQ_ATTRIBUTE_MD5)
     {
         LPBYTE ArrayMd5 = pbAttrPtr;
-        DWORD cbArraySize = dwBlockTableSize * MD5_DIGEST_SIZE;
+        DWORD cbArraySize = dwAttributesEntries * MD5_DIGEST_SIZE;
 
         // Verify if there's enough data
         if((pbAttrPtr + cbArraySize) > pbAttrFileEnd)
             return ERROR_FILE_CORRUPT;
 
-        for(i = 0; i < dwBlockTableSize; i++)
+        for(i = 0; i < dwAttributesEntries; i++)
         {
             memcpy(ha->pFileTable[i].md5, ArrayMd5, MD5_DIGEST_SIZE);
             ArrayMd5 += MD5_DIGEST_SIZE;
@@ -165,36 +211,25 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     }
 
     // Read the patch bit for each file (if present)
-    if((ha->dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT) && bPatchBitsValid)
+    if(ha->dwAttrFlags & MPQ_ATTRIBUTE_PATCH_BIT)
     {
         LPBYTE pbBitArray = pbAttrPtr;
-        DWORD cbArraySize = (dwBlockTableSize + 7) / 8;
+        DWORD cbArraySize = (dwAttributesEntries + 7) / 8;
         DWORD dwByteIndex = 0;
         DWORD dwBitMask = 0x80;
 
         // Verify if there's enough data
-        if((pbAttrPtr + cbArraySize) > pbAttrFileEnd)
-            return ERROR_FILE_CORRUPT;
-
-        for(i = 0; i < dwBlockTableSize; i++)
+        if((pbAttrPtr + cbArraySize) == pbAttrFileEnd)
         {
-            ha->pFileTable[i].dwFlags |= (pbBitArray[dwByteIndex] & dwBitMask) ? MPQ_FILE_PATCH_FILE : 0;
-            dwByteIndex += (dwBitMask & 0x01);
-            dwBitMask = (dwBitMask << 0x07) | (dwBitMask >> 0x01);
+            for(i = 0; i < dwAttributesEntries; i++)
+            {
+                ha->pFileTable[i].dwFlags |= (pbBitArray[dwByteIndex] & dwBitMask) ? MPQ_FILE_PATCH_FILE : 0;
+                dwByteIndex += (dwBitMask & 0x01);
+                dwBitMask = (dwBitMask << 0x07) | (dwBitMask >> 0x01);
+            }
         }
-
-        pbAttrPtr += cbArraySize;
     }
 
-    // 
-    // Note: Version 7.00 of StormLib saved the (attributes) incorrectly. 
-    // Sometimes, number of entries in the (attributes) was 1 item less
-    // than block table size. 
-    // If we encounter such table, we will zero all three arrays
-    //
-
-    if(pbAttrPtr != pbAttrFileEnd)
-        ha->dwAttrFlags = 0;
     return ERROR_SUCCESS;
 }
 
@@ -333,7 +368,6 @@ int SAttrLoadAttributes(TMPQArchive * ha)
         return ERROR_FILE_CORRUPT;
 
     // Attempt to open the "(attributes)" file.
-    // If it's not there, then the archive doesn't support attributes
     if(SFileOpenFileEx((HANDLE)ha, ATTRIBUTES_NAME, SFILE_OPEN_ANY_LOCALE, &hFile))
     {
         // Retrieve and check size of the (attributes) file
