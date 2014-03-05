@@ -395,8 +395,9 @@ int ConvertMpqHeaderToFormat4(
 
             // Check for malformed MPQ header version 1.0
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_1);
-            if(pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V1)
+            if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_1 || pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V1)
             {
+                pHeader->wFormatVersion = MPQ_FORMAT_VERSION_1;
                 pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V1;
                 ha->dwFlags |= MPQ_FLAG_MALFORMED;
             }
@@ -439,7 +440,7 @@ int ConvertMpqHeaderToFormat4(
 
             // Check for malformed MPQ header version 1.0
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_2);
-            if(pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V2)
+            if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_2 || pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V2)
             {
                 pHeader->wFormatVersion = MPQ_FORMAT_VERSION_1;
                 pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V1;
