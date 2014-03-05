@@ -3566,6 +3566,9 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_Spazzler.w3x");
 
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x");
+
     // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
@@ -3662,8 +3665,8 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_MapToCompact.w3x");
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_MapToCompact.w3x");
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)
