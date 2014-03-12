@@ -146,6 +146,7 @@ extern "C" {
 #define ERROR_BASE_FILE_MISSING          10004  // The file is present as incremental patch file, but base file is missing
 #define ERROR_MARKED_FOR_DELETE          10005  // The file was marked as "deleted" in the MPQ
 #define ERROR_FILE_INCOMPLETE            10006  // The required file part is missing
+#define ERROR_UNKNOWN_FILE_NAMES         10007  // A name of at least one file is unknown
 
 // Values for SFileCreateArchive
 #define HASH_TABLE_SIZE_MIN         0x00000004  // Verified: If there is 1 file, hash table size is 4

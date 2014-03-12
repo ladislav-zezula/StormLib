@@ -62,7 +62,7 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha, const char * szListFile, LPDWO
                 }
                 else
                 {
-                    nError = ERROR_CAN_NOT_COMPLETE;
+                    nError = ERROR_UNKNOWN_FILE_NAMES;
                     break;
                 }
             }
