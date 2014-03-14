@@ -266,175 +266,191 @@ DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
 
 
 //-----------------------------------------------------------------------------
-// Encrypting and decrypting MPQ file data
+// Encrypting/Decrypting MPQ data block
 
-void EncryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwSeed1)
+void EncryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 {
-    LPDWORD block = (LPDWORD)pvFileBlock;
-    DWORD dwSeed2 = 0xEEEEEEEE;
-    DWORD ch;
+    LPDWORD DataBlock = (LPDWORD)pvDataBlock;
+    DWORD dwValue32;
+    DWORD dwKey2 = 0xEEEEEEEE;
 
     // Round to DWORDs
     dwLength >>= 2;
 
-    while(dwLength-- > 0)
+    // Encrypt the data block at array of DWORDs
+    for(DWORD i = 0; i < dwLength; i++)
     {
-        dwSeed2 += StormBuffer[0x400 + (dwSeed1 & 0xFF)];
-        ch     = *block;
-        *block++ = ch ^ (dwSeed1 + dwSeed2);
+        // Modify the second key
+        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
 
-        dwSeed1  = ((~dwSeed1 << 0x15) + 0x11111111) | (dwSeed1 >> 0x0B);
-        dwSeed2  = ch + dwSeed2 + (dwSeed2 << 5) + 3;
+        dwValue32 = DataBlock[i];
+        DataBlock[i] = DataBlock[i] ^ (dwKey1 + dwKey2);
+
+        dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+        dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
     }
 }
 
-void DecryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwSeed1)
+void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 {
-    LPDWORD block = (LPDWORD)pvFileBlock;
-    DWORD dwSeed2 = 0xEEEEEEEE;
-    DWORD ch;
+    LPDWORD DataBlock = (LPDWORD)pvDataBlock;
+    DWORD dwValue32;
+    DWORD dwKey2 = 0xEEEEEEEE;
 
     // Round to DWORDs
     dwLength >>= 2;
 
-    while(dwLength-- > 0)
+    // Decrypt the data block at array of DWORDs
+    for(DWORD i = 0; i < dwLength; i++)
     {
-        dwSeed2 += StormBuffer[0x400 + (dwSeed1 & 0xFF)];
-        ch     = *block ^ (dwSeed1 + dwSeed2);
+        // Modify the second key
+        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+        
+        DataBlock[i] = DataBlock[i] ^ (dwKey1 + dwKey2);
+        dwValue32 = DataBlock[i];
 
-        dwSeed1  = ((~dwSeed1 << 0x15) + 0x11111111) | (dwSeed1 >> 0x0B);
-        dwSeed2  = ch + dwSeed2 + (dwSeed2 << 5) + 3;
-        *block++ = ch;
+        dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+        dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
     }
 }
 
 /**
- * Functions tries to get file decryption key. The trick comes from sector
- * positions which are stored at the begin of each compressed file. We know the
- * file size, that means we know number of sectors that means we know the first
- * DWORD value in sector position. And if we know encrypted and decrypted value,
- * we can find the decryption key !!!
+ * Functions tries to get file decryption key. This comes from these facts
  *
- * hf            - MPQ file handle
- * SectorOffsets - DWORD array of sector positions
- * ch            - Decrypted value of the first sector pos
+ * - We know the decrypted value of the first DWORD in the encrypted data
+ * - We know the decrypted value of the second DWORD (at least aproximately)
+ * - There is only 256 variants of how the second key is modified
+ *
+ *  The first iteration of dwKey1 and dwKey2 is this:
+ *
+ *  dwKey2 = 0xEEEEEEEE + StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)]
+ *  dwDecrypted0 = DataBlock[0] ^ (dwKey1 + dwKey2);
+ *
+ *  This means:
+ *
+ *  (dwKey1 + dwKey2) = DataBlock[0] ^ dwDecrypted0;
+ *
  */
 
-DWORD DetectFileKeyBySectorSize(LPDWORD SectorOffsets, DWORD decrypted)
+DWORD DetectFileKeyBySectorSize(LPDWORD EncryptedData, DWORD dwSectorSize, DWORD dwDecrypted0)
 {
-    DWORD saveKey1;
-    DWORD temp = *SectorOffsets ^ decrypted;    // temp = seed1 + seed2
-    temp -= 0xEEEEEEEE;                 // temp = seed1 + StormBuffer[0x400 + (seed1 & 0xFF)]
+    DWORD dwDecrypted1Max = dwSectorSize + dwDecrypted0;
+    DWORD dwKey1PlusKey2;
+    DWORD DataBlock[2];
 
-    for(int i = 0; i < 0x100; i++)      // Try all 255 possibilities
-    {
-        DWORD seed1;
-        DWORD seed2 = 0xEEEEEEEE;
-        DWORD ch;
-
-        // Try the first DWORD (We exactly know the value)
-        seed1  = temp - StormBuffer[0x400 + i];
-        seed2 += StormBuffer[0x400 + (seed1 & 0xFF)];
-        ch     = SectorOffsets[0] ^ (seed1 + seed2);
-
-        if(ch != decrypted)
-            continue;
-
-        // Add 1 because we are decrypting sector positions
-        saveKey1 = seed1 + 1;
-
-        // If OK, continue and test the second value. We don't know exactly the value,
-        // but we know that the second one has lower 16 bits set to zero
-        // (no compressed sector is larger than 0xFFFF bytes)
-        seed1  = ((~seed1 << 0x15) + 0x11111111) | (seed1 >> 0x0B);
-        seed2  = ch + seed2 + (seed2 << 5) + 3;
-
-        seed2 += StormBuffer[0x400 + (seed1 & 0xFF)];
-        ch     = SectorOffsets[1] ^ (seed1 + seed2);
-
-        if((ch & 0xFFFF0000) == 0)
-            return saveKey1;
-    }
-    return 0;
-}
-
-// Function tries to detect file encryption key. It expectes at least two uncompressed bytes
-DWORD DetectFileKeyByKnownContent(void * pvFileContent, DWORD nDwords, ...)
-{
-    LPDWORD pdwContent = (LPDWORD)pvFileContent;
-    va_list argList;
-    DWORD dwDecrypted[0x10];
-    DWORD saveKey1;
-    DWORD dwTemp;
-    DWORD i, j;
-    
-    // We need at least two DWORDS to detect the file key
-    if(nDwords < 0x02 || nDwords > 0x10)
+    // We must have at least 2 DWORDs there to be able to decrypt something
+    if(dwSectorSize < 0x08)
         return 0;
-    memset(dwDecrypted, 0, sizeof(dwDecrypted));
-    
-    va_start(argList, nDwords);
-    for(i = 0; i < nDwords; i++)
-        dwDecrypted[i] = va_arg(argList, DWORD);
-    va_end(argList);
-    
-    dwTemp = (*pdwContent ^ dwDecrypted[0]) - 0xEEEEEEEE;
-    for(i = 0; i < 0x100; i++)      // Try all 256 possibilities
+
+    // Get the value of the combined encryption key
+    dwKey1PlusKey2 = (EncryptedData[0] ^ dwDecrypted0) - 0xEEEEEEEE;
+
+    // Try all 256 combinations of dwKey1
+    for(DWORD i = 0; i < 0x100; i++)
     {
-        DWORD seed1;
-        DWORD seed2 = 0xEEEEEEEE;
-        DWORD ch;
+        DWORD dwSaveKey1;
+        DWORD dwKey1 = dwKey1PlusKey2 - StormBuffer[MPQ_HASH_KEY2_MIX + i];
+        DWORD dwKey2 = 0xEEEEEEEE;
 
-        // Try the first DWORD
-        seed1  = dwTemp - StormBuffer[0x400 + i];
-        seed2 += StormBuffer[0x400 + (seed1 & 0xFF)];
-        ch     = pdwContent[0] ^ (seed1 + seed2);
+        // Modify the second key and decrypt the first DWORD
+        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+        DataBlock[0] = EncryptedData[0] ^ (dwKey1 + dwKey2);
 
-        if(ch != dwDecrypted[0])
-            continue;
-
-        saveKey1 = seed1;
-
-        // If OK, continue and test all bytes.
-        for(j = 1; j < nDwords; j++)
+        // Did we obtain the same value like dwDecrypted0?
+        if(DataBlock[0] == dwDecrypted0)
         {
-            seed1  = ((~seed1 << 0x15) + 0x11111111) | (seed1 >> 0x0B);
-            seed2  = ch + seed2 + (seed2 << 5) + 3;
+            // Save this key value. Increment by one because
+            // we are decrypting sector offset table
+            dwSaveKey1 = dwKey1 + 1;
 
-            seed2 += StormBuffer[0x400 + (seed1 & 0xFF)];
-            ch     = pdwContent[j] ^ (seed1 + seed2);
+            // Rotate both keys
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = DataBlock[0] + dwKey2 + (dwKey2 << 5) + 3;
 
-            if(ch == dwDecrypted[j] && j == nDwords - 1)
-                return saveKey1;
+            // Modify the second key again and decrypt the second DWORD
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+            DataBlock[1] = EncryptedData[1] ^ (dwKey1 + dwKey2);
+
+            // Now compare the results
+            if(DataBlock[1] <= dwDecrypted1Max)
+                return dwSaveKey1;
         }
     }
+
+    // Key not found
     return 0;
 }
 
-DWORD DetectFileKeyByContent(void * pvFileContent, DWORD dwFileSize)
+// Function tries to detect file encryption key based on expected file content
+// It is the same function like before, except that we know the value of the second DWORD
+DWORD DetectFileKeyByKnownContent(void * pvEncryptedData, DWORD dwDecrypted0, DWORD dwDecrypted1)
+{
+    LPDWORD EncryptedData = (LPDWORD)pvEncryptedData;
+    DWORD dwKey1PlusKey2;
+    DWORD DataBlock[2];
+
+    // Get the value of the combined encryption key
+    dwKey1PlusKey2 = (EncryptedData[0] ^ dwDecrypted0) - 0xEEEEEEEE;
+
+    // Try all 256 combinations of dwKey1
+    for(DWORD i = 0; i < 0x100; i++)
+    {
+        DWORD dwSaveKey1;
+        DWORD dwKey1 = dwKey1PlusKey2 - StormBuffer[MPQ_HASH_KEY2_MIX + i];
+        DWORD dwKey2 = 0xEEEEEEEE;
+
+        // Modify the second key and decrypt the first DWORD
+        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+        DataBlock[0] = EncryptedData[0] ^ (dwKey1 + dwKey2);
+
+        // Did we obtain the same value like dwDecrypted0?
+        if(DataBlock[0] == dwDecrypted0)
+        {
+            // Save this key value
+            dwSaveKey1 = dwKey1;
+
+            // Rotate both keys
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = DataBlock[0] + dwKey2 + (dwKey2 << 5) + 3;
+
+            // Modify the second key again and decrypt the second DWORD
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+            DataBlock[1] = EncryptedData[1] ^ (dwKey1 + dwKey2);
+
+            // Now compare the results
+            if(DataBlock[1] == dwDecrypted1)
+                return dwSaveKey1;
+        }
+    }
+
+    // Key not found
+    return 0;
+}
+
+DWORD DetectFileKeyByContent(void * pvEncryptedData, DWORD dwSectorSize, DWORD dwFileSize)
 {
     DWORD dwFileKey;
 
     // Try to break the file encryption key as if it was a WAVE file
-    if(dwFileSize >= 0x0C)
+    if(dwSectorSize >= 0x0C)
     {
-        dwFileKey = DetectFileKeyByKnownContent(pvFileContent, 3, 0x46464952, dwFileSize - 8, 0x45564157);
+        dwFileKey = DetectFileKeyByKnownContent(pvEncryptedData, 0x46464952, dwFileSize - 8);
         if(dwFileKey != 0)
             return dwFileKey;
     }
 
     // Try to break the encryption key as if it was an EXE file
-    if(dwFileSize > 0x40)
+    if(dwSectorSize > 0x40)
     {
-        dwFileKey = DetectFileKeyByKnownContent(pvFileContent, 2, 0x00905A4D, 0x00000003);
+        dwFileKey = DetectFileKeyByKnownContent(pvEncryptedData, 0x00905A4D, 0x00000003);
         if(dwFileKey != 0)
             return dwFileKey;
     }
 
     // Try to break the encryption key as if it was a XML file
-    if(dwFileSize > 0x04)
+    if(dwSectorSize > 0x04)
     {
-        dwFileKey = DetectFileKeyByKnownContent(pvFileContent, 2, 0x6D783F3C, 0x6576206C);
+        dwFileKey = DetectFileKeyByKnownContent(pvEncryptedData, 0x6D783F3C, 0x6576206C);
         if(dwFileKey != 0)
             return dwFileKey;
     }
@@ -673,7 +689,7 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
 //-----------------------------------------------------------------------------
 // Common functions - MPQ File
 
-TMPQFile * CreateMpqFile(TMPQArchive * ha)
+TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry)
 {
     TMPQFile * hf;
 
@@ -683,9 +699,21 @@ TMPQFile * CreateMpqFile(TMPQArchive * ha)
     {
         // Fill the file structure
         memset(hf, 0, sizeof(TMPQFile));
-        hf->ha = ha;
-        hf->pStream = NULL;
         hf->dwMagic = ID_MPQ_FILE;
+        hf->pStream = NULL;
+        hf->ha = ha;
+
+        // If the called entered a file entry, we also copy informations from the file entry
+        if(ha != NULL && pFileEntry != NULL)
+        {
+            // Set the raw position and MPQ position
+            hf->RawFilePos = ha->MpqPos + pFileEntry->ByteOffset;
+            hf->MpqFilePos = pFileEntry->ByteOffset;
+
+            // Set the data size
+            hf->dwDataSize = pFileEntry->dwFileSize;
+            hf->pFileEntry = pFileEntry;
+        }
     }
 
     return hf;
@@ -863,7 +891,7 @@ __AllocateAndLoadPatchInfo:
 
     // Allocate space for patch header. Start with default size,
     // and if its size if bigger, then we reload them
-    hf->pPatchInfo = (TPatchInfo *)STORM_ALLOC(BYTE, dwLength);
+    hf->pPatchInfo = STORM_ALLOC(TPatchInfo, 1);
     if(hf->pPatchInfo == NULL)
         return ERROR_NOT_ENOUGH_MEMORY;
 
@@ -983,7 +1011,7 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
                 // If we don't know the file key, try to find it.
                 if(hf->dwFileKey == 0)
                 {
-                    hf->dwFileKey = DetectFileKeyBySectorSize(hf->SectorOffsets, dwSectorOffsLen);
+                    hf->dwFileKey = DetectFileKeyBySectorSize(hf->SectorOffsets, ha->dwSectorSize, dwSectorOffsLen);
                     if(hf->dwFileKey == 0)
                     {
                         STORM_FREE(hf->SectorOffsets);
@@ -1356,13 +1384,13 @@ int WriteMpqDataMD5(
 }
 
 // Frees the structure for MPQ file
-void FreeMPQFile(TMPQFile *& hf)
+void FreeFileHandle(TMPQFile *& hf)
 {
     if(hf != NULL)
     {
         // If we have patch file attached to this one, free it first
         if(hf->hfPatch != NULL)
-            FreeMPQFile(hf->hfPatch);
+            FreeFileHandle(hf->hfPatch);
 
         // Then free all buffers allocated in the file structure
         if(hf->pPatchHeader != NULL)
@@ -1377,20 +1405,21 @@ void FreeMPQFile(TMPQFile *& hf)
             STORM_FREE(hf->SectorChksums);
         if(hf->pbFileSector != NULL)
             STORM_FREE(hf->pbFileSector);
-        FileStream_Close(hf->pStream);
+        if(hf->pStream != NULL)
+            FileStream_Close(hf->pStream);
         STORM_FREE(hf);
         hf = NULL;
     }
 }
 
 // Frees the MPQ archive
-void FreeMPQArchive(TMPQArchive *& ha)
+void FreeArchiveHandle(TMPQArchive *& ha)
 {
     if(ha != NULL)
     {
         // First of all, free the patch archive, if any
         if(ha->haPatch != NULL)
-            FreeMPQArchive(ha->haPatch);
+            FreeArchiveHandle(ha->haPatch);
 
         // Close the file stream
         FileStream_Close(ha->pStream);

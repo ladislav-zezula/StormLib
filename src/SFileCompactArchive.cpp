@@ -18,7 +18,36 @@
 /* Local functions                                                           */
 /*****************************************************************************/
 
-static int CheckIfAllFilesKnown(TMPQArchive * ha, const char * szListFile, LPDWORD pFileKeys)
+static int CheckIfAllFilesKnown(TMPQArchive * ha)
+{
+    TFileEntry * pFileTableEnd;
+    TFileEntry * pFileEntry;
+    DWORD dwBlockIndex = 0;
+    int nError = ERROR_SUCCESS;
+
+    // Verify the file table
+    if(nError == ERROR_SUCCESS)
+    {
+        pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
+        for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++, dwBlockIndex++)
+        {
+            // If there is an existing entry in the file table, check its name
+            if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
+            {
+                // The name must be valid and must not be a pseudo-name
+                if(pFileEntry->szFileName == NULL || IsPseudoFileName(pFileEntry->szFileName, NULL))
+                {
+                    nError = ERROR_UNKNOWN_FILE_NAMES;
+                    break;
+                }
+            }
+        }
+    }
+
+    return nError;
+}
+
+static int CheckIfAllKeysKnown(TMPQArchive * ha, const char * szListFile, LPDWORD pFileKeys)
 {
     TFileEntry * pFileTableEnd;
     TFileEntry * pFileEntry;
@@ -41,30 +70,49 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha, const char * szListFile, LPDWO
         pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
         for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++, dwBlockIndex++)
         {
+            // If the file exists and it's encrypted
             if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
             {
+                // If we know the name, we decrypt the file key from the file name
                 if(pFileEntry->szFileName != NULL && !IsPseudoFileName(pFileEntry->szFileName, NULL))
                 {
-                    DWORD dwFileKey = 0;
+                    // Give the key to the caller
+                    pFileKeys[dwBlockIndex] = DecryptFileKey(pFileEntry->szFileName,
+                                                             pFileEntry->ByteOffset,
+                                                             pFileEntry->dwFileSize,
+                                                             pFileEntry->dwFlags);
+                    continue;
+                }
+/*
+                // If the file has a nonzero size, we can try to read few bytes of data
+                // and force to detect the decryption key that way
+                if(pFileEntry->dwFileSize > 0x10)
+                {
+                    TMPQFile * hf = NULL;
+                    DWORD dwBytesRead = 0;
+                    DWORD FileData[4];
 
-                    // Resolve the file key. Use plain file name for it
-                    if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
+                    // Create file handle where we load the sector offset table
+                    hf = CreateFileHandle(ha, pFileEntry);
+                    if(hf != NULL)
                     {
-                        dwFileKey = DecryptFileKey(pFileEntry->szFileName,
-                                                   pFileEntry->ByteOffset,
-                                                   pFileEntry->dwFileSize,
-                                                   pFileEntry->dwFlags);
+                        // Call one dummy load of the first 4 bytes.
+                        // This enforces loading all buffers and also detecting of the decryption key
+                        SFileReadFile((HANDLE)hf, FileData, sizeof(FileData), &dwBytesRead, NULL);
+                        pFileKeys[dwBlockIndex] = hf->dwFileKey;
+                        FreeFileHandle(hf);
                     }
 
-                    // Give the key to the caller
-                    if(pFileKeys != NULL)
-                        pFileKeys[dwBlockIndex] = dwFileKey;
+                    // If we succeeded in reading 16 bytes from the file,
+                    // we also know the encryption key
+                    if(dwBytesRead == sizeof(FileData))
+                        continue;
                 }
-                else
-                {
-                    nError = ERROR_UNKNOWN_FILE_NAMES;
-                    break;
-                }
+*/
+                // We don't know the encryption key of this file,
+                // thus we cannot compact the file
+                nError = ERROR_UNKNOWN_FILE_NAMES;
+                break;
             }
         }
     }
@@ -373,20 +421,12 @@ static int CopyMpqFiles(TMPQArchive * ha, LPDWORD pFileKeys, TFileStream * pNewS
         if((pFileEntry->dwFlags & MPQ_FILE_EXISTS) && pFileEntry->dwFileSize != 0)
         {
             // Allocate structure for the MPQ file
-            hf = CreateMpqFile(ha);
+            hf = CreateFileHandle(ha, pFileEntry);
             if(hf == NULL)
                 return ERROR_NOT_ENOUGH_MEMORY;
 
-            // Store file entry
-            hf->pFileEntry = pFileEntry;
-
-            // Set the raw file position
-            hf->MpqFilePos = pFileEntry->ByteOffset;
-            hf->RawFilePos = ha->MpqPos + hf->MpqFilePos;
-
             // Set the file decryption key
             hf->dwFileKey = pFileKeys[pFileEntry - ha->pFileTable];
-            hf->dwDataSize = pFileEntry->dwFileSize;
 
             // If the file is a patch file, load the patch header
             if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE)
@@ -420,13 +460,13 @@ static int CopyMpqFiles(TMPQArchive * ha, LPDWORD pFileKeys, TFileStream * pNewS
                 break;
 
             // Free buffers. This also sets "hf" to NULL.
-            FreeMPQFile(hf);
+            FreeFileHandle(hf);
         }
     }
 
     // Cleanup and exit
     if(hf != NULL)
-        FreeMPQFile(hf);
+        FreeFileHandle(hf);
     return nError;
 }
 
@@ -492,7 +532,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
         // Initialize the progress variables for compact callback
         FileStream_GetSize(ha->pStream, &(ha->CompactTotalBytes));
         ha->CompactBytesProcessed = 0;
-        nError = CheckIfAllFilesKnown(ha, szListFile, pFileKeys);
+        nError = CheckIfAllKeysKnown(ha, szListFile, pFileKeys);
     }
 
     // Get the temporary file name and create it
@@ -636,7 +676,7 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
     // to rebuild hash table
     if(nError == ERROR_SUCCESS)
     {
-        nError = CheckIfAllFilesKnown(ha, NULL, NULL);
+        nError = CheckIfAllFilesKnown(ha);
     }
 
     // If the MPQ has a hash table, then we relocate the hash table

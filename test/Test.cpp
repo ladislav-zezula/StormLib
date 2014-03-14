@@ -1470,11 +1470,17 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
             nError = pLogger->PrintError("Failed to read the content of the file %s", szFileName);
     }
 
+    // If failed, free the buffer
+    if(nError != ERROR_SUCCESS)
+    {
+        STORM_FREE(pFileData);
+        SetLastError(nError);
+        pFileData = NULL;
+    }
+
     // Close the file and return what we got
     if(hFile != NULL)
         SFileCloseFile(hFile);
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
     return pFileData;
 }
 
@@ -1544,6 +1550,9 @@ static int SearchArchive(
         // Increment number of files
         dwFileCount++;
 
+//      if(!_stricmp(sf.cFileName, "OldWorld\\world\\maps\\Northrend\\Northrend.tex"))
+//          DebugBreak();
+
         if(dwTestFlags & TEST_FLAG_MOST_PATCHED)
         {
             // Load the patch count
@@ -1562,26 +1571,23 @@ static int SearchArchive(
         {
             // Load the entire file to the MPQ
             pFileData = LoadMpqFile(pLogger, hMpq, sf.cFileName);
-            if(pFileData == NULL)
+            if(pFileData != NULL)
             {
-                nError = pLogger->PrintError("Failed to load the file %s", sf.cFileName);
-                break;
-            }
+                // Hash the file data, if needed
+                if((dwTestFlags & TEST_FLAG_HASH_FILES) && !IsInternalMpqFileName(sf.cFileName))
+                    md5_process(&md5state, pFileData->FileData, pFileData->dwFileSize);
 
-            // Hash the file data, if needed
-            if((dwTestFlags & TEST_FLAG_HASH_FILES) && !IsInternalMpqFileName(sf.cFileName))
-                md5_process(&md5state, pFileData->FileData, pFileData->dwFileSize);
-
-            // Play sound files, if required
-            if((dwTestFlags & TEST_FLAG_PLAY_WAVES) && strstr(sf.cFileName, ".wav") != NULL)
-            {
+                // Play sound files, if required
+                if((dwTestFlags & TEST_FLAG_PLAY_WAVES) && strstr(sf.cFileName, ".wav") != NULL)
+                {
 #ifdef _MSC_VER
-                pLogger->PrintProgress("Playing sound %s", sf.cFileName);
-                PlaySound((LPCTSTR)pFileData->FileData, NULL, SND_MEMORY);
+                    pLogger->PrintProgress("Playing sound %s", sf.cFileName);
+                    PlaySound((LPCTSTR)pFileData->FileData, NULL, SND_MEMORY);
 #endif
-            }
+                }
 
-            STORM_FREE(pFileData);
+                STORM_FREE(pFileData);
+            }
         }
 
         bFound = SFileFindNextFile(hFind, &sf);
@@ -2627,14 +2633,26 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
 }
 
 
-static int TestOpenArchive_CompactingTest(const char * szPlainName)
+static int TestOpenArchive_CompactingTest(const char * szPlainName, const char * szListFile)
 {
     TLogHelper Logger("CompactingTest", szPlainName);
     HANDLE hMpq = NULL;
-    int nError;
+    char szFullListName[MAX_PATH];
+    int nError = ERROR_SUCCESS;
 
-    // Create copy of the archive, with interleaving some user data
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    // Create copy of the listfile
+    if(szListFile != NULL)
+    {
+        nError = CreateFileCopy(&Logger, szListFile, szListFile, szFullListName, 0, 0);
+        szListFile = szFullListName;
+    }
+
+    // Create copy of the archive
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    }
+
     if(nError == ERROR_SUCCESS)
     {
         // Compact the archive
@@ -2642,7 +2660,7 @@ static int TestOpenArchive_CompactingTest(const char * szPlainName)
         if(!SFileSetCompactCallback(hMpq, CompactCallback, &Logger))
             nError = Logger.PrintError("Failed to set the compact callback");
 
-        if(!SFileCompactArchive(hMpq, NULL, false))
+        if(!SFileCompactArchive(hMpq, szListFile, false))
             nError = Logger.PrintError("Failed to compact archive %s", szPlainName);
         
         SFileCloseArchive(hMpq);
@@ -3457,10 +3475,10 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-/*
+
     // Search all testing archives and verify their SHA1 hash
-    if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+//  if(nError == ERROR_SUCCESS)
+//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
@@ -3565,7 +3583,7 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by the Spazzler protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_Spazzler.w3x");
-*/
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x");
 
@@ -3657,7 +3675,7 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2010_v3_expansion-locale-frFR.MPQ", "StormLibTest_CraftedMpq1_v3.mpq");
 
-    // Open a MPQ (add custom user data to it
+    // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_SC2_EmptyMap.SC2Map", "StormLibTest_CraftedMpq2_v4.mpq");
 
@@ -3666,7 +3684,7 @@ int main(int argc, char * argv[])
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
 
 //  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_MapToCompact.w3x");
+//      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_CompactTest.w3x", "ListFile_Blizzard.txt");
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)

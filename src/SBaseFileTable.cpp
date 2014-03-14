@@ -60,10 +60,21 @@ static int CompareFilePositions(const void * p1, const void * p2)
 {
     TMPQBlock * pBlock1 = *(TMPQBlock **)p1;
     TMPQBlock * pBlock2 = *(TMPQBlock **)p2;
+    DWORD dwFileEnd1;
+    DWORD dwFileEnd2;
 
+    // Compare file begins
     if(pBlock1->dwFilePos < pBlock2->dwFilePos)
         return -1;
     if(pBlock1->dwFilePos > pBlock2->dwFilePos)
+        return +1;
+
+    // If the files begin at the same position, compare their ends
+    dwFileEnd1 = pBlock1->dwFilePos + pBlock1->dwCSize;
+    dwFileEnd2 = pBlock2->dwFilePos + pBlock2->dwCSize;
+    if(dwFileEnd1 < dwFileEnd2)
+        return -1;
+    if(dwFileEnd1 > dwFileEnd2)
         return +1;
 
     return 0;
@@ -321,54 +332,6 @@ static ULONGLONG DetermineArchiveSize_V2(
 }
 
 // This function converts the MPQ header so it always looks like version 4
-/*static ULONGLONG GetArchiveSize64(TMPQHeader * pHeader)
-{
-    ULONGLONG ArchiveSize = pHeader->dwHeaderSize;
-    ULONGLONG ByteOffset = pHeader->dwHeaderSize;
-
-    // If there is HET table
-    if(pHeader->HetTablePos64 != 0)
-    {
-        ByteOffset = pHeader->HetTablePos64 + pHeader->HetTableSize64;
-        if(ByteOffset > ArchiveSize)
-            ArchiveSize = ByteOffset;
-    }
-
-    // If there is BET table
-    if(pHeader->BetTablePos64 != 0)
-    {
-        ByteOffset = pHeader->BetTablePos64 + pHeader->BetTableSize64;
-        if(ByteOffset > ArchiveSize)
-            ArchiveSize = ByteOffset;
-    }
-
-    // If there is hash table
-    if(pHeader->dwHashTablePos || pHeader->wHashTablePosHi)
-    {
-        ByteOffset = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos) + pHeader->HashTableSize64;
-        if(ByteOffset > ArchiveSize)
-            ArchiveSize = ByteOffset;
-    }
-
-    // If there is block table
-    if(pHeader->dwBlockTablePos || pHeader->wBlockTablePosHi)
-    {
-        ByteOffset = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos) + pHeader->BlockTableSize64;
-        if(ByteOffset > ArchiveSize)
-            ArchiveSize = ByteOffset;
-    }
-
-    // If there is hi-block table
-    if(pHeader->HiBlockTablePos64)
-    {
-        ByteOffset = pHeader->HiBlockTablePos64 + pHeader->HiBlockTableSize64;
-        if(ByteOffset > ArchiveSize)
-            ArchiveSize = ByteOffset;
-    }
-
-    return ArchiveSize;
-}
-*/
 int ConvertMpqHeaderToFormat4(
     TMPQArchive * ha,
     ULONGLONG MpqOffset,
@@ -2246,7 +2209,7 @@ static void FixCompressedFileSize(
                 SortTable[nElements++] = pBlock;
         }
 
-        // Have we found at least one compressed
+        // Have we found at least one block?
         if(nElements > 0)
         {
             // Sort the table

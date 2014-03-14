@@ -252,7 +252,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     if(nError != ERROR_SUCCESS)
     {
         FileStream_Close(pStream);
-        FreeMPQArchive(ha);
+        FreeArchiveHandle(ha);
         SetLastError(nError);
         ha = NULL;
     }

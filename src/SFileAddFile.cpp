@@ -394,7 +394,7 @@ int SFileAddFile_Init(
         lcLocale = 0;
 
     // Allocate the TMPQFile entry for newly added file
-    hf = CreateMpqFile(ha);
+    hf = CreateFileHandle(ha, NULL);
     if(hf == NULL)
         nError = ERROR_NOT_ENOUGH_MEMORY;
 
@@ -664,7 +664,7 @@ int SFileAddFile_Finish(TMPQFile * hf)
     }
 
     // Clear the add file callback
-    FreeMPQFile(hf);
+    FreeFileHandle(hf);
     return nError;
 }
 
@@ -1143,12 +1143,10 @@ bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * s
         // with the new decryption key
         if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
         {
-            hf = CreateMpqFile(ha);
+            hf = CreateFileHandle(ha, pFileEntry);
             if(hf != NULL)
             {
                 // Recrypt the file data in the MPQ
-                hf->pFileEntry = pFileEntry;
-                hf->dwDataSize = pFileEntry->dwFileSize;
                 nError = RecryptFileData(ha, hf, szFileName, szNewFileName);
                 
                 // Update the MD5
@@ -1161,7 +1159,7 @@ bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * s
                                     ha->pHeader->dwRawChunkSize);
                 }
                 
-                FreeMPQFile(hf);
+                FreeFileHandle(hf);
             }
             else
             {

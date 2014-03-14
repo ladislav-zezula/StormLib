@@ -125,7 +125,7 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
             // If we don't know the key, try to detect it by file content
             if(hf->dwFileKey == 0)
             {
-                hf->dwFileKey = DetectFileKeyByContent(pbInSector, dwBytesInThisSector);
+                hf->dwFileKey = DetectFileKeyByContent(pbInSector, dwBytesInThisSector, hf->dwDataSize);
                 if(hf->dwFileKey == 0)
                 {
                     nError = ERROR_UNKNOWN_FILE_KEY;
@@ -565,7 +565,7 @@ static int ReadMpqFilePatchFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos,
     int nError = ERROR_SUCCESS;
 
     // Make sure that the patch file is loaded completely
-    if(hf->pbFileData == NULL)
+    if(nError == ERROR_SUCCESS && hf->pbFileData == NULL)
     {
         // Load the original file and store its content to "pbOldData"
         hf->pbFileData = STORM_ALLOC(BYTE, hf->pFileEntry->dwFileSize);
@@ -670,6 +670,17 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return false;
+    }
+
+    // If we didn't load the patch info yet, do it now
+    if(hf->pFileEntry != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
+    {
+        nError = AllocatePatchInfo(hf, true);
+        if(nError != ERROR_SUCCESS)
+        {
+            SetLastError(nError);
+            return false;
+        }
     }
 
     // If the file is local file, read the data directly from the stream

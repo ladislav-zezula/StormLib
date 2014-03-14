@@ -50,7 +50,7 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
     if(pStream != NULL)
     {
         // Allocate and initialize file handle
-        hf = CreateMpqFile(NULL);
+        hf = CreateFileHandle(NULL, NULL);
         if(hf != NULL)
         {
             hf->pStream = pStream;
@@ -381,22 +381,14 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
     // Allocate file handle
     if(nError == ERROR_SUCCESS)
     {
-        if((hf = STORM_ALLOC(TMPQFile, 1)) == NULL)
+        hf = CreateFileHandle(ha, pFileEntry);
+        if(hf == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }
 
     // Initialize file handle
     if(nError == ERROR_SUCCESS)
     {
-        memset(hf, 0, sizeof(TMPQFile));
-        hf->pFileEntry = pFileEntry;
-        hf->dwMagic = ID_MPQ_FILE;
-        hf->ha = ha;
-
-        hf->MpqFilePos   = pFileEntry->ByteOffset;
-        hf->RawFilePos   = ha->MpqPos + hf->MpqFilePos;
-        hf->dwDataSize   = pFileEntry->dwFileSize;
-
         // If the MPQ has sector CRC enabled, enable if for the file
         if(ha->dwFlags & MPQ_FLAG_CHECK_SECTOR_CRC)
             hf->bCheckSectorCRCs = true;
@@ -424,18 +416,11 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
         }
     }
 
-    // If the file is actually a patch file, we have to load the patch file header
-    if(nError == ERROR_SUCCESS && pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE)
-    {
-        assert(hf->pPatchInfo == NULL);
-        nError = AllocatePatchInfo(hf, true);
-    }
-
     // Cleanup and exit
     if(nError != ERROR_SUCCESS)
     {
         SetLastError(nError);
-        FreeMPQFile(hf);
+        FreeFileHandle(hf);
         return false;
     }
 
@@ -457,6 +442,6 @@ bool WINAPI SFileCloseFile(HANDLE hFile)
     }
 
     // Free the structure
-    FreeMPQFile(hf);
+    FreeFileHandle(hf);
     return true;
 }

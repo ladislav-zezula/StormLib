@@ -134,6 +134,7 @@ extern unsigned char AsciiToUpperTable[256];
 #define MPQ_HASH_NAME_A         0x100
 #define MPQ_HASH_NAME_B         0x200
 #define MPQ_HASH_FILE_KEY       0x300
+#define MPQ_HASH_KEY2_MIX       0x400
 
 DWORD HashString(const char * szFileName, DWORD dwHashType);
 DWORD HashStringSlash(const char * szFileName, DWORD dwHashType);
@@ -148,11 +149,11 @@ ULONGLONG HashStringJenkins(const char * szFileName);
 
 DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion);
 
-void  EncryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwKey);
-void  DecryptMpqBlock(void * pvFileBlock, DWORD dwLength, DWORD dwKey);
+void  EncryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey);
+void  DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey);
 
-DWORD DetectFileKeyBySectorSize(LPDWORD SectorOffsets, DWORD decrypted);
-DWORD DetectFileKeyByContent(void * pvFileContent, DWORD dwFileSize);
+DWORD DetectFileKeyBySectorSize(LPDWORD EncryptedData, DWORD dwSectorSize, DWORD dwSectorOffsLen);
+DWORD DetectFileKeyByContent(void * pvEncryptedData, DWORD dwSectorSize, DWORD dwFileSize);
 DWORD DecryptFileKey(const char * szFileName, ULONGLONG MpqPos, DWORD dwFileSize, DWORD dwFlags);
 
 bool IsValidMD5(LPBYTE pbMd5);
@@ -235,7 +236,7 @@ int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer
 //-----------------------------------------------------------------------------
 // Common functions - MPQ File
 
-TMPQFile * CreateMpqFile(TMPQArchive * ha);
+TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry);
 void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey);
 int  AllocateSectorBuffer(TMPQFile * hf);
 int  AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile);
@@ -247,12 +248,12 @@ int  WriteSectorOffsets(TMPQFile * hf);
 int  WriteSectorChecksums(TMPQFile * hf);
 int  WriteMemDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, void * pvRawData, DWORD dwRawDataSize, DWORD dwChunkSize, LPDWORD pcbTotalSize);
 int  WriteMpqDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, DWORD dwRawDataSize, DWORD dwChunkSize);
-void FreeMPQFile(TMPQFile *& hf);
+void FreeFileHandle(TMPQFile *& hf);
 
 bool IsIncrementalPatchFile(const void * pvData, DWORD cbData, LPDWORD pdwPatchedFileSize);
 int  PatchFileData(TMPQFile * hf);
 
-void FreeMPQArchive(TMPQArchive *& ha);
+void FreeArchiveHandle(TMPQArchive *& ha);
 
 //-----------------------------------------------------------------------------
 // Utility functions
