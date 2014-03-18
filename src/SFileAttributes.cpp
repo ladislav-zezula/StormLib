@@ -125,8 +125,13 @@ static DWORD CheckSizeOfAttributesFile(DWORD cbAttrFile, DWORD dwAttrFlags, DWOR
     if(cbAttrFile == (cbHeaderSize + cbChecksumSize1 + cbFileTimeSize1 + cbFileHashSize1 + cbPatchBitSize3))
         return dwFileTableSize;
 
+#ifdef __STORMLIB_TEST__
     // Invalid size of the (attributes) file
+    // Note that many MPQs, especially Warcraft III maps have the size of (attributes) invalid.
+    // We only perform this check if this is the STORMLIB testprogram itself
     assert(false);
+#endif
+
     return 0;
 }
 

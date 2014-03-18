@@ -3472,6 +3472,11 @@ int main(int argc, char * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
+    HANDLE hMpq = NULL;
+    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\Castle Defense v7.3 NEWest.w3x"), 0, 0, &hMpq))
+        SFileCloseArchive(hMpq);
+
+
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
