@@ -107,6 +107,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     DWORD dwBlockTableSize = 0;             // Initial block table size
     DWORD dwHashTableSize = 0;
     DWORD dwReservedFiles = 0;              // Number of reserved file entries
+    DWORD dwMpqFlags = 0;
     int nError = ERROR_SUCCESS;
 
     // Check the parameters, if they are valid
@@ -154,11 +155,19 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
             return false;
     }
 
-    // Increment the maximum amount of files to have space for (listfile) and (attributes)
+    // Increment the maximum amount of files to have space for (listfile)
     if(pCreateInfo->dwMaxFileCount && pCreateInfo->dwFileFlags1)
+    {
+        dwMpqFlags |= MPQ_FLAG_LISTFILE_INVALID;
         dwReservedFiles++;
+    }
+
+    // Increment the maximum amount of files to have space for (attributes)
     if(pCreateInfo->dwMaxFileCount && pCreateInfo->dwFileFlags2 && pCreateInfo->dwAttrFlags)
+    {
+        dwMpqFlags |= MPQ_FLAG_ATTRIBUTES_INVALID;
         dwReservedFiles++;
+    }
 
     // If file count is not zero, initialize the hash table size
     dwHashTableSize = GetHashTableSizeForFileCount(pCreateInfo->dwMaxFileCount + dwReservedFiles);
@@ -197,7 +206,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         ha->dwFileFlags1    = pCreateInfo->dwFileFlags1;
         ha->dwFileFlags2    = pCreateInfo->dwFileFlags2;
         ha->dwAttrFlags     = pCreateInfo->dwAttrFlags;
-        ha->dwFlags         = 0;
+        ha->dwFlags         = dwMpqFlags | MPQ_FLAG_CHANGED;
         pStream = NULL;
 
         // Fill the MPQ header
@@ -219,9 +228,6 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
 
         // Write the naked MPQ header
         nError = WriteNakedMPQHeader(ha);
-
-        // Remember that the (listfile) and (attributes) need to be saved
-        ha->dwFlags |= MPQ_FLAG_CHANGED | MPQ_FLAG_LISTFILE_INVALID | MPQ_FLAG_ATTRIBUTES_INVALID;
     }
 
     // Create initial HET table, if the caller required an MPQ format 3.0 or newer

@@ -434,6 +434,11 @@ int SFileAddFile_Init(
             // If the caller didn't set MPQ_FILE_REPLACEEXISTING, fail it
             if((dwFlags & MPQ_FILE_REPLACEEXISTING) == 0)
                 nError = ERROR_ALREADY_EXISTS;
+
+            // When replacing an existing file,
+            // we still need to invalidate the (attributes) file
+            if(nError == ERROR_SUCCESS)
+                InvalidateInternalFiles(ha);
         }
     }
 

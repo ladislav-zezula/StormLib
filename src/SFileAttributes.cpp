@@ -246,7 +246,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
     LPBYTE pbAttrFile;
     LPBYTE pbAttrPtr;
     size_t cbAttrFile;
-    DWORD dwFinalEntries = ha->dwFileTableSize + ha->dwReservedFiles + 1;
+    DWORD dwFinalEntries = ha->dwFileTableSize + ha->dwReservedFiles;
 
     // Check if we need patch bits in the (attributes) file
     for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
@@ -283,7 +283,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 *pArrayCRC32++ = BSWAP_INT32_UNSIGNED(pFileEntry->dwCrc32);
 
             // Skip the reserved entries
-            pbAttrPtr = (LPBYTE)(pArrayCRC32 + ha->dwReservedFiles + 1);
+            pbAttrPtr = (LPBYTE)(pArrayCRC32 + ha->dwReservedFiles);
         }
 
         // Write the array of file time
@@ -296,7 +296,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 *pArrayFileTime++ = BSWAP_INT64_UNSIGNED(pFileEntry->FileTime);
 
             // Skip the reserved entries
-            pbAttrPtr = (LPBYTE)(pArrayFileTime + ha->dwReservedFiles + 1);
+            pbAttrPtr = (LPBYTE)(pArrayFileTime + ha->dwReservedFiles);
         }
 
         // Write the array of MD5s
@@ -312,7 +312,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
             }
 
             // Skip the reserved items
-            pbAttrPtr = pbArrayMD5 + ((ha->dwReservedFiles + 1) * MD5_DIGEST_SIZE);
+            pbAttrPtr = pbArrayMD5 + (ha->dwReservedFiles * MD5_DIGEST_SIZE);
         }
 
         // Write the array of patch bits
@@ -334,8 +334,8 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
                 dwBitMask = (dwBitMask << 0x07) | (dwBitMask >> 0x01);
             }
 
-            // Note: Do not increment the array by the last bit that belongs to (attributes).
-            // This might create the array one byte less (if the number of files a multiplier of 8).
+            // Having incremented the bit array just by the number of items in the file table
+            // will create the bit array one byte less of the number of files is a multiplier of 8).
             // Blizzard MPQs have the same feature.
 
             // Move past the bit array
@@ -410,48 +410,57 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
     DWORD cbAttrFile = 0;
     int nError = ERROR_SUCCESS;
 
-    // If there are no file flags for (attributes) file, do nothing
-    if(ha->dwFileFlags2 == 0 || ha->dwMaxFileCount == 0)
-        return ERROR_SUCCESS;
-
-    // We expect at least one reserved entry to be there
-    assert(ha->dwReservedFiles >= 1);
-    ha->dwReservedFiles--;
-
-    // Create the raw data that is to be written to (attributes)
-    // Note: Blizzard MPQs have entries for (listfile) and (attributes),
-    // but they are filled empty
-    pbAttrFile = CreateAttributesFile(ha, &cbAttrFile);
-    if(pbAttrFile != NULL)
+    // Only save the attributes if we should do so
+    if(ha->dwFileFlags2 != 0)
     {
-        // We expect it to be nonzero size
-        assert(cbAttrFile != 0);
+        // At this point, we expect to have at least one reserved entry in the file table
+        assert(ha->dwFlags & MPQ_FLAG_ATTRIBUTES_INVALID);
+        assert(ha->dwReservedFiles >= 1);
 
-        // Determine the real flags for (attributes)
-        if(ha->dwFileFlags2 == MPQ_FILE_EXISTS)
-            ha->dwFileFlags2 = GetDefaultSpecialFileFlags(cbAttrFile, ha->pHeader->wFormatVersion);
-
-        // Create the attributes file in the MPQ
-        nError = SFileAddFile_Init(ha, ATTRIBUTES_NAME,
-                                       0,
-                                       cbAttrFile,
-                                       LANG_NEUTRAL,
-                                       ha->dwFileFlags2 | MPQ_FILE_REPLACEEXISTING,
-                                      &hf);
-
-        // Write the attributes file raw data to it
-        if(nError == ERROR_SUCCESS)
+        // Create the raw data that is to be written to (attributes)
+        // Note: Blizzard MPQs have entries for (listfile) and (attributes),
+        // but they are filled empty
+        pbAttrFile = CreateAttributesFile(ha, &cbAttrFile);
+        if(pbAttrFile != NULL)
         {
-            // Write the content of the attributes file to the MPQ
-            nError = SFileAddFile_Write(hf, pbAttrFile, cbAttrFile, MPQ_COMPRESSION_ZLIB);
-            SFileAddFile_Finish(hf);
+            // We expect it to be nonzero size
+            assert(cbAttrFile != 0);
 
-            // Clear the invalidate flag
-            ha->dwFlags &= ~MPQ_FLAG_ATTRIBUTES_INVALID;
+            // Determine the real flags for (attributes)
+            if(ha->dwFileFlags2 == MPQ_FILE_EXISTS)
+                ha->dwFileFlags2 = GetDefaultSpecialFileFlags(cbAttrFile, ha->pHeader->wFormatVersion);
+
+            // Create the attributes file in the MPQ
+            nError = SFileAddFile_Init(ha, ATTRIBUTES_NAME,
+                                           0,
+                                           cbAttrFile,
+                                           LANG_NEUTRAL,
+                                           ha->dwFileFlags2 | MPQ_FILE_REPLACEEXISTING,
+                                          &hf);
+
+            // Write the attributes file raw data to it
+            if(nError == ERROR_SUCCESS)
+            {
+                // Write the content of the attributes file to the MPQ
+                nError = SFileAddFile_Write(hf, pbAttrFile, cbAttrFile, MPQ_COMPRESSION_ZLIB);
+                SFileAddFile_Finish(hf);
+            }
+
+            // Free the attributes buffer
+            STORM_FREE(pbAttrFile);
+        }
+        else
+        {
+            // If the list file is empty, we assume ERROR_SUCCESS
+            nError = (cbAttrFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
 
-        // Free the attributes buffer
-        STORM_FREE(pbAttrFile);
+        // If the save process succeeded, we clear the MPQ_FLAG_ATTRIBUTE_INVALID flag
+        if(nError == ERROR_SUCCESS)
+        {
+            ha->dwFlags &= ~MPQ_FLAG_ATTRIBUTES_INVALID;
+            ha->dwReservedFiles--;
+        }
     }
     
     return nError;

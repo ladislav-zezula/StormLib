@@ -1847,8 +1847,8 @@ TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID l
             if((ha->dwFileTableSize + ha->dwReservedFiles) >= ha->dwMaxFileCount)
                 return NULL;
 
-            // Invalidate the internal files. Then we need to search for a deleted entry again,
-            // because the previous call to InvalidateInternalFiles might have created some
+            // Invalidate the internal files so we free
+            // their file entries.
             InvalidateInternalFiles(ha);
 
             // Re-check for deleted entries
@@ -1856,7 +1856,7 @@ TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID l
             if(pFileEntry == NULL)
             {
                 // If there is still no deleted entry, we allocate an entry at the end of the file table
-                assert((ha->dwFileTableSize + ha->dwReservedFiles) < ha->dwMaxFileCount);
+                assert((ha->dwFileTableSize + ha->dwReservedFiles) <= ha->dwMaxFileCount);
                 pFileEntry = ha->pFileTable + ha->dwFileTableSize++;
             }
         }
@@ -1869,7 +1869,7 @@ TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID l
     else
     {
         // There should be at least one entry for that internal file
-        assert((ha->dwFileTableSize + ha->dwReservedFiles) < ha->dwMaxFileCount);
+        assert((ha->dwFileTableSize + ha->dwReservedFiles) <= ha->dwMaxFileCount);
         pFileEntry = ha->pFileTable + ha->dwFileTableSize++;
     }
 
@@ -1985,8 +1985,9 @@ void DeleteFileEntry(
 
 void InvalidateInternalFiles(TMPQArchive * ha)
 {
-    TFileEntry * pFileEntry;
-    DWORD dwReservedFiles = 0;
+    TFileEntry * pFileTableEnd;
+    TFileEntry * pFileEntry1 = NULL;
+    TFileEntry * pFileEntry2 = NULL;
 
     // Do nothing if we are in the middle of saving internal files
     if(!(ha->dwFlags & MPQ_FLAG_SAVING_TABLES))
@@ -1998,54 +1999,49 @@ void InvalidateInternalFiles(TMPQArchive * ha)
         //
 
         // Invalidate the (listfile), if not done yet
-        if(!(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID))
+        if(ha->dwFileFlags1 != 0 && (ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID) == 0)
         {
-            pFileEntry = GetFileEntryExact(ha, LISTFILE_NAME, LANG_NEUTRAL);
-            if(pFileEntry != NULL)
-            {
-                DeleteFileEntry(ha, pFileEntry);
-                dwReservedFiles++;
-            }
+            // Delete the existing entry for (listfile)
+            pFileEntry1 = GetFileEntryExact(ha, LISTFILE_NAME, LANG_NEUTRAL);
+            if(pFileEntry1 != NULL)
+                DeleteFileEntry(ha, pFileEntry1);
 
+            // Reserve one entry for (listfile)
             ha->dwFlags |= MPQ_FLAG_LISTFILE_INVALID;
+            ha->dwReservedFiles++;
         }
 
         // Invalidate the (attributes), if not done yet
-        if(!(ha->dwFlags & MPQ_FLAG_ATTRIBUTES_INVALID))
+        if(ha->dwFileFlags2 != 0 && (ha->dwFlags & MPQ_FLAG_ATTRIBUTES_INVALID) == 0)
         {
-            pFileEntry = GetFileEntryExact(ha, ATTRIBUTES_NAME, LANG_NEUTRAL);
-            if(pFileEntry != NULL)
-            {
-                DeleteFileEntry(ha, pFileEntry);
-                dwReservedFiles++;
-            }
+            // Delete the existing entry for (attributes)
+            pFileEntry2 = GetFileEntryExact(ha, ATTRIBUTES_NAME, LANG_NEUTRAL);
+            if(pFileEntry2 != NULL)
+                DeleteFileEntry(ha, pFileEntry2);
 
+            // Reserve one entry for (attributes)
             ha->dwFlags |= MPQ_FLAG_ATTRIBUTES_INVALID;
+            ha->dwReservedFiles++;
         }
 
         // If the internal files are at the end of the file table (they usually are),
         // we want to free these 2 entries, so when new files are added, they get
         // added to the freed entries and the internal files get added after that
-        if(ha->dwFileTableSize > 0 && dwReservedFiles != 0)
+        if(ha->dwFileTableSize > 0)
         {
-            // Go backwards while there are free entries
-            for(pFileEntry = ha->pFileTable + ha->dwFileTableSize - 1; pFileEntry >= ha->pFileTable; pFileEntry--)
-            {
-                // Stop searching if a file is present
-                if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
-                {
-                    pFileEntry++;
-                    break;
-                }
-            }
+            pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
+
+            // Is one of the entries the last one?
+            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1)
+                pFileTableEnd--;
+            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1)
+                pFileTableEnd--;
 
             // Calculate the new file table size
-            ha->dwFileTableSize = (DWORD)(pFileEntry - ha->pFileTable);
-            ha->dwReservedFiles = dwReservedFiles;
+            ha->dwFileTableSize = (DWORD)(pFileTableEnd - ha->pFileTable);
         }
 
-        // Remember that the MPQ has been changed and it will be necessary
-        // to update the tables
+        // Remember that the MPQ has been changed
         ha->dwFlags |= MPQ_FLAG_CHANGED;
     }
 }

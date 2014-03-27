@@ -363,49 +363,58 @@ int SListFileSaveToMpq(TMPQArchive * ha)
     DWORD cbListFile = 0;
     int nError = ERROR_SUCCESS;
 
-    // Only save (listfile) if we should do so
-    if(ha->dwFileFlags1 == 0 || ha->dwMaxFileCount == 0)
-        return ERROR_SUCCESS;
-
-    // At this point, we expect to have at least one reserved entry in the file table
-    assert(ha->dwReservedFiles >= 1);
-    ha->dwReservedFiles--;
-
-    // Create the raw data that is to be written to (listfile)
-    // Note: Creating the raw data before the (listfile) has been created in the MPQ
-    // causes that the name of the listfile will not be included in the listfile itself.
-    // That is OK, because (listfile) in Blizzard MPQs does not contain it either.
-    pbListFile = CreateListFile(ha, &cbListFile);
-    if(pbListFile != NULL)
+    // Only save the listfile if we should do so
+    if(ha->dwFileFlags1 != 0)
     {
-        // We expect it to be nonzero size
-        assert(cbListFile != 0);
+        // At this point, we expect to have at least one reserved entry in the file table
+        assert(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID);
+        assert(ha->dwReservedFiles >= 1);
 
-        // Determine the real flags for (listfile)
-        if(ha->dwFileFlags1 == MPQ_FILE_EXISTS)
-            ha->dwFileFlags1 = GetDefaultSpecialFileFlags(cbListFile, ha->pHeader->wFormatVersion);
-
-        // Create the listfile in the MPQ
-        nError = SFileAddFile_Init(ha, LISTFILE_NAME,
-                                       0,
-                                       cbListFile,
-                                       LANG_NEUTRAL,
-                                       ha->dwFileFlags1 | MPQ_FILE_REPLACEEXISTING,
-                                      &hf);
-
-        // Write the listfile raw data to it
-        if(nError == ERROR_SUCCESS)
+        // Create the raw data that is to be written to (listfile)
+        // Note: Creating the raw data before the (listfile) has been created in the MPQ
+        // causes that the name of the listfile will not be included in the listfile itself.
+        // That is OK, because (listfile) in Blizzard MPQs does not contain it either.
+        pbListFile = CreateListFile(ha, &cbListFile);
+        if(pbListFile != NULL)
         {
-            // Write the content of the listfile to the MPQ
-            nError = SFileAddFile_Write(hf, pbListFile, cbListFile, MPQ_COMPRESSION_ZLIB);
-            SFileAddFile_Finish(hf);
+            // We expect it to be nonzero size
+            assert(cbListFile != 0);
 
-            // Clear the invalidate flag
-            ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
+            // Determine the real flags for (listfile)
+            if(ha->dwFileFlags1 == MPQ_FILE_EXISTS)
+                ha->dwFileFlags1 = GetDefaultSpecialFileFlags(cbListFile, ha->pHeader->wFormatVersion);
+
+            // Create the listfile in the MPQ
+            nError = SFileAddFile_Init(ha, LISTFILE_NAME,
+                                           0,
+                                           cbListFile,
+                                           LANG_NEUTRAL,
+                                           ha->dwFileFlags1 | MPQ_FILE_REPLACEEXISTING,
+                                          &hf);
+
+            // Write the listfile raw data to it
+            if(nError == ERROR_SUCCESS)
+            {
+                // Write the content of the listfile to the MPQ
+                nError = SFileAddFile_Write(hf, pbListFile, cbListFile, MPQ_COMPRESSION_ZLIB);
+                SFileAddFile_Finish(hf);
+            }
+
+            // Free the listfile buffer
+            STORM_FREE(pbListFile);
+        }
+        else
+        {
+            // If the list file is empty, we assume ERROR_SUCCESS
+            nError = (cbListFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
 
-        // Free the listfile buffer
-        STORM_FREE(pbListFile);
+        // If the save process succeeded, we clear the MPQ_FLAG_LISTFILE_INVALID flag
+        if(nError == ERROR_SUCCESS)
+        {
+            ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
+            ha->dwReservedFiles--;
+        }
     }
 
     return nError;
