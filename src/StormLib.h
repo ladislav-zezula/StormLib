@@ -424,6 +424,8 @@ typedef enum _SFileInfoClass
 //-----------------------------------------------------------------------------
 // Deprecated flags. These are going to be removed in next releases.
 
+/*
+
 STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_LINEAR, STREAM_PROVIDER_FLAT);
 STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_ENCRYPTED, STREAM_PROVIDER_MPQE);
 STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_OPEN_ENCRYPTED, STREAM_PROVIDER_MPQE);
@@ -457,6 +459,7 @@ STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_KEY, SFileInfoEncryptionKey)
 STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_KEY_UNFIXED, SFileInfoEncryptionKeyRaw);
 STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_FILETIME, SFileInfoFileTime);
 STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_PATCH_CHAIN, SFileInfoPatchChain);
+*/
 
 //-----------------------------------------------------------------------------
 // Callback functions
