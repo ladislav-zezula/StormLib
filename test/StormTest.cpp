@@ -1,11 +1,11 @@
 /*****************************************************************************/
-/* StormLibTest.cpp                       Copyright (c) Ladislav Zezula 2003 */
+/* StormTest.cpp                          Copyright (c) Ladislav Zezula 2003 */
 /*---------------------------------------------------------------------------*/
 /* Test module for StormLib                                                  */
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 25.03.03  1.00  Lad  The first version of StormLibTest.cpp                */
+/* 25.03.03  1.00  Lad  The first version of StormTest.cpp                   */
 /*****************************************************************************/
 
 #define _CRT_NON_CONFORMING_SWPRINTFS

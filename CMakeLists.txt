@@ -237,7 +237,7 @@ set(ZLIB_BZIP2_FILES
 )
 
 set(TEST_SRC_FILES
-           test/Test.cpp
+           test/StormTest.cpp
 )
 
 add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)

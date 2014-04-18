@@ -1031,7 +1031,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\test\Test.cpp"
+				RelativePath=".\test\StormTest.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
