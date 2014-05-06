@@ -839,7 +839,7 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
 
     // Now calculate the new file pointer
     // Do not allow the file pointer to overflow
-    FilePosition = ((FilePosition + MoveOffset) > FilePosition) ? (FilePosition + MoveOffset) : 0;
+    FilePosition = ((FilePosition + MoveOffset) >= FilePosition) ? (FilePosition + MoveOffset) : 0;
 
     // Now apply the file pointer to the file
     if(hf->pStream != NULL)
