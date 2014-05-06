@@ -447,7 +447,7 @@ static bool BaseMap_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD 
 
     // Open the file for read access
     hFile = CreateFile(szFileName, FILE_READ_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if(hFile != NULL)
+    if(hFile != INVALID_HANDLE_VALUE)
     {
         // Retrieve file size. Don't allow mapping file of a zero size.
         FileSize.LowPart = GetFileSize(hFile, &FileSize.HighPart);
