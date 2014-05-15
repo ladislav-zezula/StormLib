@@ -1371,7 +1371,10 @@ static TFileStream * FlatStream_Open(const TCHAR * szFileName, DWORD dwStreamFla
     {
         // Attempt to open the base stream
         if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
+        {
+            FileStream_Close(pStream);
             return NULL;
+        }
 
         // Load the bitmap, if required to
         if(dwStreamFlags & STREAM_FLAG_USE_BITMAP)
