@@ -8,9 +8,7 @@
 /* xx.xx.99  1.00  Lad  The first version of SFileOpenFileEx.cpp             */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 /*****************************************************************************/
 /* Local functions                                                           */
@@ -22,7 +20,7 @@ static const char * GetPatchFileName(TMPQArchive * ha, const char * szFileName, 
     {
         // Copy the patch prefix
         memcpy(szBuffer, ha->szPatchPrefix, ha->cchPatchPrefix);
-        
+
         // The patch name for "OldWorld\\XXX\\YYY" is "Base\\XXX\YYY"
         // We need to remove the "Oldworld\\" prefix
         if(!_strnicmp(szFileName, "OldWorld\\", 9))
@@ -138,7 +136,7 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
 /*****************************************************************************/
 
 //-----------------------------------------------------------------------------
-// SFileEnumLocales enums all locale versions within MPQ. 
+// SFileEnumLocales enums all locale versions within MPQ.
 // Functions fills all available language identifiers on a file into the buffer
 // pointed by plcLocales. There must be enough entries to copy the localed,
 // otherwise the function returns ERROR_INSUFFICIENT_BUFFER.
@@ -164,7 +162,7 @@ int WINAPI SFileEnumLocales(
         return ERROR_INVALID_PARAMETER;
     if(pdwMaxLocales == NULL)
         return ERROR_INVALID_PARAMETER;
-    
+
     // Keep compiler happy
     dwSearchScope = dwSearchScope;
 
@@ -295,7 +293,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
         {
             case SFILE_OPEN_FROM_MPQ:
             case SFILE_OPEN_BASE_FILE:
-                
+
                 if(!IsValidMpqHandle(hMpq))
                 {
                     nError = ERROR_INVALID_HANDLE;
@@ -351,7 +349,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                     break;
                 }
 
-                return OpenLocalFile(szFileName, phFile); 
+                return OpenLocalFile(szFileName, phFile);
 
             default:
 
@@ -434,7 +432,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
 bool WINAPI SFileCloseFile(HANDLE hFile)
 {
     TMPQFile * hf = (TMPQFile *)hFile;
-    
+
     if(!IsValidFileHandle(hFile))
     {
         SetLastError(ERROR_INVALID_HANDLE);

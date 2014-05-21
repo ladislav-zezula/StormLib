@@ -8,9 +8,7 @@
 /* 12.06.04  1.00  Lad  The first version of SListFile.cpp                   */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 #include <assert.h>
 
 //-----------------------------------------------------------------------------
@@ -151,7 +149,7 @@ static size_t ReadListFileLine(TListFileCache * pCache, char * szLine, int nMaxC
     char * szLineBegin = szLine;
     char * szLineEnd = szLine + nMaxChars - 1;
     char * szExtraString = NULL;
-    
+
     // Skip newlines, spaces, tabs and another non-printable stuff
     for(;;)
     {
@@ -210,7 +208,7 @@ static size_t ReadListFileLine(TListFileCache * pCache, char * szLine, int nMaxC
     return (szLine - szLineBegin);
 }
 
-static int CompareFileNodes(const void * p1, const void * p2) 
+static int CompareFileNodes(const void * p1, const void * p2)
 {
     char * szFileName1 = *(char **)p1;
     char * szFileName2 = *(char **)p2;
@@ -439,7 +437,7 @@ static int SFileAddArbitraryListFile(
         // Delete the cache
         FreeListFileCache(pCache);
     }
-    
+
     return (pCache != NULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
@@ -487,7 +485,7 @@ static int SFileAddInternalListFile(
                 nError = SFileAddArbitraryListFile(ha, hListFile);
                 SFileCloseFile(hListFile);
             }
-            
+
             // Restore the original locale
             SFileSetLocale(lcSaveLocale);
 
@@ -595,7 +593,7 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const
 
             // If some mask entered, check it
             if(CheckWildCard(lpFindFileData->cFileName, pCache->szMask))
-                break;                
+                break;
         }
     }
 

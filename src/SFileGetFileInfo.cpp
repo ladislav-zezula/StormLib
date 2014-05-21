@@ -8,9 +8,7 @@
 /* 30.11.13  1.00  Lad  The first version of SFileGetFileInfo.cpp            */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 //-----------------------------------------------------------------------------
 // Local defines
@@ -90,7 +88,7 @@ static bool GetFilePatchChain(TMPQFile * hf, void * pvFileInfo, DWORD cbFileInfo
 
     // Give the caller the needed length
     if(pcbLengthNeeded != NULL)
-        pcbLengthNeeded[0] = (DWORD)(cchCharsNeeded * sizeof(TCHAR)); 
+        pcbLengthNeeded[0] = (DWORD)(cchCharsNeeded * sizeof(TCHAR));
 
     // If the caller gave both buffer pointer and data length,
     // try to copy the patch chain
@@ -880,7 +878,7 @@ struct TFileHeader2Ext
     const char * szExt;                 // Supplied extension, if the condition is true
 };
 
-static TFileHeader2Ext data2ext[] = 
+static TFileHeader2Ext data2ext[] =
 {
     {0x00005A4D, 0x0000FFFF, 0x00000000, 0x00000000, "exe"},    // EXE files
     {0x00000006, 0xFFFFFFFF, 0x00000001, 0xFFFFFFFF, "dc6"},    // EXE files
@@ -903,7 +901,7 @@ static TFileHeader2Ext data2ext[] =
     {0x47585053, 0xFFFFFFFF, 0x00000000, 0x00000000, "bls"},    // WoW pixel shaders
     {0xE0FFD8FF, 0xFFFFFFFF, 0x00000000, 0x00000000, "jpg"},    // JPEG image
     {0x00000000, 0x00000000, 0x00000000, 0x00000000, "xxx"},    // Default extension
-    {0, 0, 0, 0, NULL}                                          // Terminator 
+    {0, 0, 0, 0, NULL}                                          // Terminator
 };
 
 static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * szFileName)
@@ -914,7 +912,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
     DWORD dwFilePos;                    // Saved file position
 
     // Read the first 2 DWORDs bytes from the file
-    dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);   
+    dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);
     SFileReadFile(hFile, FirstBytes, sizeof(FirstBytes), &dwBytesRead, NULL);
     SFileSetFilePointer(hFile, dwFilePos, NULL, FILE_BEGIN);
 
@@ -930,7 +928,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
             if((FirstBytes[0] & data2ext[i].dwOffset00Mask) == data2ext[i].dwOffset00Data &&
                (FirstBytes[1] & data2ext[i].dwOffset04Mask) == data2ext[i].dwOffset04Data)
             {
-                char szPseudoName[20] = "";    
+                char szPseudoName[20] = "";
 
                 // Format the pseudo-name
                 sprintf(szPseudoName, "File%08u.%s", (unsigned int)(pFileEntry - hf->ha->pFileTable), data2ext[i].szExt);

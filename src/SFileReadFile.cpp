@@ -9,9 +9,7 @@
 /* 24.03.99  1.00  Lad  Added the SFileGetFileInfo function                  */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 //-----------------------------------------------------------------------------
 // Local functions
@@ -205,10 +203,10 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
     // Free all used buffers
     if(pbRawSector != NULL)
         STORM_FREE(pbRawSector);
-    
+
     // Give the caller thenumber of bytes read
     *pdwBytesRead = dwBytesRead;
-    return nError; 
+    return nError;
 }
 
 static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos, DWORD dwToRead, LPDWORD pdwBytesRead)
@@ -245,7 +243,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
                 return ERROR_NOT_ENOUGH_MEMORY;
             pbRawData = pbCompressed;
         }
-        
+
         // Load the raw (compressed, encrypted) data
         if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, pFileEntry->dwCmpSize))
         {
@@ -278,7 +276,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
             // --------------------------------------  ---------- -------- -------- ---------------
             // esES\DBFilesClient\LightSkyBox.dbc      0xBE->0xA2  0xBC     0xBC     Yes
             // deDE\DBFilesClient\MountCapability.dbc  0x93->0x77  0x77     0x77     No
-            // 
+            //
 
             if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE)
                 cbInBuffer = cbInBuffer - sizeof(TPatchInfo);
@@ -373,7 +371,7 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
                 return ERROR_NOT_ENOUGH_MEMORY;
             pbRawData = pbCompressed;
         }
-        
+
         // Load the raw (compressed, encrypted) data
         if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, pFileEntry->dwCmpSize))
         {
@@ -474,7 +472,7 @@ static int ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     {
         DWORD dwBytesInSector = ha->dwSectorSize;
         DWORD dwBufferOffs = dwFilePos & dwSectorSizeMask;
-        DWORD dwToCopy;                                     
+        DWORD dwToCopy;
 
         // Is the file sector already loaded ?
         if(hf->dwSectorOffs != dwFileSectorPos)
@@ -548,7 +546,7 @@ static int ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
 
         // Copy the data from the cached last sector to the caller's buffer
         memcpy(pbBuffer, hf->pbFileSector, dwToCopy);
-        
+
         // Update pointers
         dwTotalBytesRead += dwToCopy;
     }
@@ -701,7 +699,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
         nError = ReadMpkFileSingleUnit(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }
 
-    // If the file is single unit file, redirect it to read file 
+    // If the file is single unit file, redirect it to read file
     else if(hf->pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT)
     {
         nError = ReadMpqFileSingleUnit(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
@@ -709,7 +707,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
 
     // Otherwise read it as sector based MPQ file
     else
-    {                                                                   
+    {
         nError = ReadMpqFileSectorFile(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }
 
