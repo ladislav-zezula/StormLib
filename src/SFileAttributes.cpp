@@ -8,9 +8,7 @@
 /* 12.06.04  1.00  Lad  The first version of SAttrFile.cpp                   */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 //-----------------------------------------------------------------------------
 // Local structures
@@ -146,7 +144,7 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     if((pbAttrPtr + sizeof(MPQ_ATTRIBUTES_HEADER)) <= pbAttrFileEnd)
     {
         PMPQ_ATTRIBUTES_HEADER pAttrHeader = (PMPQ_ATTRIBUTES_HEADER)pbAttrPtr;
-        
+
         // Verify the header version
         BSWAP_ARRAY32_UNSIGNED(pAttrHeader, sizeof(MPQ_ATTRIBUTES_HEADER));
         if(pAttrHeader->dwVersion != MPQ_ATTRIBUTES_V1)
@@ -462,7 +460,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
             ha->dwReservedFiles--;
         }
     }
-    
+
     return nError;
 }
 

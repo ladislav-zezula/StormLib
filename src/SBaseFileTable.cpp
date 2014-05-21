@@ -8,9 +8,7 @@
 /* 06.09.10  1.00  Lad  The first version of SBaseFileTable.cpp              */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 //-----------------------------------------------------------------------------
 // Local defines
@@ -52,11 +50,11 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
         MaxValue >>= 1;
         dwBitCount++;
     }
-    
+
     return dwBitCount;
 }
 
-static int CompareFilePositions(const void * p1, const void * p2) 
+static int CompareFilePositions(const void * p1, const void * p2)
 {
     TMPQBlock * pBlock1 = *(TMPQBlock **)p1;
     TMPQBlock * pBlock2 = *(TMPQBlock **)p2;
@@ -130,7 +128,7 @@ void GetBits(
 #ifndef PLATFORM_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
     pbBuffer += (nResultByteSize - 1);
-#endif    
+#endif
 
     // Copy whole bytes, if any
     while(nByteLength > 0)
@@ -190,7 +188,7 @@ void SetBits(
 #ifndef PLATFORM_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
     pbBuffer += (nResultByteSize - 1);
-#endif    
+#endif
 
     // Copy whole bytes, if any
     while(nBitLength > 8)
@@ -248,7 +246,7 @@ static DWORD GetMaxFileOffset32(TMPQArchive * ha)
     // We can call this only for malformed archives v 1.0
     assert(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
     assert((ha->dwFlags & MPQ_FLAG_MALFORMED) != 0);
-    
+
     // If the block table is at the end, decrement the limit by the block table
     if(pHeader->dwBlockTablePos + (pHeader->dwBlockTableSize * sizeof(TMPQBlock)) >= dwMaxFileOffset)
         dwMaxFileOffset = pHeader->dwBlockTablePos;
@@ -384,7 +382,7 @@ int ConvertMpqHeaderToFormat4(
             pHeader->BlockTableSize64 = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
             pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
             pHeader->ArchiveSize64 = pHeader->dwArchiveSize;
-            
+
             // Block table position must be calculated as 32-bit value
             // Note: BOBA protector puts block table before the MPQ header, so it is negative
             BlockTablePos64 = (ULONGLONG)((DWORD)MpqOffset + pHeader->dwBlockTablePos);
@@ -526,7 +524,7 @@ int ConvertMpqHeaderToFormat4(
                 pHeader->HetTableSize64 = ByteOffset - pHeader->HetTablePos64;
 //              ByteOffset = pHeader->HetTablePos64;
             }
-            
+
             // Add the MPQ Offset
             BlockTablePos64 += MpqOffset;
             break;
@@ -603,7 +601,7 @@ static TMPQHash * GetHashEntryAny(TMPQArchive * ha, const char * szFileName)
             pHashAny = pHash;
 
         // Get the next hash entry for that file
-        pHash = GetNextHashEntry(ha, pFirstHash, pHash); 
+        pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
     // At the end, return neutral hash (if found), otherwise NULL
@@ -626,13 +624,13 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
         // If the locales match, return it
         if(pHash->lcLocale == lcLocale)
             return pHash;
-        
+
         // If we found neutral hash, remember it
         if(pHash->lcLocale == 0)
             pHashNeutral = pHash;
 
         // Get the next hash entry for that file
-        pHash = GetNextHashEntry(ha, pFirstHash, pHash); 
+        pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
     // At the end, return neutral hash (if found), otherwise NULL
@@ -653,9 +651,9 @@ static TMPQHash * GetHashEntryExact(TMPQArchive * ha, const char * szFileName, L
         // If the locales match, return it
         if(pHash->lcLocale == lcLocale)
             return pHash;
-        
+
         // Get the next hash entry for that file
-        pHash = GetNextHashEntry(ha, pFirstHash, pHash); 
+        pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
     // Not found
@@ -688,7 +686,7 @@ static int BuildFileTableFromBlockTable(
             //   a6d79af0 e61a0932 0000d761 0000dacb <== Fake valid
             //   a6d79af0 e61a0932 00000000 0000002f <== Real file entry
             //   a6d79af0 e61a0932 00005a4f 000093bc <== Fake valid
-            // 
+            //
 
             if(!(pBlock->dwFlags & ~MPQ_FILE_VALID_FLAGS) && (pBlock->dwFlags & MPQ_FILE_EXISTS))
             {
@@ -1137,7 +1135,7 @@ TMPQHetTable * CreateHetTable(DWORD dwEntryCount, DWORD dwTotalCount, DWORD dwNa
                     // Copy the file indexes
                     memcpy(pHetTable->pBetIndexes->Elements, pbSrcData + dwTotalCount, pHetTable->pBetIndexes->NumberOfBytes);
                 }
-                
+
                 // Return the result HET table
                 return pHetTable;
             }
@@ -1221,7 +1219,7 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
             // The size of index table (in entries) is expected
             // to be the same like the hash table size (in bytes)
             assert(((pHetHeader->dwTotalCount * pHetHeader->dwIndexSizeTotal) + 7) / 8 == pHetHeader->dwIndexTableSize);
-            
+
             // Create translated table
             pHetTable = CreateHetTable(pHetHeader->dwEntryCount, pHetHeader->dwTotalCount, pHetHeader->dwNameHashBitSize, pbSrcData);
             if(pHetTable != NULL)
@@ -1319,7 +1317,7 @@ DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
                                             4);
             //
             // TODO: This condition only happens when we are opening a MPQ
-            // where some files were deleted by StormLib. Perhaps 
+            // where some files were deleted by StormLib. Perhaps
             // we should not allow shrinking of the file table in MPQs v 4.0?
             // assert(dwFileIndex <= ha->dwFileTableSize);
             //
@@ -1535,7 +1533,7 @@ static TMPQBetTable * TranslateBetTable(
                 pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
                 pBetTable->dwBitExtra_NameHash2 = pBetHeader->dwBitExtra_NameHash2;
                 pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
-                
+
                 // Create and load the array of BET hashes
                 pBetTable->pNameHashes = CreateBitArray(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
                 LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
@@ -1646,7 +1644,7 @@ TMPQExtHeader * TranslateBetTable(
                                    BetHeader.dwBitCount_NameHash2,
                                   &pFileEntry->FileNameHash,
                                    8);
-                
+
                 assert(dwFileIndex < BetHeader.dwEntryCount);
                 dwFileIndex++;
             }
@@ -1708,7 +1706,7 @@ TFileEntry * GetFileEntryAny(TMPQArchive * ha, const char * szFileName)
         if(pHash != NULL && pHash->dwBlockIndex < ha->dwFileTableSize)
             return ha->pFileTable + pHash->dwBlockIndex;
     }
-    
+
     // Not found
     return NULL;
 }
@@ -1733,7 +1731,7 @@ TFileEntry * GetFileEntryLocale(TMPQArchive * ha, const char * szFileName, LCID 
         if(pHash != NULL && pHash->dwBlockIndex < ha->dwFileTableSize)
             return ha->pFileTable + pHash->dwBlockIndex;
     }
-    
+
     // Not found
     return NULL;
 }
@@ -1758,7 +1756,7 @@ TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID l
         if(pHash != NULL && pHash->dwBlockIndex < ha->dwFileTableSize)
             return ha->pFileTable + pHash->dwBlockIndex;
     }
-    
+
     // Not found
     return NULL;
 }
@@ -1994,7 +1992,7 @@ void InvalidateInternalFiles(TMPQArchive * ha)
     {
         //
         // We clear the file entries of (listfile) and (attributes)
-        // For each internal file cleared, we increment the number 
+        // For each internal file cleared, we increment the number
         // of reserved entries in the file table.
         //
 
@@ -2217,7 +2215,7 @@ static void FixCompressedFileSize(
             {
                 TMPQBlock * pBlock1 = SortTable[nIndex + 1];
                 TMPQBlock * pBlock0 = SortTable[nIndex];
-                
+
                 pBlock0->dwCSize = (pBlock0->dwFlags & MPQ_FILE_COMPRESS_MASK) ? (pBlock1->dwFilePos - pBlock0->dwFilePos) : pBlock0->dwFSize;
             }
 
@@ -2256,14 +2254,14 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries)
             ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
             if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
                 ByteOffset = (DWORD)ha->MpqPos + pHeader->dwBlockTablePos;
-            
+
             // Calculate full and compressed size of the block table
             dwTableSize = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
             dwCmpSize = (DWORD)pHeader->BlockTableSize64;
             assert((ByteOffset + dwCmpSize) <= (ha->MpqPos + ha->pHeader->ArchiveSize64));
 
             //
-            // One of the first cracked versions of Diablo I had block table unencrypted 
+            // One of the first cracked versions of Diablo I had block table unencrypted
             // StormLib does NOT support such MPQs anymore, as they are incompatible
             // with compressed block table feature
             //
@@ -2474,7 +2472,7 @@ int BuildFileTable_HetBet(
         // It has to be 8 bits less than the information in HET table
         if((pBetTable->dwBitCount_NameHash2 + 8) != pHetTable->dwNameHashBitSize)
             return ERROR_FILE_CORRUPT;
-        
+
         // Step one: Fill the name indexes
         for(i = 0; i < pHetTable->dwEntryCount; i++)
         {
@@ -2509,7 +2507,7 @@ int BuildFileTable_HetBet(
 
         // Go through the entire BET table and convert it to the file table.
         pFileEntry = pFileTable;
-        pBitArray = pBetTable->pFileTable; 
+        pBitArray = pBetTable->pFileTable;
         for(i = 0; i < pBetTable->dwEntryCount; i++)
         {
             DWORD dwFlagIndex = 0;
@@ -2605,7 +2603,7 @@ int BuildFileTable(TMPQArchive * ha)
         else
             bFileTableCreated = true;
     }
-    
+
     // If something failed, we free the file table entry
     if(bFileTableCreated == false)
     {
@@ -2691,7 +2689,7 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
         // Make sure that the hash table is properly filled
         memset(pFileTable, 0x00, sizeof(TFileEntry) * dwNewMaxFileCount);
         memset(pHashTable, 0xFF, sizeof(TMPQHash) * dwNewHashTableSize);
-        
+
         // Set the new tables to the MPQ archive
         ha->pFileTable = pFileTable;
         ha->pHashTable = pHashTable;
@@ -2760,7 +2758,7 @@ int SaveMPQTables(TMPQArchive * ha)
     // We expect this function to be called only when tables have been changed
     assert(ha->dwFlags & MPQ_FLAG_CHANGED);
 
-    // Find the space where the MPQ tables will be saved 
+    // Find the space where the MPQ tables will be saved
     TablePos = FindFreeMpqSpace(ha);
 
     // If the MPQ has HET table, we prepare a ready-to-save version
@@ -2851,7 +2849,7 @@ int SaveMPQTables(TMPQArchive * ha)
         pHeader->HiBlockTableSize64 = HiBlockTableSize64;
         pHeader->HiBlockTablePos64 = TablePos;
         BSWAP_ARRAY16_UNSIGNED(pHiBlockTable, HiBlockTableSize64);
-        
+
         if(!FileStream_Write(ha->pStream, &ByteOffset, pHiBlockTable, (DWORD)HiBlockTableSize64))
             nError = GetLastError();
         TablePos += HiBlockTableSize64;
@@ -2874,7 +2872,7 @@ int SaveMPQTables(TMPQArchive * ha)
         // Update the size of the archive
         pHeader->ArchiveSize64 = TablePos;
         pHeader->dwArchiveSize = (DWORD)TablePos;
-        
+
         // Update the MD5 of the archive header
         CalculateDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader);
 

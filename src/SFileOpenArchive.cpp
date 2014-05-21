@@ -13,9 +13,7 @@
 /* 19.11.03  1.01  Dan  Big endian handling                                  */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 /*****************************************************************************/
 /* Local functions                                                           */
@@ -156,7 +154,7 @@ bool WINAPI SFileOpenArchive(
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
     ULONGLONG FileSize = 0;             // Size of the file
-    int nError = ERROR_SUCCESS;   
+    int nError = ERROR_SUCCESS;
 
     // Verify the parameters
     if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)

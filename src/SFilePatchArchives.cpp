@@ -8,9 +8,7 @@
 /* 18.08.10  1.00  Lad  The first version of SFilePatchArchives.cpp          */
 /*****************************************************************************/
 
-#define __STORMLIB_SELF__
-#include "StormLib.h"
-#include "StormCommon.h"
+#include "StormPrehead.h"
 
 //-----------------------------------------------------------------------------
 // Local structures
@@ -60,7 +58,7 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
 {
     LPBYTE pbDecompressedEnd = pbDecompressed + cbDecompressed;
     LPBYTE pbCompressedEnd = pbCompressed + cbCompressed;
-    BYTE RepeatCount; 
+    BYTE RepeatCount;
     BYTE OneByte;
 
     // Cut the initial DWORD from the compressed chunk
@@ -73,7 +71,7 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
     while(pbCompressed < pbCompressedEnd && pbDecompressed < pbDecompressedEnd)
     {
         OneByte = *pbCompressed++;
-        
+
         // Is it a repetition byte ?
         if(OneByte & 0x80)
         {
