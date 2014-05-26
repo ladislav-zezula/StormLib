@@ -2090,7 +2090,7 @@ static int TestReadFile_MasterMirror(const char * szMirrorName, const char * szM
 // Test of the TFileStream object
 static int TestFileStreamOperations(const char * szPlainName, DWORD dwStreamFlags)
 {
-    TFileStream * pStream;
+    TFileStream * pStream = NULL;
     TLogHelper Logger("FileStreamTest", szPlainName);
     ULONGLONG ByteOffset;
     ULONGLONG FileSize = 0;
