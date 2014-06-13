@@ -199,6 +199,7 @@ bool WINAPI SFileOpenArchive(
     if(nError == ERROR_SUCCESS)
     {
         ULONGLONG SearchOffset = 0;
+        ULONGLONG EndOfSearch = FileSize;
         DWORD dwStreamFlags = 0;
         DWORD dwHeaderSize;
         DWORD dwHeaderID;
@@ -215,9 +216,13 @@ bool WINAPI SFileOpenArchive(
         // Also remember if we shall check sector CRCs when reading file
         if(dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC)
             ha->dwFlags |= MPQ_FLAG_CHECK_SECTOR_CRC;
+        
+        // Limit the header searching to about 130 MB of data
+        if(EndOfSearch > 0x08000000)
+            EndOfSearch = 0x08000000;
 
         // Find the offset of MPQ header within the file
-        while(SearchOffset < FileSize)
+        while(SearchOffset < EndOfSearch)
         {
             DWORD dwBytesAvailable = MPQ_HEADER_SIZE_V4;
 
