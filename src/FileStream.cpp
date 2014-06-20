@@ -211,7 +211,7 @@ static bool BaseFile_Read(
         ssize_t bytes_read;
 
         // If the byte offset is different from the current file position,
-        // we have to update the file position
+        // we have to update the file position   xxx
         if(ByteOffset != pStream->Base.File.FilePos)
         {
             lseek64((intptr_t)pStream->Base.File.hFile, (off64_t)(ByteOffset), SEEK_SET);
