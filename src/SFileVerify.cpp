@@ -26,6 +26,17 @@
 // Known Blizzard public keys
 // Created by Jean-Francois Roy using OpenSSL
 
+static const char * szBlizzardWeakPrivateKey =
+    "-----BEGIN PRIVATE KEY-----"
+    "MIIBOQIBAAJBAJJidwS/uILMBSO5DLGsBFknIXWWjQJe2kfdfEk3G/j66w4KkhZ1"
+    "V61Rt4zLaMVCYpDun7FLwRjkMDSepO1q2DcCAwEAAQJANtiztVDMJh2hE1hjPDKy"
+    "UmEJ9U/aN3gomuKOjbQbQ/bWWcM/WfhSVHmPqtqh/bQI2UXFr0rnXngeteZHLr/b"
+    "8QIhAMuWriSKGMACw18/rVVfUrThs915odKBH1Alr3vMVVzZAiEAuBHPSQkgwcb6"
+    "L4MWaiKuOzq08mSyNqPeN8oSy18q848CIHeMn+3s+eOmu7su1UYQl6yH7OrdBd1q"
+    "3UxfFNEJiAbhAiAqxdCyOxHGlbM7aS3DOg3cq5ayoN2cvtV7h1R4t8OmVwIgF+5z"
+    "/6vkzBUsZhd8Nwyis+MeQYH0rpFpMKdTlqmPF2Q="
+    "-----END PRIVATE KEY-----";
+
 static const char * szBlizzardWeakPublicKey =
     "-----BEGIN PUBLIC KEY-----"
     "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJJidwS/uILMBSO5DLGsBFknIXWWjQJe"

@@ -3,6 +3,8 @@ rem Post-build batch for StormLib project
 rem Called as StormLib.bat $(PlatformName) $(ConfigurationName)
 rem Example: StormLib.bat x64 Debug
 
+if not exist ..\aaa goto exit
+
 copy src\StormPort.h ..\aaa\inc
 copy src\StormLib.h  ..\aaa\inc
 
@@ -19,4 +21,5 @@ copy .\bin\StormLib\%1\%2\*.lib    ..\aaa\lib64
 goto exit
 
 :exit
+
 
