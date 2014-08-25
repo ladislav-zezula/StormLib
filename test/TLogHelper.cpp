@@ -279,7 +279,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
     }
 
     // Put the newline, if requested
-    *szBuffer++ = bPrintEndOfLine ? '\n' : 0;
+    *szBuffer++ = bPrintEndOfLine ? '\n' : '\r';
     *szBuffer = 0;
 
     // Remember if we printed a message
