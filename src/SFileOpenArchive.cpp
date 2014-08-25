@@ -84,6 +84,9 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     if(pHeader->wHashTablePosHi || pHeader->dwHashTablePos)
     {
         ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
+        if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
+            ByteOffset = (DWORD)ha->MpqPos + pHeader->dwHashTablePos;
+
         if(ByteOffset > FileSize)
             return ERROR_BAD_FORMAT;
     }
@@ -91,18 +94,12 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     // Check the begin of block table
     if(pHeader->wBlockTablePosHi || pHeader->dwBlockTablePos)
     {
+        ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
         if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
-        {
             ByteOffset = (DWORD)ha->MpqPos + pHeader->dwBlockTablePos;
-            if(ByteOffset > FileSize)
-                return ERROR_BAD_FORMAT;
-        }
-        else
-        {
-            ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
-            if(ByteOffset > FileSize)
-                return ERROR_BAD_FORMAT;
-        }
+
+        if(ByteOffset > FileSize)
+            return ERROR_BAD_FORMAT;
     }
 
     // Check the begin of hi-block table

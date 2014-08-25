@@ -56,30 +56,6 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
     return dwBitCount;
 }
 
-static int CompareFilePositions(const void * p1, const void * p2) 
-{
-    TMPQBlock * pBlock1 = *(TMPQBlock **)p1;
-    TMPQBlock * pBlock2 = *(TMPQBlock **)p2;
-    DWORD dwFileEnd1;
-    DWORD dwFileEnd2;
-
-    // Compare file begins
-    if(pBlock1->dwFilePos < pBlock2->dwFilePos)
-        return -1;
-    if(pBlock1->dwFilePos > pBlock2->dwFilePos)
-        return +1;
-
-    // If the files begin at the same position, compare their ends
-    dwFileEnd1 = pBlock1->dwFilePos + pBlock1->dwCSize;
-    dwFileEnd2 = pBlock2->dwFilePos + pBlock2->dwCSize;
-    if(dwFileEnd1 < dwFileEnd2)
-        return -1;
-    if(dwFileEnd1 > dwFileEnd2)
-        return +1;
-
-    return 0;
-}
-
 //-----------------------------------------------------------------------------
 // Support functions for BIT_ARRAY
 
@@ -239,27 +215,6 @@ void SetBits(
 
 //-----------------------------------------------------------------------------
 // Support for MPQ header
-
-static DWORD GetMaxFileOffset32(TMPQArchive * ha)
-{
-    TMPQHeader * pHeader = ha->pHeader;
-    DWORD dwMaxFileOffset = ha->pHeader->dwArchiveSize;
-
-    // We can call this only for malformed archives v 1.0
-    assert(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
-    assert((ha->dwFlags & MPQ_FLAG_MALFORMED) != 0);
-    
-    // If the block table is at the end, decrement the limit by the block table
-    if(pHeader->dwBlockTablePos + (pHeader->dwBlockTableSize * sizeof(TMPQBlock)) >= dwMaxFileOffset)
-        dwMaxFileOffset = pHeader->dwBlockTablePos;
-
-    // If the hash table is at the end, decrement the limit by the hash table
-    if(pHeader->dwHashTablePos + (pHeader->dwHashTableSize * sizeof(TMPQBlock)) >= dwMaxFileOffset)
-        dwMaxFileOffset = pHeader->dwHashTablePos;
-
-    // Return what we found
-    return dwMaxFileOffset;
-}
 
 static ULONGLONG DetermineArchiveSize_V1(
     TMPQArchive * ha,
@@ -2049,78 +2004,40 @@ void InvalidateInternalFiles(TMPQArchive * ha)
 //-----------------------------------------------------------------------------
 // Support for file tables - hash table, block table, hi-block table
 
-int CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize)
+// Fixes the case when hash table size is set to arbitrary long value
+static void FixHashTableSize(TMPQArchive * ha, ULONGLONG ByteOffset)
 {
-    TMPQHash * pHashTable;
+    ULONGLONG FileSize = 0;
+    DWORD dwFixedTableSize;
+    DWORD dwHashTableSize = ha->pHeader->dwHashTableSize;
 
-    // Sanity checks
-    assert((dwHashTableSize & (dwHashTableSize - 1)) == 0);
-    assert(ha->pHashTable == NULL);
+    // Spazzler protector abuses the fact that hash table size does not matter
+    // if the hash table is entirely filled with values different than 0xFFFFFFFF.
+    // It sets the hash table size to 0x00100000, which slows down file searching
+    // and adding a listfile.
 
-    // If the required hash table size is zero, don't create anything
-    if(dwHashTableSize == 0)
-        dwHashTableSize = HASH_TABLE_SIZE_DEFAULT;
-
-    // Create the hash table
-    pHashTable = STORM_ALLOC(TMPQHash, dwHashTableSize);
-    if(pHashTable == NULL)
-        return ERROR_NOT_ENOUGH_MEMORY;
-
-    // Fill it
-    memset(pHashTable, 0xFF, dwHashTableSize * sizeof(TMPQHash));
-    ha->dwMaxFileCount = dwHashTableSize;
-    ha->pHashTable = pHashTable;
-    return ERROR_SUCCESS;
-}
-
-TMPQHash * LoadHashTable(TMPQArchive * ha)
-{
-    TMPQHeader * pHeader = ha->pHeader;
-    ULONGLONG ByteOffset;
-    TMPQHash * pHashTable = NULL;
-    DWORD dwTableSize;
-    DWORD dwCmpSize;
-
-    // If the MPQ has no hash table, do nothing
-    if(pHeader->dwHashTablePos == 0 && pHeader->wHashTablePosHi == 0)
-        return NULL;
-
-    // If the hash table size is zero, do nothing
-    if(pHeader->dwHashTableSize == 0)
-        return NULL;
-
-    // Load the hash table for MPQ variations
-    switch(ha->dwSubType)
+    // Only if the hash table size is correct
+    if((dwHashTableSize & (dwHashTableSize - 1)) == 0)
     {
-        case MPQ_SUBTYPE_MPQ:
+        // Retrieve the file size
+        FileStream_GetSize(ha->pStream, &FileSize);
 
-            // Get the compressed and uncompressed hash table size
-            dwTableSize = pHeader->dwHashTableSize * sizeof(TMPQHash);
-            dwCmpSize = (DWORD)pHeader->HashTableSize64;
+        // Work as long as the size greater than file size
+        for(;;)
+        {
+            // Try the size of one half of the current
+            dwFixedTableSize = dwHashTableSize >> 1;
+            if(ByteOffset + (dwFixedTableSize * sizeof(TMPQHash)) <= FileSize)
+                break;
 
-            //
-            // Load the table from the MPQ, with decompression
-            //
-            // Note: We will NOT check if the hash table is properly decrypted.
-            // Some MPQ protectors corrupt the hash table by rewriting part of it.
-            // Hash table, the way how it works, allows arbitrary values for unused entries.
-            //
+            // Cut the hash table size to half
+            dwHashTableSize = dwFixedTableSize;
+        }
 
-            ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
-            pHashTable = (TMPQHash *)LoadMpqTable(ha, ByteOffset, dwCmpSize, dwTableSize, MPQ_KEY_HASH_TABLE);
-            break;
-
-        case MPQ_SUBTYPE_SQP:
-            pHashTable = LoadSqpHashTable(ha);
-            break;
-
-        case MPQ_SUBTYPE_MPK:
-            pHashTable = LoadMpkHashTable(ha);
-            break;
+        // Fix the hash table size
+        ha->pHeader->dwHashTableSize = dwHashTableSize;
+        ha->pHeader->HashTableSize64 = dwHashTableSize * sizeof(TMPQHash);
     }
-
-    // Return the hash table
-    return pHashTable;
 }
 
 // This function fixes the scenario then dwBlockTableSize
@@ -2174,64 +2091,90 @@ static void FixBlockTableSize(
     }
 }
 
-// This function fixes the scenario then dwBlockTableSize
-// is greater and goes into a MPQ file
-static void FixCompressedFileSize(
-    TMPQArchive * ha,
-    TMPQBlock * pBlockTable)
+int CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize)
 {
-    TMPQHeader * pHeader = ha->pHeader;
-    TMPQBlock ** SortTable;
-    TMPQBlock * pBlockTableEnd = pBlockTable + pHeader->dwBlockTableSize;
-    TMPQBlock * pBlock;
-    size_t nElements = 0;
-    size_t nIndex;
-    DWORD dwMaxFileOffs;
+    TMPQHash * pHashTable;
 
-    // Only perform this check on MPQs version 1.0
-    assert(pHeader->dwHeaderSize == MPQ_HEADER_SIZE_V1);
+    // Sanity checks
+    assert((dwHashTableSize & (dwHashTableSize - 1)) == 0);
+    assert(ha->pHashTable == NULL);
 
-    // Allocate sort table for all entries
-    SortTable = STORM_ALLOC(TMPQBlock*, pHeader->dwBlockTableSize);
-    if(SortTable != NULL)
-    {
-        // Calculate the end of the archive
-        dwMaxFileOffs = GetMaxFileOffset32(ha);
+    // If the required hash table size is zero, don't create anything
+    if(dwHashTableSize == 0)
+        dwHashTableSize = HASH_TABLE_SIZE_DEFAULT;
 
-        // Put all blocks to a sort table
-        for(pBlock = pBlockTable; pBlock < pBlockTableEnd; pBlock++)
-        {
-            if(pBlock->dwFlags & MPQ_FILE_EXISTS)
-                SortTable[nElements++] = pBlock;
-        }
+    // Create the hash table
+    pHashTable = STORM_ALLOC(TMPQHash, dwHashTableSize);
+    if(pHashTable == NULL)
+        return ERROR_NOT_ENOUGH_MEMORY;
 
-        // Have we found at least one block?
-        if(nElements > 0)
-        {
-            // Sort the table
-            qsort(SortTable, nElements, sizeof(TMPQBlock *), CompareFilePositions);
-
-            // Walk the table and set all compressed sizes to they
-            // match the difference (dwFilePos1 - dwFilePos0)
-            for(nIndex = 0; nIndex < nElements - 1; nIndex++)
-            {
-                TMPQBlock * pBlock1 = SortTable[nIndex + 1];
-                TMPQBlock * pBlock0 = SortTable[nIndex];
-                
-                pBlock0->dwCSize = (pBlock0->dwFlags & MPQ_FILE_COMPRESS_MASK) ? (pBlock1->dwFilePos - pBlock0->dwFilePos) : pBlock0->dwFSize;
-            }
-
-            // Fix the last entry
-            pBlock = SortTable[nElements - 1];
-            pBlock->dwCSize = (pBlock->dwFlags & MPQ_FILE_COMPRESS_MASK) ? (dwMaxFileOffs - pBlock->dwFilePos) : pBlock->dwFSize;
-        }
-
-        STORM_FREE(SortTable);
-    }
+    // Fill it
+    memset(pHashTable, 0xFF, dwHashTableSize * sizeof(TMPQHash));
+    ha->dwMaxFileCount = dwHashTableSize;
+    ha->pHashTable = pHashTable;
+    return ERROR_SUCCESS;
 }
 
+TMPQHash * LoadHashTable(TMPQArchive * ha)
+{
+    TMPQHeader * pHeader = ha->pHeader;
+    ULONGLONG ByteOffset;
+    TMPQHash * pHashTable = NULL;
+    DWORD dwTableSize;
+    DWORD dwCmpSize;
 
-TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries)
+    // If the MPQ has no hash table, do nothing
+    if(pHeader->dwHashTablePos == 0 && pHeader->wHashTablePosHi == 0)
+        return NULL;
+
+    // If the hash table size is zero, do nothing
+    if(pHeader->dwHashTableSize == 0)
+        return NULL;
+
+    // Load the hash table for MPQ variations
+    switch(ha->dwSubType)
+    {
+        case MPQ_SUBTYPE_MPQ:
+
+            ByteOffset = ha->MpqPos + MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
+            if((pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1) && (ha->dwFlags & MPQ_FLAG_MALFORMED))
+            {
+                // Calculate the hash table offset as 32-bit value
+                ByteOffset = (DWORD)ha->MpqPos + pHeader->dwHashTablePos;
+
+                // Defense against map protectors that set the hash table size too big
+                FixHashTableSize(ha, ByteOffset);
+            }
+
+            // Get the compressed and uncompressed hash table size
+            dwTableSize = pHeader->dwHashTableSize * sizeof(TMPQHash);
+            dwCmpSize = (DWORD)pHeader->HashTableSize64;
+
+            //
+            // Load the table from the MPQ, with decompression
+            //
+            // Note: We will NOT check if the hash table is properly decrypted.
+            // Some MPQ protectors corrupt the hash table by rewriting part of it.
+            // Hash table, the way how it works, allows arbitrary values for unused entries.
+            //
+
+            pHashTable = (TMPQHash *)LoadMpqTable(ha, ByteOffset, dwCmpSize, dwTableSize, MPQ_KEY_HASH_TABLE);
+            break;
+
+        case MPQ_SUBTYPE_SQP:
+            pHashTable = LoadSqpHashTable(ha);
+            break;
+
+        case MPQ_SUBTYPE_MPK:
+            pHashTable = LoadMpkHashTable(ha);
+            break;
+    }
+
+    // Return the hash table
+    return pHashTable;
+}
+
+TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool /* bDontFixEntries */)
 {
     TMPQHeader * pHeader = ha->pHeader;
     TMPQBlock * pBlockTable = NULL;
@@ -2278,9 +2221,11 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries)
                 if(pBlockTable != NULL)
                     FixBlockTableSize(ha, pBlockTable);
 
-                // Defense against protectors that set invalid compressed size
-                if((ha->dwFlags & MPQ_FLAG_MALFORMED) && (bDontFixEntries == false))
-                    FixCompressedFileSize(ha, pBlockTable);
+                //
+                // Note: TMPQBlock::dwCSize file size can be completely invalid
+                // for compressed files and the file can still be read.
+                // Abused by some MPQ protectors
+                //
             }
             break;
 

@@ -1436,6 +1436,13 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
             nError = pLogger->PrintError("Failed to query the file size");
     }
 
+    // Spazzler protector: Creates fake files with size of 0x7FFFE7CA
+    if(nError == ERROR_SUCCESS)
+    {
+        if(dwFileSizeLo > 0x1FFFFFFF)
+            nError = ERROR_FILE_CORRUPT;
+    }
+
     // Allocate buffer for the file content
     if(nError == ERROR_SUCCESS)
     {
@@ -3556,7 +3563,7 @@ int main(int argc, char * argv[])
     // Search all testing archives and verify their SHA1 hash
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-
+/*
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
         nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", 0);
@@ -3608,7 +3615,7 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-
+*/
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
@@ -3663,6 +3670,9 @@ int main(int argc, char * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x");
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x");
 
     // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)

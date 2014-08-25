@@ -29,8 +29,7 @@
   #define SCOMP(Name) SComp##Name
 #endif
 
-
-// Just in case anyone is still using C out there
+// Make sure the functions are exported as C functions
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,7 +45,7 @@ DWORD WINAPI SFILE(GetFileSize)(HANDLE hFile, LPDWORD lpFileSizeHigh);
 BOOL  WINAPI SFILE(GetFileArchive)(HANDLE hFile, HANDLE *hMPQ);
 BOOL  WINAPI SFILE(GetFileName)(HANDLE hFile, LPCSTR lpBuffer, DWORD dwBufferLength);
 DWORD WINAPI SFILE(SetFilePointer)(HANDLE hFile, long lDistanceToMove, PLONG lplDistanceToMoveHigh, DWORD dwMoveMethod);
-BOOL  WINAPI SFILE(ReadFile)(HANDLE hFile,LPVOID lpBuffer,DWORD nNumberOfBytesToRead,LPDWORD lpNumberOfBytesRead,LPOVERLAPPED lpOverlapped);
+BOOL  WINAPI SFILE(ReadFile)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
 LCID  WINAPI SFILE(SetLocale)(LCID nNewLocale);
 BOOL  WINAPI SFILE(GetBasePath)(LPCSTR lpBuffer, DWORD dwBufferLength);
 BOOL  WINAPI SFILE(SetBasePath)(LPCSTR lpNewBasePath);
@@ -55,13 +54,12 @@ BOOL  WINAPI SFILE(SetBasePath)(LPCSTR lpNewBasePath);
 BOOL  WINAPI SCOMP(Compress)  (char * pbOutBuffer, int * pdwOutLength, char * pbInBuffer, int dwInLength, int uCmp, int uCmpType, int nCmpLevel);
 BOOL  WINAPI SCOMP(Decompress)(char * pbOutBuffer, int * pdwOutLength, char * pbInBuffer, int dwInLength);
 
+#ifdef __cplusplus
+}
+#endif
 
 #if defined(_MSC_VER) && !defined(BUILDING_STORM_CPP)
 #pragma comment(lib, "Storm.lib")    // Force linking Storm.lib and thus Storm.dll
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif // __STORM_H__
