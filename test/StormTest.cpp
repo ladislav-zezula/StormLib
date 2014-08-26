@@ -1673,7 +1673,6 @@ static int CreateNewArchive_V2(TLogHelper * pLogger, const char * szPlainName, D
     return ERROR_SUCCESS;
 }
 
-
 // Creates new archive with UNICODE name. Adds prefix to the name
 static int CreateNewArchiveU(TLogHelper * pLogger, const wchar_t * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount)
 {
@@ -2894,6 +2893,79 @@ static int TestCreateArchive_EmptyMpq(const char * szPlainName, DWORD dwCreateFl
     return nError;
 }
 
+static int TestCreateArchive_TestGaps(const char * szPlainName)
+{
+    TLogHelper Logger("CreateMpqEditor", szPlainName);
+    ULONGLONG ByteOffset1 = 0xFFFFFFFF;
+    ULONGLONG ByteOffset2 = 0xEEEEEEEE;
+    HANDLE hMpq = NULL;
+    HANDLE hFile = NULL;
+    char szFullPath[MAX_PATH];
+    int nError = ERROR_SUCCESS;
+
+    // Create new MPQ
+    nError = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_4, 4000, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Add one file and flush the archive
+        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
+        SFileCloseArchive(hMpq);
+        hMpq = NULL;
+    }
+
+    // Reopen the MPQ and add another file.
+    // The new file must be added to the position of the (listfile)
+    if(nError == ERROR_SUCCESS)
+    {
+        CreateFullPathName(szFullPath, NULL, szPlainName);
+        nError = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
+        if(nError == ERROR_SUCCESS)
+        {
+            // Retrieve the position of the (listfile)
+            if(SFileOpenFileEx(hMpq, LISTFILE_NAME, 0, &hFile))
+            {
+                SFileGetFileInfo(hFile, SFileInfoByteOffset, &ByteOffset1, sizeof(ULONGLONG), NULL);
+                SFileCloseFile(hFile);
+            }
+            else
+                nError = GetLastError();
+        }
+    }
+
+    // Add another file and check its position. It must be at the position of the former listfile
+    if(nError == ERROR_SUCCESS)
+    {
+        const char * szAddedFile = "AddedFile02.txt";
+
+        // Add another file
+        nError = AddFileToMpq(&Logger, hMpq, szAddedFile, "This is the second added file.", MPQ_FILE_COMPRESS);
+
+        // Retrieve the position of the (listfile)
+        if(SFileOpenFileEx(hMpq, szAddedFile, 0, &hFile))
+        {
+            SFileGetFileInfo(hFile, SFileInfoByteOffset, &ByteOffset2, sizeof(ULONGLONG), NULL);
+            SFileCloseFile(hFile);
+        }
+        else
+            nError = GetLastError();
+    }
+
+    // Now check the positions
+    if(nError == ERROR_SUCCESS)
+    {
+        if(ByteOffset1 != ByteOffset2)
+        {
+            Logger.PrintError("The added file was not written to the position of (listfile)");
+            nError = ERROR_FILE_CORRUPT;    
+        }
+    }
+
+    // Close the archive if needed
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
 static int TestCreateArchive_MpqEditor(const char * szPlainName, const char * szFileName)
 {
     TLogHelper Logger("CreateMpqEditor", szPlainName);
@@ -3563,7 +3635,7 @@ int main(int argc, char * argv[])
     // Search all testing archives and verify their SHA1 hash
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-/*
+
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
         nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", 0);
@@ -3792,6 +3864,10 @@ int main(int argc, char * argv[])
 
     // Test creating of an archive the same way like MPQ Editor does
     if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_TestGaps("StormLibTest_GapsTest.mpq");
+
+    // Test creating of an archive the same way like MPQ Editor does
+    if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_MpqEditor("StormLibTest_MpqEditorTest.mpq", "AddedFile.exe");
 
     // Create an archive and fill it with files up to the max file count
@@ -3805,7 +3881,7 @@ int main(int argc, char * argv[])
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES);
-*/
+
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);
