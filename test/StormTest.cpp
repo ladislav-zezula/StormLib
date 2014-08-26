@@ -3615,7 +3615,7 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-*/
+
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
@@ -3805,7 +3805,7 @@ int main(int argc, char * argv[])
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES);
-
+*/
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);

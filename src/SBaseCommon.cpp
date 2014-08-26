@@ -651,7 +651,8 @@ TMPQHash * AllocateHashEntry(
 
 // Finds a free space in the MPQ where to store next data
 // The free space begins beyond the file that is stored at the fuhrtest
-// position in the MPQ.
+// position in the MPQ. (listfile), (attributes) and (signature) are ignored,
+// unless the MPQ is being flushed.
 ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
@@ -666,6 +667,10 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
         // Only take existing files with nonzero size
         if((pFileEntry->dwFlags & MPQ_FILE_EXISTS) && (pFileEntry->dwCmpSize != 0))
         {
+            // If we are not saving MPQ tables, ignore internal MPQ files
+            if((ha->dwFlags & MPQ_FLAG_SAVING_TABLES) == 0 && IsInternalMpqFileName(pFileEntry->szFileName))
+                continue;
+
             // If the end of the file is bigger than current MPQ table pos, update it
             if((pFileEntry->ByteOffset + pFileEntry->dwCmpSize) > FreeSpacePos)
             {
