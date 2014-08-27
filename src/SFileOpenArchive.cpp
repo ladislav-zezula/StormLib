@@ -388,7 +388,7 @@ bool WINAPI SFileOpenArchive(
     // Load the internal listfile and include it to the file table
     if(nError == ERROR_SUCCESS && (dwFlags & MPQ_OPEN_NO_LISTFILE) == 0)
     {
-        // Save the flags for (listfile)
+        // Quick check for (listfile)
         pFileEntry = GetFileEntryLocale(ha, LISTFILE_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
         {
@@ -401,13 +401,26 @@ bool WINAPI SFileOpenArchive(
     // Load the "(attributes)" file and merge it to the file table
     if(nError == ERROR_SUCCESS && (dwFlags & MPQ_OPEN_NO_ATTRIBUTES) == 0)
     {
-        // Save the flags for (attributes)
+        // Quick check for (attributes)
         pFileEntry = GetFileEntryLocale(ha, ATTRIBUTES_NAME, LANG_NEUTRAL);
         if(pFileEntry != NULL)
         {
             // Ignore result of the operation. (attributes) is optional.
             SAttrLoadAttributes(ha);
             ha->dwFileFlags2 = pFileEntry->dwFlags;
+        }
+    }
+
+    // Remember whether the archive has weak signature. Only for MPQs format 1.0.
+    if(nError == ERROR_SUCCESS)
+    {
+        // Quick check for (signature)
+        pFileEntry = GetFileEntryLocale(ha, SIGNATURE_NAME, LANG_NEUTRAL);
+        if(pFileEntry != NULL)
+        {
+            // Just remember that the archive is weak-signed
+            assert(pFileEntry->dwFlags == MPQ_FILE_EXISTS);
+            ha->dwFileFlags3 = pFileEntry->dwFlags;
         }
     }
 
@@ -469,6 +482,14 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
     // Indicate that we are saving MPQ internal structures
     ha->dwFlags |= MPQ_FLAG_SAVING_TABLES;
 
+    // If the (signature) has been invalidated, save it
+    if(ha->dwFlags & MPQ_FLAG_SIGNATURE_INVALID)
+    {
+        nError = SSignFileCreate(ha);
+        if(nError != ERROR_SUCCESS)
+            nResultError = nError;
+    }
+
     // If the (listfile) has been invalidated, save it
     if(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID)
     {
@@ -488,9 +509,18 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
     // Save HET table, BET table, hash table, block table, hi-block table
     if(ha->dwFlags & MPQ_FLAG_CHANGED)
     {
+        // Save all MPQ tables first
         nError = SaveMPQTables(ha);
         if(nError != ERROR_SUCCESS)
             nResultError = nError;
+
+        // If the archive has weak signature, we need to finish it
+        if(ha->dwFileFlags3 != 0)
+        {
+            nError = SSignFileFinish(ha);
+            if(nError != ERROR_SUCCESS)
+                nResultError = nError;
+        }
     }
 
     // We are no longer saving internal MPQ structures

@@ -1655,6 +1655,7 @@ static int CreateNewArchive_V2(TLogHelper * pLogger, const char * szPlainName, D
     CreateInfo.dwStreamFlags  = STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE;
     CreateInfo.dwFileFlags1   = (dwCreateFlags & MPQ_CREATE_LISTFILE)   ? MPQ_FILE_EXISTS : 0;
     CreateInfo.dwFileFlags2   = (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? MPQ_FILE_EXISTS : 0;
+    CreateInfo.dwFileFlags3   = (dwCreateFlags & MPQ_CREATE_SIGNATURE)  ? MPQ_FILE_EXISTS : 0;
     CreateInfo.dwAttrFlags    = (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? (MPQ_ATTRIBUTE_CRC32 | MPQ_ATTRIBUTE_FILETIME | MPQ_ATTRIBUTE_MD5) : 0;
     CreateInfo.dwSectorSize   = (CreateInfo.dwMpqVersion >= MPQ_FORMAT_VERSION_3) ? 0x4000 : 0x1000;
     CreateInfo.dwRawChunkSize = (CreateInfo.dwMpqVersion >= MPQ_FORMAT_VERSION_4) ? 0x4000 : 0;
@@ -2594,6 +2595,114 @@ static int TestOpenArchive_VerifySignature(const char * szPlainName, const char 
     return nError;
 }
 
+static int TestOpenArchive_ModifySigned(const char * szPlainName, const char * szOriginalName)
+{
+    TLogHelper Logger("ModifySignedTest", szPlainName);
+    HANDLE hMpq = NULL;
+    int nVerifyError;
+    int nError = ERROR_SUCCESS;
+
+    // We need original name for the signature check
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify the weak signature
+        Logger.PrintProgress("Verifying archive signature ...");
+        nVerifyError = SFileVerifyArchive(hMpq);
+
+        // Check the result signature
+        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
+        {
+            Logger.PrintMessage("Weak signature verification error");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Add a file and verify the signature again
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify any of the present signatures
+        Logger.PrintProgress("Modifying signed archive ...");
+        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, true);
+    }
+
+    // Verify the signature again
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify the weak signature
+        Logger.PrintProgress("Verifying archive signature ...");
+        nVerifyError = SFileVerifyArchive(hMpq);
+
+        // Check the result signature
+        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
+        {
+            Logger.PrintMessage("Weak signature verification error");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Close the MPQ
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
+static int TestOpenArchive_SignExisting(const char * szPlainName)
+{
+    TLogHelper Logger("SignExistingMpq", szPlainName);
+    HANDLE hMpq = NULL;
+    int nVerifyError;
+    int nError = ERROR_SUCCESS;
+
+    // We need original name for the signature check
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify the weak signature
+        Logger.PrintProgress("Verifying archive signature ...");
+        nVerifyError = SFileVerifyArchive(hMpq);
+
+        // Check the result signature
+        if(nVerifyError != ERROR_NO_SIGNATURE)
+        {
+            Logger.PrintMessage("There already is a signature in the MPQ");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Add a file and verify the signature again
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify any of the present signatures
+        Logger.PrintProgress("Signing the MPQ ...");
+        if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
+        {
+            Logger.PrintMessage("Failed to create archive signature");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Verify the signature again
+    if(nError == ERROR_SUCCESS)
+    {
+        // Verify the weak signature
+        Logger.PrintProgress("Verifying archive signature ...");
+        nVerifyError = SFileVerifyArchive(hMpq);
+
+        // Check the result signature
+        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
+        {
+            Logger.PrintMessage("Weak signature verification error");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Close the MPQ
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
 // Open an empty archive (found in WoW cache - it's just a header)
 static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char * szCopyName)
 {
@@ -2895,7 +3004,7 @@ static int TestCreateArchive_EmptyMpq(const char * szPlainName, DWORD dwCreateFl
 
 static int TestCreateArchive_TestGaps(const char * szPlainName)
 {
-    TLogHelper Logger("CreateMpqEditor", szPlainName);
+    TLogHelper Logger("CreateGapsTest", szPlainName);
     ULONGLONG ByteOffset1 = 0xFFFFFFFF;
     ULONGLONG ByteOffset2 = 0xEEEEEEEE;
     HANDLE hMpq = NULL;
@@ -2961,6 +3070,60 @@ static int TestCreateArchive_TestGaps(const char * szPlainName)
     }
 
     // Close the archive if needed
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
+static int TestCreateArchive_Signed(const char * szPlainName, bool bSignAtCreate)
+{
+    TLogHelper Logger("CreateSignedMpq", szPlainName);
+    HANDLE hMpq = NULL;
+    DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1;
+    DWORD dwSignatures = 0;
+    DWORD nVerifyError = 0;
+    int nError = ERROR_SUCCESS;
+
+    // Method 1: Create the archive as signed
+    if(bSignAtCreate)
+        dwCreateFlags |= MPQ_CREATE_SIGNATURE;
+
+    // Create new MPQ
+    nError = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, 4000, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Add one file and flush the archive
+        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
+    }
+
+    // Sign the archive with weak signature
+    if(nError == ERROR_SUCCESS)
+    {
+        if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
+            nError = ERROR_SUCCESS;
+    }
+
+    // Reopen the MPQ and add another file.
+    // The new file must be added to the position of the (listfile)
+    if(nError == ERROR_SUCCESS)
+    {
+        // Query the signature types
+        Logger.PrintProgress("Retrieving signatures ...");
+        TestGetFileInfo(&Logger, hMpq, SFileMpqSignatures, &dwSignatures, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
+
+        // Verify any of the present signatures
+        Logger.PrintProgress("Verifying archive signature ...");
+        nVerifyError = SFileVerifyArchive(hMpq);
+
+        // Verify the result
+        if((dwSignatures != SIGNATURE_TYPE_WEAK) && (nVerifyError != ERROR_WEAK_SIGNATURE_OK))
+        {
+            Logger.PrintMessage("Weak signature verification error");
+            nError = ERROR_FILE_CORRUPT;
+        }
+    }
+
+    // Close the archive
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
     return nError;
@@ -3865,6 +4028,21 @@ int main(int argc, char * argv[])
     // Test creating of an archive the same way like MPQ Editor does
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_TestGaps("StormLibTest_GapsTest.mpq");
+
+    // Sign an existing non-signed archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_SignExisting("MPQ_1998_v1_StarDat.mpq");
+
+    // Open a signed archive, add a file and verify the signature
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ModifySigned("MPQ_1999_v1_WeakSignature.exe", "War2Patch_202.exe");
+
+    // Create new archive and sign it
+    if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_Signed("MPQ_1999_v1_WeakSigned1.mpq", true);
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_Signed("MPQ_1999_v1_WeakSigned2.mpq", false);
 
     // Test creating of an archive the same way like MPQ Editor does
     if(nError == ERROR_SUCCESS)

@@ -28,8 +28,9 @@ CFLAGS = -fPIC -D_7ZIP_ST
 CFLAGS += $(OFLAGS) $(DFLAGS)
 
 OBJS =  src/adpcm/adpcm.o \
-	src/FileStream.o \
 	src/huffman/huff.o \
+	src/sparse/sparse.o \
+	src/FileStream.o \
 	src/SBaseCommon.o \
         src/SBaseDumpData.o \
 	src/SBaseFileTable.o \
@@ -47,8 +48,7 @@ OBJS =  src/adpcm/adpcm.o \
 	src/SFileOpenFileEx.o \
 	src/SFilePatchArchives.o \
 	src/SFileReadFile.o \
-	src/SFileVerify.o \
-	src/sparse/sparse.o
+	src/SFileVerify.o
 
 COBJS = src/libtomcrypt/src/hashes/sha1.o \
 	src/libtomcrypt/src/hashes/hash_memory.o \
@@ -69,48 +69,65 @@ COBJS = src/libtomcrypt/src/hashes/sha1.o \
 	src/libtomcrypt/src/math/multi.o \
 	src/libtomcrypt/src/math/ltm_desc.o \
 	src/libtomcrypt/src/math/rand_prime.o \
-	src/libtomcrypt/src/pk/asn1/der_length_ia5_string.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_utctime.o \
-	src/libtomcrypt/src/pk/asn1/der_length_boolean.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_object_identifier.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_sequence_multi.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_octet_string.o \
-	src/libtomcrypt/src/pk/asn1/der_length_object_identifier.o \
-	src/libtomcrypt/src/pk/asn1/der_length_bit_string.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_ia5_string.o \
-	src/libtomcrypt/src/pk/asn1/der_length_integer.o \
-	src/libtomcrypt/src/pk/asn1/der_length_sequence.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_choice.o \
-	src/libtomcrypt/src/pk/asn1/der_length_octet_string.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_sequence_flexi.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_printable_string.o \
 	src/libtomcrypt/src/pk/asn1/der_decode_bit_string.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_short_integer.o \
-	src/libtomcrypt/src/pk/asn1/der_length_utctime.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_utf8_string.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_integer.o \
 	src/libtomcrypt/src/pk/asn1/der_decode_boolean.o \
-	src/libtomcrypt/src/pk/asn1/der_sequence_free.o \
-	src/libtomcrypt/src/pk/asn1/der_decode_sequence_ex.o \
-	src/libtomcrypt/src/pk/asn1/der_length_short_integer.o \
-	src/libtomcrypt/src/pk/asn1/der_length_printable_string.o \
-	src/libtomcrypt/src/pk/asn1/der_length_utf8_string.o \
-	src/libtomcrypt/src/pk/rsa/rsa_make_key.o \
-	src/libtomcrypt/src/pk/rsa/rsa_free.o \
-	src/libtomcrypt/src/pk/rsa/rsa_verify_simple.o \
-	src/libtomcrypt/src/pk/rsa/rsa_import.o \
-	src/libtomcrypt/src/pk/rsa/rsa_verify_hash.o \
-	src/libtomcrypt/src/pk/rsa/rsa_exptmod.o \
-	src/libtomcrypt/src/pk/pkcs1/pkcs_1_v1_5_decode.o \
-	src/libtomcrypt/src/pk/pkcs1/pkcs_1_pss_decode.o \
-	src/libtomcrypt/src/pk/pkcs1/pkcs_1_mgf1.o \
-	src/libtomcrypt/src/pk/pkcs1/pkcs_1_oaep_decode.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_choice.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_ia5_string.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_integer.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_object_identifier.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_octet_string.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_printable_string.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_sequence_ex.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_sequence_flexi.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_sequence_multi.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_short_integer.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_utctime.o \
+        src/libtomcrypt/src/pk/asn1/der_decode_utf8_string.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_bit_string.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_boolean.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_ia5_string.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_integer.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_object_identifier.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_octet_string.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_printable_string.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_sequence_ex.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_sequence_multi.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_set.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_setof.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_short_integer.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_utctime.o \
+        src/libtomcrypt/src/pk/asn1/der_encode_utf8_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_bit_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_boolean.o \
+        src/libtomcrypt/src/pk/asn1/der_length_ia5_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_integer.o \
+        src/libtomcrypt/src/pk/asn1/der_length_object_identifier.o \
+        src/libtomcrypt/src/pk/asn1/der_length_octet_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_printable_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_sequence.o \
+        src/libtomcrypt/src/pk/asn1/der_length_utctime.o \
+        src/libtomcrypt/src/pk/asn1/der_sequence_free.o \
+        src/libtomcrypt/src/pk/asn1/der_length_utf8_string.o \
+        src/libtomcrypt/src/pk/asn1/der_length_short_integer.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_projective_dbl_point.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_mulmod.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_projective_add_point.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_map.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_points.o \
 	src/libtomcrypt/src/pk/ecc/ltc_ecc_mul2add.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_v1_5_decode.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_v1_5_encode.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_pss_decode.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_pss_encode.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_mgf1.o \
+	src/libtomcrypt/src/pk/pkcs1/pkcs_1_oaep_decode.o \
+	src/libtomcrypt/src/pk/rsa/rsa_make_key.o \
+	src/libtomcrypt/src/pk/rsa/rsa_free.o \
+	src/libtomcrypt/src/pk/rsa/rsa_verify_simple.o \
+	src/libtomcrypt/src/pk/rsa/rsa_import.o \
+	src/libtomcrypt/src/pk/rsa/rsa_verify_hash.o \
+	src/libtomcrypt/src/pk/rsa/rsa_sign_hash.o \
+	src/libtomcrypt/src/pk/rsa/rsa_exptmod.o \
 	src/libtommath/bn_mp_exptmod_fast.o \
 	src/libtommath/bn_mp_jacobi.o \
 	src/libtommath/bn_mp_mod.o \

@@ -1943,6 +1943,7 @@ void InvalidateInternalFiles(TMPQArchive * ha)
     TFileEntry * pFileTableEnd;
     TFileEntry * pFileEntry1 = NULL;
     TFileEntry * pFileEntry2 = NULL;
+    TFileEntry * pFileEntry3 = NULL;
 
     // Do nothing if we are in the middle of saving internal files
     if(!(ha->dwFlags & MPQ_FLAG_SAVING_TABLES))
@@ -1979,17 +1980,33 @@ void InvalidateInternalFiles(TMPQArchive * ha)
             ha->dwReservedFiles++;
         }
 
+        // Invalidate the (signature), if not done yet
+        if(ha->dwFileFlags3 != 0 && (ha->dwFlags & MPQ_FLAG_SIGNATURE_INVALID) == 0)
+        {
+            // Delete the existing entry for (attributes)
+            pFileEntry3 = GetFileEntryExact(ha, SIGNATURE_NAME, LANG_NEUTRAL);
+            if(pFileEntry3 != NULL)
+                DeleteFileEntry(ha, pFileEntry3);
+
+            // Reserve one entry for (attributes)
+            ha->dwFlags |= MPQ_FLAG_SIGNATURE_INVALID;
+            ha->dwReservedFiles++;
+        }
+
+
         // If the internal files are at the end of the file table (they usually are),
-        // we want to free these 2 entries, so when new files are added, they get
+        // we want to free these 3 entries, so when new files are added, they get
         // added to the freed entries and the internal files get added after that
         if(ha->dwFileTableSize > 0)
         {
             pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
 
             // Is one of the entries the last one?
-            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1)
+            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1 || pFileEntry3 == pFileTableEnd - 1)
                 pFileTableEnd--;
-            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1)
+            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1 || pFileEntry3 == pFileTableEnd - 1)
+                pFileTableEnd--;
+            if(pFileEntry1 == pFileTableEnd - 1 || pFileEntry2 == pFileTableEnd - 1 || pFileEntry3 == pFileTableEnd - 1)
                 pFileTableEnd--;
 
             // Calculate the new file table size

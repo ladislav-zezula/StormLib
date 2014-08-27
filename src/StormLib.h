@@ -68,6 +68,7 @@
 /* 29.05.12  8.20  Lad  C-only interface                                     */
 /* 14.01.13  8.21  Lad  ADPCM and Huffmann (de)compression refactored        */
 /* 04.12.13  9.00  Lad  Unit tests, bug fixes                                */
+/* 27.08.14  9.10  Lad  Signing archives with weak digital signature         */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -132,8 +133,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0900  // Current version of StormLib (9.0)
-#define STORMLIB_VERSION_STRING         "9.00"  // String version of StormLib version
+#define STORMLIB_VERSION                0x090A  // Current version of StormLib (9.1)
+#define STORMLIB_VERSION_STRING         "9.10"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
@@ -180,7 +181,8 @@ extern "C" {
 #define MPQ_FLAG_CHECK_SECTOR_CRC   0x00000008  // Checking sector CRC when reading files
 #define MPQ_FLAG_LISTFILE_INVALID   0x00000020  // If set, it means that the (listfile) has been invalidated
 #define MPQ_FLAG_ATTRIBUTES_INVALID 0x00000040  // If set, it means that the (attributes) has been invalidated
-#define MPQ_FLAG_SAVING_TABLES      0x00000080  // If set, we are saving MPQ internal files and MPQ tables
+#define MPQ_FLAG_SIGNATURE_INVALID  0x00000080  // If set, it means that the (signature) has been invalidated
+#define MPQ_FLAG_SAVING_TABLES      0x00000100  // If set, we are saving MPQ internal files and MPQ tables
 
 // Values for TMPQArchive::dwSubType
 #define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
@@ -290,6 +292,7 @@ extern "C" {
 // Flags for SFileCreateArchive
 #define MPQ_CREATE_LISTFILE         0x00100000  // Also add the (listfile) file
 #define MPQ_CREATE_ATTRIBUTES       0x00200000  // Also add the (attributes) file
+#define MPQ_CREATE_SIGNATURE        0x00400000  // Also add the (signature) file
 #define MPQ_CREATE_ARCHIVE_V1       0x00000000  // Creates archive of version 1 (size up to 4GB)
 #define MPQ_CREATE_ARCHIVE_V2       0x01000000  // Creates archive of version 2 (larger than 4 GB)
 #define MPQ_CREATE_ARCHIVE_V3       0x02000000  // Creates archive of version 3
@@ -852,6 +855,7 @@ typedef struct _TMPQArchive
     DWORD          dwSectorSize;                // Default size of one file sector
     DWORD          dwFileFlags1;                // Flags for (listfile)
     DWORD          dwFileFlags2;                // Flags for (attributes)
+    DWORD          dwFileFlags3;                // Flags for (signature)
     DWORD          dwAttrFlags;                 // Flags for the (attributes) file, see MPQ_ATTRIBUTE_XXX
     DWORD          dwFlags;                     // See MPQ_FLAG_XXXXX
     DWORD          dwSubType;                   // See MPQ_SUBTYPE_XXX
@@ -929,6 +933,7 @@ typedef struct _SFILE_CREATE_MPQ
     DWORD dwStreamFlags;                        // Stream flags for creating the MPQ
     DWORD dwFileFlags1;                         // File flags for (listfile). 0 = default
     DWORD dwFileFlags2;                         // File flags for (attributes). 0 = default
+    DWORD dwFileFlags3;                         // File flags for (signature). 0 = default
     DWORD dwAttrFlags;                          // Flags for the (attributes) file. If 0, no attributes will be created
     DWORD dwSectorSize;                         // Sector size for compressed files
     DWORD dwRawChunkSize;                       // Size of raw data chunk
@@ -1058,6 +1063,7 @@ DWORD  WINAPI SFileVerifyFile(HANDLE hMpq, const char * szFileName, DWORD dwFlag
 int    WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * szFileName);
 
 // Verifies the signature, if present
+bool   WINAPI SFileSignArchive(HANDLE hMpq, DWORD dwSignatureType);
 DWORD  WINAPI SFileVerifyArchive(HANDLE hMpq);
 
 //-----------------------------------------------------------------------------

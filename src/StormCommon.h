@@ -77,6 +77,7 @@
 #define MPQ_WEAK_SIGNATURE_SIZE                 64
 #define MPQ_STRONG_SIGNATURE_SIZE              256 
 #define MPQ_STRONG_SIGNATURE_ID         0x5349474E      // ID of the strong signature ("NGIS")
+#define MPQ_SIGNATURE_FILE_SIZE (MPQ_WEAK_SIGNATURE_SIZE + 8)
 
 // MPQ signature info
 typedef struct _MPQ_SIGNATURE_INFO
@@ -301,6 +302,12 @@ int  SAttrFileSaveToMpq(TMPQArchive * ha);
 // Listfile functions
 
 int  SListFileSaveToMpq(TMPQArchive * ha);
+
+//-----------------------------------------------------------------------------
+// Weak signature support
+
+int SSignFileCreate(TMPQArchive * ha);
+int SSignFileFinish(TMPQArchive * ha);
 
 //-----------------------------------------------------------------------------
 // Dump data support

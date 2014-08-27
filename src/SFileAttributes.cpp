@@ -368,7 +368,7 @@ int SAttrLoadAttributes(TMPQArchive * ha)
     // File table must be initialized
     assert(ha->pFileTable != NULL);
 
-    // Don't load the attributes file from malformer Warcraft III maps
+    // Don't load the attributes file from malformed Warcraft III maps
     if(ha->dwFlags & MPQ_FLAG_MALFORMED)
         return ERROR_FILE_CORRUPT;
 
