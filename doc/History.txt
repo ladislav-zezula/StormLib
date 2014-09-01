@@ -2,6 +2,11 @@
   StormLib history
   ================
 
+ Version 9.10
+
+ - Support for weak-signing
+ - Anti-protector: New Spazzler
+
  Version 9.00
 
  - Support for streaming (master-mirror)
