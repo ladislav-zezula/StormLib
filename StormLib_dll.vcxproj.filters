@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Doc Files">
@@ -777,6 +777,57 @@
     </ClCompile>
     <ClCompile Include="src\SBaseSubTypes.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_sign_hash.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_pss_encode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_v1_5_encode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_bit_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_boolean.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_ia5_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_object_identifier.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_octet_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_printable_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_ex.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_multi.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_set.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_setof.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_short_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utctime.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utf8_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
