@@ -452,12 +452,12 @@ static int SFileAddExternalListFile(
     int nError = ERROR_SUCCESS;
 
     // Open the external list file
-    if(SFileOpenFileEx(hMpq, szListFile, SFILE_OPEN_LOCAL_FILE, &hListFile))
-    {
-        // Add the data from the listfile to MPQ
-        nError = SFileAddArbitraryListFile(ha, hListFile);
-        SFileCloseFile(hListFile);
-    }
+    if(!SFileOpenFileEx(hMpq, szListFile, SFILE_OPEN_LOCAL_FILE, &hListFile))
+        return GetLastError();
+
+    // Add the data from the listfile to MPQ
+    nError = SFileAddArbitraryListFile(ha, hListFile);
+    SFileCloseFile(hListFile);
     return nError;
 }
 
@@ -524,9 +524,9 @@ int WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile)
     while(ha != NULL)
     {
         if(szListFile != NULL)
-            SFileAddExternalListFile(ha, hMpq, szListFile);
+            nError = SFileAddExternalListFile(ha, hMpq, szListFile);
         else
-            SFileAddInternalListFile(ha, hMpq);
+            nError = SFileAddInternalListFile(ha, hMpq);
 
         // Also, add three special files to the listfile:
         // (listfile) itself, (attributes) and (signature)
