@@ -1410,10 +1410,10 @@ void FreeFileHandle(TMPQFile *& hf)
             FreeFileHandle(hf->hfPatch);
 
         // Then free all buffers allocated in the file structure
-        if(hf->pPatchHeader != NULL)
-            STORM_FREE(hf->pPatchHeader);
         if(hf->pbFileData != NULL)
             STORM_FREE(hf->pbFileData);
+        if(hf->pPatchHeader != NULL)
+            STORM_FREE(hf->pPatchHeader);
         if(hf->pPatchInfo != NULL)
             STORM_FREE(hf->pPatchInfo);
         if(hf->SectorOffsets != NULL)
@@ -1437,6 +1437,10 @@ void FreeArchiveHandle(TMPQArchive *& ha)
         // First of all, free the patch archive, if any
         if(ha->haPatch != NULL)
             FreeArchiveHandle(ha->haPatch);
+
+        // Free the patch prefix, if any
+        if(ha->pPatchPrefix != NULL)
+            STORM_FREE(ha->pPatchPrefix);
 
         // Close the file stream
         FileStream_Close(ha->pStream);
@@ -1517,12 +1521,9 @@ bool IsPseudoFileName(const char * szFileName, DWORD * pdwFileIndex)
 
 bool IsValidMD5(LPBYTE pbMd5)
 {
-    BYTE BitSummary = 0;
-    
-    // The MD5 is considered invalid of it is zeroed
-    BitSummary |= pbMd5[0x00] | pbMd5[0x01] | pbMd5[0x02] | pbMd5[0x03] | pbMd5[0x04] | pbMd5[0x05] | pbMd5[0x06] | pbMd5[0x07];
-    BitSummary |= pbMd5[0x08] | pbMd5[0x09] | pbMd5[0x0A] | pbMd5[0x0B] | pbMd5[0x0C] | pbMd5[0x0D] | pbMd5[0x0E] | pbMd5[0x0F];
-    return (BitSummary != 0);
+    LPDWORD Md5 = (LPDWORD)pbMd5;
+
+    return (Md5[0] | Md5[1] | Md5[2] | Md5[3]) ? true : false;
 }
 
 bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_md5)

@@ -18,18 +18,23 @@
 
 static const char * GetPatchFileName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
 {
-    if(ha->cchPatchPrefix != 0)
+    TMPQNamePrefix * pPrefix;
+
+    // Are there patches in the current MPQ?
+    if(ha->dwFlags & MPQ_FLAG_PATCH)
     {
-        // Copy the patch prefix
-        memcpy(szBuffer, ha->szPatchPrefix, ha->cchPatchPrefix);
-        
+        // The patch prefix must be already known here
+        assert(ha->pPatchPrefix != NULL);
+        pPrefix = ha->pPatchPrefix;
+
         // The patch name for "OldWorld\\XXX\\YYY" is "Base\\XXX\YYY"
-        // We need to remove the "Oldworld\\" prefix
+        // We need to remove the "OldWorld\\" prefix
         if(!_strnicmp(szFileName, "OldWorld\\", 9))
             szFileName += 9;
 
-        // Copy the rest of the name
-        strcpy(szBuffer + ha->cchPatchPrefix, szFileName);
+        // Create the file name from the known patch entry
+        memcpy(szBuffer, pPrefix->szPatchPrefix, pPrefix->nLength);
+        strcpy(szBuffer + pPrefix->nLength, szFileName);
         szFileName = szBuffer;
     }
 
@@ -67,7 +72,7 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * phFile)
     return false;
 }
 
-bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HANDLE * phFile)
+bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, HANDLE * phFile)
 {
     TMPQArchive * haBase = NULL;
     TMPQArchive * ha = (TMPQArchive *)hMpq;
@@ -76,17 +81,14 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     TMPQFile * hfBase = NULL;               // Pointer to base open file
     TMPQFile * hf = NULL;
     HANDLE hPatchFile;
-    char szPrefixBuffer[MAX_PATH];
-
-    // Keep this flag here for future updates
-    dwReserved = dwReserved;
+    char szNameBuffer[MAX_PATH];
 
     // First of all, find the latest archive where the file is in base version
     // (i.e. where the original, unpatched version of the file exists)
     while(ha != NULL)
     {
         // If the file is there, then we remember the archive
-        pFileEntry = GetFileEntryExact(ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), 0);
+        pFileEntry = GetFileEntryExact(ha, GetPatchFileName(ha, szFileName, szNameBuffer), 0);
         if(pFileEntry != NULL && (pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
             haBase = ha;
 
@@ -102,7 +104,7 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     }
 
     // Now open the base file
-    if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
+    if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
     {
         // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
         assert((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0);
@@ -112,7 +114,7 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
         for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
         {
             // Prepare the file name with a correct prefix
-            if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szPrefixBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
+            if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
             {
                 // Remember the new version
                 hfPatch = (TMPQFile *)hPatchFile;
@@ -130,7 +132,7 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, DWORD dwReserved, HAN
     // Give the updated base MPQ
     if(phFile != NULL)
         *phFile = (HANDLE)hfBase;
-    return true;
+    return (hfBase != NULL);
 }
 
 /*****************************************************************************/
@@ -328,7 +330,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                     }
                     else
                     {
-                        return OpenPatchedFile(hMpq, szFileName, 0, phFile);
+                        return OpenPatchedFile(hMpq, szFileName, phFile);
                     }
                 }
                 break;

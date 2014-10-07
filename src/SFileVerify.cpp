@@ -113,13 +113,6 @@ static void memrev(unsigned char *buf, size_t count)
     }
 }
 
-static bool is_valid_md5(void * pvMd5)
-{
-    LPDWORD Md5 = (LPDWORD)pvMd5;
-
-    return (Md5[0] | Md5[1] | Md5[2] | Md5[3]) ? true : false;
-}
-
 static bool decode_base64_key(const char * szKeyBase64, rsa_key * key)
 {
     unsigned char decoded_key[0x200];
@@ -685,7 +678,7 @@ static DWORD VerifyFile(
                     md5_done(&md5_state, md5);
 
                     // Only check the MD5 if it is valid
-                    if(is_valid_md5(pFileMd5))
+                    if(IsValidMD5(pFileMd5))
                     {
                         dwVerifyResult |= VERIFY_FILE_HAS_MD5;
                         if(memcmp(md5, pFileMd5, MD5_DIGEST_SIZE))

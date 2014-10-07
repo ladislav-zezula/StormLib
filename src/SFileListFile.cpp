@@ -189,6 +189,10 @@ static size_t ReadListFileLine(TListFileCache * pCache, char * szLine, int nMaxC
         if(*pCache->pPos == '~')
             szExtraString = szLine;
 
+        // Remember that last occurence of a slash or backslash
+//      if(*pCache->pPos == '\\' || *pCache->pPos == '/')
+//          szPlainName = szLine + 1;
+
         // Copy the character
         *szLine++ = *pCache->pPos++;
     }

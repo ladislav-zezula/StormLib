@@ -211,9 +211,11 @@ bool WINAPI SFileOpenArchive(
         ha->dwFlags |= (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? MPQ_FLAG_READ_ONLY : 0;
 
         // Also remember if we shall check sector CRCs when reading file
-        if(dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC)
-            ha->dwFlags |= MPQ_FLAG_CHECK_SECTOR_CRC;
-        
+        ha->dwFlags |= (dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC) ? MPQ_FLAG_CHECK_SECTOR_CRC : 0;
+
+        // Also remember if this MPQ is a patch
+        ha->dwFlags |= (dwFlags & MPQ_OPEN_PATCH) ? MPQ_FLAG_PATCH : 0;
+       
         // Limit the header searching to about 130 MB of data
         if(EndOfSearch > 0x08000000)
             EndOfSearch = 0x08000000;

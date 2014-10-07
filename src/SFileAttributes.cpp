@@ -24,6 +24,11 @@ typedef struct _MPQ_ATTRIBUTES_HEADER
     // Followed by an array of file times
     // Followed by an array of MD5
     // Followed by an array of patch bits
+
+    // Note: The MD5 in (attributes), if present, is a hash of the entire file.
+    // In case the file is an incremental patch, it contains MD5 of the file
+    // after being patched.
+
 } MPQ_ATTRIBUTES_HEADER, *PMPQ_ATTRIBUTES_HEADER;
 
 //-----------------------------------------------------------------------------

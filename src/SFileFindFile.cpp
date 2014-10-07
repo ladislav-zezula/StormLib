@@ -167,14 +167,14 @@ static bool FileWasFoundBefore(
     {
         // If we are in patch MPQ, we check if patch prefix matches
         // and then trim the patch prefix
-        if(ha->cchPatchPrefix != 0)
+        if(ha->pPatchPrefix != NULL)
         {
             // If the patch prefix doesn't fit, we pretend that the file
             // was there before and it will be skipped
-            if(_strnicmp(szRealFileName, ha->szPatchPrefix, ha->cchPatchPrefix))
+            if(_strnicmp(szRealFileName, ha->pPatchPrefix->szPatchPrefix, ha->pPatchPrefix->nLength))
                 return true;
 
-            szRealFileName += ha->cchPatchPrefix;
+            szRealFileName += ha->pPatchPrefix->nLength;
         }
 
         // Calculate the hash to the table
@@ -213,6 +213,14 @@ static bool FileWasFoundBefore(
     return false;
 }
 
+static inline bool FileEntryIsInvalid(
+    TMPQArchive * ha,
+    TFileEntry * pFileEntry)
+{
+    // Spazzler3 protector: Some files are clearly wrong
+    return ((ha->dwFlags & MPQ_FLAG_MALFORMED) && (pFileEntry->dwCmpSize & 0xFFFF0000) >= 0x7FFF0000);
+}
+
 static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
 {
     TFileEntry * pPatchEntry = NULL;
@@ -225,9 +233,11 @@ static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
     {
         // Move to the patch archive
         ha = ha->haPatch;
+        szFileName[0] = 0;
 
         // Prepare the prefix for the file name
-        strcpy(szFileName, ha->szPatchPrefix);
+        if(ha->pPatchPrefix != NULL)
+            strcpy(szFileName, ha->pPatchPrefix->szPatchPrefix);
         strcat(szFileName, pFileEntry->szFileName);
 
         // Try to find the file there
@@ -261,7 +271,7 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
         pFileEntry = ha->pFileTable + hs->dwNextIndex;
 
         // Get the length of the patch prefix (0 if none)
-        nPrefixLength = strlen(ha->szPatchPrefix);
+        nPrefixLength = (ha->pPatchPrefix != NULL) ? ha->pPatchPrefix->nLength : 0;
 
         // Parse the file table
         while(pFileEntry < pFileTableEnd)
@@ -269,56 +279,60 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
             // Increment the next index for subsequent search
             hs->dwNextIndex++;
 
-            // Is it a file and not a patch file?
+            // Is it a file but not a patch file?
             if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
             {
-                // Now we have to check if this file was not enumerated before
-                if(!FileWasFoundBefore(ha, hs, pFileEntry))
-                {
-                    // Find a patch to this file
-                    pPatchEntry = FindPatchEntry(ha, pFileEntry);
-                    if(pPatchEntry == NULL)
-                        pPatchEntry = pFileEntry;
-
-                    // Prepare the block index
-                    dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
-
-                    // Get the file name. If it's not known, we will create pseudo-name
-                    szFileName = pFileEntry->szFileName;
-                    if(szFileName == NULL)
+                // Spazzler3 protector: Some files are clearly wrong
+                if(!FileEntryIsInvalid(ha, pFileEntry))
+                {                    
+                    // Now we have to check if this file was not enumerated before
+                    if(!FileWasFoundBefore(ha, hs, pFileEntry))
                     {
-                        // Open the file by its pseudo-name.
-                        // This also generates the file name with a proper extension
-                        sprintf(szPseudoName, "File%08u.xxx", (unsigned int)dwBlockIndex);
-                        if(SFileOpenFileEx((HANDLE)hs->ha, szPseudoName, SFILE_OPEN_BASE_FILE, &hFile))
+                        // Find a patch to this file
+                        pPatchEntry = FindPatchEntry(ha, pFileEntry);
+                        if(pPatchEntry == NULL)
+                            pPatchEntry = pFileEntry;
+
+                        // Prepare the block index
+                        dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
+
+                        // Get the file name. If it's not known, we will create pseudo-name
+                        szFileName = pFileEntry->szFileName;
+                        if(szFileName == NULL)
                         {
-                            szFileName = (pFileEntry->szFileName != NULL) ? pFileEntry->szFileName : szPseudoName;
-                            SFileCloseFile(hFile);
+                            // Open the file by its pseudo-name.
+                            // This also generates the file name with a proper extension
+                            sprintf(szPseudoName, "File%08u.xxx", (unsigned int)dwBlockIndex);
+                            if(SFileOpenFileEx((HANDLE)hs->ha, szPseudoName, SFILE_OPEN_BASE_FILE, &hFile))
+                            {
+                                szFileName = (pFileEntry->szFileName != NULL) ? pFileEntry->szFileName : szPseudoName;
+                                SFileCloseFile(hFile);
+                            }
                         }
-                    }
 
-                    // If the file name is still NULL, we cannot include the file to the search
-                    if(szFileName != NULL)
-                    {
-                        // Check the file name against the wildcard
-                        if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
+                        // If the file name is still NULL, we cannot include the file to the search
+                        if(szFileName != NULL)
                         {
-                            // Fill the found entry
-                            lpFindFileData->dwHashIndex  = pPatchEntry->dwHashIndex;
-                            lpFindFileData->dwBlockIndex = dwBlockIndex;
-                            lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
-                            lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
-                            lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
-                            lpFindFileData->lcLocale     = pPatchEntry->lcLocale;
+                            // Check the file name against the wildcard
+                            if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
+                            {
+                                // Fill the found entry
+                                lpFindFileData->dwHashIndex  = pPatchEntry->dwHashIndex;
+                                lpFindFileData->dwBlockIndex = dwBlockIndex;
+                                lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
+                                lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
+                                lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
+                                lpFindFileData->lcLocale     = pPatchEntry->lcLocale;
 
-                            // Fill the filetime
-                            lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
-                            lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
+                                // Fill the filetime
+                                lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
+                                lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
 
-                            // Fill the file name and plain file name
-                            strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
-                            lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
-                            return ERROR_SUCCESS;
+                                // Fill the file name and plain file name
+                                strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
+                                lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
+                                return ERROR_SUCCESS;
+                            }
                         }
                     }
                 }
@@ -326,6 +340,12 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
 
             pFileEntry++;
         }
+
+        // If there is no more patches in the chain, stop it.
+        // This also keeps hs->ha non-NULL, which is required
+        // for freeing the handle later
+        if(ha->haPatch == NULL)
+            break;
 
         // Move to the next patch in the patch chain
         hs->ha = ha = ha->haPatch;

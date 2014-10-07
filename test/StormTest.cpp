@@ -128,7 +128,7 @@ static const char * PatchList_WoW_OldWorld13286[] =
     NULL
 };
 
-static const char * PatchList_WoW15050[] =
+static const char * PatchList_WoW_15050[] =
 {
     "MPQ_2013_v4_world.MPQ",
     "wow-update-13164.MPQ",
@@ -148,7 +148,7 @@ static const char * PatchList_WoW15050[] =
     NULL
 };
 
-static const char * PatchList_WoW16965[] = 
+static const char * PatchList_WoW_16965[] = 
 {
     "MPQ_2013_v4_locale-enGB.MPQ",
     "wow-update-enGB-16016.MPQ",
@@ -160,6 +160,30 @@ static const char * PatchList_WoW16965[] =
     "wow-update-enGB-16650.MPQ",
     "wow-update-enGB-16844.MPQ",
     "wow-update-enGB-16965.MPQ",
+    NULL
+};
+
+static const char * PatchList_SC2_32283[] = 
+{
+    "MPQ_2013_v4_Base1.SC2Data",
+    "s2-update-base-23258.MPQ",
+    "s2-update-base-24540.MPQ",
+    "s2-update-base-26147.MPQ",
+    "s2-update-base-28522.MPQ",
+    "s2-update-base-30508.MPQ",
+    "s2-update-base-32283.MPQ",
+    NULL
+};
+
+static const char * PatchList_SC2_32283_enGB[] = 
+{
+    "MPQ_2013_v4_enGB.SC2Data",
+    "s2-update-enGB-23258.MPQ",
+    "s2-update-enGB-24540.MPQ",
+    "s2-update-enGB-26147.MPQ",
+    "s2-update-enGB-28522.MPQ",
+    "s2-update-enGB-30508.MPQ",
+    "s2-update-enGB-32283.MPQ",
     NULL
 };
 
@@ -1557,7 +1581,7 @@ static int SearchArchive(
         // Increment number of files
         dwFileCount++;
 
-//      if(!_stricmp(sf.cFileName, "OldWorld\\world\\maps\\Northrend\\Northrend.tex"))
+//      if(!_stricmp(sf.cFileName, "DBFilesClient\\Item-Sparse.db2"))
 //          DebugBreak();
 
         if(dwTestFlags & TEST_FLAG_MOST_PATCHED)
@@ -2317,10 +2341,25 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     return nError;
 }
 
-static int TestOpenArchive_WillFail(const char * szPlainName, const char * szListFile = NULL)
+static int TestOpenArchive_WillFail(const char * szPlainName)
 {
-    TestOpenArchive(szPlainName, szListFile);
-    return ERROR_SUCCESS;
+    TLogHelper Logger("FailMpqTest", szPlainName);
+    HANDLE hMpq = NULL;
+    TCHAR szMpqName[MAX_PATH];
+    char szFullPath[MAX_PATH];
+
+    // Create the full path name for the archive
+    CreateFullPathName(szFullPath, szMpqSubDir, szPlainName);
+    CopyFileName(szMpqName, szFullPath, strlen(szFullPath));
+
+    // Try to open the archive. It is expected to fail
+    Logger.PrintProgress("Opening archive %s", szPlainName);
+    if(!SFileOpenArchive(szMpqName, 0, MPQ_OPEN_READ_ONLY, &hMpq))
+        return ERROR_SUCCESS;
+
+    Logger.PrintError("Archive %s succeeded to open, even if it should not.", szPlainName);
+    SFileCloseArchive(hMpq);
+    return ERROR_CAN_NOT_COMPLETE;
 }
 
 static int TestOpenArchive_Corrupt(const char * szPlainName)
@@ -2345,7 +2384,7 @@ static int TestOpenArchive_Corrupt(const char * szPlainName)
 
 
 // Opens a patched MPQ archive
-static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatchedFile = NULL, int nExpectedPatchCount = 0)
+static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatchedFile, int nExpectedPatchCount)
 {
     TLogHelper Logger("OpenPatchedMpqTest", PatchList[0]);
     HANDLE hMpq;
@@ -3958,12 +3997,20 @@ int main(int argc, char * argv[])
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_WoW15050, "World\\Model.blob", 8);
+    if(nError == ERROR_SUCCESS)                               
+        nError = TestOpenArchive_Patched(PatchList_WoW_15050, "World\\Model.blob", 8);
 
-    // Open a patched archive. The file is in each patch as full, so there is 0 patches in the chain
+    // Open a patched archive.
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_WoW16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
+        nError = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
+
+    // Open a patched archive.
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
+
+    // Open a patched archive.
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Check the opening archive for read-only
     if(nError == ERROR_SUCCESS)
