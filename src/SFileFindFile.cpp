@@ -288,6 +288,9 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
                     // Now we have to check if this file was not enumerated before
                     if(!FileWasFoundBefore(ha, hs, pFileEntry))
                     {
+//                      if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
+//                          DebugBreak();
+
                         // Find a patch to this file
                         pPatchEntry = FindPatchEntry(ha, pFileEntry);
                         if(pPatchEntry == NULL)
@@ -310,14 +313,14 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
                             }
                         }
 
-                        // If the file name is still NULL, we cannot include the file to the search
+                        // If the file name is still NULL, we cannot include the file to search results
                         if(szFileName != NULL)
                         {
                             // Check the file name against the wildcard
                             if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
                             {
-                                // Fill the found entry
-                                lpFindFileData->dwHashIndex  = pPatchEntry->dwHashIndex;
+                                // Fill the found entry. hash entry and block index are taken from the base MPQ
+                                lpFindFileData->dwHashIndex  = pFileEntry->dwHashIndex;
                                 lpFindFileData->dwBlockIndex = dwBlockIndex;
                                 lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
                                 lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;

@@ -1583,6 +1583,8 @@ static int SearchArchive(
 
 //      if(!_stricmp(sf.cFileName, "DBFilesClient\\Item-Sparse.db2"))
 //          DebugBreak();
+//      if(!_stricmp(sf.cFileName, "TriggerLibs\\NativeLib.galaxy"))
+//          DebugBreak();
 
         if(dwTestFlags & TEST_FLAG_MOST_PATCHED)
         {
@@ -3837,7 +3839,7 @@ int main(int argc, char * argv[])
     // Search all testing archives and verify their SHA1 hash
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-
+/*
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
         nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", 0);
@@ -4003,7 +4005,7 @@ int main(int argc, char * argv[])
     // Open a patched archive.
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
-
+*/
     // Open a patched archive.
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
