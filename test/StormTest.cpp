@@ -3754,6 +3754,50 @@ static int TestCreateArchive_BigArchive(const char * szPlainName)
     return nError;
 }
 
+// "MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events"
+static int TestModifyArchive_ReplaceFile(const char * szPlainName, const char * szFileName)
+{
+    TLogHelper Logger("ModifyTest");
+    HANDLE hMpq = NULL;
+    HANDLE hFile = NULL;
+    const char * szArchivedName;
+    char szLocalFileName[MAX_PATH];
+    size_t nOffset = 0;
+    int nError;
+
+    // Open an existing archive
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+
+    // Add the given file
+    if(nError == ERROR_SUCCESS)
+    {
+        // Get the name of archived file
+        if(!_strnicmp(szFileName, "AddFile-", 8))
+            nOffset = 8;
+        szArchivedName = szFileName + nOffset;
+
+        // Just for test - try to open the file in the archive
+        if(SFileOpenFileEx(hMpq, szArchivedName, 0, &hFile))
+            SFileCloseFile(hFile);
+
+        // Create the local file name
+        CreateFullPathName(szLocalFileName, szMpqSubDir, szFileName);
+
+        // Add the file to MPQ
+        nError = AddLocalFileToMpq(&Logger, hMpq,
+                                            szArchivedName,
+                                            szLocalFileName,
+                                            MPQ_FILE_REPLACEEXISTING | MPQ_FILE_COMPRESS | MPQ_FILE_SINGLE_UNIT,
+                                            MPQ_COMPRESSION_ZLIB,
+                                            true);
+    }
+
+    // Close the MPQ
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
 //-----------------------------------------------------------------------------
 // Comparing two directories, creating links
 
@@ -4005,7 +4049,7 @@ int main(int argc, char * argv[])
     // Open a patched archive.
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
-*/
+
     // Open a patched archive.
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
@@ -4144,6 +4188,10 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
+*/
+    // Test modifying a replay file from Heroes of the Storm
+    if(nError == ERROR_SUCCESS)
+        nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events");
 
     return nError;
 }

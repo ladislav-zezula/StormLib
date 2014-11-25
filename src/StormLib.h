@@ -69,6 +69,7 @@
 /* 14.01.13  8.21  Lad  ADPCM and Huffmann (de)compression refactored        */
 /* 04.12.13  9.00  Lad  Unit tests, bug fixes                                */
 /* 27.08.14  9.10  Lad  Signing archives with weak digital signature         */
+/* 25.11.14  9.11  Lad  Fixed bug reading & creating HET table               */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -133,8 +134,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x090A  // Current version of StormLib (9.1)
-#define STORMLIB_VERSION_STRING         "9.10"  // String version of StormLib version
+#define STORMLIB_VERSION                0x090B  // Current version of StormLib (9.11)
+#define STORMLIB_VERSION_STRING         "9.11"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')

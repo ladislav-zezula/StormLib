@@ -2,6 +2,10 @@
   StormLib history
   ================
 
+ Version 9.11
+
+ - Fixed bug in processing HET table.
+
  Version 9.10
 
  - Support for weak-signing

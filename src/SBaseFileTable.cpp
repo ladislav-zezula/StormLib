@@ -1115,7 +1115,7 @@ static int InsertHetEntry(TMPQHetTable * pHetTable, ULONGLONG FileNameHash, DWOR
     BYTE NameHash1;
 
     // Get the start index and the high 8 bits of the name hash
-    StartIndex = Index = (DWORD)(FileNameHash % pHetTable->dwEntryCount);
+    StartIndex = Index = (DWORD)(FileNameHash % pHetTable->dwTotalCount);
     NameHash1 = (BYTE)(FileNameHash >> (pHetTable->dwNameHashBitSize - 8));
 
     // Find a place where to put it
@@ -1137,7 +1137,7 @@ static int InsertHetEntry(TMPQHetTable * pHetTable, ULONGLONG FileNameHash, DWOR
 
         // Move to the next entry in the HET table
         // If we came to the start index again, we are done
-        Index = (Index + 1) % pHetTable->dwEntryCount;
+        Index = (Index + 1) % pHetTable->dwTotalCount;
         if(Index == StartIndex)
             break;
     }
@@ -1257,7 +1257,7 @@ DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
     NameHash1 = (BYTE)(FileNameHash >> (pHetTable->dwNameHashBitSize - 8));
 
     // Calculate the starting index to the hash table
-    StartIndex = Index = (DWORD)(FileNameHash % pHetTable->dwEntryCount);
+    StartIndex = Index = (DWORD)(FileNameHash % pHetTable->dwTotalCount);
 
     // Go through HET table until we find a terminator
     while(pHetTable->pNameHashes[Index] != HET_ENTRY_FREE)
@@ -1286,7 +1286,7 @@ DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
 
         // Move to the next entry in the HET table
         // If we came to the start index again, we are done
-        Index = (Index + 1) % pHetTable->dwEntryCount;
+        Index = (Index + 1) % pHetTable->dwTotalCount;
         if(Index == StartIndex)
             break;
     }
@@ -2438,7 +2438,7 @@ int BuildFileTable_HetBet(
             return ERROR_FILE_CORRUPT;
         
         // Step one: Fill the name indexes
-        for(i = 0; i < pHetTable->dwEntryCount; i++)
+        for(i = 0; i < pHetTable->dwTotalCount; i++)
         {
             DWORD dwFileIndex = 0;
 
