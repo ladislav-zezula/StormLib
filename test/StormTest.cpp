@@ -2466,7 +2466,7 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
 
 static int TestOpenArchive_GetFileInfo(const char * szPlainName1, const char * szPlainName4)
 {
-    TLogHelper Logger("GetFileInfoTest");
+    TLogHelper Logger("GetFileInfoTest", szPlainName1, szPlainName4);
     HANDLE hFile;
     HANDLE hMpq4;
     HANDLE hMpq1;
@@ -3342,7 +3342,7 @@ static int TestCreateArchive_IncMaxFileCount(const char * szPlainName)
             nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData);
             if(nError != ERROR_SUCCESS)
             {
-                // Increment the ma file count by one
+                // Increment the max file count by one
                 dwMaxFileCount = SFileGetMaxFileCount(hMpq) + 1;
                 Logger.PrintProgress("Increasing max file count to %u ...", dwMaxFileCount);
                 SFileSetMaxFileCount(hMpq, dwMaxFileCount);
@@ -3755,18 +3755,17 @@ static int TestCreateArchive_BigArchive(const char * szPlainName)
 }
 
 // "MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events"
-static int TestModifyArchive_ReplaceFile(const char * szPlainName, const char * szFileName)
+static int TestModifyArchive_ReplaceFile(const char * szMpqPlainName, const char * szFileName)
 {
     TLogHelper Logger("ModifyTest");
     HANDLE hMpq = NULL;
-    HANDLE hFile = NULL;
     const char * szArchivedName;
     char szLocalFileName[MAX_PATH];
     size_t nOffset = 0;
     int nError;
 
     // Open an existing archive
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    nError = OpenExistingArchiveWithCopy(&Logger, szMpqPlainName, szMpqPlainName, &hMpq);
 
     // Add the given file
     if(nError == ERROR_SUCCESS)
@@ -3775,10 +3774,6 @@ static int TestModifyArchive_ReplaceFile(const char * szPlainName, const char * 
         if(!_strnicmp(szFileName, "AddFile-", 8))
             nOffset = 8;
         szArchivedName = szFileName + nOffset;
-
-        // Just for test - try to open the file in the archive
-        if(SFileOpenFileEx(hMpq, szArchivedName, 0, &hFile))
-            SFileCloseFile(hFile);
 
         // Create the local file name
         CreateFullPathName(szLocalFileName, szMpqSubDir, szFileName);
@@ -3792,9 +3787,29 @@ static int TestModifyArchive_ReplaceFile(const char * szPlainName, const char * 
                                             true);
     }
 
-    // Close the MPQ
-    if(hMpq != NULL)
+    // Reopen the MPQ and compact it
+    if(nError == ERROR_SUCCESS)
+    {
+        // Compact the archive
+        Logger.PrintProgress("Compacting archive %s ...", szMpqPlainName);
+        if(!SFileSetCompactCallback(hMpq, CompactCallback, &Logger))
+            nError = Logger.PrintError("Failed to compact archive %s", szMpqPlainName);
+
+        if(!SFileCompactArchive(hMpq, NULL, 0))
+            nError = GetLastError();
+
         SFileCloseArchive(hMpq);
+    }
+
+    // Try to open the archive again
+    if(nError == ERROR_SUCCESS)
+    {
+        CreateFullPathName(szLocalFileName, NULL, szMpqPlainName);
+        nError = OpenExistingArchive(&Logger, szLocalFileName, 0, &hMpq);
+        if(nError == ERROR_SUCCESS)
+            SFileCloseArchive(hMpq);
+    }
+
     return nError;
 }
 
@@ -3881,9 +3896,9 @@ int main(int argc, char * argv[])
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
 
     // Search all testing archives and verify their SHA1 hash
-//  if(nError == ERROR_SUCCESS)
-//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-/*
+    if(nError == ERROR_SUCCESS)
+        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+
     // Test reading linear file without bitmap
     if(nError == ERROR_SUCCESS)
         nError = TestFileStreamOperations("MPQ_2013_v4_alternate-original.MPQ", 0);
@@ -4109,11 +4124,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestAddFile_ListFileTest("MPQ_2013_v4_SC2_EmptyMap.SC2Map", true, true);
 
-    // Test archive compacting
     // Create an empty archive v2
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v2.mpq", MPQ_CREATE_ARCHIVE_V2 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
-                                                            
+
     // Create an empty archive v4
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
@@ -4188,10 +4202,14 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
-*/
-    // Test modifying a replay file from Heroes of the Storm
+
+    // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
-        nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events");
+        nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
+
+#ifdef _MSC_VER
+    _CrtDumpMemoryLeaks();
+#endif  // _MSC_VER
 
     return nError;
 }

@@ -479,11 +479,14 @@ int SFileAddFile_Init(
         // Call the callback, if needed
         if(ha->pfnAddFileCB != NULL)
             ha->pfnAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
+        hf->nAddFileError = ERROR_SUCCESS;
     }
 
-    // Store the error code from Add File operation
-    if(hf != NULL)
-        hf->nAddFileError = nError;
+    // Fre the file handle if failed
+    if(nError != ERROR_SUCCESS && hf != NULL)
+        FreeFileHandle(hf);
+
+    // Give the handle to the caller
     *phf = hf;
     return nError;
 }

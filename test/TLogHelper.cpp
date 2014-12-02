@@ -16,7 +16,7 @@ class TLogHelper
 {
     public:
 
-    TLogHelper(const char * szNewMainTitle = NULL, const char * szNewSubTitle = NULL);
+    TLogHelper(const char * szNewMainTitle = NULL, const char * szNewSubTitle1 = NULL, const char * szNewSubTitle2 = NULL);
     ~TLogHelper();
 
 #if defined(UNICODE) || defined(UNICODE)
@@ -49,7 +49,8 @@ class TLogHelper
     int  GetConsoleWidth();
 
     const char * szMainTitle;                       // Title of the text (usually name)
-    const char * szSubTitle;                        // Title of the text (can be name of the tested file)
+    const char * szSubTitle1;                       // Title of the text (can be name of the tested file)
+    const char * szSubTitle2;                       // Title of the text (can be name of the tested file)
     size_t nTextLength;                             // Length of the previous progress message
     bool bMessagePrinted;
 };
@@ -71,16 +72,18 @@ class TLogHelper
 
 //-----------------------------------------------------------------------------
 // Constructor and destructor
+    
 
-TLogHelper::TLogHelper(const char * szNewTestTitle, const char * szNewSubTitle)
+TLogHelper::TLogHelper(const char * szNewMainTitle, const char * szNewSubTitle1, const char * szNewSubTitle2)
 {
     UserString = "";
     UserCount = 1;
     UserTotal = 1;
 
     // Fill the test line structure
-    szMainTitle = szNewTestTitle;
-    szSubTitle = szNewSubTitle;
+    szMainTitle = szNewMainTitle;
+    szSubTitle1 = szNewSubTitle1;
+    szSubTitle2 = szNewSubTitle2;
     nTextLength = 0;
     bMessagePrinted = false;
     bDontPrintResult = false;
@@ -88,8 +91,10 @@ TLogHelper::TLogHelper(const char * szNewTestTitle, const char * szNewSubTitle)
     // Print the initial information
     if(szMainTitle != NULL)
     {
-        if(szSubTitle != NULL)
-            printf("Running %s (%s) ...", szMainTitle, szSubTitle);
+        if(szSubTitle1 != NULL && szSubTitle2 != NULL)
+            printf("Running %s (%s+%s) ...", szMainTitle, szSubTitle1, szSubTitle2);
+        else if(szSubTitle1 != NULL)
+            printf("Running %s (%s) ...", szMainTitle, szSubTitle1);
         else
             printf("Running %s ...", szMainTitle);
     }
@@ -98,19 +103,21 @@ TLogHelper::TLogHelper(const char * szNewTestTitle, const char * szNewSubTitle)
 TLogHelper::~TLogHelper()
 {
     const char * szSaveMainTitle = szMainTitle;
-    const char * szSaveSubTitle = szSubTitle;
+    const char * szSaveSubTitle1 = szSubTitle1;
+    const char * szSaveSubTitle2 = szSubTitle2;
 
     // Set both to NULL so the won't be printed
-    szMainTitle = NULL;
-    szSubTitle = NULL;
+    szMainTitle = szSubTitle1 = szSubTitle2 = NULL;
 
     // Print the final information
     if(szSaveMainTitle != NULL && bMessagePrinted == false)
     {
         if(bDontPrintResult == false)
         {
-            if(szSaveSubTitle != NULL)
-                PrintMessage("%s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle);
+            if(szSaveSubTitle1 != NULL && szSaveSubTitle2 != NULL)
+                PrintMessage("%s (%s+%s) succeeded.", szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2);
+            else if(szSaveSubTitle1 != NULL)
+                PrintMessage("%s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle1);
             else
                 PrintMessage("%s succeeded.", szSaveMainTitle);
         }
@@ -120,6 +127,13 @@ TLogHelper::~TLogHelper()
             printf("\r");
         }
     }
+
+#ifdef _MSC_VER
+    if(_CrtDumpMemoryLeaks())
+    {
+        PrintMessage("Memory leak detected after %s\n.", szSaveMainTitle);
+    }
+#endif  // _MSC_VER
 }
 
 //-----------------------------------------------------------------------------

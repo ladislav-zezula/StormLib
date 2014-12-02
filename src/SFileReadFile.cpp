@@ -95,111 +95,114 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
     CalculateRawSectorOffset(RawFilePos, hf, dwRawSectorOffset);
 
     // Set file pointer and read all required sectors
-    if(!FileStream_Read(ha->pStream, &RawFilePos, pbInSector, dwRawBytesToRead))
-        return GetLastError();
-    dwBytesRead = 0;
-
-    // Now we have to decrypt and decompress all file sectors that have been loaded
-    for(DWORD i = 0; i < dwSectorsToRead; i++)
+    if(FileStream_Read(ha->pStream, &RawFilePos, pbInSector, dwRawBytesToRead))
     {
-        DWORD dwRawBytesInThisSector = ha->dwSectorSize;
-        DWORD dwBytesInThisSector = ha->dwSectorSize;
-        DWORD dwIndex = dwSectorIndex + i;
-
-        // If there is not enough bytes in the last sector,
-        // cut the number of bytes in this sector
-        if(dwRawBytesInThisSector > dwBytesToRead)
-            dwRawBytesInThisSector = dwBytesToRead;
-        if(dwBytesInThisSector > dwBytesToRead)
-            dwBytesInThisSector = dwBytesToRead;
-
-        // If the file is compressed, we have to adjust the raw sector size
-        if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
-            dwRawBytesInThisSector = hf->SectorOffsets[dwIndex + 1] - hf->SectorOffsets[dwIndex];
-
-        // If the file is encrypted, we have to decrypt the sector
-        if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
+        // Now we have to decrypt and decompress all file sectors that have been loaded
+        for(DWORD i = 0; i < dwSectorsToRead; i++)
         {
-            BSWAP_ARRAY32_UNSIGNED(pbInSector, dwRawBytesInThisSector);
+            DWORD dwRawBytesInThisSector = ha->dwSectorSize;
+            DWORD dwBytesInThisSector = ha->dwSectorSize;
+            DWORD dwIndex = dwSectorIndex + i;
 
-            // If we don't know the key, try to detect it by file content
-            if(hf->dwFileKey == 0)
+            // If there is not enough bytes in the last sector,
+            // cut the number of bytes in this sector
+            if(dwRawBytesInThisSector > dwBytesToRead)
+                dwRawBytesInThisSector = dwBytesToRead;
+            if(dwBytesInThisSector > dwBytesToRead)
+                dwBytesInThisSector = dwBytesToRead;
+
+            // If the file is compressed, we have to adjust the raw sector size
+            if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
+                dwRawBytesInThisSector = hf->SectorOffsets[dwIndex + 1] - hf->SectorOffsets[dwIndex];
+
+            // If the file is encrypted, we have to decrypt the sector
+            if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
             {
-                hf->dwFileKey = DetectFileKeyByContent(pbInSector, dwBytesInThisSector, hf->dwDataSize);
+                BSWAP_ARRAY32_UNSIGNED(pbInSector, dwRawBytesInThisSector);
+
+                // If we don't know the key, try to detect it by file content
                 if(hf->dwFileKey == 0)
                 {
-                    nError = ERROR_UNKNOWN_FILE_KEY;
-                    break;
+                    hf->dwFileKey = DetectFileKeyByContent(pbInSector, dwBytesInThisSector, hf->dwDataSize);
+                    if(hf->dwFileKey == 0)
+                    {
+                        nError = ERROR_UNKNOWN_FILE_KEY;
+                        break;
+                    }
                 }
+
+                DecryptMpqBlock(pbInSector, dwRawBytesInThisSector, hf->dwFileKey + dwIndex);
+                BSWAP_ARRAY32_UNSIGNED(pbInSector, dwRawBytesInThisSector);
             }
 
-            DecryptMpqBlock(pbInSector, dwRawBytesInThisSector, hf->dwFileKey + dwIndex);
-            BSWAP_ARRAY32_UNSIGNED(pbInSector, dwRawBytesInThisSector);
-        }
-
-        // If the file has sector CRC check turned on, perform it
-        if(hf->bCheckSectorCRCs && hf->SectorChksums != NULL)
-        {
-            DWORD dwAdlerExpected = hf->SectorChksums[dwIndex];
-            DWORD dwAdlerValue = 0;
-
-            // We can only check sector CRC when it's not zero
-            // Neither can we check it if it's 0xFFFFFFFF.
-            if(dwAdlerExpected != 0 && dwAdlerExpected != 0xFFFFFFFF)
+            // If the file has sector CRC check turned on, perform it
+            if(hf->bCheckSectorCRCs && hf->SectorChksums != NULL)
             {
-                dwAdlerValue = adler32(0, pbInSector, dwRawBytesInThisSector);
-                if(dwAdlerValue != dwAdlerExpected)
+                DWORD dwAdlerExpected = hf->SectorChksums[dwIndex];
+                DWORD dwAdlerValue = 0;
+
+                // We can only check sector CRC when it's not zero
+                // Neither can we check it if it's 0xFFFFFFFF.
+                if(dwAdlerExpected != 0 && dwAdlerExpected != 0xFFFFFFFF)
                 {
-                    nError = ERROR_CHECKSUM_ERROR;
+                    dwAdlerValue = adler32(0, pbInSector, dwRawBytesInThisSector);
+                    if(dwAdlerValue != dwAdlerExpected)
+                    {
+                        nError = ERROR_CHECKSUM_ERROR;
+                        break;
+                    }
+                }
+            }
+
+            // If the sector is really compressed, decompress it.
+            // WARNING : Some sectors may not be compressed, it can be determined only
+            // by comparing uncompressed and compressed size !!!
+            if(dwRawBytesInThisSector < dwBytesInThisSector)
+            {
+                int cbOutSector = dwBytesInThisSector;
+                int cbInSector = dwRawBytesInThisSector;
+                int nResult = 0;
+
+                // Is the file compressed by Blizzard's multiple compression ?
+                if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
+                {
+                    if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
+                        nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                    else
+                        nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                }
+
+                // Is the file compressed by PKWARE Data Compression Library ?
+                else if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+                {
+                    nResult = SCompExplode(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                }
+
+                // Did the decompression fail ?
+                if(nResult == 0)
+                {
+                    nError = ERROR_FILE_CORRUPT;
                     break;
                 }
             }
-        }
-
-        // If the sector is really compressed, decompress it.
-        // WARNING : Some sectors may not be compressed, it can be determined only
-        // by comparing uncompressed and compressed size !!!
-        if(dwRawBytesInThisSector < dwBytesInThisSector)
-        {
-            int cbOutSector = dwBytesInThisSector;
-            int cbInSector = dwRawBytesInThisSector;
-            int nResult = 0;
-
-            // Is the file compressed by Blizzard's multiple compression ?
-            if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
+            else
             {
-                if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
-                    nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                else
-                    nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                if(pbOutSector != pbInSector)
+                    memcpy(pbOutSector, pbInSector, dwBytesInThisSector);
             }
 
-            // Is the file compressed by PKWARE Data Compression Library ?
-            else if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
-            {
-                nResult = SCompExplode(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-            }
-
-            // Did the decompression fail ?
-            if(nResult == 0)
-            {
-                nError = ERROR_FILE_CORRUPT;
-                break;
-            }
+            // Move pointers
+            dwBytesToRead -= dwBytesInThisSector;
+            dwByteOffset += dwBytesInThisSector;
+            dwBytesRead += dwBytesInThisSector;
+            pbOutSector += dwBytesInThisSector;
+            pbInSector += dwRawBytesInThisSector;
+            dwSectorsDone++;
         }
-        else
-        {
-            if(pbOutSector != pbInSector)
-                memcpy(pbOutSector, pbInSector, dwBytesInThisSector);
-        }
-
-        // Move pointers
-        dwBytesToRead -= dwBytesInThisSector;
-        dwByteOffset += dwBytesInThisSector;
-        dwBytesRead += dwBytesInThisSector;
-        pbOutSector += dwBytesInThisSector;
-        pbInSector += dwRawBytesInThisSector;
-        dwSectorsDone++;
+    }
+    else
+    {
+        nError = GetLastError();
     }
 
     // Free all used buffers
