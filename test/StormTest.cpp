@@ -187,6 +187,22 @@ static const char * PatchList_SC2_32283_enGB[] =
     NULL
 };
 
+static const char * PatchList_HS_6898_enGB[] = 
+{
+    "MPQ_2014_v4_base-Win.MPQ",
+    "hs-0-5314-Win-final.MPQ",
+    "hs-5314-5435-Win-final.MPQ",
+    "hs-5435-5506-Win-final.MPQ",
+    "hs-5506-5834-Win-final.MPQ",
+    "hs-5834-6024-Win-final.MPQ",
+    "hs-6024-6141-Win-final.MPQ",
+    "hs-6141-6187-Win-final.MPQ",
+    "hs-6187-6284-Win-final.MPQ",
+    "hs-6284-6485-Win-final.MPQ",
+    "hs-6485-6898-Win-final.MPQ",
+    NULL
+};
+
 //-----------------------------------------------------------------------------
 // Local file functions
 
@@ -2390,7 +2406,10 @@ static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatc
 {
     TLogHelper Logger("OpenPatchedMpqTest", PatchList[0]);
     HANDLE hMpq;
+    HANDLE hFile;
+    BYTE Buffer[0x100];
     DWORD dwFileCount = 0;
+    DWORD BytesRead = 0;
     int nError;
 
     // Open a patched MPQ archive
@@ -2400,6 +2419,16 @@ static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatc
         // Check patch count
         if(szPatchedFile != NULL)
             nError = VerifyFilePatchCount(&Logger, hMpq, szPatchedFile, nExpectedPatchCount);
+
+        // Try to open and read the file
+        if(nError == ERROR_SUCCESS)
+        {
+            if(SFileOpenFileEx(hMpq, szPatchedFile, 0, &hFile))
+            {
+                SFileReadFile(hFile, Buffer, sizeof(Buffer), &BytesRead, NULL);
+                SFileCloseFile(hFile);
+            }
+        }
 
         // Search the archive and load every file
         if(nError == ERROR_SUCCESS)
@@ -3894,7 +3923,7 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-
+/*
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -4061,17 +4090,21 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)                               
         nError = TestOpenArchive_Patched(PatchList_WoW_15050, "World\\Model.blob", 8);
 
-    // Open a patched archive.
+    // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
 
-    // Open a patched archive.
+    // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
 
-    // Open a patched archive.
+    // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 6);
+*/
+    // Open a patched archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
 
     // Check the opening archive for read-only
     if(nError == ERROR_SUCCESS)

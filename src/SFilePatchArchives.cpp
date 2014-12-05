@@ -28,6 +28,28 @@ typedef struct _BLIZZARD_BSDIFF40_FILE
 } BLIZZARD_BSDIFF40_FILE, *PBLIZZARD_BSDIFF40_FILE;
 
 //-----------------------------------------------------------------------------
+// Local variables
+
+static const char * LanguageList[] =
+{
+    "deDE",
+    "enCN",
+    "enGB",
+    "enTW",
+    "enUS",
+    "esES",
+    "esMX",
+    "frFR",
+    "koKR",
+    "ptBR",
+    "ptPT",
+    "ruRU",
+    "zhCN",
+    "zhTW",
+    NULL
+};
+
+//-----------------------------------------------------------------------------
 // Local functions
 
 static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE pbCompressed, DWORD cbCompressed)
@@ -321,7 +343,7 @@ static int ApplyFilePatch(
         hfFrom = hfBase;
     if(!memcmp(hfPrev->FileDataMD5, pPatchHeader->md5_before_patch, MD5_DIGEST_SIZE))
         hfFrom = hfPrev;
-    if(hfFrom == hf)
+    if(hfFrom == NULL)
         return ERROR_FILE_CORRUPT;
 
     // Allocate the buffer for patched file content
@@ -376,29 +398,46 @@ static void FreePatchData(TMPQFile * hf)
 //-----------------------------------------------------------------------------
 // Local functions (patch prefix matching)
 
-static bool LoadPatchHeader(TMPQArchive * ha, const char * szFileName, TPatchHeader * pPatchHeader)
+static TFileEntry * FindMd5ListFile(TMPQArchive * ha)
 {
-    HANDLE hFile = NULL;
-    DWORD dwTransferred = 0;
+    TFileEntry * pFileEntry = ha->pFileTable + ha->dwFileTableSize;
+    char * szLstName;
+    size_t nTryCount = 0;
+    size_t nLength;
 
-    // Load the patch header
-    if(SFileOpenFileEx((HANDLE)ha, szFileName, SFILE_OPEN_BASE_FILE, &hFile))
+    // Check every file entry for "*-md5.lst".
+    // Go backwards, as the entry is usually at the end of the file table
+    while(pFileEntry > ha->pFileTable && nTryCount < 10)
     {
-        SFileReadFile(hFile, pPatchHeader, sizeof(TPatchHeader), &dwTransferred, NULL);
-        SFileCloseFile(hFile);
+        // The file name must be valid
+        if(pFileEntry->szFileName != NULL)
+        {
+            // Get the name and length
+            szLstName = pFileEntry->szFileName;
+            nLength = strlen(szLstName);
+
+            // Check for the tail name
+            if(!_stricmp(szLstName + nLength - 8, "-md5.lst"))
+                return pFileEntry;
+        }
+
+        // Move back
+        pFileEntry--;
+        nTryCount++;
     }
 
-    // Convert the patch header to the proper endian
-    BSWAP_ARRAY32_UNSIGNED(pPatchHeader, sizeof(DWORD) * 6);
-
-    // Check the patch header
-    return (dwTransferred == sizeof(TPatchHeader) && pPatchHeader->dwSignature == PATCH_SIGNATURE_HEADER);
+    // Not found, sorry
+    return NULL;
 }
 
 static bool CreatePatchPrefix(TMPQArchive * ha, const char * szFileName, const char * szPrefixEnd)
 {
     TMPQNamePrefix * pNewPrefix;
     size_t nLength;
+
+    // If the end of the patch prefix was not entered, find it
+    if(szFileName != NULL && szPrefixEnd == NULL)
+        szPrefixEnd = szFileName + strlen(szFileName);
 
     // Create the patch prefix
     nLength = (szPrefixEnd - szFileName);
@@ -421,155 +460,158 @@ static bool CreatePatchPrefix(TMPQArchive * ha, const char * szFileName, const c
     return (pNewPrefix != NULL);
 }
 
-static bool FindPatchPrefix_OldWorld(
-    TMPQArchive * haBase,
-    TMPQArchive * haPatch)
+static bool IsMatchingPatchFile(
+    TMPQArchive * ha,
+    const char * szFileName,
+    LPBYTE pbFileMd5)
 {
-    TFileEntry * pFileTableEnd = haPatch->pFileTable + haPatch->dwFileTableSize;
-    TFileEntry * pPatchEntry;
-    TFileEntry * pBaseEntry;
-    TPatchHeader PatchHeader;
-    char * szPatchName;
-    char szBaseName[MAX_PATH + 0x20];
-    size_t nBaseLength = 9;
+    TPatchHeader PatchHeader = {0};
+    HANDLE hFile = NULL;
+    DWORD dwTransferred = 0;
+    bool bResult = false;
 
-    // Prepare the base prefix
-    memcpy(szBaseName, "OldWorld\\", nBaseLength);
-
-    // Check every file entry in the patch archive
-    for(pPatchEntry = haPatch->pFileTable; pPatchEntry < pFileTableEnd; pPatchEntry++)
+    // Open the file and load the patch header
+    if(SFileOpenFileEx((HANDLE)ha, szFileName, SFILE_OPEN_BASE_FILE, &hFile))
     {
-        // If the file is a patch file, there must be a base file in the base MPQ
-        if((pPatchEntry->dwFlags & MPQ_FILE_PATCH_FILE) && (pPatchEntry->szFileName != NULL))
-        {
-            // Cut one subdirectory from the patch name
-            szPatchName = strchr(pPatchEntry->szFileName, '\\');
-            if(szPatchName != NULL)
-            {
-                // Construct the base name
-                strcpy(szBaseName + nBaseLength, szPatchName + 1);
+        // Load the patch header
+        SFileReadFile(hFile, &PatchHeader, sizeof(TPatchHeader), &dwTransferred, NULL);
+        BSWAP_ARRAY32_UNSIGNED(pPatchHeader, sizeof(DWORD) * 6);
 
-                // Check if the name is in the base archive as-is.
-                // Do not use locale search, patched archives no longer use locale ID.
-                pBaseEntry = GetFileEntryAny(haBase, szBaseName);
-                if(pBaseEntry != NULL && IsValidMD5(pBaseEntry->md5))
-                {
-                    // Read the patch header from the file
-                    if(LoadPatchHeader(haPatch, pPatchEntry->szFileName, &PatchHeader))
-                    {
-                        // Compare the file MD5's. If they match,
-                        // it means that we have found the proper prefix
-                        if(!memcmp(pBaseEntry->md5, PatchHeader.md5_before_patch, MD5_DIGEST_SIZE))
-                        {
-                            return CreatePatchPrefix(haPatch, pPatchEntry->szFileName, szPatchName + 1);
-                        }
-                    }
-                }
-            }
-        }
+        // If the file contains an incremental patch,
+        // compare the "MD5 before patching" with the base file MD5
+        if(dwTransferred == sizeof(TPatchHeader) && PatchHeader.dwSignature == PATCH_SIGNATURE_HEADER)
+            bResult = (!memcmp(PatchHeader.md5_before_patch, pbFileMd5, MD5_DIGEST_SIZE));
+
+        // Close the file
+        SFileCloseFile(hFile);
     }
 
-    return false;
+    return bResult;
 }
 
-static bool FindPatchPrefix_Normal(
-    TMPQArchive * haBase,
-    TMPQArchive * haPatch)
+static const char * GetLstFileLanguage(const char * szFileName)
 {
-    TFileEntry * pFileTableEnd = haPatch->pFileTable + haPatch->dwFileTableSize;
-    TFileEntry * pPatchEntry;
-    TFileEntry * pBaseEntry;
-    TPatchHeader PatchHeader;
-    char * szPatchName;
-    char * szNextName;
-
-    // Check every file entry in the patch archive
-    for(pPatchEntry = haPatch->pFileTable; pPatchEntry < pFileTableEnd; pPatchEntry++)
-    {
-        // If the file is a patch file, there must be a base file in the base MPQ
-        if((pPatchEntry->dwFlags & MPQ_FILE_PATCH_FILE) && (pPatchEntry->szFileName != NULL))
-        {
-            // Set the start of the patch name
-            szPatchName = pPatchEntry->szFileName;
-
-            // Only verify names that have at least one subdirectory
-            while((szNextName = strchr(szPatchName, '\\')) != NULL)
-            {
-                // Check if the name is in the base archive as-is.
-                // Do not use locale search, patched archives no longer use locale ID.
-                pBaseEntry = GetFileEntryAny(haBase, szPatchName);
-                if(pBaseEntry != NULL && IsValidMD5(pBaseEntry->md5))
-                {
-                    // Read the patch header from the file
-                    if(LoadPatchHeader(haPatch, pPatchEntry->szFileName, &PatchHeader))
-                    {
-                        // Compare the file MD5's. If they match,
-                        // it means that we have found the proper prefix
-                        if(!memcmp(pBaseEntry->md5, PatchHeader.md5_before_patch, MD5_DIGEST_SIZE))
-                        {
-                            return CreatePatchPrefix(haPatch, pPatchEntry->szFileName, szPatchName);
-                        }
-                    }
-                }
-
-                // Move one directory fuhrter
-                szPatchName = szNextName + 1;
-            }
-        }
-    }
-
-    // Not found a match
-    return false;
-}
-
-static bool FindPatchPrefix_ByFileName(
-    TMPQArchive * haBase,
-    TMPQArchive * haPatch)
-{
-    TFileEntry * pFileTableEnd = haBase->pFileTable + haBase->dwFileTableSize;
-    TFileEntry * pFileEntry;
-    const char * szBasePrefix;
-    char * szLangName;
-    char * szTailName;
-    char * szLstName;
+    char szLstSuffix[0x80];
     size_t nLength;
-    char szPrefix[6];
+    size_t nSuffixLength;
 
-    // Check every file entry for "*-md5.lst".
-    // Go backwards, as the entry is usually at the end of the file table
-    for(pFileEntry = pFileTableEnd - 1; pFileEntry >= haBase->pFileTable; pFileEntry--)
+    // Each language-dependent file ends with "xxXX-md5.lst"
+    nLength = strlen(szFileName);
+    if(nLength < 12)
+        return NULL;
+
+    // Try each and every possibility
+    for(size_t i = 0; LanguageList[i] != NULL; i++)
     {
-        // The file name must be valid
-        if(pFileEntry->szFileName != NULL)
-        {
-            // Get the name and length
-            szLstName = pFileEntry->szFileName;
-            nLength = strlen(szLstName);
+        nSuffixLength = sprintf(szLstSuffix, "%s-md5.lst", LanguageList[i]);
+        assert(nSuffixLength == 12);
 
-            // Get the tail and lang name
-            szLangName = szLstName + nLength - 13;
-            szTailName = szLstName + nLength - 8;
-
-            // Check for the tail name
-            if(szTailName > szLstName && !_stricmp(szTailName, "-md5.lst"))
-            {
-                // Check the language name
-                if(szLangName > szLstName && szLangName[0] == '-' && szLangName[5] == '-')
-                {
-                    memcpy(szPrefix, szLangName + 1, 4);
-                    szPrefix[4] = '\\';
-                    return CreatePatchPrefix(haPatch, szPrefix, szPrefix + 5);
-                }
-
-                // Stop searching
-                break;
-            }
-        }
+        if(!_stricmp(szFileName + nLength - nSuffixLength, szLstSuffix))
+            return LanguageList[i];
     }
 
-    // Create the patch name with "base\\"
-    szBasePrefix = "base\\";
-    return CreatePatchPrefix(haPatch, szBasePrefix, szBasePrefix + 5);
+    return NULL;
+}
+
+static bool FindPatchPrefix_WoW_13164_13623(TMPQArchive * haBase, TMPQArchive * haPatch)
+{
+    TFileEntry * pFileEntry;
+    const char * szFilePrefix = "Base";
+    const char * szLanguage;
+    char szNamePrefix[0x10];
+    int nLength;
+
+    // Find a *-md5.lst file in the base archive
+    pFileEntry = FindMd5ListFile(haBase);
+    if(pFileEntry == NULL)
+        return false;
+
+    // Language-specific MPQs have the language identifier right before extension
+    szLanguage = GetLstFileLanguage(pFileEntry->szFileName);
+    if(szLanguage != NULL)
+        szFilePrefix = szLanguage;
+
+    // Format the name prefix
+    nLength = sprintf(szNamePrefix, "%s\\", szFilePrefix);
+    return CreatePatchPrefix(haPatch, szNamePrefix, &szNamePrefix[nLength]);
+}
+
+//
+// Find match in Starcraft II patch MPQs
+// Match a LST file in the root directory if the MPQ with any of the file in subdirectories
+//
+// The problem:
+// Base:  enGB-md5.lst
+// Patch: Campaigns\Liberty.SC2Campaign\enGB.SC2Assets\enGB-md5.lst
+//        Campaigns\Liberty.SC2Campaign\enGB.SC2Data\enGB-md5.lst
+//        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst
+//        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst Mods\Core.SC2Mod\enGB.SC2Assets\enGB-md5.lst
+//        Mods\Core.SC2Mod\enGB.SC2Data\enGB-md5.lst
+//        Mods\Liberty.SC2Mod\enGB.SC2Assets\enGB-md5.lst
+//        Mods\Liberty.SC2Mod\enGB.SC2Data\enGB-md5.lst
+//        Mods\LibertyMulti.SC2Mod\enGB.SC2Data\enGB-md5.lst
+//
+// Solution:
+// We need to match the file by its MD5
+//
+
+static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
+{
+    TFileEntry * pFileTableEnd;
+    TFileEntry * pFileEntry;
+    TFileEntry * pBaseEntry;
+    const char * szPlainName;
+    char * szLstFileName;
+    size_t cchWorkBuffer = 0x400;
+    size_t cchBaseName;
+    size_t cchDirName;
+    bool bResult = false;
+
+    // Find a *-md5.lst file in the base archive
+    pBaseEntry = FindMd5ListFile(haBase);
+    if(pBaseEntry == NULL)
+        return false;
+    cchBaseName = strlen(pBaseEntry->szFileName) + 1;
+
+    // Allocate working buffer for merging LST file
+    szLstFileName = STORM_ALLOC(char, cchWorkBuffer);
+    if(szLstFileName != NULL)
+    {
+        // Find that file in the patch MPQ
+        pFileTableEnd = haPatch->pFileTable + haPatch->dwFileTableSize;
+        for(pFileEntry = haPatch->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
+        {
+            // Find the "(patch_metadata)" file within that folder
+            // Note that the file is always relatively small and contains the patch prefix
+            // Checking for file size greatly speeds up the search process
+            if(pFileEntry->szFileName && !(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && (0 < pFileEntry->dwFileSize && pFileEntry->dwFileSize < 0x40))
+            {
+                // If the plain file name matches, we need to check its MD5
+                szPlainName = GetPlainFileName(pFileEntry->szFileName);
+                cchDirName = (size_t)(szPlainName - pFileEntry->szFileName);
+
+                // The file name must not too long and must be PATCH_METADATA_NAME
+                if((cchDirName + cchBaseName) < cchWorkBuffer && _stricmp(szPlainName, PATCH_METADATA_NAME) == 0)
+                {
+                    // Construct the name of the eventuall LST file
+                    memcpy(szLstFileName, pFileEntry->szFileName, cchDirName);
+                    memcpy(szLstFileName + cchDirName, pBaseEntry->szFileName, cchBaseName);
+
+                    // If there is the "*-md5.lst" file in that directory, we check its MD5
+                    if(IsMatchingPatchFile(haPatch, szLstFileName, pBaseEntry->md5))
+                    {
+                        bResult = CreatePatchPrefix(haPatch, pFileEntry->szFileName, szPlainName);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Free the work buffer
+        STORM_FREE(szLstFileName);
+    }
+
+    return bResult;
 }
 
 static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const char * szPatchPathPrefix)
@@ -578,25 +620,22 @@ static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const c
     if(szPatchPathPrefix != NULL)
         return CreatePatchPrefix(haPatch, szPatchPathPrefix, szPatchPathPrefix + strlen(szPatchPathPrefix));
 
-    // An old base MPQ from WoW-Cataclysm required to add "OldWorld\\"
-    // as base file name prefix. Try to match 
-    // Match: OldWorld\Cameras\FlybyDraenei.m2 <==> base\Cameras\FlybyDraenei.m2
-    if(GetFileEntryAny(haBase, "OldWorld-md5.lst") != NULL)
-        return FindPatchPrefix_OldWorld(haBase, haPatch);
+    // Patches for World of Warcraft - mostly the do not use prefix.
+    // Those who do, they have the (patch_metadata) file present in the "base" subdirectory.
+    // All patches that use patch prefix have the "base\\(patch_metadata) file present
+    if(GetFileEntryAny(haPatch, "base\\" PATCH_METADATA_NAME))
+        return FindPatchPrefix_WoW_13164_13623(haBase, haPatch);
 
-    // Find the patch so that file MD5 will match
-    // Note: This must be done before checking PATCH_METADATA_NAME in the root of the archive
+    // Updates for Starcraft II
     // Match: LocalizedData\GameHotkeys.txt <==> Campaigns\Liberty.SC2Campaign\enGB.SC2Data\LocalizedData\GameHotkeys.txt 
-    if(FindPatchPrefix_Normal(haBase, haPatch))
-        return true;
+    // All Starcraft II base archives seem to have the file "StreamingBuckets.txt" present
+    if(GetFileEntryAny(haBase, "StreamingBuckets.txt"))
+        return FindPatchPrefix_SC2(haBase, haPatch);
 
-    // If the PATCH_METADATA_NAME is in the root, the patch prefix is empty
-    // Match: Creature\Ragnaros2\Ragnaros2.M2 <==> Creature\Ragnaros2\Ragnaros2.M2
-    if(GetFileEntryAny(haPatch, PATCH_METADATA_NAME) != NULL)
-        return CreatePatchPrefix(haPatch, NULL, NULL);
-
-    // Create the patch prefix by the base MPQ file name
-    return FindPatchPrefix_ByFileName(haBase, haPatch);
+    // Diablo III patch MPQs don't use patch prefix
+    // Hearthstone MPQs don't use patch prefix
+    CreatePatchPrefix(haPatch, NULL, NULL);
+    return true;
 }
 
 //-----------------------------------------------------------------------------
