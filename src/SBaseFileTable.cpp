@@ -2629,7 +2629,6 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
 
     // The new hash table size must be greater or equal to the current hash table size
     assert(dwNewHashTableSize >= ha->pHeader->dwHashTableSize);
-    assert(dwNewMaxFileCount >= ha->dwFileTableSize);
 
     // The new hash table size must be a power of two
     assert((dwNewHashTableSize & (dwNewHashTableSize - 1)) == 0);
@@ -2676,7 +2675,11 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxF
                 if(ha->pHashTable != NULL)
                 {
                     pHash = AllocateHashEntry(ha, pFileEntry);
-                    assert(pHash != NULL);
+                    if(pHash == NULL)
+                    {
+                        nError = ERROR_DISK_FULL;
+                        break;
+                    }
                 }
 
                 // Move the file entry by one

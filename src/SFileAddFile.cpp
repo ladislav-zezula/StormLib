@@ -725,6 +725,14 @@ bool WINAPI SFileCreateFile(
             nError = ERROR_INVALID_PARAMETER;
     }
 
+    // Check for MPQs that have invalid block table size
+    // Example: size of block table: 0x41, size of hash table: 0x40
+    if(nError == ERROR_SUCCESS)
+    {
+        if(ha->dwFileTableSize > ha->dwMaxFileCount)
+            nError = ERROR_DISK_FULL;
+    }
+
     // Initiate the add file operation
     if(nError == ERROR_SUCCESS)
         nError = SFileAddFile_Init(ha, szArchivedName, FileTime, dwFileSize, lcLocale, dwFlags, (TMPQFile **)phFile);

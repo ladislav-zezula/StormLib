@@ -2970,6 +2970,32 @@ static int ForEachFile_OpenArchive(const char * szFullPath)
 
 // Adding a file to MPQ that had no (listfile) and no (attributes).
 // We expect that neither of these will be present after the archive is closed
+static int TestAddFile_FullArchive(const char * szSourceMpq)
+{
+    TLogHelper Logger("FullMpqTest", szSourceMpq);
+    const char * szFileName = "AddedFile001.txt";
+    const char * szFileData = "0123456789ABCDEF";
+    HANDLE hMpq = NULL;
+    int nError = ERROR_SUCCESS;
+
+    // Copy the archive so we won't fuck up the original one
+    nError = OpenExistingArchiveWithCopy(&Logger, szSourceMpq, szSourceMpq, &hMpq);
+
+    // Add a file
+    if(nError == ERROR_SUCCESS)
+    {
+        // Now add a file
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE);
+        nError = (nError == ERROR_DISK_FULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
+
+        SFileCloseArchive(hMpq);
+    }
+
+    return nError;
+}
+
+// Adding a file to MPQ that had no (listfile) and no (attributes).
+// We expect that neither of these will be present after the archive is closed
 static int TestAddFile_ListFileTest(const char * szSourceMpq, bool bShouldHaveListFile, bool bShouldHaveAttributes)
 {
     TLogHelper Logger("ListFileTest", szSourceMpq);
@@ -4101,7 +4127,7 @@ int main(int argc, char * argv[])
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 6);
-*/
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
@@ -4148,6 +4174,10 @@ int main(int argc, char * argv[])
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_CompactTest.w3x", "ListFile_Blizzard.txt");
+*/
+    // Test adding a file to MPQ that is already full
+    if(nError == ERROR_SUCCESS)
+        nError = TestAddFile_FullArchive("MPQ_2014_v1_out.w3x");
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)
