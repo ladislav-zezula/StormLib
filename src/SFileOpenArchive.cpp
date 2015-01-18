@@ -470,12 +470,12 @@ bool WINAPI SFileSetDownloadCallback(HANDLE hMpq, SFILE_DOWNLOAD_CALLBACK Downlo
 
 bool WINAPI SFileFlushArchive(HANDLE hMpq)
 {
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
+    TMPQArchive * ha;
     int nResultError = ERROR_SUCCESS;
     int nError;
 
     // Do nothing if 'hMpq' is bad parameter
-    if(!IsValidMpqHandle(hMpq))
+    if((ha = IsValidMpqHandle(hMpq)) == NULL)
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
@@ -540,8 +540,15 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
 
 bool WINAPI SFileCloseArchive(HANDLE hMpq)
 {
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
-    bool bResult;
+    TMPQArchive * ha = IsValidMpqHandle(hMpq);
+    bool bResult = false;
+
+    // Only if the handle is valid
+    if(ha == NULL)
+    {
+        SetLastError(ERROR_INVALID_HANDLE);
+        return false;
+    }
 
     // Invalidate the add file callback so it won't be called
     // when saving (listfile) and (attributes)
@@ -555,4 +562,3 @@ bool WINAPI SFileCloseArchive(HANDLE hMpq)
     FreeArchiveHandle(ha);
     return bResult;
 }
-

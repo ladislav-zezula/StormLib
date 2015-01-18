@@ -659,7 +659,9 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     DWORD dwBytesRead = 0;                      // Number of bytes read
     int nError = ERROR_SUCCESS;
 
-    // Keep compilers happy
+    // Always zero the result
+    if(pdwRead != NULL)
+        *pdwRead = 0;
     lpOverlapped = lpOverlapped;
 
     // Check valid parameters

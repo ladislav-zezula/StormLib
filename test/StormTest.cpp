@@ -1875,7 +1875,7 @@ static int AddFileToMpq(
     const char * szFileData,
     DWORD dwFlags = 0,
     DWORD dwCompression = 0,
-    bool bMustSucceed = false)
+    int nExpectedError = ERROR_SUCCESS)
 {
     HANDLE hFile = NULL;
     DWORD dwFileSize = (DWORD)strlen(szFileData);
@@ -1891,21 +1891,22 @@ static int AddFileToMpq(
         dwCompression = MPQ_COMPRESSION_ZLIB;
 
     // Create the file within the MPQ
-    if(!SFileCreateFile(hMpq, szFileName, 0, dwFileSize, 0, dwFlags, &hFile))
+    if(SFileCreateFile(hMpq, szFileName, 0, dwFileSize, 0, dwFlags, &hFile))
     {
-        // If success is not expected, it is actually a good thing
-        if(bMustSucceed == true)
-            return pLogger->PrintError("Failed to create MPQ file %s", szFileName);
-
-        return GetLastError();
+        // Write the file
+        if(!SFileWriteFile(hFile, szFileData, dwFileSize, dwCompression))
+            nError = pLogger->PrintError("Failed to write data to the MPQ");
+        SFileCloseFile(hFile);
+    }
+    else
+    {
+        nError = GetLastError();
     }
 
-    // Write the file
-    if(!SFileWriteFile(hFile, szFileData, dwFileSize, dwCompression))
-        nError = pLogger->PrintError("Failed to write data to the MPQ");
-
-    SFileCloseFile(hFile);
-    return nError;
+    // Check the expected error code
+    if(nError != nExpectedError)
+        return pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
+    return ERROR_SUCCESS;
 }
 
 static int AddLocalFileToMpq(
@@ -1957,35 +1958,35 @@ static int AddLocalFileToMpq(
     return ERROR_SUCCESS;
 }
 
-static int RenameMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szOldFileName, const char * szNewFileName, bool bMustSucceed)
+static int RenameMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szOldFileName, const char * szNewFileName, int nExpectedError)
 {
+    int nError = ERROR_SUCCESS;
+
     // Notify the user
     pLogger->PrintProgress("Renaming %s to %s ...", szOldFileName, szNewFileName);
 
     // Perform the deletion
     if(!SFileRenameFile(hMpq, szOldFileName, szNewFileName))
-    {
-        if(bMustSucceed == true)
-            return pLogger->PrintErrorVa("Failed to rename %s to %s", szOldFileName, szNewFileName);
-        return GetLastError();
-    }
+        nError = GetLastError();
 
+    if(nError != nExpectedError)
+        return pLogger->PrintErrorVa("Unexpected result from SFileRenameFile(%s -> %s)", szOldFileName, szNewFileName);
     return ERROR_SUCCESS;
 }
 
-static int RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileName, bool bMustSucceed)
+static int RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileName, int nExpectedError)
 {
+    int nError = ERROR_SUCCESS;
+
     // Notify the user
     pLogger->PrintProgress("Removing file %s ...", szFileName);
 
     // Perform the deletion
     if(!SFileRemoveFile(hMpq, szFileName, 0))
-    {
-        if(bMustSucceed == true)
-            return pLogger->PrintError("Failed to remove the file %s from the archive", szFileName);
-        return GetLastError();
-    }
+        nError = GetLastError();
 
+    if(nError != nExpectedError)
+        return pLogger->PrintError("Unexpected result from SFileRemoveFile(%s)", szFileName);
     return ERROR_SUCCESS;
 }
 
@@ -2449,7 +2450,7 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
     HANDLE hMpq = NULL;
     char  szFullPathName[MAX_PATH];
     DWORD dwFlags = bReadOnly ? MPQ_OPEN_READ_ONLY : 0;;
-    bool bMustSucceed;
+    int nExpectedError;
     int nError;
 
     // Copy the fiel so we wont screw up something
@@ -2463,28 +2464,22 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
     // Now try to add a file. This must fail if the MPQ is read only
     if(nError == ERROR_SUCCESS)
     {
-        bMustSucceed = (bReadOnly == false);
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, bMustSucceed);
-        if(nError != ERROR_SUCCESS && bMustSucceed == false)
-            nError = ERROR_SUCCESS;
+        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+        nError = AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, nExpectedError);
     }
 
     // Now try to rename a file in the MPQ. This must only succeed if the MPQ is not read only
     if(nError == ERROR_SUCCESS)
     {
-        bMustSucceed = (bReadOnly == false);
-        nError = RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", bMustSucceed);
-        if(nError != ERROR_SUCCESS && bMustSucceed == false)
-            nError = ERROR_SUCCESS;
+        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+        nError = RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", nExpectedError);
     }
 
     // Now try to delete a file in the MPQ. This must only succeed if the MPQ is not read only
     if(nError == ERROR_SUCCESS)
     {
-        bMustSucceed = (bReadOnly == false);
-        nError = RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", bMustSucceed);
-        if(nError != ERROR_SUCCESS && bMustSucceed == false)
-            nError = ERROR_SUCCESS;
+        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+        nError = RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", nExpectedError);
     }
 
     // Close the archive
@@ -2693,7 +2688,7 @@ static int TestOpenArchive_ModifySigned(const char * szPlainName, const char * s
     {
         // Verify any of the present signatures
         Logger.PrintProgress("Modifying signed archive ...");
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, true);
+        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, ERROR_SUCCESS);
     }
 
     // Verify the signature again
@@ -2970,24 +2965,29 @@ static int ForEachFile_OpenArchive(const char * szFullPath)
 
 // Adding a file to MPQ that had no (listfile) and no (attributes).
 // We expect that neither of these will be present after the archive is closed
-static int TestAddFile_FullArchive(const char * szSourceMpq)
+static int TestAddFile_FullArchive(const char * szFullMpq1, const char * szFullMpq2)
 {
-    TLogHelper Logger("FullMpqTest", szSourceMpq);
+    TLogHelper Logger("FullMpqTest", szFullMpq1);
     const char * szFileName = "AddedFile001.txt";
     const char * szFileData = "0123456789ABCDEF";
     HANDLE hMpq = NULL;
     int nError = ERROR_SUCCESS;
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szSourceMpq, szSourceMpq, &hMpq);
+    nError = OpenExistingArchiveWithCopy(&Logger, szFullMpq1, szFullMpq1, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Attempt to add a file
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_DISK_FULL);
+        SFileCloseArchive(hMpq);
+    }
 
-    // Add a file
+    // Copy the archive so we won't fuck up the original one
+    nError = OpenExistingArchiveWithCopy(&Logger, szFullMpq2, szFullMpq2, &hMpq);
     if(nError == ERROR_SUCCESS)
     {
         // Now add a file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE);
-        nError = (nError == ERROR_DISK_FULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
-
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_DISK_FULL);
         SFileCloseArchive(hMpq);
     }
 
@@ -3294,7 +3294,7 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
     // Now the MPQ should be full. It must not be possible to add another file
     if(nError == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, false);
+        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
         assert(nError != ERROR_SUCCESS);
         nError = ERROR_SUCCESS;
     }
@@ -3313,7 +3313,7 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
         CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? true : false);
-        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, false);
+        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
         assert(nError != ERROR_SUCCESS);
         nError = ERROR_SUCCESS;
     }
@@ -3323,20 +3323,20 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
         CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? true : false);
-        nError = RemoveMpqFile(&Logger, hMpq, szFileName, true);
+        nError = RemoveMpqFile(&Logger, hMpq, szFileName, ERROR_SUCCESS);
     }
 
     // Now add the file again. This time, it should be possible OK
     if(nError == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, true);
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_SUCCESS);
         assert(nError == ERROR_SUCCESS);
     }
 
     // Now add the file again. This time, it should be fail
     if(nError == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, false);
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_DISK_FULL);
         assert(nError != ERROR_SUCCESS);
         nError = ERROR_SUCCESS;
     }
@@ -3403,7 +3403,7 @@ static int TestCreateArchive_IncMaxFileCount(const char * szPlainName)
                 SFileSetMaxFileCount(hMpq, dwMaxFileCount);
 
                 // Attempt to create the file again
-                nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, true);
+                nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_SUCCESS);
             }
 
             // Compact the archive and close it
@@ -3496,7 +3496,7 @@ static int TestCreateArchive_FileFlagTest(const char * szPlainName)
     if(nError == ERROR_SUCCESS)
     {
         Logger.PrintProgress("Removing file %s ...", szMiddleFile);
-        nError = RemoveMpqFile(&Logger, hMpq, szMiddleFile, true);
+        nError = RemoveMpqFile(&Logger, hMpq, szMiddleFile, ERROR_SUCCESS);
         dwFileCount--;
     }
 
@@ -3688,7 +3688,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
         for(i = 0; i < dwMaxFileCount; i++)
         {
             sprintf(szArchivedName, szFileMask, i);
-            nError = AddFileToMpq(&Logger, hMpq, szArchivedName, "This is a text data.", 0, 0, true);
+            nError = AddFileToMpq(&Logger, hMpq, szArchivedName, "This is a text data.", 0, 0, ERROR_SUCCESS);
             if(nError != ERROR_SUCCESS)
                 break;
 
@@ -3702,7 +3702,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
         for(i = 0; i < (dwMaxFileCount / 2); i++)
         {
             sprintf(szArchivedName, szFileMask, i);
-            nError = RemoveMpqFile(&Logger, hMpq, szArchivedName, true);
+            nError = RemoveMpqFile(&Logger, hMpq, szArchivedName, ERROR_SUCCESS);
             if(nError != ERROR_SUCCESS)
                 break;
         }
@@ -3738,7 +3738,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
 
         // Add new file to the archive. It should be added to position 0
         // (since position 0 should be free)
-        nError = AddFileToMpq(&Logger, hMpq, szReaddedFile, "This is a re-added file.", 0, 0, true);
+        nError = AddFileToMpq(&Logger, hMpq, szReaddedFile, "This is a re-added file.", 0, 0, ERROR_SUCCESS);
         if(nError == ERROR_SUCCESS)
         {
             pFileData = LoadMpqFile(&Logger, hMpq, szReaddedFile);
@@ -4175,9 +4175,8 @@ int main(int argc, char * argv[])
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_CompactTest.w3x", "ListFile_Blizzard.txt");
 */
-    // Test adding a file to MPQ that is already full
     if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_FullArchive("MPQ_2014_v1_out.w3x");
+        nError = TestAddFile_FullArchive("MPQ_2014_v1_out1.w3x", "MPQ_2014_v1_out2.w3x");
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)

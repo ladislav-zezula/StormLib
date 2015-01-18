@@ -563,7 +563,6 @@ static DWORD VerifyFile(
     HANDLE hFile = NULL;
     DWORD dwVerifyResult = 0;
     DWORD dwTotalBytes = 0;
-    DWORD dwBytesRead;
     DWORD dwCrc32 = 0;
 
     //
@@ -622,6 +621,8 @@ static DWORD VerifyFile(
         // Go through entire file and update both CRC32 and MD5
         for(;;)
         {
+            DWORD dwBytesRead = 0;
+
             // Read data from file
             SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
             if(dwBytesRead == 0)
