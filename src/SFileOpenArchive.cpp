@@ -31,6 +31,14 @@ static bool IsAviFile(DWORD * HeaderData)
     return (DwordValue0 == 0x46464952 && DwordValue2 == 0x20495641 && DwordValue3 == 0x5453494C);
 }
 
+static bool IsWarcraft3Map(DWORD * HeaderData)
+{
+    DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(HeaderData[0]);
+    DWORD DwordValue1 = BSWAP_INT32_UNSIGNED(HeaderData[1]);
+
+    return (DwordValue0 == 0x57334D48 && DwordValue1 == 0x00000000);
+}
+
 static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSize, void * pvUserData)
 {
     TMPQUserData * pUserData;
@@ -153,6 +161,7 @@ bool WINAPI SFileOpenArchive(
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
     ULONGLONG FileSize = 0;             // Size of the file
+    bool bIsWarcraft3Map = false;
     int nError = ERROR_SUCCESS;   
 
     // Verify the parameters
@@ -237,28 +246,37 @@ bool WINAPI SFileOpenArchive(
             }
 
             // There are AVI files from Warcraft III with 'MPQ' extension.
-            if(SearchOffset == 0 && IsAviFile(ha->HeaderData))
+            if(SearchOffset == 0)
             {
-                nError = ERROR_AVI_FILE;
-                break;
+                if(IsAviFile(ha->HeaderData))
+                {
+                    nError = ERROR_AVI_FILE;
+                    break;
+                }
+
+                bIsWarcraft3Map = IsWarcraft3Map(ha->HeaderData);
             }
 
-            // If there is the MPQ user data signature, process it
+            // If there is the MPQ user data, process it
+            // Note that Warcraft III does not check for user data, which is abused by many map protectors
             dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
-            if(dwHeaderID == ID_MPQ_USERDATA && ha->pUserData == NULL && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
+            if(bIsWarcraft3Map == false && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
             {
-                // Verify if this looks like a valid user data
-                pUserData = IsValidMpqUserData(SearchOffset, FileSize, ha->HeaderData);
-                if(pUserData != NULL)
+                if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                 {
-                    // Fill the user data header
-                    ha->UserDataPos = SearchOffset;
-                    ha->pUserData = &ha->UserData;
-                    memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
+                    // Verify if this looks like a valid user data
+                    pUserData = IsValidMpqUserData(SearchOffset, FileSize, ha->HeaderData);
+                    if(pUserData != NULL)
+                    {
+                        // Fill the user data header
+                        ha->UserDataPos = SearchOffset;
+                        ha->pUserData = &ha->UserData;
+                        memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
 
-                    // Continue searching from that position
-                    SearchOffset += ha->pUserData->dwHeaderOffs;
-                    continue;
+                        // Continue searching from that position
+                        SearchOffset += ha->pUserData->dwHeaderOffs;
+                        continue;
+                    }
                 }
             }
 

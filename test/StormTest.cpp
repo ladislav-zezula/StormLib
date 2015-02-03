@@ -1751,6 +1751,7 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFullPath, DW
 {
     HANDLE hMpq = NULL;
     TCHAR szMpqName[MAX_PATH];
+    bool bReopenResult;
     int nError = ERROR_SUCCESS;
 
     // Is it an encrypted MPQ ?
@@ -1768,8 +1769,14 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFullPath, DW
     CopyFileName(szMpqName, szFullPath, strlen(szFullPath));
     if(!SFileOpenArchive(szMpqName, 0, dwFlags, &hMpq))
     {
+        // If the error is ERROR_BAD_FORMAT, try to open with MPQ_OPEN_FORCE_MPQ_V1
+//      if((nError = GetLastError()) == ERROR_BAD_FORMAT)
+//      {
+//          bReopenResult = SFileOpenArchive(szMpqName, 0, dwFlags | MPQ_OPEN_FORCE_MPQ_V1, &hMpq);
+//          nError = (bReopenResult == false) ? GetLastError() : ERROR_SUCCESS;
+//      }
+
         // Ignore the error if it's an AVI file or if the file is incomplete
-        nError = GetLastError();
         if(nError == ERROR_AVI_FILE || nError == ERROR_FILE_INCOMPLETE)
             return nError;
 
@@ -2322,7 +2329,7 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     bIsPartialMpq = (strstr(szPlainName, ".MPQ.part") != NULL);
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, NULL, &hMpq);
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
     if(nError == ERROR_SUCCESS)
     {
         // If the listfile was given, add it to the MPQ
@@ -4067,7 +4074,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
-
+*/
+    // Open an Warcraft III map locked by the BOBA protector
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x");
+/*
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
