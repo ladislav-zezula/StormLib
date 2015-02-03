@@ -1,10 +1,10 @@
 #####################################################################
 #
-# Makefile for compiling StormLib with MINGW
+# Makefile for compiling StormLib with MINGW 3.0
 #
 # Author: Ladislav Zezula
-# Created: Mon May 10 14:13:00 CEST 2010
-# System: Windows Seven
+# Tested: Feb 03 2015
+# System: Windows 8.1 64-bit
 #    
 #####################################################################
 
@@ -12,7 +12,7 @@ CC        = @gcc
 CPP       = @g++
 CFLAGS    = -Wall
 DFLAGS    = -D_7ZIP_ST
-EXELFLAGS = -s -Wl --subsystem,console -lwininet
+EXELFLAGS = -s -Wl,--subsystem,console -lwininet
 DLLLFLAGS = -shared -lwininet
 AR        = ar
 ARFLAGS   = rcs
@@ -239,6 +239,13 @@ COBJS = src/libtomcrypt/src/hashes/sha1.o \
 	src/libtommath/bn_mp_n_root.o \
 	src/libtommath/bn_mp_lshd.o \
 	src/libtommath/bn_mp_reduce_is_2k.o \
+	src/bzip2/blocksort.o \
+	src/bzip2/bzlib.o \
+	src/bzip2/compress.o \
+	src/bzip2/crctable.o \
+	src/bzip2/decompress.o \
+	src/bzip2/huffman.o \
+	src/bzip2/randtable.o \
 	src/pklib/implode.o \
 	src/pklib/crc32.o \
 	src/pklib/explode.o \
@@ -258,7 +265,7 @@ COBJS = src/libtomcrypt/src/hashes/sha1.o \
             
 OBJS_DLL  = stormlib_dll/DllMain.o
 
-OBJS_TEST = test/test.o
+OBJS_TEST = test/StormTest.o
 
 all: $(LIBRARY) $(TESTEXE)
 
