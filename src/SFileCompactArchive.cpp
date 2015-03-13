@@ -20,7 +20,7 @@
 
 static int CheckIfAllFilesKnown(TMPQArchive * ha)
 {
-    TFileEntry * pFileTableEnd;
+    TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
     TFileEntry * pFileEntry;
     DWORD dwBlockIndex = 0;
     int nError = ERROR_SUCCESS;
@@ -28,7 +28,6 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha)
     // Verify the file table
     if(nError == ERROR_SUCCESS)
     {
-        pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
         for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++, dwBlockIndex++)
         {
             // If there is an existing entry in the file table, check its name
@@ -49,7 +48,7 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha)
 
 static int CheckIfAllKeysKnown(TMPQArchive * ha, const char * szListFile, LPDWORD pFileKeys)
 {
-    TFileEntry * pFileTableEnd;
+    TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
     TFileEntry * pFileEntry;
     DWORD dwBlockIndex = 0;
     int nError = ERROR_SUCCESS;
@@ -67,7 +66,6 @@ static int CheckIfAllKeysKnown(TMPQArchive * ha, const char * szListFile, LPDWOR
     // Verify the file table
     if(nError == ERROR_SUCCESS)
     {
-        pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
         for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++, dwBlockIndex++)
         {
             // If the file exists and it's encrypted
@@ -266,7 +264,7 @@ static int CopyMpqFileSectors(
                 dwRawDataInSector = dwBytesToCopy;
 
             // Calculate the raw file offset of the file sector
-            CalculateRawSectorOffset(RawFilePos, hf, dwRawByteOffset);
+            RawFilePos = CalculateRawSectorOffset(hf, dwRawByteOffset);
             
             // Read the file sector
             if(!FileStream_Read(ha->pStream, &RawFilePos, hf->pbFileSector, dwRawDataInSector))
@@ -600,19 +598,13 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     if(nError == ERROR_SUCCESS)
         nError = CopyMpqFiles(ha, pFileKeys, pTempStream);
 
-    // Defragment the file table
-    if(nError == ERROR_SUCCESS)
-        nError = RebuildFileTable(ha, ha->pHeader->dwHashTableSize, ha->dwMaxFileCount);
-
     // We also need to rebuild the HET table, if any
     if(nError == ERROR_SUCCESS)
     {
-        // Invalidate (listfile) and (attributes)
-        InvalidateInternalFiles(ha);
-
         // Rebuild the HET table, if we have any
         if(ha->pHetTable != NULL)
             nError = RebuildHetTable(ha);
+        ha->dwFlags |= MPQ_FLAG_CHANGED;
     }
 
     // If succeeded, switch the streams
@@ -624,21 +616,12 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
             nError = ERROR_CAN_NOT_COMPLETE;
     }
 
-    // If all succeeded, save the MPQ tables
-    if(nError == ERROR_SUCCESS)
+    // Final user notification
+    if(nError == ERROR_SUCCESS && ha->pfnCompactCB != NULL)
     {
-        //
-        // Note: We don't recalculate position of the MPQ tables at this point.
-        // SaveMPQTables does it automatically.
-        // 
-
-        nError = SaveMPQTables(ha);
-        if(nError == ERROR_SUCCESS && ha->pfnCompactCB != NULL)
-        {
-            ha->CompactBytesProcessed += (ha->pHeader->dwHashTableSize * sizeof(TMPQHash));
-            ha->CompactBytesProcessed += (ha->pHeader->dwBlockTableSize * sizeof(TMPQBlock));
-            ha->pfnCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
-        }
+        ha->CompactBytesProcessed += (ha->dwHashTableSize * sizeof(TMPQHash));
+        ha->CompactBytesProcessed += (ha->dwFileTableSize * sizeof(TMPQBlock));
+        ha->pfnCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
     }
 
     // Cleanup and return

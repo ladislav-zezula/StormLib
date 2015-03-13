@@ -54,6 +54,8 @@ static const char * szMpqPatchDir = "1995 - Test MPQs\\patches";
 typedef int (*FIND_FILE_CALLBACK)(const char * szFullPath);
 typedef int (*FIND_PAIR_CALLBACK)(const char * szFullPath1, const char * szFullPath2);
 
+#define ERROR_UNDETERMINED_RESULT 0xC000FFFF
+
 //-----------------------------------------------------------------------------
 // Testing data
 
@@ -1209,8 +1211,11 @@ static int CreateFileCopy(
     // Close the source file
     FileStream_Close(pStream1);
 
+    // Create the full file name of the target file, including prefix
     if(szBuffer != NULL)
         CreateFullPathName(szBuffer, NULL, szFileCopy);
+    
+    // Report error, if any
     if(nError != ERROR_SUCCESS)
         pLogger->PrintError("Failed to create copy of MPQ");
     return nError;
@@ -1463,6 +1468,11 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
 
     // Notify the user that we are loading a file from MPQ
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+//  if(!_stricmp(szFileName, "DragonSeaTurtle_Portrait.mdx"))
+//      DebugBreak();
+#endif
 
     // Open the file from MPQ
     if(!SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
@@ -1751,7 +1761,7 @@ static int OpenExistingArchive(TLogHelper * pLogger, const char * szFullPath, DW
 {
     HANDLE hMpq = NULL;
     TCHAR szMpqName[MAX_PATH];
-    bool bReopenResult;
+//  bool bReopenResult;
     int nError = ERROR_SUCCESS;
 
     // Is it an encrypted MPQ ?
@@ -1911,9 +1921,9 @@ static int AddFileToMpq(
     }
 
     // Check the expected error code
-    if(nError != nExpectedError)
+    if(nExpectedError != ERROR_UNDETERMINED_RESULT && nError != nExpectedError)
         return pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
-    return ERROR_SUCCESS;
+    return nError;
 }
 
 static int AddLocalFileToMpq(
@@ -2313,11 +2323,11 @@ static int TestOpenFile_OpenById(const char * szPlainName)
     return nError;
 }
 
-// Open an empty archive (found in WoW cache - it's just a header)
-static int TestOpenArchive(const char * szPlainName, const char * szListFile = NULL)
+static int TestOpenArchive(const char * szPlainName, const char * szListFile = NULL, bool bDontCopyArchive = false)
 {
     TLogHelper Logger("OpenMpqTest", szPlainName);
     TFileData * pFileData;
+    const char * szCopyName = (bDontCopyArchive) ? NULL : szPlainName;
     HANDLE hMpq;
     DWORD dwFileCount = 0;
     DWORD dwTestFlags;
@@ -2329,7 +2339,7 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     bIsPartialMpq = (strstr(szPlainName, ".MPQ.part") != NULL);
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szCopyName, &hMpq);
     if(nError == ERROR_SUCCESS)
     {
         // If the listfile was given, add it to the MPQ
@@ -2367,6 +2377,8 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     return nError;
 }
 
+
+// Open an empty archive (found in WoW cache - it's just a header)
 static int TestOpenArchive_WillFail(const char * szPlainName)
 {
     TLogHelper Logger("FailMpqTest", szPlainName);
@@ -2472,21 +2484,21 @@ static int TestOpenArchive_ReadOnly(const char * szPlainName, bool bReadOnly)
     if(nError == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, nExpectedError);
+        AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, nExpectedError);
     }
 
     // Now try to rename a file in the MPQ. This must only succeed if the MPQ is not read only
     if(nError == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        nError = RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", nExpectedError);
+        RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", nExpectedError);
     }
 
     // Now try to delete a file in the MPQ. This must only succeed if the MPQ is not read only
     if(nError == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        nError = RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", nExpectedError);
+        RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", nExpectedError);
     }
 
     // Close the archive
@@ -2970,9 +2982,9 @@ static int ForEachFile_OpenArchive(const char * szFullPath)
     return nError;
 }
 
-// Adding a file to MPQ that had no (listfile) and no (attributes).
-// We expect that neither of these will be present after the archive is closed
-static int TestAddFile_FullArchive(const char * szFullMpq1, const char * szFullMpq2)
+// Adding a file to MPQ that had size of the file table equal
+// or greater than hash table, but has free entries
+static int TestAddFile_FullTable(const char * szFullMpq1, const char * szFullMpq2)
 {
     TLogHelper Logger("FullMpqTest", szFullMpq1);
     const char * szFileName = "AddedFile001.txt";
@@ -2985,7 +2997,7 @@ static int TestAddFile_FullArchive(const char * szFullMpq1, const char * szFullM
     if(nError == ERROR_SUCCESS)
     {
         // Attempt to add a file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_DISK_FULL);
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_SUCCESS);
         SFileCloseArchive(hMpq);
     }
 
@@ -2994,7 +3006,7 @@ static int TestAddFile_FullArchive(const char * szFullMpq1, const char * szFullM
     if(nError == ERROR_SUCCESS)
     {
         // Now add a file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_DISK_FULL);
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_SUCCESS);
         SFileCloseArchive(hMpq);
     }
 
@@ -3023,6 +3035,7 @@ static int TestAddFile_ListFileTest(const char * szSourceMpq, bool bShouldHaveLi
         // Now add a file
         nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE);
         SFileCloseArchive(hMpq);
+        hMpq = NULL;
     }
 
     // Now reopen the archive
@@ -3271,8 +3284,10 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
     DWORD dwFlags = MPQ_FILE_ENCRYPTED | MPQ_FILE_COMPRESS;
     int nError;
 
+    //
     // Note that StormLib will round the maxfile count
     // up to hash table size (nearest power of two)
+    //
     if((dwCreateFlags & MPQ_CREATE_LISTFILE) == 0)
         dwMaxFileCount++;
     if((dwCreateFlags & MPQ_CREATE_ATTRIBUTES) == 0)
@@ -3325,7 +3340,7 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
         nError = ERROR_SUCCESS;
     }
 
-    // The (listfile) must be present
+    // The (listfile) and (attributes) must be present
     if(nError == ERROR_SUCCESS)
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
@@ -3340,10 +3355,18 @@ static int TestCreateArchive_FillArchive(const char * szPlainName, DWORD dwCreat
         assert(nError == ERROR_SUCCESS);
     }
 
-    // Now add the file again. This time, it should be fail
+    // Now add the file again. This time, it should fail
     if(nError == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_DISK_FULL);
+        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_ALREADY_EXISTS);
+        assert(nError != ERROR_SUCCESS);
+        nError = ERROR_SUCCESS;
+    }
+
+    // Now add the file again. This time, it should fail
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, dwFlags, dwCompression, ERROR_DISK_FULL);
         assert(nError != ERROR_SUCCESS);
         nError = ERROR_SUCCESS;
     }
@@ -3401,7 +3424,7 @@ static int TestCreateArchive_IncMaxFileCount(const char * szPlainName)
 
             // Add one file
             sprintf(szFileName, "AddFile_%04u.txt", i);
-            nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData);
+            nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_UNDETERMINED_RESULT);
             if(nError != ERROR_SUCCESS)
             {
                 // Increment the max file count by one
@@ -3682,7 +3705,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
     HANDLE hMpq = NULL;                 // Handle of created archive 
     char szArchivedName[MAX_PATH];
     DWORD dwMaxFileCount = 0x1E;
-    DWORD dwAddedCount = 0;
+    DWORD dwFileCount = 0;
     size_t i;
     int nError;
 
@@ -3699,7 +3722,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
             if(nError != ERROR_SUCCESS)
                 break;
 
-            dwAddedCount++;
+            dwFileCount++;
         }
     }
 
@@ -3712,6 +3735,8 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
             nError = RemoveMpqFile(&Logger, hMpq, szArchivedName, ERROR_SUCCESS);
             if(nError != ERROR_SUCCESS)
                 break;
+
+            dwFileCount--;
         }
     }
 
@@ -3730,7 +3755,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
         pFileData = LoadMpqFile(&Logger, hMpq, LISTFILE_NAME);
         if(pFileData != NULL)
         {
-            if(pFileData->dwBlockIndex < dwAddedCount)
+            if(pFileData->dwBlockIndex < dwFileCount)
                 Logger.PrintMessage("Unexpected file index of %s", LISTFILE_NAME);
             STORM_FREE(pFileData);
         }
@@ -3738,20 +3763,23 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
         pFileData = LoadMpqFile(&Logger, hMpq, ATTRIBUTES_NAME);
         if(pFileData != NULL)
         {
-            if(pFileData->dwBlockIndex <= dwAddedCount)
+            if(pFileData->dwBlockIndex <= dwFileCount)
                 Logger.PrintMessage("Unexpected file index of %s", ATTRIBUTES_NAME);
             STORM_FREE(pFileData);
         }
 
-        // Add new file to the archive. It should be added to position 0
-        // (since position 0 should be free)
+        // Add new file to the archive. It should be added to the last position
         nError = AddFileToMpq(&Logger, hMpq, szReaddedFile, "This is a re-added file.", 0, 0, ERROR_SUCCESS);
         if(nError == ERROR_SUCCESS)
         {
+            // Force update of the tables
+            SFileFlushArchive(hMpq);
+
+            // Load the file
             pFileData = LoadMpqFile(&Logger, hMpq, szReaddedFile);
             if(pFileData != NULL)
             {
-                if(pFileData->dwBlockIndex != 0)
+                if(pFileData->dwBlockIndex != dwFileCount)
                     Logger.PrintMessage("Unexpected file index of %s", szReaddedFile);
                 STORM_FREE(pFileData);
             }
@@ -4075,10 +4103,14 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
 */
-    // Open an Warcraft III map locked by the BOBA protector
+    // Open an Warcraft III map locked by a protector
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x");
+
+    // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x");
-/*
+
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
@@ -4109,7 +4141,7 @@ int main(int argc, char * argv[])
 
     // Open an archive that is merged with multiple files
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0");
+        nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0", NULL, true);
 
     // Open every MPQ that we have in the storage
     if(nError == ERROR_SUCCESS)
@@ -4185,9 +4217,9 @@ int main(int argc, char * argv[])
 
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_CompactTest.w3x", "ListFile_Blizzard.txt");
-*/
+
     if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_FullArchive("MPQ_2014_v1_out1.w3x", "MPQ_2014_v1_out2.w3x");
+        nError = TestAddFile_FullTable("MPQ_2014_v1_out1.w3x", "MPQ_2014_v1_out2.w3x");
 
     // Test modifying file with no (listfile) and no (attributes)
     if(nError == ERROR_SUCCESS)

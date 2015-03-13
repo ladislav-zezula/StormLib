@@ -97,7 +97,7 @@ unsigned char AsciiToUpperTable_Slash[256] =
 
 #define STORM_BUFFER_SIZE       0x500
 
-#define HASH_INDEX_MASK(ha) (ha->pHeader->dwHashTableSize ? (ha->pHeader->dwHashTableSize - 1) : 0)
+#define HASH_INDEX_MASK(ha) (ha->dwHashTableSize ? (ha->dwHashTableSize - 1) : 0)
 
 static DWORD StormBuffer[STORM_BUFFER_SIZE];    // Buffer for the decryption engine
 static bool  bMpqCryptographyInitialized = false;
@@ -712,9 +712,7 @@ TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry)
         if(ha != NULL && pFileEntry != NULL)
         {
             // Set the raw position and MPQ position
-            hf->RawFilePos = ha->MpqPos + pFileEntry->ByteOffset;
-            if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
-                hf->RawFilePos = (DWORD)ha->MpqPos + (DWORD)pFileEntry->ByteOffset;
+            hf->RawFilePos = FileOffsetFromMpqOffset(ha, pFileEntry->ByteOffset);
             hf->MpqFilePos = pFileEntry->ByteOffset;
 
             // Set the data size
@@ -733,8 +731,10 @@ void * LoadMpqTable(
     ULONGLONG ByteOffset,
     DWORD dwCompressedSize,
     DWORD dwTableSize,
-    DWORD dwKey)
+    DWORD dwKey,
+    bool * pbTableIsCut)
 {
+    ULONGLONG FileSize = 0;
     LPBYTE pbCompressed = NULL;
     LPBYTE pbMpqTable;
     LPBYTE pbToRead;
@@ -757,19 +757,29 @@ void * LoadMpqTable(
             }
         }
 
-        // On archives v 1.0, Storm.dll does not actually check
-        // if the hash table was read entirely. Abused by Spazzler map protector
-        // which sets hash table size to 0x00100000
-        if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1 && (ha->dwFlags & MPQ_FLAG_MALFORMED))
-        {
-            ULONGLONG FileSize = 0;
+        // Get the file offset from which we will read the table
+        // Note: According to Storm.dll from Warcraft III (version 2002),
+        // if the hash table position is 0xFFFFFFFF, no SetFilePointer call is done
+        // and the table is loaded from the current file offset
+        if(ByteOffset == SFILE_INVALID_POS)
+            FileStream_GetPos(ha->pStream, &ByteOffset);
 
+        // On archives v 1.0, hash table and block table can go beyond EOF.
+        // Storm.dll reads as much as possible, then fills the missing part with zeros.
+        // Abused by Spazzler map protector which sets hash table size to 0x00100000
+        if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+        {
             // Cut the table size
             FileStream_GetSize(ha->pStream, &FileSize);
             if((ByteOffset + dwBytesToRead) > FileSize)
             {
+                // Fill the extra data with zeros
                 dwBytesToRead = (DWORD)(FileSize - ByteOffset);
                 memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
+                
+                // Give the caller information that the table was cut
+                if(pbTableIsCut != NULL)
+                    pbTableIsCut[0] = true;
             }
         }
 
@@ -816,33 +826,6 @@ void * LoadMpqTable(
 
     // Return the MPQ table
     return pbMpqTable;
-}
-
-void CalculateRawSectorOffset(
-    ULONGLONG & RawFilePos, 
-    TMPQFile * hf,
-    DWORD dwSectorOffset)
-{
-    // Must be used for files within a MPQ
-    assert(hf->ha != NULL);
-    assert(hf->ha->pHeader != NULL);
-    
-    //
-    // Some MPQ protectors place the sector offset table after the actual file data.
-    // Sector offsets in the sector offset table are negative. When added
-    // to MPQ file offset from the block table entry, the result is a correct
-    // position of the file data in the MPQ.
-    //
-    // For MPQs version 1.0, the offset is purely 32-bit
-    //
-
-    RawFilePos = hf->RawFilePos + dwSectorOffset;
-    if(hf->ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
-        RawFilePos = (DWORD)hf->ha->MpqPos + (DWORD)hf->pFileEntry->ByteOffset + dwSectorOffset;
-
-    // We also have to add patch header size, if patch header is present
-    if(hf->pPatchInfo != NULL)
-        RawFilePos += hf->pPatchInfo->dwLength;
 }
 
 unsigned char * AllocateMd5Buffer(
@@ -1166,10 +1149,10 @@ int AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
             // Calculate offset of the CRC table
             dwCrcSize = hf->dwSectorCount * sizeof(DWORD);
             dwCrcOffset = hf->SectorOffsets[hf->dwSectorCount];
-            CalculateRawSectorOffset(RawFilePos, hf, dwCrcOffset); 
+            RawFilePos = CalculateRawSectorOffset(hf, dwCrcOffset); 
 
             // Now read the table from the MPQ
-            hf->SectorChksums = (DWORD *)LoadMpqTable(ha, RawFilePos, dwCompressedSize, dwCrcSize, 0);
+            hf->SectorChksums = (DWORD *)LoadMpqTable(ha, RawFilePos, dwCompressedSize, dwCrcSize, 0, NULL);
             if(hf->SectorChksums == NULL)
                 return ERROR_NOT_ENOUGH_MEMORY;
         }

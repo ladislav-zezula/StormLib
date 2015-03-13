@@ -177,12 +177,14 @@ extern "C" {
 #define MPQ_FLAG_READ_ONLY          0x00000001  // If set, the MPQ has been open for read-only access
 #define MPQ_FLAG_CHANGED            0x00000002  // If set, the MPQ tables have been changed
 #define MPQ_FLAG_MALFORMED          0x00000004  // Malformed data structure detected (W3M map protectors)
-#define MPQ_FLAG_CHECK_SECTOR_CRC   0x00000008  // Checking sector CRC when reading files
-#define MPQ_FLAG_LISTFILE_INVALID   0x00000020  // If set, it means that the (listfile) has been invalidated
-#define MPQ_FLAG_ATTRIBUTES_INVALID 0x00000040  // If set, it means that the (attributes) has been invalidated
-#define MPQ_FLAG_SIGNATURE_INVALID  0x00000080  // If set, it means that the (signature) has been invalidated
-#define MPQ_FLAG_SAVING_TABLES      0x00000100  // If set, we are saving MPQ internal files and MPQ tables
-#define MPQ_FLAG_PATCH              0x00000200  // If set, this MPQ is a patch archive
+#define MPQ_FLAG_HASH_TABLE_CUT     0x00000008  // The hash table goes beyond EOF
+#define MPQ_FLAG_BLOCK_TABLE_CUT    0x00000010  // The hash table goes beyond EOF
+#define MPQ_FLAG_CHECK_SECTOR_CRC   0x00000020  // Checking sector CRC when reading files
+#define MPQ_FLAG_LISTFILE_INVALID   0x00000040  // If set, it means that the (listfile) has been invalidated
+#define MPQ_FLAG_ATTRIBUTES_INVALID 0x00000080  // If set, it means that the (attributes) has been invalidated
+#define MPQ_FLAG_SIGNATURE_INVALID  0x00000100  // If set, it means that the (signature) has been invalidated
+#define MPQ_FLAG_SAVING_TABLES      0x00000200  // If set, we are saving MPQ internal files and MPQ tables
+#define MPQ_FLAG_PATCH              0x00000400  // If set, this MPQ is a patch archive
 
 // Values for TMPQArchive::dwSubType
 #define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
@@ -857,6 +859,7 @@ typedef struct _TMPQArchive
     DWORD          dwHETBlockSize;
     DWORD          dwBETBlockSize;
     DWORD          dwMaxFileCount;              // Maximum number of files in the MPQ. Also total size of the file table.
+    DWORD          dwHashTableSize;             // Size of the hash table. Different from hash table size in the header if the hash table was shrunk
     DWORD          dwFileTableSize;             // Current size of the file table, e.g. index of the entry past the last occupied one
     DWORD          dwReservedFiles;             // Number of entries reserved for internal MPQ files (listfile, attributes)
     DWORD          dwSectorSize;                // Default size of one file sector

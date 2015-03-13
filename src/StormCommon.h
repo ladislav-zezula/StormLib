@@ -170,6 +170,9 @@ TMPQFile * IsValidFileHandle(HANDLE hFile);
 //-----------------------------------------------------------------------------
 // Support for MPQ file tables
 
+ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset);
+ULONGLONG CalculateRawSectorOffset(TMPQFile * hf, DWORD dwSectorOffset);
+
 int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags);
 
 TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
@@ -191,6 +194,9 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha);
 int  CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize);
 int  LoadAnyHashTable(TMPQArchive * ha);
 int  BuildFileTable(TMPQArchive * ha);
+int  DefragmentFileTable(TMPQArchive * ha);
+int  ShrinkMalformedMpqTables(TMPQArchive * ha);
+
 int  RebuildHetTable(TMPQArchive * ha);
 int  RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxFileCount);
 int  SaveMPQTables(TMPQArchive * ha);
@@ -238,12 +244,11 @@ int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer
 // Common functions - MPQ File
 
 TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry);
-void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey);
+void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey, bool * pbTableIsCut);
 int  AllocateSectorBuffer(TMPQFile * hf);
 int  AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile);
 int  AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile);
 int  AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile);
-void CalculateRawSectorOffset(ULONGLONG & RawFilePos, TMPQFile * hf, DWORD dwSectorOffset);
 int  WritePatchInfo(TMPQFile * hf);
 int  WriteSectorOffsets(TMPQFile * hf);
 int  WriteSectorChecksums(TMPQFile * hf);

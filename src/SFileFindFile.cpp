@@ -213,14 +213,6 @@ static bool FileWasFoundBefore(
     return false;
 }
 
-static inline bool FileEntryIsInvalid(
-    TMPQArchive * ha,
-    TFileEntry * pFileEntry)
-{
-    // Spazzler3 protector: Some files are clearly wrong
-    return ((ha->dwFlags & MPQ_FLAG_MALFORMED) && (pFileEntry->dwCmpSize & 0xFFFF0000) >= 0x7FFF0000);
-}
-
 static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
 {
     TFileEntry * pPatchEntry = NULL;
@@ -282,60 +274,56 @@ static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
             // Is it a file but not a patch file?
             if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
             {
-                // Spazzler3 protector: Some files are clearly wrong
-                if(!FileEntryIsInvalid(ha, pFileEntry))
-                {                    
-                    // Now we have to check if this file was not enumerated before
-                    if(!FileWasFoundBefore(ha, hs, pFileEntry))
+                // Now we have to check if this file was not enumerated before
+                if(!FileWasFoundBefore(ha, hs, pFileEntry))
+                {
+//                  if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
+//                      DebugBreak();
+
+                    // Find a patch to this file
+                    pPatchEntry = FindPatchEntry(ha, pFileEntry);
+                    if(pPatchEntry == NULL)
+                        pPatchEntry = pFileEntry;
+
+                    // Prepare the block index
+                    dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
+
+                    // Get the file name. If it's not known, we will create pseudo-name
+                    szFileName = pFileEntry->szFileName;
+                    if(szFileName == NULL)
                     {
-//                      if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
-//                          DebugBreak();
-
-                        // Find a patch to this file
-                        pPatchEntry = FindPatchEntry(ha, pFileEntry);
-                        if(pPatchEntry == NULL)
-                            pPatchEntry = pFileEntry;
-
-                        // Prepare the block index
-                        dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
-
-                        // Get the file name. If it's not known, we will create pseudo-name
-                        szFileName = pFileEntry->szFileName;
-                        if(szFileName == NULL)
+                        // Open the file by its pseudo-name.
+                        // This also generates the file name with a proper extension
+                        sprintf(szPseudoName, "File%08u.xxx", (unsigned int)dwBlockIndex);
+                        if(SFileOpenFileEx((HANDLE)hs->ha, szPseudoName, SFILE_OPEN_BASE_FILE, &hFile))
                         {
-                            // Open the file by its pseudo-name.
-                            // This also generates the file name with a proper extension
-                            sprintf(szPseudoName, "File%08u.xxx", (unsigned int)dwBlockIndex);
-                            if(SFileOpenFileEx((HANDLE)hs->ha, szPseudoName, SFILE_OPEN_BASE_FILE, &hFile))
-                            {
-                                szFileName = (pFileEntry->szFileName != NULL) ? pFileEntry->szFileName : szPseudoName;
-                                SFileCloseFile(hFile);
-                            }
+                            szFileName = (pFileEntry->szFileName != NULL) ? pFileEntry->szFileName : szPseudoName;
+                            SFileCloseFile(hFile);
                         }
+                    }
 
-                        // If the file name is still NULL, we cannot include the file to search results
-                        if(szFileName != NULL)
+                    // If the file name is still NULL, we cannot include the file to search results
+                    if(szFileName != NULL)
+                    {
+                        // Check the file name against the wildcard
+                        if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
                         {
-                            // Check the file name against the wildcard
-                            if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
-                            {
-                                // Fill the found entry. hash entry and block index are taken from the base MPQ
-                                lpFindFileData->dwHashIndex  = pFileEntry->dwHashIndex;
-                                lpFindFileData->dwBlockIndex = dwBlockIndex;
-                                lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
-                                lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
-                                lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
-                                lpFindFileData->lcLocale     = pPatchEntry->lcLocale;
+                            // Fill the found entry. hash entry and block index are taken from the base MPQ
+                            lpFindFileData->dwHashIndex  = pFileEntry->dwHashIndex;
+                            lpFindFileData->dwBlockIndex = dwBlockIndex;
+                            lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
+                            lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
+                            lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
+                            lpFindFileData->lcLocale     = pPatchEntry->lcLocale;
 
-                                // Fill the filetime
-                                lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
-                                lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
+                            // Fill the filetime
+                            lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
+                            lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
 
-                                // Fill the file name and plain file name
-                                strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
-                                lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
-                                return ERROR_SUCCESS;
-                            }
+                            // Fill the file name and plain file name
+                            strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
+                            lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
+                            return ERROR_SUCCESS;
                         }
                     }
                 }

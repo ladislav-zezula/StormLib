@@ -92,7 +92,7 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
     }
 
     // Calculate raw file offset where the sector(s) are stored.
-    CalculateRawSectorOffset(RawFilePos, hf, dwRawSectorOffset);
+    RawFilePos = CalculateRawSectorOffset(hf, dwRawSectorOffset);
 
     // Set file pointer and read all required sectors
     if(FileStream_Read(ha->pStream, &RawFilePos, pbInSector, dwRawBytesToRead))

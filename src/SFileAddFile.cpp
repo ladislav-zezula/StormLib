@@ -321,7 +321,7 @@ static int RecryptFileData(
             }
 
             // Calculate the raw file offset of the file sector
-            CalculateRawSectorOffset(RawFilePos, hf, dwRawByteOffset);
+            RawFilePos = CalculateRawSectorOffset(hf, dwRawByteOffset);
 
             // Read the file sector
             if(!FileStream_Read(ha->pStream, &RawFilePos, hf->pbFileSector, dwRawDataInSector))
@@ -410,9 +410,8 @@ int SFileAddFile_Init(
         if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
         {
             TempPos  = hf->MpqFilePos + dwFileSize;
-            TempPos += ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
-            TempPos += ha->pHeader->dwBlockTableSize * sizeof(TMPQBlock);
-            TempPos += ha->pHeader->dwBlockTableSize * sizeof(USHORT);
+            TempPos += ha->dwHashTableSize * sizeof(TMPQHash);
+            TempPos += ha->dwFileTableSize * sizeof(TMPQBlock);
             if((TempPos >> 32) != 0)
                 nError = ERROR_DISK_FULL;
         }
@@ -425,6 +424,10 @@ int SFileAddFile_Init(
         pFileEntry = GetFileEntryExact(ha, szFileName, lcLocale);
         if(pFileEntry == NULL)
         {
+            // First, free the internal files
+            InvalidateInternalFiles(ha);
+
+            // Find a free entry in the file table
             pFileEntry = AllocateFileEntry(ha, szFileName, lcLocale);
             if(pFileEntry == NULL)
                 nError = ERROR_DISK_FULL;
@@ -432,13 +435,10 @@ int SFileAddFile_Init(
         else
         {
             // If the caller didn't set MPQ_FILE_REPLACEEXISTING, fail it
-            if((dwFlags & MPQ_FILE_REPLACEEXISTING) == 0)
-                nError = ERROR_ALREADY_EXISTS;
-
-            // When replacing an existing file,
-            // we still need to invalidate the (attributes) file
-            if(nError == ERROR_SUCCESS)
+            if(dwFlags & MPQ_FILE_REPLACEEXISTING)
                 InvalidateInternalFiles(ha);
+            else
+                nError = ERROR_ALREADY_EXISTS;
         }
     }
 
@@ -723,23 +723,6 @@ bool WINAPI SFileCreateFile(
         // Check for valid flag combinations
         if((dwFlags & (MPQ_FILE_IMPLODE | MPQ_FILE_COMPRESS)) == (MPQ_FILE_IMPLODE | MPQ_FILE_COMPRESS))
             nError = ERROR_INVALID_PARAMETER;
-    }
-
-    // The number of files must not overflow the maximum
-    // Example: size of block table: 0x41, size of hash table: 0x40
-    if(nError == ERROR_SUCCESS)
-    {
-        DWORD dwReservedFiles = ha->dwReservedFiles;
-
-        if(dwReservedFiles == 0)
-        {
-            dwReservedFiles += ha->dwFileFlags1 ? 1 : 0;
-            dwReservedFiles += ha->dwFileFlags2 ? 1 : 0;
-            dwReservedFiles += ha->dwFileFlags3 ? 1 : 0;
-        }
-
-        if((ha->dwFileTableSize + dwReservedFiles) > ha->dwMaxFileCount)
-            nError = ERROR_DISK_FULL;
     }
 
     // Initiate the add file operation

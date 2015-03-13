@@ -264,7 +264,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
     }
 
     // Allocate the buffer for holding the entire (attributes)
-    // Allodate 1 byte more (See GetSizeOfAttributesFile for more info)
+    // Allocate 1 byte more (See GetSizeOfAttributesFile for more info)
     cbAttrFile = GetSizeOfAttributesFile(ha->dwAttrFlags, dwFinalEntries);
     pbAttrFile = pbAttrPtr = STORM_ALLOC(BYTE, cbAttrFile + 1);
     if(pbAttrFile != NULL)
@@ -349,7 +349,7 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
 
         // Now we expect that current position matches the estimated size
         // Note that if there is 1 extra bit above the byte size,
-        // the table is actually 1 byte shorted in Blizzard MPQs. See GetSizeOfAttributesFile
+        // the table is actually 1 byte shorter in Blizzard MPQs. See GetSizeOfAttributesFile
         assert((size_t)(pbAttrPtr - pbAttrFile) == cbAttrFile);
     }
 
@@ -420,7 +420,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
     {
         // At this point, we expect to have at least one reserved entry in the file table
         assert(ha->dwFlags & MPQ_FLAG_ATTRIBUTES_INVALID);
-        assert(ha->dwReservedFiles >= 1);
+        assert(ha->dwReservedFiles > 0);
 
         // Create the raw data that is to be written to (attributes)
         // Note: Blizzard MPQs have entries for (listfile) and (attributes),
@@ -456,16 +456,13 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
         }
         else
         {
-            // If the list file is empty, we assume ERROR_SUCCESS
+            // If the (attributes) file would be empty, its OK
             nError = (cbAttrFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
 
-        // If the save process succeeded, we clear the MPQ_FLAG_ATTRIBUTE_INVALID flag
-        if(nError == ERROR_SUCCESS)
-        {
-            ha->dwFlags &= ~MPQ_FLAG_ATTRIBUTES_INVALID;
-            ha->dwReservedFiles--;
-        }
+        // Clear the number of reserved files
+        ha->dwFlags &= ~MPQ_FLAG_ATTRIBUTES_INVALID;
+        ha->dwReservedFiles--;
     }
     
     return nError;

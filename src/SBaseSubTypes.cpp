@@ -525,7 +525,7 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
     if(pMpkHash != NULL)
     {
         // Calculate the hash table size as if it was real MPQ hash table
-        pHeader->dwHashTableSize = GetHashTableSizeForFileCount(dwHashTableSize);
+        pHeader->dwHashTableSize = GetHashTableSizeForFileCount(pHeader->dwHashTableSize);
         pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
 
         // Now allocate table that will serve like a true MPQ hash table,

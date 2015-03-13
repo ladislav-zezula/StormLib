@@ -354,6 +354,8 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
             // Now find the next language version of the file
             pHash = GetNextHashEntry(ha, pFirstHash, pHash);
         }
+
+        return ERROR_SUCCESS;
     }
 
     return ERROR_CAN_NOT_COMPLETE;
@@ -372,7 +374,7 @@ int SListFileSaveToMpq(TMPQArchive * ha)
     {
         // At this point, we expect to have at least one reserved entry in the file table
         assert(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID);
-        assert(ha->dwReservedFiles >= 1);
+        assert(ha->dwReservedFiles > 0);
 
         // Create the raw data that is to be written to (listfile)
         // Note: Creating the raw data before the (listfile) has been created in the MPQ
@@ -409,16 +411,13 @@ int SListFileSaveToMpq(TMPQArchive * ha)
         }
         else
         {
-            // If the list file is empty, we assume ERROR_SUCCESS
+            // If the (listfile) file would be empty, its OK
             nError = (cbListFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
 
-        // If the save process succeeded, we clear the MPQ_FLAG_LISTFILE_INVALID flag
-        if(nError == ERROR_SUCCESS)
-        {
-            ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
-            ha->dwReservedFiles--;
-        }
+        // Clear the listfile flags
+        ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
+        ha->dwReservedFiles--;
     }
 
     return nError;

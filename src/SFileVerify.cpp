@@ -787,6 +787,7 @@ int SSignFileCreate(TMPQArchive * ha)
     {
         // The (signature) file must be non-encrypted and non-compressed
         assert(ha->dwFileFlags3 == MPQ_FILE_EXISTS);
+        assert(ha->dwReservedFiles > 0);
 
         // Create the (signature) file file in the MPQ
         // Note that the file must not be compressed or encrypted
@@ -800,21 +801,15 @@ int SSignFileCreate(TMPQArchive * ha)
         // Write the empty signature file to the archive
         if(nError == ERROR_SUCCESS)
         {
-            // Write the empty zeroed fiel to the MPQ
+            // Write the empty zeroed file to the MPQ
             memset(EmptySignature, 0, sizeof(EmptySignature));
             nError = SFileAddFile_Write(hf, EmptySignature, (DWORD)sizeof(EmptySignature), 0);
-        }
-
-        // If the save process succeeded, we clear the MPQ_FLAG_ATTRIBUTE_INVALID flag
-        if(nError == ERROR_SUCCESS)
-        {
-            ha->dwFlags &= ~MPQ_FLAG_SIGNATURE_INVALID;
-            ha->dwReservedFiles--;
-        }
-
-        // Free the file
-        if(hf != NULL)
             SFileAddFile_Finish(hf);
+        }
+
+        // Clear the invalid mark
+        ha->dwFlags &= ~MPQ_FLAG_SIGNATURE_INVALID;
+        ha->dwReservedFiles--;
     }
 
     return nError;

@@ -376,11 +376,12 @@ bool WINAPI SFileGetFileInfo(
             if(ha != NULL)
             {
                 nInfoType = SFILE_INFO_TYPE_NOT_FOUND;
-                if(ha->pHashTable != NULL)
+                if(MAKE_OFFSET64(ha->pHeader->wHashTablePosHi, ha->pHeader->dwHashTablePos) != 0)
                 {
-                    pvSrcFileInfo = ha->pHashTable;
                     cbSrcFileInfo = ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
-                    nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+                    if(cbFileInfo >= cbSrcFileInfo)
+                        pvSrcFileInfo = LoadHashTable(ha);
+                    nInfoType = SFILE_INFO_TYPE_ALLOCATED;
                 }
             }
             break;
