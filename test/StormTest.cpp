@@ -4102,7 +4102,7 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
-*/
+
     // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x");
@@ -4198,6 +4198,9 @@ int main(int argc, char * argv[])
     // Check archive signature
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_1999_v1_WeakSignature.exe", "War2Patch_202.exe");
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_VerifySignature("MPQ_2003_v1_WeakSignatureEmpty.exe", "WoW-1.2.3.4211-enUS-patch.exe");
 
     // Check archive signature
     if(nError == ERROR_SUCCESS)

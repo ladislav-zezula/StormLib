@@ -1509,6 +1509,18 @@ bool IsValidMD5(LPBYTE pbMd5)
     return (Md5[0] | Md5[1] | Md5[2] | Md5[3]) ? true : false;
 }
 
+bool IsValidSignature(LPBYTE pbSignature)
+{
+    LPDWORD Signature = (LPDWORD)pbSignature;
+    DWORD SigValid = 0;
+
+    for(int i = 0; i < MPQ_WEAK_SIGNATURE_SIZE / sizeof(DWORD); i++)
+        SigValid |= Signature[i];
+
+    return (SigValid != 0) ? true : false;
+}
+
+
 bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_md5)
 {
     hash_state md5_state;

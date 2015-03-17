@@ -442,6 +442,10 @@ static DWORD VerifyWeakSignature(
     int hash_idx = find_hash("md5");
     int result = 0;
 
+    // The signature might be zeroed out. In that case, we ignore it
+    if(!IsValidSignature(pSI->Signature))
+        return ERROR_WEAK_SIGNATURE_OK;
+
     // Calculate hash of the entire archive, skipping the (signature) file
     if(!CalculateMpqHashMd5(ha, pSI, Md5Digest))
         return ERROR_VERIFY_FAILED;
@@ -746,8 +750,8 @@ bool QueryMpqSignatureInfo(
             if(!FileStream_Read(ha->pStream, &pSI->BeginExclude, pSI->Signature, dwFileSize))
                 return false;
 
-            pSI->cbSignatureSize = dwFileSize;
             pSI->SignatureTypes |= SIGNATURE_TYPE_WEAK;
+            pSI->cbSignatureSize = dwFileSize;
             return true;
         }
     }
