@@ -988,8 +988,13 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
         {
             ULONGLONG RawFilePos = hf->RawFilePos;
 
+            // Append the length of the patch info, if any
             if(hf->pPatchInfo != NULL)
+            {
+                if((RawFilePos + hf->pPatchInfo->dwLength) < RawFilePos)
+                    return ERROR_FILE_CORRUPT;
                 RawFilePos += hf->pPatchInfo->dwLength;
+            }
 
             // Load the sector offsets from the file
             if(!FileStream_Read(ha->pStream, &RawFilePos, hf->SectorOffsets, dwSectorOffsLen))
@@ -1043,12 +1048,13 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
 
                 // The sector size must not be bigger than compressed file size
                 // Edit: Yes, but apparently, in original Storm.dll, the compressed
-                // size is not checked anywhere
-//              if((dwSectorOffset1 - dwSectorOffset0) > pFileEntry->dwCmpSize)
-//              {
-//                  bSectorOffsetTableCorrupt = true;
-//                  break;
-//              }
+                // size is not checked anywhere. However, we need to do this check
+                // in order to sector offset table malformed by MPQ protectors
+                if((dwSectorOffset1 - dwSectorOffset0) > ha->dwSectorSize)
+                {
+                    bSectorOffsetTableCorrupt = true;
+                    break;
+                }
             }
 
             // If data corruption detected, free the sector offset table
@@ -1070,9 +1076,13 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
 
             if(hf->SectorOffsets[0] > dwSectorOffsLen)
             {
+                // MPQ protectors put some ridiculous values there. We must limit the extra bytes
+                if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400))
+                    return ERROR_FILE_CORRUPT;
+
+                // Free the old sector offset table
                 dwSectorOffsLen = hf->SectorOffsets[0];
                 STORM_FREE(hf->SectorOffsets);
-                hf->SectorOffsets = NULL;
                 goto __LoadSectorOffsets;
             }
         }

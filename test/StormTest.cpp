@@ -177,6 +177,18 @@ static const char * PatchList_SC2_32283[] =
     NULL
 };
 
+static const char * PatchList_SC2_34644[] = 
+{
+    "MPQ_2013_v4_Base1.SC2Data",
+    "s2-update-base-23258.MPQ",
+    "s2-update-base-24540.MPQ",
+    "s2-update-base-26147.MPQ",
+    "s2-update-base-28522.MPQ",
+    "s2-update-base-32384.MPQ",
+    "s2-update-base-34644.MPQ",
+    NULL
+};
+
 static const char * PatchList_SC2_32283_enGB[] = 
 {
     "MPQ_2013_v4_enGB.SC2Data",
@@ -4114,6 +4126,10 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
+*/
+    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("2.1.w3x");
 
     // Open a MPQ archive v 3.0
     if(nError == ERROR_SUCCESS)
@@ -4169,6 +4185,10 @@ int main(int argc, char * argv[])
 
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_SC2_34644, "TriggerLibs\\GameData\\GameData.galaxy", 2);
+
+    // Open a patched archive
+    if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Open a patched archive
@@ -4198,7 +4218,7 @@ int main(int argc, char * argv[])
     // Check archive signature
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_1999_v1_WeakSignature.exe", "War2Patch_202.exe");
-*/
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_2003_v1_WeakSignatureEmpty.exe", "WoW-1.2.3.4211-enUS-patch.exe");
 

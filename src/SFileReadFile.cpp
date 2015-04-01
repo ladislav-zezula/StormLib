@@ -81,14 +81,14 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
 //              return nError;
 //      }
 
-        // If the file is compressed, also allocate secondary buffer
-        pbInSector = pbRawSector = STORM_ALLOC(BYTE, dwBytesToRead);
-        if(pbRawSector == NULL)
-            return ERROR_NOT_ENOUGH_MEMORY;
-
         // Assign the temporary buffer as target for read operation
         dwRawSectorOffset = hf->SectorOffsets[dwSectorIndex];
         dwRawBytesToRead = hf->SectorOffsets[dwSectorIndex + dwSectorsToRead] - dwRawSectorOffset;
+
+        // If the file is compressed, also allocate secondary buffer
+        pbInSector = pbRawSector = STORM_ALLOC(BYTE, dwRawBytesToRead);
+        if(pbRawSector == NULL)
+            return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     // Calculate raw file offset where the sector(s) are stored.

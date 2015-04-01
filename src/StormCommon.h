@@ -105,17 +105,17 @@ typedef struct _MPQ_SIGNATURE_INFO
 //  - Memory freeing function doesn't have to test the pointer to NULL
 //
 
-//#if defined(_MSC_VER) && defined(_DEBUG)
-//
-//#define STORM_ALLOC(type, nitems) (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
-//#define STORM_FREE(ptr)           HeapFree(GetProcessHeap(), 0, ptr)
-//
-//#else
+#if defined(_MSC_VER) && defined(_DEBUG)
+
+#define STORM_ALLOC(type, nitems) (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
+#define STORM_FREE(ptr)           HeapFree(GetProcessHeap(), 0, ptr)
+
+#else
 
 #define STORM_ALLOC(type, nitems) (type *)malloc((nitems) * sizeof(type))
 #define STORM_FREE(ptr)           free(ptr)
 
-//#endif
+#endif
 
 //-----------------------------------------------------------------------------
 // StormLib internal global variables
