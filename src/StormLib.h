@@ -185,6 +185,7 @@ extern "C" {
 #define MPQ_FLAG_SIGNATURE_INVALID  0x00000100  // If set, it means that the (signature) has been invalidated
 #define MPQ_FLAG_SAVING_TABLES      0x00000200  // If set, we are saving MPQ internal files and MPQ tables
 #define MPQ_FLAG_PATCH              0x00000400  // If set, this MPQ is a patch archive
+#define MPQ_FLAG_WAR3_MAP           0x00000800  // If set, this MPQ is a map for Warcraft III
 
 // Values for TMPQArchive::dwSubType
 #define MPQ_SUBTYPE_MPQ             0x00000000  // The file is a MPQ file (Blizzard games)
@@ -406,7 +407,7 @@ typedef enum _SFileInfoClass
     SFileMpqNumberOfFiles,                  // Number of files (DWORD)
     SFileMpqRawChunkSize,                   // Size of the raw data chunk for MD5
     SFileMpqStreamFlags,                    // Stream flags (DWORD)
-    SFileMpqIsReadOnly,                     // Nonzero if the MPQ is read only (DWORD)
+    SFileMpqFlags,                          // Nonzero if the MPQ is read only (DWORD)
 
     // Info classes for files
     SFileInfoPatchChain,                    // Chain of patches where the file is (TCHAR [])
@@ -426,46 +427,6 @@ typedef enum _SFileInfoClass
     SFileInfoEncryptionKey,                 // File encryption key
     SFileInfoEncryptionKeyRaw,              // Unfixed value of the file key
 } SFileInfoClass;
-
-//-----------------------------------------------------------------------------
-// Deprecated flags. These are going to be removed in next releases.
-
-/*
-
-STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_LINEAR, STREAM_PROVIDER_FLAT);
-STORMLIB_DEPRECATED_FLAG(DWORD, STREAM_PROVIDER_ENCRYPTED, STREAM_PROVIDER_MPQE);
-STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_OPEN_ENCRYPTED, STREAM_PROVIDER_MPQE);
-STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_OPEN_PARTIAL, STREAM_PROVIDER_PARTIAL);
-
-// MPQ_FILE_COMPRESSED is deprecated. Do not use.
-STORMLIB_DEPRECATED_FLAG(DWORD, MPQ_FILE_COMPRESSED, MPQ_FILE_COMPRESS_MASK);
-
-// Legacy values for file info classes. Included for backward compatibility, do not use.
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_ARCHIVE_NAME, SFileMpqFileName);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_ARCHIVE_SIZE, SFileMpqArchiveSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_MAX_FILE_COUNT, SFileMpqMaxFileCount);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_HASH_TABLE_SIZE, SFileMpqHashTableSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_BLOCK_TABLE_SIZE, SFileMpqBlockTableSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_SECTOR_SIZE, SFileMpqSectorSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_HASH_TABLE, SFileMpqHashTable);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_BLOCK_TABLE, SFileMpqBlockTable);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_NUM_FILES, SFileMpqNumberOfFiles);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_STREAM_FLAGS, SFileMpqStreamFlags);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_IS_READ_ONLY, SFileMpqIsReadOnly);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_HASH_INDEX, SFileInfoHashIndex);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_CODENAME1, SFileInfoNameHash1);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_CODENAME2, SFileInfoNameHash2);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_LOCALEID, SFileInfoLocale);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_BLOCKINDEX, SFileInfoFileIndex);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_FILE_SIZE, SFileInfoFileSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_COMPRESSED_SIZE, SFileInfoCompressedSize);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_FLAGS, SFileInfoFlags);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_POSITION, SFileInfoByteOffset);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_KEY, SFileInfoEncryptionKey);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_KEY_UNFIXED, SFileInfoEncryptionKeyRaw);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_FILETIME, SFileInfoFileTime);
-STORMLIB_DEPRECATED_FLAG(SFileInfoClass, SFILE_INFO_PATCH_CHAIN, SFileInfoPatchChain);
-*/
 
 //-----------------------------------------------------------------------------
 // Callback functions
@@ -833,6 +794,19 @@ typedef struct _TMPQNamePrefix
     size_t nLength;                             // Length of this patch prefix. Can be 0
     char szPatchPrefix[1];                      // Patch name prefix (variable length). If not empty, it always starts with backslash.
 } TMPQNamePrefix;
+
+// Structure for name cache
+typedef struct _TMPQNameCache
+{
+    DWORD FirstNameOffset;                      // Offset of the first name in the name list (in bytes)
+    DWORD FreeSpaceOffset;                      // Offset of the first free byte in the name cache (in bytes)
+    DWORD TotalCacheSize;                       // Size, in bytes, of the cache. Includes wildcard
+    DWORD SearchOffset;                         // Used by SListFileFindFirstFile
+
+    // Followed by search mask (ASCIIZ, '\0' if none)
+    // Followed by name cache (ANSI multistring)
+
+} TMPQNameCache;
 
 // Archive handle structure
 typedef struct _TMPQArchive

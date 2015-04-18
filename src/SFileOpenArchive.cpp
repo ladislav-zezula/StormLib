@@ -370,6 +370,10 @@ bool WINAPI SFileOpenArchive(
         if(dwFlags & (MPQ_OPEN_NO_LISTFILE | MPQ_OPEN_NO_ATTRIBUTES))
             ha->dwFlags |= MPQ_FLAG_READ_ONLY;
 
+        // Remember whether whis is a map for Warcraft III
+        if(bIsWarcraft3Map)
+            ha->dwFlags |= MPQ_FLAG_WAR3_MAP;
+
         // Set the size of file sector
         ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize);
 

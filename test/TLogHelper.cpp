@@ -128,7 +128,7 @@ TLogHelper::~TLogHelper()
         }
     }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && defined(_DEBUG)
     if(_CrtDumpMemoryLeaks())
     {
         PrintMessage("Memory leak detected after %s\n.", szSaveMainTitle);

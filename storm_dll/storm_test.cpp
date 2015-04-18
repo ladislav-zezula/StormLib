@@ -27,6 +27,8 @@ int main()
     HANDLE hMpq = NULL;
 
     _asm int 3;
+    StormOpenFileEx(NULL, NULL, 0, NULL);
+
     if(StormOpenArchive("E:\\Multimedia\\MPQs\\1995 - Test MPQs\\MPQ_2014_v1_ProtectedMap_Spazzler3.w3x", 0, 0, &hMpq))
     {
         StormCloseArchive(hMpq);
