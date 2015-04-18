@@ -185,7 +185,6 @@ TMPQExtHeader * LoadExtTable(TMPQArchive * ha, ULONGLONG ByteOffset, size_t Size
 TMPQHetTable * LoadHetTable(TMPQArchive * ha);
 TMPQBetTable * LoadBetTable(TMPQArchive * ha);
 
-TMPQHash * LoadHashTable(TMPQArchive * ha);
 TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool bDontFixEntries = false);
 TMPQBlock * TranslateBlockTable(TMPQArchive * ha, ULONGLONG * pcbTableSize, bool * pbNeedHiBlockTable);
 

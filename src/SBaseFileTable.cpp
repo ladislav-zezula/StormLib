@@ -568,6 +568,20 @@ int ConvertMpqHeaderToFormat4(
 //-----------------------------------------------------------------------------
 // Support for hash table
 
+static DWORD IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash)
+{
+    // The block table index must be smaller than file table size
+    if(pHash->dwBlockIndex < ha->dwFileTableSize)
+    {
+        // The block table entry must contain a file
+        if(ha->pFileTable[pHash->dwBlockIndex].dwFlags & MPQ_FILE_EXISTS)
+            return pHash->dwBlockIndex;
+    }
+
+    // Return an invalid index
+    return HASH_ENTRY_FREE;
+}
+
 // Returns a hash table entry in the following order:
 // 1) A hash table entry with the neutral locale
 // 2) A hash table entry with any other locale
@@ -2034,7 +2048,7 @@ int CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize)
     return ERROR_SUCCESS;
 }
 
-TMPQHash * LoadHashTable(TMPQArchive * ha)
+static TMPQHash * LoadHashTable(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
     ULONGLONG ByteOffset;
@@ -2455,35 +2469,67 @@ int BuildFileTable(TMPQArchive * ha)
 // Defragment the file table so it does not contain any gaps
 int DefragmentFileTable(TMPQArchive * ha)
 {
-    TFileEntry * pFileTable = ha->pFileTable;
-    TFileEntry * pSrcEntry = pFileTable;
-    TFileEntry * pTrgEntry = pFileTable;
+    TFileEntry * pNewTable;
+    TMPQHash * pHashEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
+    TMPQHash * pHash;
+    PDWORD NewIndexes;
+    DWORD dwNewTableSize = 0;
+    DWORD dwNewBlockIndex;
+    DWORD dwBlockIndex = 0;
 
-    // Parse the file entries
-    for(DWORD i = 0; i < ha->dwFileTableSize; i++, pSrcEntry++)
+    // Allocate brand new file table
+    NewIndexes = STORM_ALLOC(DWORD, ha->dwFileTableSize);
+    if(NewIndexes != NULL)
     {
-        // Is the source file entry does not contain anything valid, we skip it
-        if(pSrcEntry->dwFlags & MPQ_FILE_EXISTS)
+        // Clear the file table
+        memset(NewIndexes, 0xFF, sizeof(DWORD) * ha->dwFileTableSize);
+
+        // Create map of OldBlockIndex => NewBlockIndex
+        for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
         {
-            // Fix the block table index and move the entry
-            if(pTrgEntry != pSrcEntry)
+            // If the entry is valid, move it
+            if((dwBlockIndex = IsValidHashEntry(ha, pHash)) != HASH_ENTRY_FREE)
             {
-                if(ha->pHashTable != NULL)
-                    ha->pHashTable[pSrcEntry->dwHashIndex].dwBlockIndex = (DWORD)(pTrgEntry - pFileTable);
-                memmove(pTrgEntry, pSrcEntry, sizeof(TFileEntry));
+                // Was the new index already resolved?
+                // Note: More hash entries can point to the same file
+                if(NewIndexes[dwBlockIndex] == 0xFFFFFFFF)
+                    NewIndexes[dwBlockIndex] = dwNewTableSize++;
+            }
+        }
+
+        // Allocate new file table
+        pNewTable = STORM_ALLOC(TFileEntry, dwNewTableSize);
+        if(pNewTable != NULL)
+        {
+            // Fill the new table with zeros
+            memset(pNewTable, 0, sizeof(TFileEntry) * dwNewTableSize);
+
+            // Create map of OldBlockIndex => NewBlockIndex
+            for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
+            {
+                // If the entry is valid, move it
+                if((dwBlockIndex = IsValidHashEntry(ha, pHash)) != HASH_ENTRY_FREE)
+                {
+                    // The new index should be resolved by now
+                    assert(NewIndexes[dwBlockIndex] != 0xFFFFFFFF);
+                    dwNewBlockIndex = NewIndexes[dwBlockIndex];
+
+                    // Remap the old entry to the new entry
+                    pNewTable[dwNewBlockIndex] = ha->pFileTable[dwBlockIndex];
+                    pHash->dwBlockIndex = dwNewBlockIndex;
+                }
             }
 
-            // Move the target pointer by one entry
-            pTrgEntry++;
+            // Replace the old file table with the new table
+            STORM_FREE(ha->pFileTable);
+            ha->pFileTable = pNewTable;
+            ha->dwFileTableSize = dwNewTableSize;
         }
+
+        // Free the conversion table
+        STORM_FREE(NewIndexes);
     }
 
-    // Store the new size of the file table
-    ha->dwFileTableSize = (DWORD)(pTrgEntry - pFileTable);
-
-    // Fill the rest with zeros
-    if(ha->dwFileTableSize < ha->dwMaxFileCount)
-        memset(pFileTable + ha->dwFileTableSize, 0, (ha->dwMaxFileCount - ha->dwFileTableSize) * sizeof(TFileEntry));
     return ERROR_SUCCESS;
 }
 
@@ -2502,7 +2548,7 @@ int ShrinkMalformedMpqTables(TMPQArchive * ha)
 
     //
     // Note: Unhandled possible case where multiple hash table entries
-    // point to the same block tabl entry.
+    // point to the same block table entry.
     //
 
     // Now perform the defragmentation of the block table
