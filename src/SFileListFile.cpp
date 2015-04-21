@@ -382,7 +382,6 @@ static LPBYTE CreateListFile(TMPQArchive * ha, DWORD * pcbListFile)
 // If the file name is already there, does nothing.
 static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFileName)
 {
-    TMPQHeader * pHeader = ha->pHeader;
     TFileEntry * pFileEntry;
     TMPQHash * pFirstHash;
     TMPQHash * pHash;
@@ -410,7 +409,7 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
         while(pHash != NULL)
         {
             // Is it a valid file table index ?
-            if(pHash->dwBlockIndex < pHeader->dwBlockTableSize)
+            if(pHash->dwBlockIndex < ha->dwFileTableSize)
             {
                 // Allocate file name for the file entry
                 AllocateFileName(ha, ha->pFileTable + pHash->dwBlockIndex, szFileName);

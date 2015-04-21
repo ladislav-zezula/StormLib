@@ -376,7 +376,7 @@ bool WINAPI SFileGetFileInfo(
             if(ha != NULL && ha->pHashTable != NULL)
             {
                 pvSrcFileInfo = ha->pHashTable;
-                cbSrcFileInfo = ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
+                cbSrcFileInfo = ha->dwHashTableSize * sizeof(TMPQHash);
                 nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
             }
             break;

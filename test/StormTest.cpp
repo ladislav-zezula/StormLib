@@ -4126,7 +4126,7 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Spazy.w3x");
-*/
+
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("flem1.w3x");
@@ -4302,7 +4302,7 @@ int main(int argc, char * argv[])
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);
-
+*/
     // Create an archive, and increment max file count several times
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_IncMaxFileCount("StormLibTest_IncMaxFileCount.mpq");
