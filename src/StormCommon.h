@@ -107,13 +107,15 @@ typedef struct _MPQ_SIGNATURE_INFO
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 
-#define STORM_ALLOC(type, nitems) (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
-#define STORM_FREE(ptr)           HeapFree(GetProcessHeap(), 0, ptr)
+#define STORM_ALLOC(type, nitems)        (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
+#define STORM_REALLOC(type, ptr, nitems) (type *)HeapReAlloc(GetProcessHeap(), 0, ptr, ((nitems) * sizeof(type)))
+#define STORM_FREE(ptr)                  HeapFree(GetProcessHeap(), 0, ptr)
 
 #else
 
-#define STORM_ALLOC(type, nitems) (type *)malloc((nitems) * sizeof(type))
-#define STORM_FREE(ptr)           free(ptr)
+#define STORM_ALLOC(type, nitems)        (type *)malloc((nitems) * sizeof(type))
+#define STORM_REALLOC(type, ptr, nitems) (type *)realloc(ptr, ((nitems) * sizeof(type)))
+#define STORM_FREE(ptr)                  free(ptr)
 
 #endif
 
