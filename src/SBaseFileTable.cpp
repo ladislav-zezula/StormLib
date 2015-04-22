@@ -2460,7 +2460,7 @@ int DefragmentFileTable(TMPQArchive * ha)
     TFileEntry * pNewTable;
     TMPQHash * pHashEnd = ha->pHashTable + ha->dwHashTableSize;
     TMPQHash * pHash;
-    PDWORD NewIndexes;
+    LPDWORD NewIndexes;
     DWORD dwNewTableSize = 0;
     DWORD dwNewBlockIndex;
 
