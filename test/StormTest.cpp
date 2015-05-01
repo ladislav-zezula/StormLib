@@ -1482,7 +1482,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-//  if(!_stricmp(szFileName, "DragonSeaTurtle_Portrait.mdx"))
+//  if(!_stricmp(szFileName, "manifest-cards.csv"))
 //      DebugBreak();
 #endif
 
@@ -1619,9 +1619,7 @@ static int SearchArchive(
         // Increment number of files
         dwFileCount++;
 
-//      if(!_stricmp(sf.cFileName, "DBFilesClient\\Item-Sparse.db2"))
-//          DebugBreak();
-//      if(!_stricmp(sf.cFileName, "TriggerLibs\\NativeLib.galaxy"))
+//      if(!_stricmp(sf.cFileName, "Interface\\Glues\\CREDITS\\1024px-Blade3_final2.blp"))
 //          DebugBreak();
 
         if(dwTestFlags & TEST_FLAG_MOST_PATCHED)
@@ -2878,43 +2876,6 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
     return nError;
 }
 
-
-static int TestOpenArchive_CompactingTest(const char * szPlainName, const char * szListFile)
-{
-    TLogHelper Logger("CompactingTest", szPlainName);
-    HANDLE hMpq = NULL;
-    char szFullListName[MAX_PATH];
-    int nError = ERROR_SUCCESS;
-
-    // Create copy of the listfile
-    if(szListFile != NULL)
-    {
-        nError = CreateFileCopy(&Logger, szListFile, szListFile, szFullListName, 0, 0);
-        szListFile = szFullListName;
-    }
-
-    // Create copy of the archive
-    if(nError == ERROR_SUCCESS)
-    {
-        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
-    }
-
-    if(nError == ERROR_SUCCESS)
-    {
-        // Compact the archive
-        Logger.PrintProgress("Compacting archive %s ...", szPlainName);
-        if(!SFileSetCompactCallback(hMpq, CompactCallback, &Logger))
-            nError = Logger.PrintError("Failed to set the compact callback");
-
-        if(!SFileCompactArchive(hMpq, szListFile, false))
-            nError = Logger.PrintError("Failed to compact archive %s", szPlainName);
-        
-        SFileCloseArchive(hMpq);
-    }
-
-    return nError;
-}
-
 static int ForEachFile_VerifyFileChecksum(const char * szFullPath)
 {
     const char * szShortPlainName = GetShortPlainName(szFullPath);
@@ -3716,7 +3677,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
     TLogHelper Logger("ListFilePos", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive 
     char szArchivedName[MAX_PATH];
-    DWORD dwMaxFileCount = 0x1E;
+    DWORD dwMaxFileCount = 0x0E;
     DWORD dwFileCount = 0;
     size_t i;
     int nError;
@@ -3724,7 +3685,7 @@ static int TestCreateArchive_ListFilePos(const char * szPlainName)
     // Create a new archive with the limit of 0x20 files
     nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
 
-    // Add 0x1E files
+    // Add maximum files files
     if(nError == ERROR_SUCCESS)
     {
         for(i = 0; i < dwMaxFileCount; i++)
@@ -4052,7 +4013,7 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-
+*/
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
@@ -4127,9 +4088,9 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Spazy.w3x");
 
-    // Open an empty archive (found in WoW cache - it's just a header)
+    // Open an protected map
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("flem1.w3x");
+        nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
 
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
@@ -4242,9 +4203,6 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
 
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenArchive_CompactingTest("MPQ_2014_v1_CompactTest.w3x", "ListFile_Blizzard.txt");
-
     if(nError == ERROR_SUCCESS)
         nError = TestAddFile_FullTable("MPQ_2014_v1_out1.w3x", "MPQ_2014_v1_out2.w3x");
 
@@ -4302,7 +4260,7 @@ int main(int argc, char * argv[])
     // Create an archive and fill it with files up to the max file count
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_FillArchive("StormLibTest_FileTableFull.mpq", MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);
-*/
+
     // Create an archive, and increment max file count several times
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_IncMaxFileCount("StormLibTest_IncMaxFileCount.mpq");

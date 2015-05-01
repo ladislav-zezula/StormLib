@@ -159,21 +159,21 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     // Increment the maximum amount of files to have space for (listfile)
     if(pCreateInfo->dwMaxFileCount && pCreateInfo->dwFileFlags1)
     {
-        dwMpqFlags |= MPQ_FLAG_LISTFILE_INVALID;
+        dwMpqFlags |= MPQ_FLAG_LISTFILE_NEW;
         dwReservedFiles++;
     }
 
     // Increment the maximum amount of files to have space for (attributes)
     if(pCreateInfo->dwMaxFileCount && pCreateInfo->dwFileFlags2 && pCreateInfo->dwAttrFlags)
     {
-        dwMpqFlags |= MPQ_FLAG_ATTRIBUTES_INVALID;
+        dwMpqFlags |= MPQ_FLAG_ATTRIBUTES_NEW;
         dwReservedFiles++;
     }
 
     // Increment the maximum amount of files to have space for (signature)
     if(pCreateInfo->dwMaxFileCount && pCreateInfo->dwFileFlags3)
     {
-        dwMpqFlags |= MPQ_FLAG_SIGNATURE_INVALID;
+        dwMpqFlags |= MPQ_FLAG_SIGNATURE_NEW;
         dwReservedFiles++;
     }
 
@@ -256,11 +256,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     // Create initial file table
     if(nError == ERROR_SUCCESS && ha->dwMaxFileCount != 0)
     {
-        ha->pFileTable = STORM_ALLOC(TFileEntry, ha->dwMaxFileCount);
-        if(ha->pFileTable != NULL)
-            memset(ha->pFileTable, 0x00, sizeof(TFileEntry) * ha->dwMaxFileCount);
-        else
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+        nError = CreateFileTable(ha, ha->dwMaxFileCount);
     }
 
     // Cleanup : If an error, delete all buffers and return

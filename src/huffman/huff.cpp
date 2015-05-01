@@ -406,10 +406,7 @@ void THTreeItem::RemoveItem()
  
 THuffmannTree::THuffmannTree(bool bCompression)
 {
-    // TODO: Obsolete, delete this!!
-//  InitializeHTListHead(&ItemLinks);
     pFirst = pLast = LIST_HEAD();
- 
     MinValidValue = 1;
     ItemsUsed = 0;
  

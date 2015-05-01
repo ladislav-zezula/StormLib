@@ -598,18 +598,10 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     if(nError == ERROR_SUCCESS)
         nError = CopyMpqFiles(ha, pFileKeys, pTempStream);
 
-    // We also need to rebuild the HET table, if any
-    if(nError == ERROR_SUCCESS)
-    {
-        // Rebuild the HET table, if we have any
-        if(ha->pHetTable != NULL)
-            nError = RebuildHetTable(ha);
-        ha->dwFlags |= MPQ_FLAG_CHANGED;
-    }
-
     // If succeeded, switch the streams
     if(nError == ERROR_SUCCESS)
     {
+        ha->dwFlags |= MPQ_FLAG_CHANGED;
         if(FileStream_Replace(ha->pStream, pTempStream))
             pTempStream = NULL;
         else
@@ -619,7 +611,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     // Final user notification
     if(nError == ERROR_SUCCESS && ha->pfnCompactCB != NULL)
     {
-        ha->CompactBytesProcessed += (ha->dwHashTableSize * sizeof(TMPQHash));
+        ha->CompactBytesProcessed += (ha->pHeader->dwHashTableSize * sizeof(TMPQHash));
         ha->CompactBytesProcessed += (ha->dwFileTableSize * sizeof(TMPQBlock));
         ha->pfnCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
     }
@@ -658,21 +650,18 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
     if(dwMaxFileCount < ha->dwFileTableSize)
         nError = ERROR_DISK_FULL;
 
-    // ALL file names must be known in order to be able
-    // to rebuild hash table
-    if(nError == ERROR_SUCCESS)
+    // ALL file names must be known in order to be able to rebuild hash table
+    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL)
     {
         nError = CheckIfAllFilesKnown(ha);
-    }
+        if(nError == ERROR_SUCCESS)
+        {
+            // Calculate the hash table size for the new file limit
+            dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
 
-    // If the MPQ has a hash table, then we relocate the hash table
-    if(nError == ERROR_SUCCESS)
-    {
-        // Calculate the hash table size for the new file limit
-        dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
-
-        // Rebuild both file tables
-        nError = RebuildFileTable(ha, dwNewHashTableSize, dwMaxFileCount);
+            // Rebuild both file tables
+            nError = RebuildFileTable(ha, dwNewHashTableSize);
+        }
     }
 
     // We always have to rebuild the (attributes) file due to file table change

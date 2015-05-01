@@ -105,19 +105,19 @@ typedef struct _MPQ_SIGNATURE_INFO
 //  - Memory freeing function doesn't have to test the pointer to NULL
 //
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-
-#define STORM_ALLOC(type, nitems)        (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
-#define STORM_REALLOC(type, ptr, nitems) (type *)HeapReAlloc(GetProcessHeap(), 0, ptr, ((nitems) * sizeof(type)))
-#define STORM_FREE(ptr)                  HeapFree(GetProcessHeap(), 0, ptr)
-
-#else
+//#if defined(_MSC_VER) && defined(_DEBUG)
+//
+//#define STORM_ALLOC(type, nitems)        (type *)HeapAlloc(GetProcessHeap(), 0, ((nitems) * sizeof(type)))
+//#define STORM_REALLOC(type, ptr, nitems) (type *)HeapReAlloc(GetProcessHeap(), 0, ptr, ((nitems) * sizeof(type)))
+//#define STORM_FREE(ptr)                  HeapFree(GetProcessHeap(), 0, ptr)
+//
+//#else
 
 #define STORM_ALLOC(type, nitems)        (type *)malloc((nitems) * sizeof(type))
 #define STORM_REALLOC(type, ptr, nitems) (type *)realloc(ptr, ((nitems) * sizeof(type)))
 #define STORM_FREE(ptr)                  free(ptr)
 
-#endif
+//#endif
 
 //-----------------------------------------------------------------------------
 // StormLib internal global variables
@@ -181,7 +181,7 @@ int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG F
 TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pPrevHash);
-TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
+TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry, LCID lcLocale);
 
 TMPQExtHeader * LoadExtTable(TMPQArchive * ha, ULONGLONG ByteOffset, size_t Size, DWORD dwSignature, DWORD dwKey);
 TMPQHetTable * LoadHetTable(TMPQArchive * ha);
@@ -197,10 +197,10 @@ int  CreateHashTable(TMPQArchive * ha, DWORD dwHashTableSize);
 int  LoadAnyHashTable(TMPQArchive * ha);
 int  BuildFileTable(TMPQArchive * ha);
 int  DefragmentFileTable(TMPQArchive * ha);
-int  ShrinkMalformedMpqTables(TMPQArchive * ha);
 
+int  CreateFileTable(TMPQArchive * ha, DWORD dwFileTableSize);
 int  RebuildHetTable(TMPQArchive * ha);
-int  RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize, DWORD dwNewMaxFileCount);
+int  RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize);
 int  SaveMPQTables(TMPQArchive * ha);
 
 TMPQHetTable * CreateHetTable(DWORD dwEntryCount, DWORD dwTotalCount, DWORD dwHashBitSize, LPBYTE pbSrcData);
@@ -210,18 +210,17 @@ TMPQBetTable * CreateBetTable(DWORD dwMaxFileCount);
 void FreeBetTable(TMPQBetTable * pBetTable);
 
 // Functions for finding files in the file table
-TFileEntry * GetFileEntryAny(TMPQArchive * ha, const char * szFileName);
+TFileEntry * GetFileEntryLocale2(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex);
 TFileEntry * GetFileEntryLocale(TMPQArchive * ha, const char * szFileName, LCID lcLocale);
-TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID lcLocale);
-TFileEntry * GetFileEntryByIndex(TMPQArchive * ha, DWORD dwIndex);
+TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex);
 
 // Allocates file name in the file entry
 void AllocateFileName(TMPQArchive * ha, TFileEntry * pFileEntry, const char * szFileName);
 
 // Allocates new file entry in the MPQ tables. Reuses existing, if possible
-TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID lcLocale);
-int  RenameFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry, const char * szNewFileName);
-void DeleteFileEntry(TMPQArchive * ha, TFileEntry * pFileEntry);
+TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex);
+int  RenameFileEntry(TMPQArchive * ha, TMPQFile * hf, const char * szNewFileName);
+int  DeleteFileEntry(TMPQArchive * ha, TMPQFile * hf);
 
 // Invalidates entries for (listfile) and (attributes)
 void InvalidateInternalFiles(TMPQArchive * ha);
@@ -257,11 +256,27 @@ int  WriteSectorChecksums(TMPQFile * hf);
 int  WriteMemDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, void * pvRawData, DWORD dwRawDataSize, DWORD dwChunkSize, LPDWORD pcbTotalSize);
 int  WriteMpqDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, DWORD dwRawDataSize, DWORD dwChunkSize);
 void FreeFileHandle(TMPQFile *& hf);
+void FreeArchiveHandle(TMPQArchive *& ha);
+
+//-----------------------------------------------------------------------------
+// Patch functions
+
+// Structure used for the patching process
+typedef struct _TMPQPatcher
+{
+    BYTE this_md5[MD5_DIGEST_SIZE];             // MD5 of the current file state
+    LPBYTE pbFileData1;                         // Primary working buffer
+    LPBYTE pbFileData2;                         // Secondary working buffer
+    DWORD cbMaxFileData;                        // Maximum allowed size of the patch data
+    DWORD cbFileData;                           // Current size of the result data
+    DWORD nCounter;                             // Counter of the patch process
+
+} TMPQPatcher;
 
 bool IsIncrementalPatchFile(const void * pvData, DWORD cbData, LPDWORD pdwPatchedFileSize);
-int  PatchFileData(TMPQFile * hf);
-
-void FreeArchiveHandle(TMPQArchive *& ha);
+int Patch_InitPatcher(TMPQPatcher * pPatcher, TMPQFile * hf);
+int Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf);
+void Patch_Finalize(TMPQPatcher * pPatcher);
 
 //-----------------------------------------------------------------------------
 // Utility functions
@@ -276,7 +291,7 @@ void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength);
 void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength);
 
 //-----------------------------------------------------------------------------
-// Support for adding files to the MPQ
+// Internal support for MPQ modifications
 
 int SFileAddFile_Init(
     TMPQArchive * ha,
@@ -320,12 +335,17 @@ int SSignFileFinish(TMPQArchive * ha);
 // Dump data support
 
 #ifdef __STORMLIB_DUMP_DATA__
+
 void DumpMpqHeader(TMPQHeader * pHeader);
+void DumpHashTable(TMPQHash * pHashTable, DWORD dwHashTableSize);
 void DumpHetAndBetTable(TMPQHetTable * pHetTable, TMPQBetTable * pBetTable);
 
 #else
+
 #define DumpMpqHeader(h)           /* */
+#define DumpHashTable(h, s)        /* */
 #define DumpHetAndBetTable(h, b)   /* */
+
 #endif
 
 #endif // __STORMCOMMON_H__

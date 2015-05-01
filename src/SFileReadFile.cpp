@@ -563,6 +563,7 @@ static int ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
 
 static int ReadMpqFilePatchFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos, DWORD dwToRead, LPDWORD pdwBytesRead)
 {
+    TMPQPatcher Patcher;
     DWORD dwBytesToRead = dwToRead;
     DWORD dwBytesRead = 0;
     int nError = ERROR_SUCCESS;
@@ -570,27 +571,26 @@ static int ReadMpqFilePatchFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos,
     // Make sure that the patch file is loaded completely
     if(nError == ERROR_SUCCESS && hf->pbFileData == NULL)
     {
-        // Load the original file and store its content to "pbOldData"
-        hf->pbFileData = STORM_ALLOC(BYTE, hf->pFileEntry->dwFileSize);
-        hf->cbFileData = hf->pFileEntry->dwFileSize;
-        if(hf->pbFileData == NULL)
-            return ERROR_NOT_ENOUGH_MEMORY;
+        // Initialize patching process and allocate data
+        nError = Patch_InitPatcher(&Patcher, hf);
+        if(nError != ERROR_SUCCESS)
+            return nError;
 
-        // Read the file data
+        // Set the current data size
+        Patcher.cbFileData = hf->pFileEntry->dwFileSize;
+
+        // Initialize the patcher object with initial file data
         if(hf->pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT)
-            nError = ReadMpqFileSingleUnit(hf, hf->pbFileData, 0, hf->cbFileData, &dwBytesRead);
+            nError = ReadMpqFileSingleUnit(hf, Patcher.pbFileData1, 0, Patcher.cbFileData, &dwBytesRead);
         else
-            nError = ReadMpqFileSectorFile(hf, hf->pbFileData, 0, hf->cbFileData, &dwBytesRead);
+            nError = ReadMpqFileSectorFile(hf, Patcher.pbFileData1, 0, Patcher.cbFileData, &dwBytesRead);
 
-        // Fix error code
-        if(nError == ERROR_SUCCESS && dwBytesRead != hf->cbFileData)
-            nError = ERROR_FILE_CORRUPT;
-
-        // Patch the file data
+        // Perform the patching process
         if(nError == ERROR_SUCCESS)
-            nError = PatchFileData(hf);
+            nError = Patch_Process(&Patcher, hf);
 
-        // Reset number of bytes read to zero
+        // Finalize the patcher structure
+        Patch_Finalize(&Patcher);
         dwBytesRead = 0;
     }
 

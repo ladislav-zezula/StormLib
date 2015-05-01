@@ -790,6 +790,7 @@ int SSignFileCreate(TMPQArchive * ha)
     if(ha->dwFileFlags3 != 0)
     {
         // The (signature) file must be non-encrypted and non-compressed
+        assert(ha->dwFlags & MPQ_FLAG_SIGNATURE_NEW);
         assert(ha->dwFileFlags3 == MPQ_FILE_EXISTS);
         assert(ha->dwReservedFiles > 0);
 
@@ -809,11 +810,11 @@ int SSignFileCreate(TMPQArchive * ha)
             memset(EmptySignature, 0, sizeof(EmptySignature));
             nError = SFileAddFile_Write(hf, EmptySignature, (DWORD)sizeof(EmptySignature), 0);
             SFileAddFile_Finish(hf);
-        }
 
-        // Clear the invalid mark
-        ha->dwFlags &= ~MPQ_FLAG_SIGNATURE_INVALID;
-        ha->dwReservedFiles--;
+            // Clear the invalid mark
+            ha->dwFlags &= ~(MPQ_FLAG_SIGNATURE_NEW | MPQ_FLAG_SIGNATURE_NONE);
+            ha->dwReservedFiles--;
+        }
     }
 
     return nError;
@@ -1043,7 +1044,7 @@ bool WINAPI SFileSignArchive(HANDLE hMpq, DWORD dwSignatureType)
     {
         // Turn the signature on. The signature will
         // be applied when the archive is closed
-        ha->dwFlags |= MPQ_FLAG_SIGNATURE_INVALID | MPQ_FLAG_CHANGED;
+        ha->dwFlags |= MPQ_FLAG_SIGNATURE_NEW | MPQ_FLAG_CHANGED;
         ha->dwFileFlags3 = MPQ_FILE_EXISTS;
         ha->dwReservedFiles++;
     }

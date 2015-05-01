@@ -389,7 +389,7 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
     // If we have HET table, use that one
     if(ha->pHetTable != NULL)
     {
-        pFileEntry = GetFileEntryAny(ha, szFileName);
+        pFileEntry = GetFileEntryLocale(ha, szFileName, 0);
         if(pFileEntry != NULL)
         {
             // Allocate file name for the file entry
@@ -402,18 +402,12 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
     // If we have hash table, we use it
     if(ha->pHashTable != NULL)
     {
-        // Look for the first hash table entry for the file
-        pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
-
         // Go while we found something
+        pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
         while(pHash != NULL)
         {
-            // Is it a valid file table index ?
-            if(pHash->dwBlockIndex < ha->dwFileTableSize)
-            {
-                // Allocate file name for the file entry
-                AllocateFileName(ha, ha->pFileTable + pHash->dwBlockIndex, szFileName);
-            }
+            // Allocate file name for the file entry
+            AllocateFileName(ha, ha->pFileTable + pHash->dwBlockIndex, szFileName);
 
             // Now find the next language version of the file
             pHash = GetNextHashEntry(ha, pFirstHash, pHash);
@@ -437,7 +431,7 @@ int SListFileSaveToMpq(TMPQArchive * ha)
     if(ha->dwFileFlags1 != 0)
     {
         // At this point, we expect to have at least one reserved entry in the file table
-        assert(ha->dwFlags & MPQ_FLAG_LISTFILE_INVALID);
+        assert(ha->dwFlags & MPQ_FLAG_LISTFILE_NEW);
         assert(ha->dwReservedFiles > 0);
 
         // Create the raw data that is to be written to (listfile)
@@ -470,6 +464,10 @@ int SListFileSaveToMpq(TMPQArchive * ha)
                 SFileAddFile_Finish(hf);
             }
 
+            // Clear the listfile flags
+            ha->dwFlags &= ~(MPQ_FLAG_LISTFILE_NEW | MPQ_FLAG_LISTFILE_NONE);
+            ha->dwReservedFiles--;
+
             // Free the listfile buffer
             STORM_FREE(pbListFile);
         }
@@ -478,10 +476,6 @@ int SListFileSaveToMpq(TMPQArchive * ha)
             // If the (listfile) file would be empty, its OK
             nError = (cbListFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
-
-        // Clear the listfile flags
-        ha->dwFlags &= ~MPQ_FLAG_LISTFILE_INVALID;
-        ha->dwReservedFiles--;
     }
 
     return nError;
