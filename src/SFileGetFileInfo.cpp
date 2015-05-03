@@ -965,7 +965,10 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
 
                 // Copy the file name to the output buffer, if any
                 if(pFileEntry->szFileName && szFileName)
+                {
                     strcpy(szFileName, pFileEntry->szFileName);
+                    nError = ERROR_SUCCESS;
+                }
             }
         }
 

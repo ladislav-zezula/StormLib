@@ -189,6 +189,18 @@ static const char * PatchList_SC2_34644[] =
     NULL
 };
 
+static const char * PatchList_SC2_34644_Maps[] = 
+{
+    "MPQ_2013_v4_Base3.SC2Maps",
+    "s2-update-base-23258.MPQ",
+    "s2-update-base-24540.MPQ",
+    "s2-update-base-26147.MPQ",
+    "s2-update-base-28522.MPQ",
+    "s2-update-base-32384.MPQ",
+    "s2-update-base-34644.MPQ",
+    NULL
+};
+
 static const char * PatchList_SC2_32283_enGB[] = 
 {
     "MPQ_2013_v4_enGB.SC2Data",
@@ -4013,7 +4025,7 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-*/
+
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
@@ -4151,6 +4163,10 @@ int main(int argc, char * argv[])
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_34644, "TriggerLibs\\GameData\\GameData.galaxy", 2);
+*/
+    // Open a patched archive with new format of BSDIFF patch
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_SC2_34644_Maps, "Maps\\Campaign\\THorner03.SC2Map\\BankList.xml", 3);
 
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
