@@ -4057,11 +4057,11 @@ int main(int argc, char * argv[])
     // Open a truncated archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_BlockTableCut.MPQ");
-
+*/
     // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x");
-
+/*
     // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
@@ -4087,11 +4087,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by the BOBA protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_BOBA.w3m");
-*/
+
     // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x");
-/*
+
     // Open an Warcraft III map locked by a protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x");
