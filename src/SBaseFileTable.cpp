@@ -787,7 +787,7 @@ static int BuildFileTableFromBlockTable(
                 pHash->dwBlockIndex = dwNewIndex;
 
                 // Dump the relocation entry
-                printf("Relocating hash entry %08X-%08X: %08X -> %08X\n", pHash->dwName1, pHash->dwName2, dwBlockIndex, dwNewIndex);
+//              printf("Relocating hash entry %08X-%08X: %08X -> %08X\n", pHash->dwName1, pHash->dwName2, dwBlockIndex, dwNewIndex);
             }
 
             // Get the pointer to the file entry and the block entry

@@ -4025,11 +4025,11 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-
+*/
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
-
+/*
     // Test opening local file with SFileOpenFileEx
     if(nError == ERROR_SUCCESS)
         nError = TestOpenLocalFile("ListFile_Blizzard.txt");
