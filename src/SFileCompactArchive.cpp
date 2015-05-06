@@ -81,32 +81,7 @@ static int CheckIfAllKeysKnown(TMPQArchive * ha, const char * szListFile, LPDWOR
                                                              pFileEntry->dwFlags);
                     continue;
                 }
-/*
-                // If the file has a nonzero size, we can try to read few bytes of data
-                // and force to detect the decryption key that way
-                if(pFileEntry->dwFileSize > 0x10)
-                {
-                    TMPQFile * hf = NULL;
-                    DWORD dwBytesRead = 0;
-                    DWORD FileData[4];
 
-                    // Create file handle where we load the sector offset table
-                    hf = CreateFileHandle(ha, pFileEntry);
-                    if(hf != NULL)
-                    {
-                        // Call one dummy load of the first 4 bytes.
-                        // This enforces loading all buffers and also detecting of the decryption key
-                        SFileReadFile((HANDLE)hf, FileData, sizeof(FileData), &dwBytesRead, NULL);
-                        pFileKeys[dwBlockIndex] = hf->dwFileKey;
-                        FreeFileHandle(hf);
-                    }
-
-                    // If we succeeded in reading 16 bytes from the file,
-                    // we also know the encryption key
-                    if(dwBytesRead == sizeof(FileData))
-                        continue;
-                }
-*/
                 // We don't know the encryption key of this file,
                 // thus we cannot compact the file
                 nError = ERROR_UNKNOWN_FILE_NAMES;
@@ -471,10 +446,67 @@ static int CopyMpqFiles(TMPQArchive * ha, LPDWORD pFileKeys, TFileStream * pNewS
     return nError;
 }
 
-
 /*****************************************************************************/
 /* Public functions                                                          */
 /*****************************************************************************/
+
+//-----------------------------------------------------------------------------
+// Changing hash table size
+
+DWORD WINAPI SFileGetMaxFileCount(HANDLE hMpq)
+{
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
+
+    return ha->dwMaxFileCount;
+}
+
+bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
+{
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
+    DWORD dwNewHashTableSize = 0;
+    int nError = ERROR_SUCCESS;
+
+    // Test the valid parameters
+    if(!IsValidMpqHandle(hMpq))
+        nError = ERROR_INVALID_HANDLE;
+    if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
+        nError = ERROR_ACCESS_DENIED;
+    if(dwMaxFileCount < ha->dwFileTableSize)
+        nError = ERROR_DISK_FULL;
+
+    // ALL file names must be known in order to be able to rebuild hash table
+    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL)
+    {
+        nError = CheckIfAllFilesKnown(ha);
+        if(nError == ERROR_SUCCESS)
+        {
+            // Calculate the hash table size for the new file limit
+            dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
+
+            // Rebuild both file tables
+            nError = RebuildFileTable(ha, dwNewHashTableSize);
+        }
+    }
+
+    // We always have to rebuild the (attributes) file due to file table change
+    if(nError == ERROR_SUCCESS)
+    {
+        // Invalidate (listfile) and (attributes)
+        InvalidateInternalFiles(ha);
+
+        // Rebuild the HET table, if we have any
+        if(ha->pHetTable != NULL)
+            nError = RebuildHetTable(ha);
+    }
+
+    // Return the error
+    if(nError != ERROR_SUCCESS)
+        SetLastError(nError);
+    return (nError == ERROR_SUCCESS);
+}
+
+//-----------------------------------------------------------------------------
+// Archive compacting
 
 bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK pfnCompactCB, void * pvUserData)
 {
@@ -490,9 +522,6 @@ bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK pfnCompa
     ha->pvCompactUserData = pvUserData;
     return true;
 }
-
-//-----------------------------------------------------------------------------
-// Archive compacting
 
 bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bReserved */)
 {
@@ -621,61 +650,6 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
         FileStream_Close(pTempStream);
     if(pFileKeys != NULL)
         STORM_FREE(pFileKeys);
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
-    return (nError == ERROR_SUCCESS);
-}
-
-//-----------------------------------------------------------------------------
-// Changing hash table size
-
-DWORD WINAPI SFileGetMaxFileCount(HANDLE hMpq)
-{
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
-
-    return ha->dwMaxFileCount;
-}
-
-bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
-{
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
-    DWORD dwNewHashTableSize = 0;
-    int nError = ERROR_SUCCESS;
-
-    // Test the valid parameters
-    if(!IsValidMpqHandle(hMpq))
-        nError = ERROR_INVALID_HANDLE;
-    if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
-        nError = ERROR_ACCESS_DENIED;
-    if(dwMaxFileCount < ha->dwFileTableSize)
-        nError = ERROR_DISK_FULL;
-
-    // ALL file names must be known in order to be able to rebuild hash table
-    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL)
-    {
-        nError = CheckIfAllFilesKnown(ha);
-        if(nError == ERROR_SUCCESS)
-        {
-            // Calculate the hash table size for the new file limit
-            dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
-
-            // Rebuild both file tables
-            nError = RebuildFileTable(ha, dwNewHashTableSize);
-        }
-    }
-
-    // We always have to rebuild the (attributes) file due to file table change
-    if(nError == ERROR_SUCCESS)
-    {
-        // Invalidate (listfile) and (attributes)
-        InvalidateInternalFiles(ha);
-
-        // Rebuild the HET table, if we have any
-        if(ha->pHetTable != NULL)
-            nError = RebuildHetTable(ha);
-    }
-
-    // Return the error
     if(nError != ERROR_SUCCESS)
         SetLastError(nError);
     return (nError == ERROR_SUCCESS);

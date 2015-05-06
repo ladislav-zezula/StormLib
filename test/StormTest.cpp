@@ -288,6 +288,30 @@ static bool IsMpqExtension(const char * szFileName)
     return false;
 }
 
+static void AddStringBeforeExtension(char * szBuffer, const char * szFileName, const char * szExtraString)
+{
+    const char * szExtension;
+    size_t nLength;
+
+    // Get the extension
+    szExtension = strrchr(szFileName, '.');
+    if(szExtension == NULL)
+        szExtension = szFileName + strlen(szFileName);
+    nLength = (size_t)(szExtension - szFileName);
+
+    // Copy the part before extension
+    memcpy(szBuffer, szFileName, nLength);
+    szFileName += nLength;
+    szBuffer += nLength;
+
+    // Append the extra data
+    if(szExtraString != NULL)
+        strcpy(szBuffer, szExtraString);
+
+    // Append the rest of the file name
+    strcat(szBuffer, szFileName);
+}
+
 static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWORD * pdwDifference)
 {
     for(DWORD i = 0; i < dwLength; i++)
@@ -2357,7 +2381,7 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     bool bIsPartialMpq = false;
     int nError;
 
-    // If the file is a partial MPQ, don;t load all files
+    // If the file is a partial MPQ, don't load all files
     bIsPartialMpq = (strstr(szPlainName, ".MPQ.part") != NULL);
 
     // Copy the archive so we won't fuck up the original one
@@ -3069,7 +3093,77 @@ static int TestAddFile_ListFileTest(const char * szSourceMpq, bool bShouldHaveLi
         SFileCloseArchive(hMpq);
     return nError;
 }
+/*
+static int TestCreateArchive_Deprotect(const char * szPlainName)
+{
+    TLogHelper Logger("DeprotectTest", szPlainName);
+    HANDLE hMpq1 = NULL;
+    HANDLE hMpq2 = NULL;
+    char szMpqName1[MAX_PATH];
+    char szMpqName2[MAX_PATH];
+    BYTE FileHash1[MD5_DIGEST_SIZE];
+    BYTE FileHash2[MD5_DIGEST_SIZE];
+    DWORD dwFileCount1 = 0;
+    DWORD dwFileCount2 = 0;
+    DWORD dwTestFlags = TEST_FLAG_LOAD_FILES | TEST_FLAG_HASH_FILES;
+    int nError = ERROR_SUCCESS;
 
+    // First copy: The original (untouched) file
+    if(nError == ERROR_SUCCESS)
+    {
+        AddStringBeforeExtension(szMpqName1, szPlainName, "_original");
+        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName1, &hMpq1);
+        if(nError != ERROR_SUCCESS)
+            Logger.PrintMessage("Failed to open %s", szMpqName1);
+    }
+
+    // Second copy: Will be deprotected
+    if(nError == ERROR_SUCCESS)
+    {
+        AddStringBeforeExtension(szMpqName2, szPlainName, "_deprotected");
+        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName2, &hMpq2);
+        if(nError != ERROR_SUCCESS)
+            Logger.PrintMessage("Failed to open %s", szMpqName2);
+    }
+
+    // Deprotect the second map
+    if(nError == ERROR_SUCCESS)
+    {
+        SFileSetCompactCallback(hMpq2, CompactCallback, &Logger);
+        if(!SFileCompactArchive(hMpq2, NULL, false))
+            nError = Logger.PrintError("Failed to deprotect archive %s", szMpqName2);
+    }
+
+    // Calculate number of files and compare their hash (archive 1)
+    if(nError == ERROR_SUCCESS)
+    {
+        memset(FileHash1, 0, sizeof(FileHash1));
+        nError = SearchArchive(&Logger, hMpq1, dwTestFlags, &dwFileCount1, FileHash1);
+    }
+
+    // Calculate number of files and compare their hash (archive 2)
+    if(nError == ERROR_SUCCESS)
+    {
+        memset(FileHash1, 0, sizeof(FileHash2));
+        nError = SearchArchive(&Logger, hMpq2, dwTestFlags, &dwFileCount2, FileHash2);
+    }
+
+    if(nError == ERROR_SUCCESS)
+    {
+        if(dwFileCount1 != dwFileCount2)
+            Logger.PrintMessage("Different file count (%u in %s; %u in %s)", dwFileCount1, szMpqName1, dwFileCount2, szMpqName2); 
+        if(memcmp(FileHash1, FileHash2, MD5_DIGEST_SIZE))
+            Logger.PrintMessage("Different file hash (%s vs %s)", szMpqName1, szMpqName2);
+    }
+
+    // Close both MPQs
+    if(hMpq2 != NULL)
+        SFileCloseArchive(hMpq2);
+    if(hMpq1 != NULL)
+        SFileCloseArchive(hMpq1);
+    return nError;
+}
+*/
 static int TestCreateArchive_EmptyMpq(const char * szPlainName, DWORD dwCreateFlags)
 {
     TLogHelper Logger("CreateEmptyMpq", szPlainName);
@@ -4029,7 +4123,7 @@ int main(int argc, char * argv[])
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
-/*
+
     // Test opening local file with SFileOpenFileEx
     if(nError == ERROR_SUCCESS)
         nError = TestOpenLocalFile("ListFile_Blizzard.txt");
@@ -4057,22 +4151,43 @@ int main(int argc, char * argv[])
     // Open a truncated archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_BlockTableCut.MPQ");
-*/
-    // Open an Warcraft III map locked by a protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x");
-/*
-    // Open an Warcraft III map locked by a protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
-
-    // Open an Warcraft III map locked by a protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x");
 
     // Open a MPQ that actually has user data
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2010_v2_HasUserData.s2ma");
+
+    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
+
+    // Open a MPQ archive v 3.0
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2010_v3_expansion-locale-frFR.MPQ");
+
+    // Open an encrypted archive from Starcraft II installer
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE");
+
+    // Open a MPK archive from Longwu online
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPx_2013_v1_LongwuOnline.mpk");
+
+    // Open a SQP archive from War of the Immortals
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPx_2013_v1_WarOfTheImmortals.sqp", "ListFile_WarOfTheImmortals.txt");
+
+    // Open a partial MPQ with compressed hash table
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x");
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x");
 
     // Open an Warcraft III map locked by the Spazzler protector
     if(nError == ERROR_SUCCESS)
@@ -4103,30 +4218,6 @@ int main(int argc, char * argv[])
     // Open an protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
-
-    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2014_v1_AttributesOneEntryLess.w3x");
-
-    // Open a MPQ archive v 3.0
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2010_v3_expansion-locale-frFR.MPQ");
-
-    // Open an encrypted archive from Starcraft II installer
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE");
-
-    // Open a MPK archive from Longwu online
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPx_2013_v1_LongwuOnline.mpk");
-
-    // Open a SQP archive from War of the Immortals
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPx_2013_v1_WarOfTheImmortals.sqp", "ListFile_WarOfTheImmortals.txt");
-
-    // Open a partial MPQ with compressed hash table
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
 
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
@@ -4312,7 +4403,7 @@ int main(int argc, char * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
-*/
+
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

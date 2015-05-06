@@ -166,6 +166,10 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
                 // Is the file compressed by Blizzard's multiple compression ?
                 if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
                 {
+                    // Remember the last used compression
+                    hf->dwCompression0 = pbInSector[0];
+
+                    // Decompress the data
                     if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
                         nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
                     else
@@ -289,6 +293,10 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
             // Is the file compressed by Blizzard's multiple compression ?
             if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
             {
+                // Remember the last used compression
+                hf->dwCompression0 = pbRawData[0];
+
+                // Decompress the file
                 if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
                     nResult = SCompDecompress2(hf->pbFileSector, &cbOutBuffer, pbRawData, cbInBuffer);
                 else
@@ -395,6 +403,7 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         {
             int cbOutBuffer = (int)hf->dwDataSize;
 
+            hf->dwCompression0 = pbRawData[0];
             if(!SCompDecompressMpk(hf->pbFileSector, &cbOutBuffer, pbRawData, (int)pFileEntry->dwCmpSize))
                 nError = ERROR_FILE_CORRUPT;
         }
@@ -687,6 +696,9 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
             return false;
         }
     }
+
+    // Clear the last used compression
+    hf->dwCompression0 = 0;
 
     // If the file is local file, read the data directly from the stream
     if(hf->pStream != NULL)

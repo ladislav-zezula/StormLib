@@ -77,22 +77,22 @@ static TListFileCache * CreateListFileCache(HANDLE hListFile, const char * szWil
         memset(pCache, 0, sizeof(TListFileCache) + cchWildCard);
 
         // Shall we copy the mask?
-        if(cchWildCard != NULL)
+        if(cchWildCard != 0)
         {
             pCache->szWildCard = (char *)(pCache + 1);
             memcpy(pCache->szWildCard, szWildCard, cchWildCard);
         }
                           
         // Fill-in the rest of the cache pointers
-        pCache->pBegin = (LPBYTE)(pCache + 1) + cchWildCard + 1;
+        pCache->pBegin = (LPBYTE)(pCache + 1) + cchWildCard;
 
         // Load the entire listfile to the cache
         SFileReadFile(hListFile, pCache->pBegin, dwFileSize, &dwBytesRead, NULL);
-        if(dwFileSize != 0)
+        if(dwBytesRead != 0)
         {
             // Allocate pointers
             pCache->pPos = pCache->pBegin;
-            pCache->pEnd = pCache->pBegin + dwFileSize;
+            pCache->pEnd = pCache->pBegin + dwBytesRead;
         }
         else
         {
@@ -302,6 +302,11 @@ static LPBYTE CreateListFile(TMPQArchive * ha, DWORD * pcbListFile)
             assert((size_t)(szListLine - szListFile) == cbListFile);
         }
     }
+    else
+    {
+        szListFile = STORM_ALLOC(char, 1);
+        cbListFile = 0;
+    }
 
     // Free the sort table
     STORM_FREE(SortTable);
@@ -379,9 +384,6 @@ int SListFileSaveToMpq(TMPQArchive * ha)
         pbListFile = CreateListFile(ha, &cbListFile);
         if(pbListFile != NULL)
         {
-            // We expect it to be nonzero size
-            assert(cbListFile != 0);
-
             // Determine the real flags for (listfile)
             if(ha->dwFileFlags1 == MPQ_FILE_EXISTS)
                 ha->dwFileFlags1 = GetDefaultSpecialFileFlags(cbListFile, ha->pHeader->wFormatVersion);

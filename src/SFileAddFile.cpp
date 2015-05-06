@@ -80,6 +80,45 @@ static bool IsWaveFile_16BitsPerAdpcmSample(
     return false;
 }
 
+static int FillWritableHandle(
+    TMPQArchive * ha,
+    TMPQFile * hf,
+    ULONGLONG FileTime,
+    DWORD dwFileSize,
+    DWORD dwFlags)
+{
+    TFileEntry * pFileEntry = hf->pFileEntry;
+
+    // Initialize the hash entry for the file
+    hf->RawFilePos = ha->MpqPos + hf->MpqFilePos;
+    hf->dwDataSize = dwFileSize;
+
+    // Initialize the block table entry for the file
+    pFileEntry->ByteOffset = hf->MpqFilePos;
+    pFileEntry->dwFileSize = dwFileSize;
+    pFileEntry->dwCmpSize = 0;
+    pFileEntry->dwFlags  = dwFlags | MPQ_FILE_EXISTS;
+
+    // Initialize the file time, CRC32 and MD5
+    assert(sizeof(hf->hctx) >= sizeof(hash_state));
+    memset(pFileEntry->md5, 0, MD5_DIGEST_SIZE);
+    md5_init((hash_state *)hf->hctx);
+    pFileEntry->dwCrc32 = crc32(0, Z_NULL, 0);
+
+    // If the caller gave us a file time, use it.
+    pFileEntry->FileTime = FileTime;
+
+    // Mark the archive as modified
+    ha->dwFlags |= MPQ_FLAG_CHANGED;
+
+    // Call the callback, if needed
+    if(ha->pfnAddFileCB != NULL)
+        ha->pfnAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
+    hf->nAddFileError = ERROR_SUCCESS;
+
+    return ERROR_SUCCESS;
+}
+
 //-----------------------------------------------------------------------------
 // MPQ write data functions
 
@@ -366,7 +405,6 @@ int SFileAddFile_Init(
     TMPQFile ** phf)
 {
     TFileEntry * pFileEntry = NULL;
-    ULONGLONG TempPos;                  // For various file offset calculations
     TMPQFile * hf = NULL;               // File structure for newly added file
     DWORD dwHashIndex = HASH_ENTRY_FREE;
     int nError = ERROR_SUCCESS;
@@ -395,28 +433,9 @@ int SFileAddFile_Init(
         lcLocale = 0;
 
     // Allocate the TMPQFile entry for newly added file
-    hf = CreateFileHandle(ha, NULL);
+    hf = CreateWritableHandle(ha, dwFileSize);
     if(hf == NULL)
-        nError = ERROR_NOT_ENOUGH_MEMORY;
-
-    // Find a free space in the MPQ and verify if it's not over 4 GB on MPQs v1
-    if(nError == ERROR_SUCCESS)
-    {
-        // Find the position where the file will be stored
-        hf->MpqFilePos = FindFreeMpqSpace(ha);
-        hf->RawFilePos = ha->MpqPos + hf->MpqFilePos;
-        hf->bIsWriteHandle = true;
-
-        // When format V1, the size of the archive cannot exceed 4 GB
-        if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
-        {
-            TempPos  = hf->MpqFilePos + dwFileSize;
-            TempPos += ha->pHeader->dwHashTableSize * sizeof(TMPQHash);
-            TempPos += ha->dwFileTableSize * sizeof(TMPQBlock);
-            if((TempPos >> 32) != 0)
-                nError = ERROR_DISK_FULL;
-        }
-    }
+        nError = GetLastError();
 
     // Allocate file entry in the MPQ
     if(nError == ERROR_SUCCESS)
@@ -440,6 +459,24 @@ int SFileAddFile_Init(
             if(pFileEntry == NULL)
                 nError = ERROR_DISK_FULL;   
         }
+
+        // Set the file entry to the file structure
+        hf->pFileEntry = pFileEntry;
+    }
+
+    // Prepare the pointer to hash table entry
+    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL && dwHashIndex < ha->pHeader->dwHashTableSize)
+    {
+        hf->pHashEntry = ha->pHashTable + dwHashIndex;
+        hf->pHashEntry->lcLocale = (USHORT)lcLocale;
+    }
+
+    // Prepare the file key
+    if(nError == ERROR_SUCCESS && (dwFlags & MPQ_FILE_ENCRYPTED))
+    {
+        hf->dwFileKey = DecryptFileKey(szFileName, hf->MpqFilePos, dwFileSize, dwFlags);
+        if(hf->dwFileKey == 0)
+            nError = ERROR_UNKNOWN_FILE_KEY;
     }
 
     // Fill the file entry and TMPQFile structure
@@ -449,46 +486,77 @@ int SFileAddFile_Init(
         assert(pFileEntry->szFileName != NULL);
         assert(_stricmp(pFileEntry->szFileName, szFileName) == 0);
 
-        // Initialize the hash entry for the file
-        hf->pFileEntry = pFileEntry;
-        hf->dwDataSize = dwFileSize;
-
-        // Set the hash table entry
-        if(ha->pHashTable != NULL && dwHashIndex < ha->pHeader->dwHashTableSize)
-        {
-            hf->pHashEntry = ha->pHashTable + dwHashIndex;
-            hf->pHashEntry->lcLocale = (USHORT)lcLocale;
-        }
-
-        // Decrypt the file key
-        if(dwFlags & MPQ_FILE_ENCRYPTED)
-            hf->dwFileKey = DecryptFileKey(szFileName, hf->MpqFilePos, dwFileSize, dwFlags);
-
-        // Initialize the block table entry for the file
-        pFileEntry->ByteOffset = hf->MpqFilePos;
-        pFileEntry->dwFileSize = dwFileSize;
-        pFileEntry->dwCmpSize = 0;
-        pFileEntry->dwFlags  = dwFlags | MPQ_FILE_EXISTS;
-
-        // Initialize the file time, CRC32 and MD5
-        assert(sizeof(hf->hctx) >= sizeof(hash_state));
-        memset(pFileEntry->md5, 0, MD5_DIGEST_SIZE);
-        md5_init((hash_state *)hf->hctx);
-        pFileEntry->dwCrc32 = crc32(0, Z_NULL, 0);
-
-        // If the caller gave us a file time, use it.
-        pFileEntry->FileTime = FileTime;
-
-        // Mark the archive as modified
-        ha->dwFlags |= MPQ_FLAG_CHANGED;
-
-        // Call the callback, if needed
-        if(ha->pfnAddFileCB != NULL)
-            ha->pfnAddFileCB(ha->pvAddFileUserData, 0, hf->dwDataSize, false);
-        hf->nAddFileError = ERROR_SUCCESS;
+        nError = FillWritableHandle(ha, hf, FileTime, dwFileSize, dwFlags);
     }
 
-    // Fre the file handle if failed
+    // Free the file handle if failed
+    if(nError != ERROR_SUCCESS && hf != NULL)
+        FreeFileHandle(hf);
+
+    // Give the handle to the caller
+    *phf = hf;
+    return nError;
+}
+
+int SFileAddFile_Init(
+    TMPQArchive * ha,
+    TMPQFile * hfSrc,
+    TMPQFile ** phf)
+{
+    TFileEntry * pFileEntry = NULL;
+    TMPQFile * hf = NULL;               // File structure for newly added file
+    ULONGLONG FileTime = hfSrc->pFileEntry->FileTime;
+    DWORD dwFileSize = hfSrc->pFileEntry->dwFileSize;
+    DWORD dwFlags = hfSrc->pFileEntry->dwFlags;
+    int nError = ERROR_SUCCESS;
+
+    // Allocate the TMPQFile entry for newly added file
+    hf = CreateWritableHandle(ha, dwFileSize);
+    if(hf == NULL)
+        nError = ERROR_NOT_ENOUGH_MEMORY;
+
+    // We need to keep the file entry index the same like in the source archive
+    // This is because multiple hash table entries can point to the same file entry
+    if(nError == ERROR_SUCCESS)
+    {
+        // Retrieve the file entry for the target file
+        pFileEntry = ha->pFileTable + (hfSrc->pFileEntry - hfSrc->ha->pFileTable);
+
+        // Copy all variables except file name
+        if((pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
+        {
+            pFileEntry[0] = hfSrc->pFileEntry[0];
+            pFileEntry->szFileName = NULL;
+        }
+        else
+            nError = ERROR_ALREADY_EXISTS;
+
+        // Set the file entry to the file structure
+        hf->pFileEntry = pFileEntry;
+    }
+
+    // Prepare the pointer to hash table entry
+    if(nError == ERROR_SUCCESS && ha->pHashTable != NULL && hfSrc->pHashEntry != NULL)
+    {
+        hf->dwHashIndex = (DWORD)(hfSrc->pHashEntry - hfSrc->ha->pHashTable);
+        hf->pHashEntry = ha->pHashTable + hf->dwHashIndex;
+    }
+
+    // Prepare the file key (copy from source file)
+    if(nError == ERROR_SUCCESS && (dwFlags & MPQ_FILE_ENCRYPTED))
+    {
+        hf->dwFileKey = hfSrc->dwFileKey;
+        if(hf->dwFileKey == 0)
+            nError = ERROR_UNKNOWN_FILE_KEY;
+    }
+
+    // Fill the file entry and TMPQFile structure
+    if(nError == ERROR_SUCCESS)
+    {
+        nError = FillWritableHandle(ha, hf, FileTime, dwFileSize, dwFlags);
+    }
+
+    // Free the file handle if failed
     if(nError != ERROR_SUCCESS && hf != NULL)
         FreeFileHandle(hf);
 

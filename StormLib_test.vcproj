@@ -51,7 +51,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="./src/libtomcrypt/src/headers"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__;__STORMLIB_DUMP_DATA__"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"

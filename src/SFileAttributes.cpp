@@ -424,9 +424,6 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
         pbAttrFile = CreateAttributesFile(ha, &cbAttrFile);
         if(pbAttrFile != NULL)
         {
-            // We expect it to be nonzero size
-            assert(cbAttrFile != 0);
-
             // Determine the real flags for (attributes)
             if(ha->dwFileFlags2 == MPQ_FILE_EXISTS)
                 ha->dwFileFlags2 = GetDefaultSpecialFileFlags(cbAttrFile, ha->pHeader->wFormatVersion);

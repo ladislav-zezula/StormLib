@@ -161,4 +161,29 @@ void DumpHetAndBetTable(TMPQHetTable * pHetTable, TMPQBetTable * pBetTable)
     printf("-----------------------------------------------------------------------------------------\n");
 }
 
+void DumpFileTable(TFileEntry * pFileTable, DWORD dwFileTableSize)
+{
+    DWORD i;
+
+    if(pFileTable == NULL || dwFileTableSize == 0)
+        return;
+
+    printf("== File Table =================================\n");
+    for(i = 0; i < dwFileTableSize; i++, pFileTable++)
+    {
+        printf("[%04u] %08X-%08X %08X-%08X %08X-%08X 0x%08X 0x%08X 0x%08X %s\n", i,
+                        (DWORD)(pFileTable->FileNameHash >> 0x20),
+                        (DWORD)(pFileTable->FileNameHash & 0xFFFFFFFF),
+                        (DWORD)(pFileTable->ByteOffset >> 0x20),
+                        (DWORD)(pFileTable->ByteOffset & 0xFFFFFFFF),
+                        (DWORD)(pFileTable->FileTime >> 0x20),
+                        (DWORD)(pFileTable->FileTime & 0xFFFFFFFF),
+                                pFileTable->dwFileSize,
+                                pFileTable->dwCmpSize,
+                                pFileTable->dwFlags,
+                                pFileTable->szFileName != NULL ? pFileTable->szFileName : "");
+    }
+    printf("-----------------------------------------------\n\n");
+}
+
 #endif  // __STORMLIB_DUMP_DATA__

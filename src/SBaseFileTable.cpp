@@ -377,6 +377,11 @@ int ConvertMpqHeaderToFormat4(
             if(pHeader->dwBlockTablePos <= pHeader->dwHeaderSize || (pHeader->dwBlockTablePos & 0x80000000))
                 ha->dwFlags |= MPQ_FLAG_MALFORMED;
 
+            // Only low byte of sector size is really used
+            if(pHeader->wSectorSize & 0xFF00)
+                ha->dwFlags |= MPQ_FLAG_MALFORMED;
+            pHeader->wSectorSize = pHeader->wSectorSize & 0xFF;
+
             // Fill the rest of the header
             memset((LPBYTE)pHeader + MPQ_HEADER_SIZE_V1, 0, sizeof(TMPQHeader) - MPQ_HEADER_SIZE_V1);
             pHeader->BlockTableSize64 = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
@@ -569,6 +574,13 @@ int ConvertMpqHeaderToFormat4(
 // Support for hash table
 
 // Hash entry verification when the file table does not exist yet
+bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash)
+{
+    TFileEntry * pFileEntry = ha->pFileTable + pHash->dwBlockIndex;
+    return ((pHash->dwBlockIndex < ha->dwFileTableSize) && (pFileEntry->dwFlags & MPQ_FILE_EXISTS)) ? true : false;
+}
+
+// Hash entry verification when the file table does not exist yet
 static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pBlockTable)
 {
     ULONGLONG ByteOffset;    
@@ -590,13 +602,6 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
     }
 
     return false;
-}
-
-// Hash entry verification when the file table does not exist yet
-static bool IsValidHashEntry2(TMPQArchive * ha, TMPQHash * pHash)
-{
-    TFileEntry * pFileEntry = ha->pFileTable + pHash->dwBlockIndex;
-    return ((pHash->dwBlockIndex < ha->dwFileTableSize) && (pFileEntry->dwFlags & MPQ_FILE_EXISTS)) ? true : false;
 }
 
 // Returns a hash table entry in the following order:
@@ -704,6 +709,7 @@ static TMPQHash * DefragmentHashTable(
     if(dwNewTableSize < pHeader->dwHashTableSize)
     {
         pHashTable = STORM_REALLOC(TMPQHash, pHashTable, dwNewTableSize);
+        ha->pHeader->BlockTableSize64 = dwNewTableSize * sizeof(TMPQHash);
         ha->pHeader->dwHashTableSize = dwNewTableSize;
     }
 
@@ -814,9 +820,12 @@ static int BuildFileTableFromBlockTable(
         if(ha->dwFileTableSize > ha->dwMaxFileCount)
         {
             ha->pFileTable = STORM_REALLOC(TFileEntry, ha->pFileTable, ha->dwMaxFileCount);
+            ha->pHeader->BlockTableSize64 = ha->dwMaxFileCount * sizeof(TMPQBlock);
             ha->pHeader->dwBlockTableSize = ha->dwMaxFileCount;
             ha->dwFileTableSize = ha->dwMaxFileCount;
         }
+
+//      DumpFileTable(ha->pFileTable, ha->dwFileTableSize);
 
         // Free the translation table
         STORM_FREE(DefragmentTable);
@@ -2697,7 +2706,7 @@ int RebuildFileTable(TMPQArchive * ha, DWORD dwNewHashTableSize)
         // Parse the old hash table and copy all entries to the new table
         for(pHash = pOldHashTable; pHash < pHashTableEnd; pHash++)
         {
-            if(IsValidHashEntry2(ha, pHash))
+            if(IsValidHashEntry(ha, pHash))
             {
                 pFileEntry = ha->pFileTable + pHash->dwBlockIndex;
                 AllocateHashEntry(ha, pFileEntry, pHash->lcLocale);

@@ -226,7 +226,7 @@ ULONGLONG HashStringJenkins(const char * szFileName)
 {
     LPBYTE pbFileName = (LPBYTE)szFileName;
     char * szTemp;
-    char szLocFileName[0x108];
+    char szNameBuff[0x108];
     size_t nLength = 0;
     unsigned int primary_hash = 1;
     unsigned int secondary_hash = 2;
@@ -234,21 +234,22 @@ ULONGLONG HashStringJenkins(const char * szFileName)
     // Normalize the file name - convert to uppercase, and convert "/" to "\\".
     if(pbFileName != NULL)
     {
-        szTemp = szLocFileName;
-        while(*pbFileName != 0)
-            *szTemp++ = (char)AsciiToLowerTable[*pbFileName++];
-        *szTemp = 0;
+        char * szNamePtr = szNameBuff;
+        char * szNameEnd = szNamePtr + sizeof(szNameBuff);
 
-        nLength = szTemp - szLocFileName;
+        // Normalize the file name. Doesn't have to be zero terminated for hashing
+        while(szNamePtr < szNameEnd && pbFileName[0] != 0)
+            *szNamePtr++ = (char)AsciiToLowerTable[*pbFileName++];
+        nLength = szNamePtr - szNameBuff;
     }
 
     // Thanks Quantam for finding out what the algorithm is.
     // I am really getting old for reversing large chunks of assembly
     // that does hashing :-)
-    hashlittle2(szLocFileName, nLength, &secondary_hash, &primary_hash);
+    hashlittle2(szNameBuff, nLength, &secondary_hash, &primary_hash);
 
     // Combine those 2 together
-    return (ULONGLONG)primary_hash * (ULONGLONG)0x100000000ULL + (ULONGLONG)secondary_hash;
+    return ((ULONGLONG)primary_hash << 0x20) | (ULONGLONG)secondary_hash;
 }
 
 //-----------------------------------------------------------------------------
@@ -719,6 +720,43 @@ TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry)
         }
     }
 
+    return hf;
+}
+
+TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize)
+{
+    ULONGLONG FreeMpqSpace;
+    ULONGLONG TempPos;
+    TMPQFile * hf;
+
+    // We need to find the position in the MPQ where we save the file data
+    FreeMpqSpace = FindFreeMpqSpace(ha);
+
+    // When format V1, the size of the archive cannot exceed 4 GB
+    if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+    {
+        TempPos  = FreeMpqSpace +
+                   dwFileSize +
+                  (ha->pHeader->dwHashTableSize * sizeof(TMPQHash)) + 
+                  (ha->dwFileTableSize * sizeof(TMPQBlock));
+        if((TempPos >> 32) != 0)
+        {
+            SetLastError(ERROR_DISK_FULL);
+            return NULL;
+        }
+    }
+
+    // Allocate the file handle
+    hf = CreateFileHandle(ha, NULL);
+    if(hf == NULL)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+
+    // We need to find the position in the MPQ where we save the file data
+    hf->MpqFilePos = FreeMpqSpace;
+    hf->bIsWriteHandle = true;
     return hf;
 }
 

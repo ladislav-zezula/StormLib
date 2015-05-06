@@ -178,6 +178,8 @@ ULONGLONG CalculateRawSectorOffset(TMPQFile * hf, DWORD dwSectorOffset);
 
 int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags);
 
+bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash);
+
 TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pPrevHash);
@@ -245,6 +247,7 @@ int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer
 // Common functions - MPQ File
 
 TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry);
+TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize);
 void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey, bool * pbTableIsCut);
 int  AllocateSectorBuffer(TMPQFile * hf);
 int  AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile);
@@ -303,6 +306,12 @@ int SFileAddFile_Init(
     TMPQFile ** phf
     );
 
+int SFileAddFile_Init(
+    TMPQArchive * ha,
+    TMPQFile * hfSrc,
+    TMPQFile ** phf
+    );
+
 int SFileAddFile_Write(
     TMPQFile * hf,
     const void * pvData,
@@ -339,12 +348,14 @@ int SSignFileFinish(TMPQArchive * ha);
 void DumpMpqHeader(TMPQHeader * pHeader);
 void DumpHashTable(TMPQHash * pHashTable, DWORD dwHashTableSize);
 void DumpHetAndBetTable(TMPQHetTable * pHetTable, TMPQBetTable * pBetTable);
+void DumpFileTable(TFileEntry * pFileTable, DWORD dwFileTableSize);
 
 #else
 
-#define DumpMpqHeader(h)           /* */
-#define DumpHashTable(h, s)        /* */
-#define DumpHetAndBetTable(h, b)   /* */
+#define DumpMpqHeader(h)            /* */
+#define DumpHashTable(t, s)         /* */
+#define DumpHetAndBetTable(t, s)    /* */
+#define DumpFileTable(t, s)         /* */
 
 #endif
 
