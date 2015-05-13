@@ -4119,7 +4119,7 @@ int main(int argc, char * argv[])
     // Open a stream, paired with remote master (takes hell lot of time!)
 //  if(nError == ERROR_SUCCESS)
 //      nError = TestReadFile_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "http://www.zezula.net\\mpqs\\alternate.zip", false);
-*/
+
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile("ListFile_Blizzard.txt");
@@ -4214,11 +4214,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Spazy.w3x");
-
+*/
     // Open an protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
-
+/*-
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4403,7 +4403,7 @@ int main(int argc, char * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

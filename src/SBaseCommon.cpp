@@ -225,7 +225,6 @@ DWORD GetHashTableSizeForFileCount(DWORD dwFileCount)
 ULONGLONG HashStringJenkins(const char * szFileName)
 {
     LPBYTE pbFileName = (LPBYTE)szFileName;
-    char * szTemp;
     char szNameBuff[0x108];
     size_t nLength = 0;
     unsigned int primary_hash = 1;

@@ -876,6 +876,7 @@ typedef struct _SFILE_FIND_DATA
 {
     char   cFileName[MAX_PATH];                 // Full name of the found file
     char * szPlainName;                         // Plain name of the found file
+    DWORD  dwHashIndex;                         // Hash table index for the file (HAH_ENTRY_FREE if no hash table)
     DWORD  dwBlockIndex;                        // Block table index for the file
     DWORD  dwFileSize;                          // File size in bytes
     DWORD  dwFileFlags;                         // MPQ file flags

@@ -208,94 +208,150 @@ static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
     return pPatchEntry;
 }
 
+static bool DoMPQSearch_FileEntry(
+    TMPQSearch * hs,
+    SFILE_FIND_DATA * lpFindFileData,
+    TMPQArchive * ha,
+    TMPQHash * pHashEntry,
+    TFileEntry * pFileEntry)
+{
+    TFileEntry * pPatchEntry;
+    HANDLE hFile = NULL;
+    const char * szFileName;
+    size_t nPrefixLength = (ha->pPatchPrefix != NULL) ? ha->pPatchPrefix->nLength : 0;
+    DWORD dwBlockIndex;
+    char szNameBuff[MAX_PATH];
+
+    // Is it a file but not a patch file?
+    if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
+    {
+        // Now we have to check if this file was not enumerated before
+        if(!FileWasFoundBefore(ha, hs, pFileEntry))
+        {
+//          if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
+//              DebugBreak();
+
+            // Find a patch to this file
+            pPatchEntry = FindPatchEntry(ha, pFileEntry);
+            if(pPatchEntry == NULL)
+                pPatchEntry = pFileEntry;
+
+            // Prepare the block index
+            dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
+
+            // Get the file name. If it's not known, we will create pseudo-name
+            szFileName = pFileEntry->szFileName;
+            if(szFileName == NULL)
+            {
+                // Open the file by its pseudo-name.
+                sprintf(szNameBuff, "File%08u.xxx", (unsigned int)dwBlockIndex);
+                if(SFileOpenFileEx((HANDLE)hs->ha, szNameBuff, SFILE_OPEN_BASE_FILE, &hFile))
+                {
+                    SFileGetFileName(hFile, szNameBuff);
+                    szFileName = szNameBuff;
+                    SFileCloseFile(hFile);
+                }
+            }
+
+            // If the file name is still NULL, we cannot include the file to search results
+            if(szFileName != NULL)
+            {
+                // Check the file name against the wildcard
+                if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
+                {
+                    // Fill the found entry. hash entry and block index are taken from the base MPQ
+                    lpFindFileData->dwHashIndex  = HASH_ENTRY_FREE;
+                    lpFindFileData->dwBlockIndex = dwBlockIndex;
+                    lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
+                    lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
+                    lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
+                    lpFindFileData->lcLocale     = 0;   // pPatchEntry->lcLocale;
+
+                    // Fill the filetime
+                    lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
+                    lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
+
+                    // Fill-in the entries from hash table entry, if given
+                    if(pHashEntry != NULL)
+                    {
+                        lpFindFileData->dwHashIndex = (DWORD)(pHashEntry - ha->pHashTable);
+                        lpFindFileData->lcLocale = pHashEntry->lcLocale;
+                    }
+
+                    // Fill the file name and plain file name
+                    strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
+                    lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Either not a valid item or was found before
+    return false;
+}
+
+static int DoMPQSearch_HashTable(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData, TMPQArchive * ha)
+{
+    TMPQHash * pHashTableEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
+    TMPQHash * pHash;
+
+    // Parse the file table
+    for(pHash = ha->pHashTable + hs->dwNextIndex; pHash < pHashTableEnd; pHash++)
+    {
+        // Increment the next index for subsequent search
+        hs->dwNextIndex++;
+
+        // Does this hash table entry point to a proper block table entry?
+        if(IsValidHashEntry(ha, pHash))
+        {
+            // Check if this file entry should be included in the search result
+            if(DoMPQSearch_FileEntry(hs, lpFindFileData, ha, pHash, ha->pFileTable + pHash->dwBlockIndex))
+                return ERROR_SUCCESS;
+        }
+    }
+
+    // No more files
+    return ERROR_NO_MORE_FILES;
+}
+
+static int DoMPQSearch_FileTable(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData, TMPQArchive * ha)
+{
+    TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
+    TFileEntry * pFileEntry;
+
+    // Parse the file table
+    for(pFileEntry = ha->pFileTable + hs->dwNextIndex; pFileEntry < pFileTableEnd; pFileEntry++)
+    {
+        // Increment the next index for subsequent search
+        hs->dwNextIndex++;
+
+        // Check if this file entry should be included in the search result
+        if(DoMPQSearch_FileEntry(hs, lpFindFileData, ha, NULL, pFileEntry))
+            return ERROR_SUCCESS;
+    }
+
+    // No more files
+    return ERROR_NO_MORE_FILES;
+}
+
 // Performs one MPQ search
 static int DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
 {
     TMPQArchive * ha = hs->ha;
-    TFileEntry * pFileTableEnd;
-    TFileEntry * pPatchEntry;
-    TFileEntry * pFileEntry;
-    const char * szFileName;
-    HANDLE hFile;
-    char szNameBuff[MAX_PATH];
-    DWORD dwBlockIndex;
-    size_t nPrefixLength;
+    int nError;
 
     // Start searching with base MPQ
     while(ha != NULL)
-    {
-        // Now parse the file entry table in order to get all files.
-        pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
-        pFileEntry = ha->pFileTable + hs->dwNextIndex;
-
-        // Get the length of the patch prefix (0 if none)
-        nPrefixLength = (ha->pPatchPrefix != NULL) ? ha->pPatchPrefix->nLength : 0;
-
-        // Parse the file table
-        while(pFileEntry < pFileTableEnd)
-        {
-            // Increment the next index for subsequent search
-            hs->dwNextIndex++;
-
-            // Is it a file but not a patch file?
-            if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
-            {
-                // Now we have to check if this file was not enumerated before
-                if(!FileWasFoundBefore(ha, hs, pFileEntry))
-                {
-//                  if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
-//                      DebugBreak();
-
-                    // Find a patch to this file
-                    pPatchEntry = FindPatchEntry(ha, pFileEntry);
-                    if(pPatchEntry == NULL)
-                        pPatchEntry = pFileEntry;
-
-                    // Prepare the block index
-                    dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
-
-                    // Get the file name. If it's not known, we will create pseudo-name
-                    szFileName = pFileEntry->szFileName;
-                    if(szFileName == NULL)
-                    {
-                        // Open the file by its pseudo-name.
-                        sprintf(szNameBuff, "File%08u.xxx", (unsigned int)dwBlockIndex);
-                        if(SFileOpenFileEx((HANDLE)hs->ha, szNameBuff, SFILE_OPEN_BASE_FILE, &hFile))
-                        {
-                            SFileGetFileName(hFile, szNameBuff);
-                            szFileName = szNameBuff;
-                            SFileCloseFile(hFile);
-                        }
-                    }
-
-                    // If the file name is still NULL, we cannot include the file to search results
-                    if(szFileName != NULL)
-                    {
-                        // Check the file name against the wildcard
-                        if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
-                        {
-                            // Fill the found entry. hash entry and block index are taken from the base MPQ
-                            lpFindFileData->dwBlockIndex = dwBlockIndex;
-                            lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
-                            lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
-                            lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
-                            lpFindFileData->lcLocale     = 0;   // pPatchEntry->lcLocale;
-
-                            // Fill the filetime
-                            lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
-                            lpFindFileData->dwFileTimeLo = (DWORD)(pPatchEntry->FileTime);
-
-                            // Fill the file name and plain file name
-                            strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
-                            lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
-                            return ERROR_SUCCESS;
-                        }
-                    }
-                }
-            }
-
-            pFileEntry++;
-        }
+    { 
+        // If the archive has hash table, we need to use hash table
+        // in order to catch hash table index and file locale.
+        // Note: If multiple hash table entries, point to the same block entry,
+        // we need, to report them all
+        nError = (ha->pHashTable != NULL) ? DoMPQSearch_HashTable(hs, lpFindFileData, ha)
+                                          : DoMPQSearch_FileTable(hs, lpFindFileData, ha);
+        if(nError == ERROR_SUCCESS)
+            return nError;
 
         // If there is no more patches in the chain, stop it.
         // This also keeps hs->ha non-NULL, which is required
