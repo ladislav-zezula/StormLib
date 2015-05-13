@@ -471,26 +471,37 @@ static int SFileAddInternalListFile(
     TMPQArchive * ha,
     HANDLE hMpq)
 {
-    TMPQArchive * haMpq = (TMPQArchive *)hMpq;
     TMPQHash * pFirstHash;
     TMPQHash * pHash;
     HANDLE hListFile;
+    DWORD dwFileSize;
     LCID lcSaveLocale = lcFileLocale;
+    bool bIgnoreListFile = false;
     int nError = ERROR_SUCCESS;
 
     // If there is hash table, we need to support multiple listfiles
     // with different locales (BrooDat.mpq)
-    if(haMpq->pHashTable != NULL)
+    if(ha->pHashTable != NULL)
     {
-        pFirstHash = pHash = GetFirstHashEntry(haMpq, LISTFILE_NAME);
+        pFirstHash = pHash = GetFirstHashEntry(ha, LISTFILE_NAME);
         while(nError == ERROR_SUCCESS && pHash != NULL)
-        {
+        {                                
             // Set the prefered locale to that from list file
             SFileSetLocale(pHash->lcLocale);
+            
+            // Attempt to open the file with that locale
             if(SFileOpenFileEx(hMpq, LISTFILE_NAME, 0, &hListFile))
             {
+                // If the archive is a malformed map, ignore too large listfiles
+                if(ha->dwFlags & MPQ_FLAG_MALFORMED)
+                {
+                    dwFileSize = SFileGetFileSize(hListFile, NULL);
+                    bIgnoreListFile = (dwFileSize > 0x40000);
+                }
+
                 // Add the data from the listfile to MPQ
-                nError = SFileAddArbitraryListFile(ha, hListFile);
+                if(bIgnoreListFile == false)
+                    nError = SFileAddArbitraryListFile(ha, hListFile);
                 SFileCloseFile(hListFile);
             }
             
@@ -498,7 +509,7 @@ static int SFileAddInternalListFile(
             SFileSetLocale(lcSaveLocale);
 
             // Move to the next hash
-            pHash = GetNextHashEntry(haMpq, pFirstHash, pHash);
+            pHash = GetNextHashEntry(ha, pFirstHash, pHash);
         }
     }
     else

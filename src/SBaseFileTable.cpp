@@ -618,7 +618,7 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
     while(pHash != NULL)
     {
         // If the locales match, return it
-        if(lcLocale == 0 && lcLocale == pHash->lcLocale)
+        if(lcLocale == pHash->lcLocale)
             return pHash;
         
         // If we found neutral hash, remember it
