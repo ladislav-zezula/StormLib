@@ -93,11 +93,12 @@ bool CheckWildCard(const char * szString, const char * szWildCard)
 
             if(szString[0] == 0)
                 return false;
+            szString++;
         }
-
-        if(szString[0] == 0)
-            return true;
-        szString++;
+        else
+        {
+            return (szString[0] == 0) ? true : false;
+        }
     }
 }
 
