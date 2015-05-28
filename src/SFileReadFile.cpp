@@ -224,7 +224,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     TMPQArchive * ha = hf->ha;
     TFileEntry * pFileEntry = hf->pFileEntry;
     LPBYTE pbCompressed = NULL;
-    LPBYTE pbRawData = NULL;
+    LPBYTE pbRawData;
     int nError = ERROR_SUCCESS;
 
     // If the file buffer is not allocated yet, do it.
@@ -233,12 +233,12 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
         nError = AllocateSectorBuffer(hf);
         if(nError != ERROR_SUCCESS || hf->pbFileSector == NULL)
             return nError;
-        pbRawData = hf->pbFileSector;
     }
 
     // If the file is a patch file, adjust raw data offset
     if(hf->pPatchInfo != NULL)
         RawFilePos += hf->pPatchInfo->dwLength;
+    pbRawData = hf->pbFileSector;
 
     // If the file sector is not loaded yet, do it
     if(hf->dwSectorOffs != 0)
@@ -680,14 +680,14 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
         return false;
     }
 
-    if(pvBuffer == NULL)
+    if(pvBuffer == NULL || hf->pFileEntry == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // If we didn't load the patch info yet, do it now
-    if(hf->pFileEntry != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
+    if((hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
     {
         nError = AllocatePatchInfo(hf, true);
         if(nError != ERROR_SUCCESS || hf->pPatchInfo == NULL)
