@@ -1363,7 +1363,9 @@ static TMPQExtHeader * TranslateHetTable(TMPQHetTable * pHetTable, ULONGLONG * p
         }
     }
 
-    return &pHetHeader->ExtHdr;
+    // Keep Coverity happy
+    assert((TMPQExtHeader *)&pHetHeader->ExtHdr == (TMPQExtHeader *)pbLinearTable);
+    return (TMPQExtHeader *)pbLinearTable;
 }
 
 static DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
@@ -1758,7 +1760,9 @@ TMPQExtHeader * TranslateBetTable(
         }
     }
 
-    return &pBetHeader->ExtHdr;
+    // Keep Coverity happy
+    assert((TMPQExtHeader *)&pBetHeader->ExtHdr == (TMPQExtHeader *)pbLinearTable);
+    return (TMPQExtHeader *)pbLinearTable;
 }
 
 void FreeBetTable(TMPQBetTable * pBetTable)
