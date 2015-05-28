@@ -1361,9 +1361,6 @@ static TMPQExtHeader * TranslateHetTable(TMPQHetTable * pHetTable, ULONGLONG * p
         {
             *pcbHetTable = (ULONGLONG)(sizeof(TMPQExtHeader) + HetHeader.dwTableSize);
         }
-
-        // Free the linear table
-        STORM_FREE(pbLinearTable);
     }
 
     return &pHetHeader->ExtHdr;
