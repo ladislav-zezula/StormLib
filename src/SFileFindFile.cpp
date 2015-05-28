@@ -13,15 +13,7 @@
 #include "StormCommon.h"
 
 //-----------------------------------------------------------------------------
-// Defines
-
-#define LISTFILE_CACHE_SIZE 0x1000
-
-//-----------------------------------------------------------------------------
 // Private structure used for file search (search handle)
-
-struct TMPQSearch;
-typedef int (*MPQSEARCH)(TMPQSearch *, SFILE_FIND_DATA *);
 
 // Used by searching in MPQ archives
 struct TMPQSearch

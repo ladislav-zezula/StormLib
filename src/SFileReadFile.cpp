@@ -680,14 +680,14 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
         return false;
     }
 
-    if(pvBuffer == NULL || hf->pFileEntry == NULL)
+    if(pvBuffer == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // If we didn't load the patch info yet, do it now
-    if((hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
+    if(hf->pFileEntry != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
     {
         nError = AllocatePatchInfo(hf, true);
         if(nError != ERROR_SUCCESS || hf->pPatchInfo == NULL)
