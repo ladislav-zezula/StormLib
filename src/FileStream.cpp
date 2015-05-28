@@ -618,19 +618,16 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
 
     // Don't connect to the internet
     if(!InternetGetConnectedState(&dwTemp, 0))
-        nError = GetLastError();
+        return false;
 
     // Initiate the connection to the internet
-    if(nError == ERROR_SUCCESS)
-    {
-        pStream->Base.Http.hInternet = InternetOpen(_T("StormLib HTTP MPQ reader"),
-                                                    INTERNET_OPEN_TYPE_PRECONFIG,
-                                                    NULL,
-                                                    NULL,
-                                                    0);
-        if(pStream->Base.Http.hInternet == NULL)
-            nError = GetLastError();
-    }
+    pStream->Base.Http.hInternet = InternetOpen(_T("StormLib HTTP MPQ reader"),
+                                                INTERNET_OPEN_TYPE_PRECONFIG,
+                                                NULL,
+                                                NULL,
+                                                0);
+    if(pStream->Base.Http.hInternet == NULL)
+        return false;
 
     // Connect to the server
     if(nError == ERROR_SUCCESS)
@@ -649,7 +646,10 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
                                                       dwFlags,
                                                       0);
         if(pStream->Base.Http.hConnect == NULL)
-            nError = GetLastError();
+        {
+            InternetCloseHandle(pStream->Base.Http.hInternet);
+            return false;
+        }
     }
 
     // Now try to query the file size

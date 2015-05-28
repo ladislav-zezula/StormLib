@@ -247,9 +247,11 @@ static ULONGLONG DetermineArchiveSize_V1(
     if((EndOfMpq - MpqOffset) > (MPQ_STRONG_SIGNATURE_SIZE + 4))
     {
         ByteOffset = EndOfMpq - MPQ_STRONG_SIGNATURE_SIZE - 4;
-        FileStream_Read(ha->pStream, &ByteOffset, &SignatureHeader, sizeof(DWORD));
-        if(BSWAP_INT32_UNSIGNED(SignatureHeader) == MPQ_STRONG_SIGNATURE_ID)
-            EndOfMpq = EndOfMpq - MPQ_STRONG_SIGNATURE_SIZE - 4;
+        if(FileStream_Read(ha->pStream, &ByteOffset, &SignatureHeader, sizeof(DWORD)))
+        {
+            if(BSWAP_INT32_UNSIGNED(SignatureHeader) == MPQ_STRONG_SIGNATURE_ID)
+                EndOfMpq = EndOfMpq - MPQ_STRONG_SIGNATURE_SIZE - 4;
+        }
     }
 
     // Return the returned archive size
@@ -1359,6 +1361,9 @@ static TMPQExtHeader * TranslateHetTable(TMPQHetTable * pHetTable, ULONGLONG * p
         {
             *pcbHetTable = (ULONGLONG)(sizeof(TMPQExtHeader) + HetHeader.dwTableSize);
         }
+
+        // Free the linear table
+        STORM_FREE(pbLinearTable);
     }
 
     return &pHetHeader->ExtHdr;
@@ -1549,7 +1554,7 @@ static TMPQBetTable * TranslateBetTable(
 {
     TMPQBetTable * pBetTable = NULL;
     LPBYTE pbSrcData = (LPBYTE)(pBetHeader + 1);
-    DWORD LengthInBytes;
+    DWORD LengthInBytes = 0;
 
     // Sanity check
     assert(pBetHeader->ExtHdr.dwSignature == BET_TABLE_SIGNATURE);
@@ -1610,10 +1615,12 @@ static TMPQBetTable * TranslateBetTable(
 
                 // Load the bit-based file table
                 pBetTable->pFileTable = CreateBitArray(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
-                LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
                 if(pBetTable->pFileTable != NULL)
+                {
+                    LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
                     memcpy(pBetTable->pFileTable->Elements, pbSrcData, LengthInBytes);
-                pbSrcData += LengthInBytes;
+                    pbSrcData += LengthInBytes;
+                }
 
                 // Fill the sizes of BET hash
                 pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
@@ -1622,10 +1629,12 @@ static TMPQBetTable * TranslateBetTable(
                 
                 // Create and load the array of BET hashes
                 pBetTable->pNameHashes = CreateBitArray(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
-                LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
                 if(pBetTable->pNameHashes != NULL)
+                {
+                    LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
                     memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
-//              pbSrcData += pBetHeader->dwNameHashArraySize;
+//                  pbSrcData += LengthInBytes;
+                }
 
                 // Dump both tables
 //              DumpHetAndBetTable(ha->pHetTable, pBetTable);
@@ -2387,7 +2396,10 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
         // Verify the size of NameHash2 in the BET table.
         // It has to be 8 bits less than the information in HET table
         if((pBetTable->dwBitCount_NameHash2 + 8) != pHetTable->dwNameHashBitSize)
+        {
+            FreeBetTable(pBetTable);
             return ERROR_FILE_CORRUPT;
+        }
         
         // Step one: Fill the name indexes
         for(i = 0; i < pHetTable->dwTotalCount; i++)

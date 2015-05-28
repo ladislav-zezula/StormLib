@@ -131,6 +131,15 @@ extern unsigned char AsciiToLowerTable[256];
 extern unsigned char AsciiToUpperTable[256];
 
 //-----------------------------------------------------------------------------
+// Safe string functions
+
+void StringCopyA(char * dest, const char * src, size_t nMaxChars);
+void StringCatA(char * dest, const char * src, size_t nMaxChars);
+
+void StringCopyT(TCHAR * dest, const TCHAR * src, size_t nMaxChars);
+void StringCatT(TCHAR * dest, const TCHAR * src, size_t nMaxChars);
+
+//-----------------------------------------------------------------------------
 // Encryption and decryption functions
 
 #define MPQ_HASH_TABLE_INDEX    0x000

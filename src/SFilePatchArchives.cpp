@@ -589,7 +589,10 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
             // Find a *-md5.lst file in the base archive
             pBaseEntry = FindBaseLstFile(haBase);
             if(pBaseEntry == NULL)
+            {
+                STORM_FREE(szLstFileName);
                 return false;
+            }
 
             // Parse the entire file table
             for(pFileEntry = haPatch->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)

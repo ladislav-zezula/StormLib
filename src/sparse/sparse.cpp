@@ -130,20 +130,6 @@ void CompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
                 pbOutBuffer += NumberOfNonZeros;
                 pbInBuffer += NumberOfNonZeros;
             }
-            else
-            {
-                // Verify if we still have enough space in output buffer
-                if((pbOutBuffer + 2) >= pbOutBufferEnd)
-                    return;
-
-                // Put marker that means "1 nonzero byte"
-                *pbOutBuffer++ = 0x80;
-                memcpy(pbOutBuffer, pbInBuffer, 1);
-
-                // Adjust pointers
-                pbOutBuffer++;
-                pbInBuffer++;
-            }
         }
 
         // Now flush all zero bytes

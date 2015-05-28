@@ -185,7 +185,7 @@ static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
 {
     TFileEntry * pPatchEntry = NULL;
     TFileEntry * pTempEntry;
-    char szFileName[MAX_PATH];
+    char szFileName[MAX_PATH+1];
 
     // Go while there are patches
     while(ha->haPatch != NULL)
@@ -196,8 +196,8 @@ static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
 
         // Prepare the prefix for the file name
         if(ha->pPatchPrefix != NULL)
-            strcpy(szFileName, ha->pPatchPrefix->szPatchPrefix);
-        strcat(szFileName, pFileEntry->szFileName);
+            StringCopyA(szFileName, ha->pPatchPrefix->szPatchPrefix, MAX_PATH);
+        StringCatA(szFileName, pFileEntry->szFileName, MAX_PATH);
 
         // Try to find the file there
         pTempEntry = GetFileEntryExact(ha, szFileName, 0, NULL);
@@ -280,7 +280,7 @@ static bool DoMPQSearch_FileEntry(
                     }
 
                     // Fill the file name and plain file name
-                    strcpy(lpFindFileData->cFileName, szFileName + nPrefixLength);
+                    StringCopyA(lpFindFileData->cFileName, szFileName + nPrefixLength, MAX_PATH-1);
                     lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
                     return true;
                 }

@@ -662,7 +662,7 @@ _00402252:;
         if(input_data_ended == 0)
         {
             input_data -= 0x1000;
-            memcpy(pWork->work_buff, pWork->work_buff + 0x1000, pWork->dsize_bytes + 0x204);
+            memmove(pWork->work_buff, pWork->work_buff + 0x1000, pWork->dsize_bytes + 0x204);
         }
     }
 

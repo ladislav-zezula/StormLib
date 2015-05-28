@@ -296,7 +296,10 @@ static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     
     // If PKLIB is unable to decompress the data, return 0;
     if(Info.pbOutBuff == pvOutBuffer)
+    {
+        STORM_FREE(work_buf);
         return 0;
+    }
 
     // Give away the number of decompressed bytes
     *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
@@ -324,6 +327,7 @@ static void Compress_BZIP2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     // Initialize the BZIP2 compression
     strm.bzalloc = NULL;
     strm.bzfree  = NULL;
+    strm.opaque  = NULL;
 
     // Blizzard uses 9 as blockSize100k, (0x30 as workFactor)
     // Last checked on Starcraft II
@@ -358,6 +362,9 @@ static int Decompress_BZIP2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     // Initialize the BZIP2 decompression
     strm.bzalloc = NULL;
     strm.bzfree  = NULL;
+    strm.opaque  = NULL;
+
+    // Initialize decompression
     if(BZ2_bzDecompressInit(&strm, 0, 0) == BZ_OK)
     {
         strm.next_in   = (char *)pvInBuffer;

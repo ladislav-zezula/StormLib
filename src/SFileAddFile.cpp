@@ -435,7 +435,7 @@ int SFileAddFile_Init(
     // Allocate the TMPQFile entry for newly added file
     hf = CreateWritableHandle(ha, dwFileSize);
     if(hf == NULL)
-        nError = GetLastError();
+        return false;
 
     // Allocate file entry in the MPQ
     if(nError == ERROR_SUCCESS)
@@ -902,26 +902,21 @@ bool WINAPI SFileAddFileEx(
 
     // Check parameters
     if(hMpq == NULL || szFileName == NULL || *szFileName == 0)
-        nError = ERROR_INVALID_PARAMETER;
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
 
     // Open added file
-    if(nError == ERROR_SUCCESS)
-    {
-        pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY | STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
-        if(pStream == NULL)
-            nError = GetLastError();
-    }
+    pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY | STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
+    if(pStream == NULL)
+        return false;
 
-    // Get the file size and file time
-    if(nError == ERROR_SUCCESS)
-    {
-        FileStream_GetTime(pStream, &FileTime);
-        FileStream_GetSize(pStream, &FileSize);
-        
-        // Files bigger than 4GB cannot be added to MPQ
-        if(FileSize >> 32)
-            nError = ERROR_DISK_FULL;
-    }
+    // Files bigger than 4GB cannot be added to MPQ
+    FileStream_GetTime(pStream, &FileTime);
+    FileStream_GetSize(pStream, &FileSize);
+    if(FileSize >> 32)
+        nError = ERROR_DISK_FULL;
 
     // Allocate data buffer for reading from the source file
     if(nError == ERROR_SUCCESS)

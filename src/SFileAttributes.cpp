@@ -378,22 +378,26 @@ int SAttrLoadAttributes(TMPQArchive * ha)
     {
         // Retrieve and check size of the (attributes) file
         cbAttrFile = SFileGetFileSize(hFile, NULL);
-
-        // Size of the (attributes) might be 1 byte less than expected
-        // See GetSizeOfAttributesFile for more info
-        pbAttrFile = STORM_ALLOC(BYTE, cbAttrFile + 1);
-        if(pbAttrFile != NULL)
+        
+        // Integer overflow check
+        if((cbAttrFile + 1) > cbAttrFile)
         {
-            // Set the last byte to 0 in case the size should be 1 byte greater
-            pbAttrFile[cbAttrFile] = 0;
+            // Size of the (attributes) might be 1 byte less than expected
+            // See GetSizeOfAttributesFile for more info
+            pbAttrFile = STORM_ALLOC(BYTE, cbAttrFile + 1);
+            if(pbAttrFile != NULL)
+            {
+                // Set the last byte to 0 in case the size should be 1 byte greater
+                pbAttrFile[cbAttrFile] = 0;
 
-            // Load the entire file to memory
-            SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL);
-            if(dwBytesRead == cbAttrFile)
-                nError = LoadAttributesFile(ha, pbAttrFile, cbAttrFile);
+                // Load the entire file to memory
+                SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL);
+                if(dwBytesRead == cbAttrFile)
+                    nError = LoadAttributesFile(ha, pbAttrFile, cbAttrFile);
 
-            // Free the buffer
-            STORM_FREE(pbAttrFile);
+                // Free the buffer
+                STORM_FREE(pbAttrFile);
+            }
         }
 
         // Close the attributes file

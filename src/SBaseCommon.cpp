@@ -93,6 +93,57 @@ unsigned char AsciiToUpperTable_Slash[256] =
 };
 
 //-----------------------------------------------------------------------------
+// Safe string functions
+
+void StringCopyA(char * dest, const char * src, size_t nMaxChars)
+{
+    size_t nLength = strlen(src);
+
+    // Don't copy more than nMaxChars
+    nLength = STORMLIB_MIN(nLength, nMaxChars);
+    memcpy(dest, src, nLength);
+    dest[nLength] = 0;
+}
+
+void StringCatA(char * dest, const char * src, size_t nMaxChars)
+{
+    size_t nLength1 = strlen(dest);
+    size_t nLength2 = strlen(src);
+
+    // Don't copy more than nMaxChars
+    if(nLength1 < nMaxChars)
+    {
+        nLength2 = STORMLIB_MIN(nLength2, (nMaxChars - nLength1));
+        memcpy(dest + nLength1, src, nLength2);
+        dest[nLength1 + nLength2] = 0;
+    }
+}
+
+void StringCopyT(TCHAR * dest, const TCHAR * src, size_t nMaxChars)
+{
+    size_t nLength = _tcslen(src);
+
+    // Don't copy more than nMaxChars
+    nLength = STORMLIB_MIN(nLength, nMaxChars);
+    memcpy(dest, src, (nLength * sizeof(TCHAR)));
+    dest[nLength] = 0;
+}
+
+void StringCatT(TCHAR * dest, const TCHAR * src, size_t nMaxChars)
+{
+    size_t nLength1 = _tcslen(dest);
+    size_t nLength2 = _tcslen(src);
+
+    // Don't copy more than nMaxChars
+    if(nLength1 < nMaxChars)
+    {
+        nLength2 = STORMLIB_MIN(nLength2, (nMaxChars - nLength1));
+        memcpy(dest + nLength1, src, (nLength2 * sizeof(TCHAR)));
+        dest[nLength1 + nLength2] = 0;
+    }
+}
+
+//-----------------------------------------------------------------------------
 // Storm hashing functions
 
 #define STORM_BUFFER_SIZE       0x500

@@ -54,7 +54,7 @@ static int ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DW
         if(hf->SectorOffsets == NULL)
         {
             nError = AllocateSectorOffsets(hf, true);
-            if(nError != ERROR_SUCCESS)
+            if(nError != ERROR_SUCCESS || hf->SectorOffsets == NULL)
                 return nError;
         }
 
@@ -231,7 +231,7 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     if(hf->pbFileSector == NULL)
     {
         nError = AllocateSectorBuffer(hf);
-        if(nError != ERROR_SUCCESS)
+        if(nError != ERROR_SUCCESS || hf->pbFileSector == NULL)
             return nError;
         pbRawData = hf->pbFileSector;
     }
@@ -367,7 +367,7 @@ static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     if(hf->pbFileSector == NULL)
     {
         nError = AllocateSectorBuffer(hf);
-        if(nError != ERROR_SUCCESS)
+        if(nError != ERROR_SUCCESS || hf->pbFileSector == NULL)
             return nError;
         pbRawData = hf->pbFileSector;
     }
@@ -477,7 +477,7 @@ static int ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
     if(hf->pbFileSector == NULL)
     {
         nError = AllocateSectorBuffer(hf);
-        if(nError != ERROR_SUCCESS)
+        if(nError != ERROR_SUCCESS || hf->pbFileSector == NULL)
             return nError;
     }
 
@@ -690,7 +690,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     if(hf->pFileEntry != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) && hf->pPatchInfo == NULL)
     {
         nError = AllocatePatchInfo(hf, true);
-        if(nError != ERROR_SUCCESS)
+        if(nError != ERROR_SUCCESS || hf->pPatchInfo == NULL)
         {
             SetLastError(nError);
             return false;

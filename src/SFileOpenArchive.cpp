@@ -158,30 +158,28 @@ bool WINAPI SFileOpenArchive(
     TFileEntry * pFileEntry;
     ULONGLONG FileSize = 0;             // Size of the file
     LPBYTE pbHeaderBuffer = NULL;       // Buffer for searching MPQ header
+    DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
     bool bIsWarcraft3Map = false;
     int nError = ERROR_SUCCESS;   
 
     // Verify the parameters
     if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)
-        nError = ERROR_INVALID_PARAMETER;
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
 
     // One time initialization of MPQ cryptography
     InitializeMpqCryptography();
     dwPriority = dwPriority;
 
+    // If not forcing MPQ v 1.0, also use file bitmap
+    dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
+
     // Open the MPQ archive file
-    if(nError == ERROR_SUCCESS)
-    {
-        DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
-
-        // If not forcing MPQ v 1.0, also use file bitmap
-        dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
-
-        // Initialize the stream
-        pStream = FileStream_OpenFile(szMpqName, dwStreamFlags);
-        if(pStream == NULL)
-            nError = GetLastError();
-    }
+    pStream = FileStream_OpenFile(szMpqName, dwStreamFlags);
+    if(pStream == NULL)
+        return false;
 
     // Check the file size. There must be at least 0x20 bytes
     if(nError == ERROR_SUCCESS)
@@ -450,7 +448,8 @@ bool WINAPI SFileOpenArchive(
     // Free the header buffer
     if(pbHeaderBuffer != NULL)
         STORM_FREE(pbHeaderBuffer);
-    *phMpq = ha;
+    if(phMpq != NULL)
+        *phMpq = ha;
     return (nError == ERROR_SUCCESS);
 }
 

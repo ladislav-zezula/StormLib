@@ -67,7 +67,7 @@ enum TInsertPoint
 // Huffmann tree item
 struct THTreeItem
 {
-    THTreeItem()    { pPrev = pNext = NULL;}
+    THTreeItem()    { pPrev = pNext = NULL; DecompressedValue = 0; Weight = 0; pParent = pChildLo = NULL; }
 //  ~THTreeItem()   { RemoveItem(); }
 
     void         RemoveItem();

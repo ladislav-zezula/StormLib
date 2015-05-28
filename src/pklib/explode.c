@@ -455,7 +455,7 @@ static unsigned int Expand(TDcmpStruct * pWork)
             // Note that if the output buffer overflowed previously, the extra decompressed bytes
             // are stored in "out_buff_overflow", and they will now be
             // within decompressed part of the output buffer.
-            memcpy(pWork->out_buff, &pWork->out_buff[0x1000], pWork->outputPos - 0x1000);
+            memmove(pWork->out_buff, &pWork->out_buff[0x1000], pWork->outputPos - 0x1000);
             pWork->outputPos -= 0x1000;
         }
     }

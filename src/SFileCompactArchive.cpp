@@ -530,8 +530,7 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     ULONGLONG ByteOffset;
     ULONGLONG ByteCount;
     LPDWORD pFileKeys = NULL;
-    TCHAR szTempFile[MAX_PATH] = _T("");
-    TCHAR * szTemp = NULL;
+    TCHAR szTempFile[MAX_PATH+1] = _T("");
     int nError = ERROR_SUCCESS;
 
     // Test the valid parameters
@@ -568,12 +567,11 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     // Get the temporary file name and create it
     if(nError == ERROR_SUCCESS)
     {
-        _tcscpy(szTempFile, FileStream_GetFileName(ha->pStream));
-        if((szTemp = _tcsrchr(szTempFile, '.')) != NULL)
-            _tcscpy(szTemp + 1, _T("mp_"));
-        else
-            _tcscat(szTempFile, _T("_"));
+        // Create temporary file name. Prevent buffer overflow
+        StringCopyT(szTempFile, FileStream_GetFileName(ha->pStream), MAX_PATH);
+        StringCatT(szTempFile, _T(".tmp"), MAX_PATH);
 
+        // Create temporary file
         pTempStream = FileStream_CreateFile(szTempFile, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
         if(pTempStream == NULL)
             nError = GetLastError();

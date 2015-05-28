@@ -543,7 +543,7 @@ static bool DoListFileSearch(TListFileCache * pCache, SFILE_FIND_DATA * lpFindFi
             if(nLength != 0 && CheckWildCard(szFileName, pCache->szWildCard))
             {
                 if(nLength >= sizeof(lpFindFileData->cFileName))
-                    nLength = sizeof(lpFindFileData->cFileName);
+                    nLength = sizeof(lpFindFileData->cFileName) - 1;
 
                 memcpy(lpFindFileData->cFileName, szFileName, nLength);
                 lpFindFileData->cFileName[nLength] = 0;
