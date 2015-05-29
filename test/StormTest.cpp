@@ -4083,10 +4083,10 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-/*
+
     // Search all testing archives and verify their SHA1 hash
-    if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+//  if(nError == ERROR_SUCCESS)
+//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 
     // Test sparse compression
     if(nError == ERROR_SUCCESS)
@@ -4426,7 +4426,7 @@ int main(int argc, char * argv[])
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_BigArchive("StormLibTest_BigArchive_v4.mpq");
-*/
+
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
