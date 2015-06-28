@@ -1077,9 +1077,6 @@ int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pv
 void  SetLastError(int err);
 int   GetLastError();
 
-#else
-  #pragma comment(linker, "/export:GetLastError=Kernel32.GetLastError")
-  #pragma comment(linker, "/export:SetLastError=Kernel32.SetLastError")
 #endif
 
 //-----------------------------------------------------------------------------
