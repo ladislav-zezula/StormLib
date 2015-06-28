@@ -3181,6 +3181,7 @@ static int TestCreateArchive_Deprotect(const char * szPlainName)
     return nError;
 }
 */
+
 static int TestCreateArchive_EmptyMpq(const char * szPlainName, DWORD dwCreateFlags)
 {
     TLogHelper Logger("CreateEmptyMpq", szPlainName);
@@ -4087,7 +4088,7 @@ int main(int argc, char * argv[])
     // Search all testing archives and verify their SHA1 hash
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-
+/*
     // Test sparse compression
     if(nError == ERROR_SUCCESS)
         nError = TestSparseCompression();
@@ -4430,7 +4431,7 @@ int main(int argc, char * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER
