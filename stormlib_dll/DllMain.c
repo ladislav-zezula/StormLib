@@ -12,6 +12,12 @@
 #include <windows.h>
 
 //-----------------------------------------------------------------------------
+// Forwarded exports
+
+#pragma comment(linker, "/export:GetLastError=Kernel32.GetLastError")
+#pragma comment(linker, "/export:SetLastError=Kernel32.SetLastError")
+
+//-----------------------------------------------------------------------------
 // DllMain
 
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved)
