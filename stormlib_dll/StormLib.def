@@ -73,3 +73,6 @@ EXPORTS
     SCompExplode
     SCompCompress   
     SCompDecompress 
+
+    GetLastError=Kernel32.GetLastError
+    SetLastError=Kernel32.SetLastError
