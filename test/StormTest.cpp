@@ -203,13 +203,25 @@ static const char * PatchList_SC2_34644_Maps[] =
 
 static const char * PatchList_SC2_32283_enGB[] = 
 {
-    "MPQ_2013_v4_enGB.SC2Data",
+    "MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets",
     "s2-update-enGB-23258.MPQ",
     "s2-update-enGB-24540.MPQ",
     "s2-update-enGB-26147.MPQ",
     "s2-update-enGB-28522.MPQ",
     "s2-update-enGB-30508.MPQ",
     "s2-update-enGB-32283.MPQ",
+    NULL
+};
+
+static const char * PatchList_SC2_36281_enGB[] = 
+{
+    "MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data",
+    "s2-update-enGB-23258.MPQ",
+    "s2-update-enGB-24540.MPQ",
+    "s2-update-enGB-26147.MPQ",
+    "s2-update-enGB-28522.MPQ",
+    "s2-update-enGB-30384.MPQ",
+    "s2-update-enGB-32281.MPQ",
     NULL
 };
 
@@ -1924,10 +1936,15 @@ static int OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, const char *
         }
     }
 
-    // Store the archive handle or close the archive
-    if(phMpq == NULL)
+    // If anything failed, close the MPQ handle
+    if(nError != ERROR_SUCCESS)
+    {
         SFileCloseArchive(hMpq);
-    else
+        hMpq = NULL;
+    }
+
+    // Give the archive handle to the caller
+    if(phMpq != NULL)
         *phMpq = hMpq;
     return nError;
 }
@@ -2494,7 +2511,7 @@ static int TestOpenArchive_Corrupt(const char * szPlainName)
 
 
 // Opens a patched MPQ archive
-static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatchedFile, int nExpectedPatchCount)
+static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatchedFile, int nExpectedPatchCount, bool bExpectedToFail = false)
 {
     TLogHelper Logger("OpenPatchedMpqTest", PatchList[0]);
     HANDLE hMpq;
@@ -2530,6 +2547,9 @@ static int TestOpenArchive_Patched(const char * PatchList[], const char * szPatc
         SFileCloseArchive(hMpq);
     }
 
+    // Clear the error if patch prefix was not found
+    if(nError == ERROR_CANT_FIND_PATCH_PREFIX && bExpectedToFail)
+        nError = ERROR_SUCCESS;
     return nError;
 }
 
@@ -4283,10 +4303,14 @@ int main(int argc, char * argv[])
     // Open a patched archive with new format of BSDIFF patch
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_34644_Maps, "Maps\\Campaign\\THorner03.SC2Map\\BankList.xml", 3);
-
+*/
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 6);
+        nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
+/*
+    // Open a patched archive where the "StreamingBuckets.txt" is not a patch file
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Open a patched archive
     if(nError == ERROR_SUCCESS)

@@ -374,10 +374,13 @@ int ConvertMpqHeaderToFormat4(
             //
 
             Label_ArchiveVersion1:
-            if(pHeader->dwHashTablePos <= pHeader->dwHeaderSize || (pHeader->dwHashTablePos & 0x80000000))
-                ha->dwFlags |= MPQ_FLAG_MALFORMED;
-            if(pHeader->dwBlockTablePos <= pHeader->dwHeaderSize || (pHeader->dwBlockTablePos & 0x80000000))
-                ha->dwFlags |= MPQ_FLAG_MALFORMED;
+            if(pHeader->dwBlockTableSize > 1)  // Prevent empty MPQs being marked as malformed
+            {
+                if(pHeader->dwHashTablePos <= pHeader->dwHeaderSize || (pHeader->dwHashTablePos & 0x80000000))
+                    ha->dwFlags |= MPQ_FLAG_MALFORMED;
+                if(pHeader->dwBlockTablePos <= pHeader->dwHeaderSize || (pHeader->dwBlockTablePos & 0x80000000))
+                    ha->dwFlags |= MPQ_FLAG_MALFORMED;
+            }
 
             // Only low byte of sector size is really used
             if(pHeader->wSectorSize & 0xFF00)

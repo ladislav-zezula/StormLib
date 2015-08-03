@@ -437,24 +437,37 @@ static bool CreatePatchPrefix(TMPQArchive * ha, const char * szFileName, size_t 
 static bool IsMatchingPatchFile(
     TMPQArchive * ha,
     const char * szFileName,
-    LPBYTE pbFileMd5)
+    LPBYTE pbBaseFileMd5)
 {
     MPQ_PATCH_HEADER PatchHeader = {0};
     HANDLE hFile = NULL;
     DWORD dwTransferred = 0;
+    DWORD dwFlags = 0;
     bool bResult = false;
 
     // Open the file and load the patch header
     if(SFileOpenFileEx((HANDLE)ha, szFileName, SFILE_OPEN_BASE_FILE, &hFile))
     {
-        // Load the patch header
-        SFileReadFile(hFile, &PatchHeader, sizeof(MPQ_PATCH_HEADER), &dwTransferred, NULL);
-        BSWAP_ARRAY32_UNSIGNED(pPatchHeader, sizeof(DWORD) * 6);
+        // Retrieve the flags. We need to know whether the file is a patch or not
+        SFileGetFileInfo(hFile, SFileInfoFlags, &dwFlags, sizeof(DWORD), &dwTransferred);
+        if(dwFlags & MPQ_FILE_PATCH_FILE)
+        {
+            // Load the patch header
+            SFileReadFile(hFile, &PatchHeader, sizeof(MPQ_PATCH_HEADER), &dwTransferred, NULL);
+            BSWAP_ARRAY32_UNSIGNED(pPatchHeader, sizeof(DWORD) * 6);
 
-        // If the file contains an incremental patch,
-        // compare the "MD5 before patching" with the base file MD5
-        if(dwTransferred == sizeof(MPQ_PATCH_HEADER) && PatchHeader.dwSignature == PATCH_SIGNATURE_HEADER)
-            bResult = (!memcmp(PatchHeader.md5_before_patch, pbFileMd5, MD5_DIGEST_SIZE));
+            // If the file contains an incremental patch,
+            // compare the "MD5 before patching" with the base file MD5
+            if(dwTransferred == sizeof(MPQ_PATCH_HEADER) && PatchHeader.dwSignature == PATCH_SIGNATURE_HEADER)
+                bResult = (!memcmp(PatchHeader.md5_before_patch, pbBaseFileMd5, MD5_DIGEST_SIZE));
+        }
+        else
+        {
+            // TODO: How to match it if it's not an incremental patch?
+            // Example: StarCraft II\Updates\enGB\s2-update-enGB-23258.MPQ:
+            //          Mods\Core.SC2Mod\enGB.SC2Assets\StreamingBuckets.txt" 
+            bResult = false;
+        }
 
         // Close the file
         SFileCloseFile(hFile);
@@ -499,33 +512,6 @@ static const char * FindArchiveLanguage(TMPQArchive * ha, PLOCALIZED_MPQ_INFO pM
     return NULL;
 }
 
-static TFileEntry * FindBaseLstFile(TMPQArchive * ha)
-{
-    TFileEntry * pFileEntry;
-    const char * szLanguage;
-    char szFileName[0x40];
-
-    // Prepare the file name tenplate
-    memcpy(szFileName, "####-md5.lst", 13);
-
-    // Try all languages
-    for(szLanguage = LanguageList; szLanguage[0] != 0; szLanguage++)
-    {
-        // Copy the language name
-        szFileName[0] = szLanguage[0];
-        szFileName[1] = szLanguage[1];
-        szFileName[2] = szLanguage[2];
-        szFileName[3] = szLanguage[3];
-
-        // Check whether this file exists
-        pFileEntry = GetFileEntryLocale(ha, szFileName, 0);
-        if(pFileEntry != NULL)
-            return pFileEntry;
-    }
-
-    return NULL;
-}
-
 static bool FindPatchPrefix_WoW_13164_13623(TMPQArchive * haBase, TMPQArchive * haPatch)
 {
     const char * szPatchPrefix;
@@ -565,12 +551,11 @@ static bool FindPatchPrefix_WoW_13164_13623(TMPQArchive * haBase, TMPQArchive * 
 // We need to match the file by its MD5
 //
 
-
-static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
+// Note: pBaseEntry is the file entry of the base version of "StreamingBuckets.txt"
+static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch, TFileEntry * pBaseEntry)
 {
     TMPQNamePrefix * pPatchPrefix;
-    TFileEntry * pBaseEntry;
-    char * szLstFileName;
+    char * szPatchFileName;
     char * szPlainName;
     size_t cchWorkBuffer = 0x400;
     bool bResult = false;
@@ -583,17 +568,9 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
         TFileEntry * pFileEntry;
 
         // Allocate working buffer for merging LST file
-        szLstFileName = STORM_ALLOC(char, cchWorkBuffer);
-        if(szLstFileName != NULL)
+        szPatchFileName = STORM_ALLOC(char, cchWorkBuffer);
+        if(szPatchFileName != NULL)
         {
-            // Find a *-md5.lst file in the base archive
-            pBaseEntry = FindBaseLstFile(haBase);
-            if(pBaseEntry == NULL)
-            {
-                STORM_FREE(szLstFileName);
-                return false;
-            }
-
             // Parse the entire file table
             for(pFileEntry = haPatch->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
             {
@@ -601,21 +578,21 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
                 if(IsPatchMetadataFile(pFileEntry))
                 {
                     // Construct the name of the MD5 file
-                    strcpy(szLstFileName, pFileEntry->szFileName);
-                    szPlainName = (char *)GetPlainFileName(szLstFileName);
+                    strcpy(szPatchFileName, pFileEntry->szFileName);
+                    szPlainName = (char *)GetPlainFileName(szPatchFileName);
                     strcpy(szPlainName, pBaseEntry->szFileName);
 
                     // Check for matching MD5 file
-                    if(IsMatchingPatchFile(haPatch, szLstFileName, pBaseEntry->md5))
+                    if(IsMatchingPatchFile(haPatch, szPatchFileName, pBaseEntry->md5))
                     {
-                        bResult = CreatePatchPrefix(haPatch, szLstFileName, (size_t)(szPlainName - szLstFileName));
+                        bResult = CreatePatchPrefix(haPatch, szPatchFileName, (size_t)(szPlainName - szPatchFileName));
                         break;
                     }
                 }
             }
 
             // Delete the merge buffer
-            STORM_FREE(szLstFileName);
+            STORM_FREE(szPatchFileName);
         }
     }
 
@@ -637,6 +614,8 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch)
 
 static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const char * szPatchPathPrefix)
 {
+    TFileEntry * pFileEntry;
+
     // If the patch prefix was explicitly entered, we use that one
     if(szPatchPathPrefix != NULL)
         return CreatePatchPrefix(haPatch, szPatchPathPrefix, 0);
@@ -649,8 +628,9 @@ static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const c
     // Updates for Starcraft II
     // Match: LocalizedData\GameHotkeys.txt <==> Campaigns\Liberty.SC2Campaign\enGB.SC2Data\LocalizedData\GameHotkeys.txt 
     // All Starcraft II base archives seem to have the file "StreamingBuckets.txt" present
-    if(GetFileEntryLocale(haBase, "StreamingBuckets.txt", 0))
-        return FindPatchPrefix_SC2(haBase, haPatch);
+    pFileEntry = GetFileEntryLocale(haBase, "StreamingBuckets.txt", 0);
+    if(pFileEntry != NULL)
+        return FindPatchPrefix_SC2(haBase, haPatch, pFileEntry);
 
     // Diablo III patch MPQs don't use patch prefix
     // Hearthstone MPQs don't use patch prefix
@@ -896,29 +876,37 @@ bool WINAPI SFileOpenPatchArchive(
     // Open the archive like it is normal archive
     if(nError == ERROR_SUCCESS)
     {
-        if(!SFileOpenArchive(szPatchMpqName, 0, MPQ_OPEN_READ_ONLY | MPQ_OPEN_PATCH, &hPatchMpq))
-            return false;
-        haPatch = (TMPQArchive *)hPatchMpq;
-
-        // We need to remember the proper patch prefix to match names of patched files
-        FindPatchPrefix(ha, (TMPQArchive *)hPatchMpq, szPatchPathPrefix);
-
-        // Now add the patch archive to the list of patches to the original MPQ
-        while(ha != NULL)
+        if(SFileOpenArchive(szPatchMpqName, 0, MPQ_OPEN_READ_ONLY | MPQ_OPEN_PATCH, &hPatchMpq))
         {
-            if(ha->haPatch == NULL)
+            // Cast the archive handle to structure pointer
+            haPatch = (TMPQArchive *)hPatchMpq;
+
+            // We need to remember the proper patch prefix to match names of patched files
+            if(FindPatchPrefix(ha, (TMPQArchive *)hPatchMpq, szPatchPathPrefix))
             {
-                haPatch->haBase = ha;
-                ha->haPatch = haPatch;
-                return true;
+                // Now add the patch archive to the list of patches to the original MPQ
+                while(ha != NULL)
+                {
+                    if(ha->haPatch == NULL)
+                    {
+                        haPatch->haBase = ha;
+                        ha->haPatch = haPatch;
+                        return true;
+                    }
+
+                    // Move to the next archive
+                    ha = ha->haPatch;
+                }
             }
 
-            // Move to the next archive
-            ha = ha->haPatch;
+            // Close the archive
+            SFileCloseArchive(hPatchMpq);
+            nError = ERROR_CANT_FIND_PATCH_PREFIX;
         }
-
-        // Should never happen
-        nError = ERROR_CAN_NOT_COMPLETE;
+        else
+        {
+            nError = GetLastError();
+        }
     }
 
     SetLastError(nError);

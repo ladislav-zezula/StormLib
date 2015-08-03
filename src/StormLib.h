@@ -149,6 +149,7 @@ extern "C" {
 #define ERROR_MARKED_FOR_DELETE          10005  // The file was marked as "deleted" in the MPQ
 #define ERROR_FILE_INCOMPLETE            10006  // The required file part is missing
 #define ERROR_UNKNOWN_FILE_NAMES         10007  // A name of at least one file is unknown
+#define ERROR_CANT_FIND_PATCH_PREFIX     10008  // StormLib was unable to find patch prefix for the patches
 
 // Values for SFileCreateArchive
 #define HASH_TABLE_SIZE_MIN         0x00000004  // Verified: If there is 1 file, hash table size is 4
