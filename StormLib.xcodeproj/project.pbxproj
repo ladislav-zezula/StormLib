@@ -487,6 +487,40 @@
 		22EC6045154B28A000679228 /* FileStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 22EC6043154B28A000679228 /* FileStream.h */; };
 		22F5A9C51193DFBA00F8B121 /* SFileVerify.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22F5A9C41193DFBA00F8B121 /* SFileVerify.cpp */; };
 		22F5A9C61193DFBA00F8B121 /* SFileVerify.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22F5A9C41193DFBA00F8B121 /* SFileVerify.cpp */; };
+		E60816D61B707A9000B283F7 /* rsa_sign_hash.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816D51B707A9000B283F7 /* rsa_sign_hash.c */; };
+		E60816D71B707A9B00B283F7 /* rsa_sign_hash.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816D51B707A9000B283F7 /* rsa_sign_hash.c */; };
+		E60816D91B707B1800B283F7 /* pkcs_1_pss_encode.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816D81B707B1800B283F7 /* pkcs_1_pss_encode.c */; };
+		E60816DA1B707B1800B283F7 /* pkcs_1_pss_encode.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816D81B707B1800B283F7 /* pkcs_1_pss_encode.c */; };
+		E60816DC1B707B2700B283F7 /* pkcs_1_v1_5_encode.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816DB1B707B2700B283F7 /* pkcs_1_v1_5_encode.c */; };
+		E60816DD1B707B2700B283F7 /* pkcs_1_v1_5_encode.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816DB1B707B2700B283F7 /* pkcs_1_v1_5_encode.c */; };
+		E60816DF1B707B5700B283F7 /* der_encode_sequence_ex.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816DE1B707B5700B283F7 /* der_encode_sequence_ex.c */; };
+		E60816E01B707B5700B283F7 /* der_encode_sequence_ex.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816DE1B707B5700B283F7 /* der_encode_sequence_ex.c */; };
+		E60816EE1B707B7200B283F7 /* der_encode_bit_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E11B707B7200B283F7 /* der_encode_bit_string.c */; };
+		E60816EF1B707B7200B283F7 /* der_encode_bit_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E11B707B7200B283F7 /* der_encode_bit_string.c */; };
+		E60816F01B707B7200B283F7 /* der_encode_boolean.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E21B707B7200B283F7 /* der_encode_boolean.c */; };
+		E60816F11B707B7200B283F7 /* der_encode_boolean.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E21B707B7200B283F7 /* der_encode_boolean.c */; };
+		E60816F21B707B7200B283F7 /* der_encode_ia5_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E31B707B7200B283F7 /* der_encode_ia5_string.c */; };
+		E60816F31B707B7200B283F7 /* der_encode_ia5_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E31B707B7200B283F7 /* der_encode_ia5_string.c */; };
+		E60816F41B707B7200B283F7 /* der_encode_integer.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E41B707B7200B283F7 /* der_encode_integer.c */; };
+		E60816F51B707B7200B283F7 /* der_encode_integer.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E41B707B7200B283F7 /* der_encode_integer.c */; };
+		E60816F61B707B7200B283F7 /* der_encode_object_identifier.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E51B707B7200B283F7 /* der_encode_object_identifier.c */; };
+		E60816F71B707B7200B283F7 /* der_encode_object_identifier.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E51B707B7200B283F7 /* der_encode_object_identifier.c */; };
+		E60816F81B707B7200B283F7 /* der_encode_octet_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E61B707B7200B283F7 /* der_encode_octet_string.c */; };
+		E60816F91B707B7200B283F7 /* der_encode_octet_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E61B707B7200B283F7 /* der_encode_octet_string.c */; };
+		E60816FA1B707B7200B283F7 /* der_encode_printable_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E71B707B7200B283F7 /* der_encode_printable_string.c */; };
+		E60816FB1B707B7200B283F7 /* der_encode_printable_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E71B707B7200B283F7 /* der_encode_printable_string.c */; };
+		E60816FC1B707B7200B283F7 /* der_encode_sequence_multi.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E81B707B7200B283F7 /* der_encode_sequence_multi.c */; };
+		E60816FD1B707B7200B283F7 /* der_encode_sequence_multi.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E81B707B7200B283F7 /* der_encode_sequence_multi.c */; };
+		E60816FE1B707B7200B283F7 /* der_encode_set.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E91B707B7200B283F7 /* der_encode_set.c */; };
+		E60816FF1B707B7200B283F7 /* der_encode_set.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816E91B707B7200B283F7 /* der_encode_set.c */; };
+		E60817001B707B7200B283F7 /* der_encode_setof.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EA1B707B7200B283F7 /* der_encode_setof.c */; };
+		E60817011B707B7200B283F7 /* der_encode_setof.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EA1B707B7200B283F7 /* der_encode_setof.c */; };
+		E60817021B707B7200B283F7 /* der_encode_short_integer.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EB1B707B7200B283F7 /* der_encode_short_integer.c */; };
+		E60817031B707B7200B283F7 /* der_encode_short_integer.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EB1B707B7200B283F7 /* der_encode_short_integer.c */; };
+		E60817041B707B7200B283F7 /* der_encode_utctime.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EC1B707B7200B283F7 /* der_encode_utctime.c */; };
+		E60817051B707B7200B283F7 /* der_encode_utctime.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816EC1B707B7200B283F7 /* der_encode_utctime.c */; };
+		E60817061B707B7200B283F7 /* der_encode_utf8_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816ED1B707B7200B283F7 /* der_encode_utf8_string.c */; };
+		E60817071B707B7200B283F7 /* der_encode_utf8_string.c in Sources */ = {isa = PBXBuildFile; fileRef = E60816ED1B707B7200B283F7 /* der_encode_utf8_string.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -745,6 +779,23 @@
 		32ED00B40D03542A00AB0B4E /* SFileListFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SFileListFile.cpp; path = src/SFileListFile.cpp; sourceTree = "<group>"; };
 		32ED00B60D03542A00AB0B4E /* StormLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StormLib.h; path = src/StormLib.h; sourceTree = "<group>"; };
 		32ED00B70D03542A00AB0B4E /* StormPort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StormPort.h; path = src/StormPort.h; sourceTree = "<group>"; };
+		E60816D51B707A9000B283F7 /* rsa_sign_hash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = rsa_sign_hash.c; sourceTree = "<group>"; };
+		E60816D81B707B1800B283F7 /* pkcs_1_pss_encode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pkcs_1_pss_encode.c; sourceTree = "<group>"; };
+		E60816DB1B707B2700B283F7 /* pkcs_1_v1_5_encode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pkcs_1_v1_5_encode.c; sourceTree = "<group>"; };
+		E60816DE1B707B5700B283F7 /* der_encode_sequence_ex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_sequence_ex.c; sourceTree = "<group>"; };
+		E60816E11B707B7200B283F7 /* der_encode_bit_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_bit_string.c; sourceTree = "<group>"; };
+		E60816E21B707B7200B283F7 /* der_encode_boolean.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_boolean.c; sourceTree = "<group>"; };
+		E60816E31B707B7200B283F7 /* der_encode_ia5_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_ia5_string.c; sourceTree = "<group>"; };
+		E60816E41B707B7200B283F7 /* der_encode_integer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_integer.c; sourceTree = "<group>"; };
+		E60816E51B707B7200B283F7 /* der_encode_object_identifier.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_object_identifier.c; sourceTree = "<group>"; };
+		E60816E61B707B7200B283F7 /* der_encode_octet_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_octet_string.c; sourceTree = "<group>"; };
+		E60816E71B707B7200B283F7 /* der_encode_printable_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_printable_string.c; sourceTree = "<group>"; };
+		E60816E81B707B7200B283F7 /* der_encode_sequence_multi.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_sequence_multi.c; sourceTree = "<group>"; };
+		E60816E91B707B7200B283F7 /* der_encode_set.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_set.c; sourceTree = "<group>"; };
+		E60816EA1B707B7200B283F7 /* der_encode_setof.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_setof.c; sourceTree = "<group>"; };
+		E60816EB1B707B7200B283F7 /* der_encode_short_integer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_short_integer.c; sourceTree = "<group>"; };
+		E60816EC1B707B7200B283F7 /* der_encode_utctime.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_utctime.c; sourceTree = "<group>"; };
+		E60816ED1B707B7200B283F7 /* der_encode_utf8_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = der_encode_utf8_string.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1092,6 +1143,20 @@
 		22C9184F11933FCF0083AC69 /* asn1 */ = {
 			isa = PBXGroup;
 			children = (
+				E60816E11B707B7200B283F7 /* der_encode_bit_string.c */,
+				E60816E21B707B7200B283F7 /* der_encode_boolean.c */,
+				E60816E31B707B7200B283F7 /* der_encode_ia5_string.c */,
+				E60816E41B707B7200B283F7 /* der_encode_integer.c */,
+				E60816E51B707B7200B283F7 /* der_encode_object_identifier.c */,
+				E60816E61B707B7200B283F7 /* der_encode_octet_string.c */,
+				E60816E71B707B7200B283F7 /* der_encode_printable_string.c */,
+				E60816E81B707B7200B283F7 /* der_encode_sequence_multi.c */,
+				E60816E91B707B7200B283F7 /* der_encode_set.c */,
+				E60816EA1B707B7200B283F7 /* der_encode_setof.c */,
+				E60816EB1B707B7200B283F7 /* der_encode_short_integer.c */,
+				E60816EC1B707B7200B283F7 /* der_encode_utctime.c */,
+				E60816ED1B707B7200B283F7 /* der_encode_utf8_string.c */,
+				E60816DE1B707B5700B283F7 /* der_encode_sequence_ex.c */,
 				22C9185011933FCF0083AC69 /* der_decode_bit_string.c */,
 				22C9185111933FCF0083AC69 /* der_decode_boolean.c */,
 				22C9185211933FCF0083AC69 /* der_decode_choice.c */,
@@ -1138,6 +1203,8 @@
 		22C9187111933FCF0083AC69 /* pkcs1 */ = {
 			isa = PBXGroup;
 			children = (
+				E60816DB1B707B2700B283F7 /* pkcs_1_v1_5_encode.c */,
+				E60816D81B707B1800B283F7 /* pkcs_1_pss_encode.c */,
 				22C9187211933FCF0083AC69 /* pkcs_1_mgf1.c */,
 				22C9187311933FCF0083AC69 /* pkcs_1_oaep_decode.c */,
 				22C9187411933FCF0083AC69 /* pkcs_1_pss_decode.c */,
@@ -1149,6 +1216,7 @@
 		22C9187611933FCF0083AC69 /* rsa */ = {
 			isa = PBXGroup;
 			children = (
+				E60816D51B707A9000B283F7 /* rsa_sign_hash.c */,
 				22C9187711933FCF0083AC69 /* rsa_exptmod.c */,
 				22C9187811933FCF0083AC69 /* rsa_free.c */,
 				22C9187911933FCF0083AC69 /* rsa_import.c */,
@@ -1403,6 +1471,7 @@
 				225530EB1056BC8700FA646A /* SFileCompactArchive.cpp in Sources */,
 				225530EC1056BC8700FA646A /* SFileCreateArchive.cpp in Sources */,
 				225530ED1056BC8700FA646A /* SFileExtractFile.cpp in Sources */,
+				E60816F81B707B7200B283F7 /* der_encode_octet_string.c in Sources */,
 				225530EE1056BC8700FA646A /* SFileFindFile.cpp in Sources */,
 				225530EF1056BC8700FA646A /* SFileOpenArchive.cpp in Sources */,
 				226C7CAD1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */,
@@ -1448,6 +1517,7 @@
 				22C918A811933FCF0083AC69 /* der_decode_short_integer.c in Sources */,
 				22C918A911933FCF0083AC69 /* der_decode_utctime.c in Sources */,
 				22C918AA11933FCF0083AC69 /* der_decode_utf8_string.c in Sources */,
+				E60816F01B707B7200B283F7 /* der_encode_boolean.c in Sources */,
 				22C918AB11933FCF0083AC69 /* der_length_bit_string.c in Sources */,
 				22C918AC11933FCF0083AC69 /* der_length_boolean.c in Sources */,
 				22C918AD11933FCF0083AC69 /* der_length_ia5_string.c in Sources */,
@@ -1478,7 +1548,9 @@
 				22C918C611933FCF0083AC69 /* rsa_verify_simple.c in Sources */,
 				22C9198A1193400A0083AC69 /* bn_fast_mp_invmod.c in Sources */,
 				22C9198B1193400A0083AC69 /* bn_fast_mp_montgomery_reduce.c in Sources */,
+				E60816F61B707B7200B283F7 /* der_encode_object_identifier.c in Sources */,
 				22C9198C1193400A0083AC69 /* bn_fast_s_mp_mul_digs.c in Sources */,
+				E60816FA1B707B7200B283F7 /* der_encode_printable_string.c in Sources */,
 				22C9198D1193400A0083AC69 /* bn_fast_s_mp_mul_high_digs.c in Sources */,
 				22C9198E1193400A0083AC69 /* bn_fast_s_mp_sqr.c in Sources */,
 				22C9198F1193400A0083AC69 /* bn_mp_2expt.c in Sources */,
@@ -1496,6 +1568,8 @@
 				22C9199B1193400A0083AC69 /* bn_mp_cnt_lsb.c in Sources */,
 				22C9199C1193400A0083AC69 /* bn_mp_copy.c in Sources */,
 				22C9199D1193400A0083AC69 /* bn_mp_count_bits.c in Sources */,
+				E60816F41B707B7200B283F7 /* der_encode_integer.c in Sources */,
+				E60817061B707B7200B283F7 /* der_encode_utf8_string.c in Sources */,
 				22C9199E1193400A0083AC69 /* bn_mp_div_2.c in Sources */,
 				22C9199F1193400A0083AC69 /* bn_mp_div_2d.c in Sources */,
 				22C919A01193400A0083AC69 /* bn_mp_div_3.c in Sources */,
@@ -1520,6 +1594,7 @@
 				22C919B31193400A0083AC69 /* bn_mp_init_set.c in Sources */,
 				22C919B41193400A0083AC69 /* bn_mp_init_size.c in Sources */,
 				22C919B51193400A0083AC69 /* bn_mp_init.c in Sources */,
+				E60816D91B707B1800B283F7 /* pkcs_1_pss_encode.c in Sources */,
 				22C919B61193400A0083AC69 /* bn_mp_invmod_slow.c in Sources */,
 				22C919B71193400A0083AC69 /* bn_mp_invmod.c in Sources */,
 				22C919B81193400A0083AC69 /* bn_mp_is_square.c in Sources */,
@@ -1533,11 +1608,15 @@
 				22C919C01193400A0083AC69 /* bn_mp_mod.c in Sources */,
 				22C919C11193400A0083AC69 /* bn_mp_montgomery_calc_normalization.c in Sources */,
 				22C919C21193400A0083AC69 /* bn_mp_montgomery_reduce.c in Sources */,
+				E60817021B707B7200B283F7 /* der_encode_short_integer.c in Sources */,
 				22C919C31193400A0083AC69 /* bn_mp_montgomery_setup.c in Sources */,
+				E60816DC1B707B2700B283F7 /* pkcs_1_v1_5_encode.c in Sources */,
 				22C919C41193400A0083AC69 /* bn_mp_mul_2.c in Sources */,
+				E60816FC1B707B7200B283F7 /* der_encode_sequence_multi.c in Sources */,
 				22C919C51193400A0083AC69 /* bn_mp_mul_2d.c in Sources */,
 				22C919C61193400A0083AC69 /* bn_mp_mul_d.c in Sources */,
 				22C919C71193400A0083AC69 /* bn_mp_mul.c in Sources */,
+				E60816EE1B707B7200B283F7 /* der_encode_bit_string.c in Sources */,
 				22C919C81193400A0083AC69 /* bn_mp_mulmod.c in Sources */,
 				22C919C91193400A0083AC69 /* bn_mp_n_root.c in Sources */,
 				22C919CA1193400A0083AC69 /* bn_mp_neg.c in Sources */,
@@ -1545,6 +1624,7 @@
 				22C919CC1193400A0083AC69 /* bn_mp_prime_fermat.c in Sources */,
 				22C919CD1193400A0083AC69 /* bn_mp_prime_is_divisible.c in Sources */,
 				22C919CE1193400A0083AC69 /* bn_mp_prime_is_prime.c in Sources */,
+				E60816D61B707A9000B283F7 /* rsa_sign_hash.c in Sources */,
 				22C919CF1193400A0083AC69 /* bn_mp_prime_miller_rabin.c in Sources */,
 				22C919D01193400A0083AC69 /* bn_mp_prime_next_prime.c in Sources */,
 				22C919D11193400A0083AC69 /* bn_mp_prime_rabin_miller_trials.c in Sources */,
@@ -1558,8 +1638,11 @@
 				22C919D91193400A0083AC69 /* bn_mp_reduce_2k_l.c in Sources */,
 				22C919DA1193400A0083AC69 /* bn_mp_reduce_2k_setup_l.c in Sources */,
 				22C919DB1193400A0083AC69 /* bn_mp_reduce_2k_setup.c in Sources */,
+				E60816FE1B707B7200B283F7 /* der_encode_set.c in Sources */,
+				E60817001B707B7200B283F7 /* der_encode_setof.c in Sources */,
 				22C919DC1193400A0083AC69 /* bn_mp_reduce_2k.c in Sources */,
 				22C919DD1193400A0083AC69 /* bn_mp_reduce_is_2k_l.c in Sources */,
+				E60817041B707B7200B283F7 /* der_encode_utctime.c in Sources */,
 				22C919DE1193400A0083AC69 /* bn_mp_reduce_is_2k.c in Sources */,
 				22C919DF1193400A0083AC69 /* bn_mp_reduce_setup.c in Sources */,
 				22C919E01193400A0083AC69 /* bn_mp_reduce.c in Sources */,
@@ -1583,6 +1666,8 @@
 				22C919F21193400A0083AC69 /* bn_mp_toradix_n.c in Sources */,
 				22C919F31193400A0083AC69 /* bn_mp_toradix.c in Sources */,
 				22C919F41193400A0083AC69 /* bn_mp_unsigned_bin_size.c in Sources */,
+				E60816F21B707B7200B283F7 /* der_encode_ia5_string.c in Sources */,
+				E60816DF1B707B5700B283F7 /* der_encode_sequence_ex.c in Sources */,
 				22C919F51193400A0083AC69 /* bn_mp_xor.c in Sources */,
 				22C919F61193400A0083AC69 /* bn_mp_zero.c in Sources */,
 				22C919F71193400A0083AC69 /* bn_prime_tab.c in Sources */,
@@ -1617,6 +1702,7 @@
 				225FACAE0E53BAB400DA2CAE /* SFileCompactArchive.cpp in Sources */,
 				225FACAF0E53BAB400DA2CAE /* SFileCreateArchive.cpp in Sources */,
 				225FACB00E53BAB400DA2CAE /* SFileExtractFile.cpp in Sources */,
+				E60816F91B707B7200B283F7 /* der_encode_octet_string.c in Sources */,
 				225FACB10E53BAB400DA2CAE /* SFileFindFile.cpp in Sources */,
 				225FACB20E53BAB400DA2CAE /* SFileOpenArchive.cpp in Sources */,
 				226C7CAE1857DEEB00AB689C /* SFileGetFileInfo.cpp in Sources */,
@@ -1662,6 +1748,7 @@
 				22C918F211933FCF0083AC69 /* der_decode_short_integer.c in Sources */,
 				22C918F311933FCF0083AC69 /* der_decode_utctime.c in Sources */,
 				22C918F411933FCF0083AC69 /* der_decode_utf8_string.c in Sources */,
+				E60816F11B707B7200B283F7 /* der_encode_boolean.c in Sources */,
 				22C918F511933FCF0083AC69 /* der_length_bit_string.c in Sources */,
 				22C918F611933FCF0083AC69 /* der_length_boolean.c in Sources */,
 				22C918F711933FCF0083AC69 /* der_length_ia5_string.c in Sources */,
@@ -1692,7 +1779,9 @@
 				22C9191011933FCF0083AC69 /* rsa_verify_simple.c in Sources */,
 				22C91A031193400A0083AC69 /* bn_fast_mp_invmod.c in Sources */,
 				22C91A041193400A0083AC69 /* bn_fast_mp_montgomery_reduce.c in Sources */,
+				E60816F71B707B7200B283F7 /* der_encode_object_identifier.c in Sources */,
 				22C91A051193400A0083AC69 /* bn_fast_s_mp_mul_digs.c in Sources */,
+				E60816FB1B707B7200B283F7 /* der_encode_printable_string.c in Sources */,
 				22C91A061193400A0083AC69 /* bn_fast_s_mp_mul_high_digs.c in Sources */,
 				22C91A071193400A0083AC69 /* bn_fast_s_mp_sqr.c in Sources */,
 				22C91A081193400A0083AC69 /* bn_mp_2expt.c in Sources */,
@@ -1710,6 +1799,8 @@
 				22C91A141193400A0083AC69 /* bn_mp_cnt_lsb.c in Sources */,
 				22C91A151193400A0083AC69 /* bn_mp_copy.c in Sources */,
 				22C91A161193400A0083AC69 /* bn_mp_count_bits.c in Sources */,
+				E60816F51B707B7200B283F7 /* der_encode_integer.c in Sources */,
+				E60817071B707B7200B283F7 /* der_encode_utf8_string.c in Sources */,
 				22C91A171193400A0083AC69 /* bn_mp_div_2.c in Sources */,
 				22C91A181193400A0083AC69 /* bn_mp_div_2d.c in Sources */,
 				22C91A191193400A0083AC69 /* bn_mp_div_3.c in Sources */,
@@ -1734,6 +1825,7 @@
 				22C91A2C1193400A0083AC69 /* bn_mp_init_set.c in Sources */,
 				22C91A2D1193400A0083AC69 /* bn_mp_init_size.c in Sources */,
 				22C91A2E1193400A0083AC69 /* bn_mp_init.c in Sources */,
+				E60816DA1B707B1800B283F7 /* pkcs_1_pss_encode.c in Sources */,
 				22C91A2F1193400A0083AC69 /* bn_mp_invmod_slow.c in Sources */,
 				22C91A301193400A0083AC69 /* bn_mp_invmod.c in Sources */,
 				22C91A311193400A0083AC69 /* bn_mp_is_square.c in Sources */,
@@ -1747,11 +1839,15 @@
 				22C91A391193400A0083AC69 /* bn_mp_mod.c in Sources */,
 				22C91A3A1193400A0083AC69 /* bn_mp_montgomery_calc_normalization.c in Sources */,
 				22C91A3B1193400A0083AC69 /* bn_mp_montgomery_reduce.c in Sources */,
+				E60817031B707B7200B283F7 /* der_encode_short_integer.c in Sources */,
 				22C91A3C1193400A0083AC69 /* bn_mp_montgomery_setup.c in Sources */,
+				E60816DD1B707B2700B283F7 /* pkcs_1_v1_5_encode.c in Sources */,
 				22C91A3D1193400A0083AC69 /* bn_mp_mul_2.c in Sources */,
+				E60816FD1B707B7200B283F7 /* der_encode_sequence_multi.c in Sources */,
 				22C91A3E1193400A0083AC69 /* bn_mp_mul_2d.c in Sources */,
 				22C91A3F1193400A0083AC69 /* bn_mp_mul_d.c in Sources */,
 				22C91A401193400A0083AC69 /* bn_mp_mul.c in Sources */,
+				E60816EF1B707B7200B283F7 /* der_encode_bit_string.c in Sources */,
 				22C91A411193400A0083AC69 /* bn_mp_mulmod.c in Sources */,
 				22C91A421193400A0083AC69 /* bn_mp_n_root.c in Sources */,
 				22C91A431193400A0083AC69 /* bn_mp_neg.c in Sources */,
@@ -1759,6 +1855,7 @@
 				22C91A451193400A0083AC69 /* bn_mp_prime_fermat.c in Sources */,
 				22C91A461193400A0083AC69 /* bn_mp_prime_is_divisible.c in Sources */,
 				22C91A471193400A0083AC69 /* bn_mp_prime_is_prime.c in Sources */,
+				E60816D71B707A9B00B283F7 /* rsa_sign_hash.c in Sources */,
 				22C91A481193400A0083AC69 /* bn_mp_prime_miller_rabin.c in Sources */,
 				22C91A491193400A0083AC69 /* bn_mp_prime_next_prime.c in Sources */,
 				22C91A4A1193400A0083AC69 /* bn_mp_prime_rabin_miller_trials.c in Sources */,
@@ -1772,8 +1869,11 @@
 				22C91A521193400A0083AC69 /* bn_mp_reduce_2k_l.c in Sources */,
 				22C91A531193400A0083AC69 /* bn_mp_reduce_2k_setup_l.c in Sources */,
 				22C91A541193400A0083AC69 /* bn_mp_reduce_2k_setup.c in Sources */,
+				E60816FF1B707B7200B283F7 /* der_encode_set.c in Sources */,
+				E60817011B707B7200B283F7 /* der_encode_setof.c in Sources */,
 				22C91A551193400A0083AC69 /* bn_mp_reduce_2k.c in Sources */,
 				22C91A561193400A0083AC69 /* bn_mp_reduce_is_2k_l.c in Sources */,
+				E60817051B707B7200B283F7 /* der_encode_utctime.c in Sources */,
 				22C91A571193400A0083AC69 /* bn_mp_reduce_is_2k.c in Sources */,
 				22C91A581193400A0083AC69 /* bn_mp_reduce_setup.c in Sources */,
 				22C91A591193400A0083AC69 /* bn_mp_reduce.c in Sources */,
@@ -1797,6 +1897,8 @@
 				22C91A6B1193400A0083AC69 /* bn_mp_toradix_n.c in Sources */,
 				22C91A6C1193400A0083AC69 /* bn_mp_toradix.c in Sources */,
 				22C91A6D1193400A0083AC69 /* bn_mp_unsigned_bin_size.c in Sources */,
+				E60816F31B707B7200B283F7 /* der_encode_ia5_string.c in Sources */,
+				E60816E01B707B5700B283F7 /* der_encode_sequence_ex.c in Sources */,
 				22C91A6E1193400A0083AC69 /* bn_mp_xor.c in Sources */,
 				22C91A6F1193400A0083AC69 /* bn_mp_zero.c in Sources */,
 				22C91A701193400A0083AC69 /* bn_prime_tab.c in Sources */,
