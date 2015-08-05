@@ -62,6 +62,8 @@ local.properties
 *.vspscc
 .builds
 *.dotCover
+*.o
+*.dylib
 
 ## TODO: If you have NuGet Package Restore enabled, uncomment this
 #packages/
@@ -161,3 +163,5 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+**/project.xcworkspace
+**/xcuserdata
