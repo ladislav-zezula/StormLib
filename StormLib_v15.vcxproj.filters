@@ -2,67 +2,67 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Doc Files">
-      <UniqueIdentifier>{c0babef7-a4c6-465f-b35d-e3e76db9fbf2}</UniqueIdentifier>
+      <UniqueIdentifier>{595d6bc1-89d0-4fb8-98f6-be35e73727c4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{a5af690c-30fc-48a4-a8b3-b355364f523a}</UniqueIdentifier>
+      <UniqueIdentifier>{721663d8-8692-476f-b0fd-71fdadf69929}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{efe8c45b-9ac6-4ece-9802-0684c7c04f4f}</UniqueIdentifier>
+      <UniqueIdentifier>{9cc24144-d198-4bd1-b941-b946bd61b982}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\adpcm">
-      <UniqueIdentifier>{a4ffdb8c-2367-4167-b46f-5053f9efe5ad}</UniqueIdentifier>
+      <UniqueIdentifier>{be0080d3-fc04-4442-9e28-b4cc2641177d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\bzip2">
-      <UniqueIdentifier>{c0d46102-b1f4-4ddd-afb2-23c823e87200}</UniqueIdentifier>
+      <UniqueIdentifier>{adb84a97-8a0c-4988-9473-452326110dff}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\huffman">
-      <UniqueIdentifier>{177c16f2-a75f-402b-9a3f-d5ff582737bf}</UniqueIdentifier>
+      <UniqueIdentifier>{87256d6a-e658-4f60-8759-6bff32a35eb2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt">
-      <UniqueIdentifier>{b16d7cfc-d53a-47d5-9bce-f1bacea7c30c}</UniqueIdentifier>
+      <UniqueIdentifier>{d730d7c1-2960-49d2-ba0d-d1a91dd08964}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\hashes">
-      <UniqueIdentifier>{5ced2573-f357-4a5e-803d-10623c23d91f}</UniqueIdentifier>
+      <UniqueIdentifier>{13e5ccb1-06f1-4d10-bdc1-825b51c64dbf}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\math">
-      <UniqueIdentifier>{a7ad01bf-937b-4726-815b-7017d7fce74b}</UniqueIdentifier>
+      <UniqueIdentifier>{73f7f025-7366-4d76-8d60-4327e00b9d18}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\misc">
-      <UniqueIdentifier>{5178056b-812c-43bb-947e-792cabc52dc1}</UniqueIdentifier>
+      <UniqueIdentifier>{be21c641-7727-4d7b-919e-c895d801db17}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk">
-      <UniqueIdentifier>{f3716532-2a20-4722-af58-917f82b27231}</UniqueIdentifier>
+      <UniqueIdentifier>{694a7758-f909-4b8e-aa13-4d06a8c70eff}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\asn1">
-      <UniqueIdentifier>{7740e6d6-03cf-46d7-8b7f-71296fecb507}</UniqueIdentifier>
+      <UniqueIdentifier>{3f01cae6-5676-4f33-bb38-215341eedfc4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\ecc">
-      <UniqueIdentifier>{b5ee44e8-e6c9-461f-b63f-1135451f1cb2}</UniqueIdentifier>
+      <UniqueIdentifier>{63d75851-c430-4c76-aa08-3398523aab4a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\pkcs1">
-      <UniqueIdentifier>{b0440145-14bb-423e-86ed-91a8013e1df5}</UniqueIdentifier>
+      <UniqueIdentifier>{11175e9e-e9f1-405c-961b-933e72503cdd}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\rsa">
-      <UniqueIdentifier>{62e2f0bb-db68-4626-b8b6-6ff1425b3ef2}</UniqueIdentifier>
+      <UniqueIdentifier>{e30512f4-bdf8-4460-823d-475bd8f08d28}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtommath">
-      <UniqueIdentifier>{e795a249-ae13-4b6c-90ff-3340873e1d5d}</UniqueIdentifier>
+      <UniqueIdentifier>{d2889ef6-3f12-4a9b-8624-8d061748ff03}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\lzma">
-      <UniqueIdentifier>{f710fac0-2561-4ef8-8b66-6de4a840f05d}</UniqueIdentifier>
+      <UniqueIdentifier>{02c6dfb8-4a58-46c5-bb35-69ba6215a3a6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\pklib">
-      <UniqueIdentifier>{60cd5d7f-a9a5-4fbf-ac59-39c097b2e7ec}</UniqueIdentifier>
+      <UniqueIdentifier>{563829a0-aaa3-4af2-88a2-8c6445d2754b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\sparse">
-      <UniqueIdentifier>{9f869665-533d-424d-ada9-db9827e28b0f}</UniqueIdentifier>
+      <UniqueIdentifier>{e82b0d03-77ff-46dc-b5a4-5b469224222a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\zlib">
-      <UniqueIdentifier>{3d0b81c2-cba7-41dc-9fbb-f16fa9638c5d}</UniqueIdentifier>
+      <UniqueIdentifier>{cb92df18-9435-4db9-997a-e0e7d532cd26}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\jenkins">
-      <UniqueIdentifier>{1712688f-dc14-4979-8fdd-8d6b559ab26d}</UniqueIdentifier>
+      <UniqueIdentifier>{2920175c-439c-4fd5-b94e-8cf1d3aaadd3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -77,9 +77,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\FileStream.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\StormCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -110,9 +107,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SBaseCommon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SBaseDumpData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SBaseFileTable.cpp">
@@ -158,9 +152,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SFileVerify.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="test\StormTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\adpcm\adpcm.cpp">

@@ -209,7 +209,7 @@ bool WINAPI SFileOpenArchive(
     {
         ULONGLONG SearchOffset = 0;
         ULONGLONG EndOfSearch = FileSize;
-        DWORD dwStreamFlags = 0;
+        DWORD dwStrmFlags = 0;
         DWORD dwHeaderSize;
         DWORD dwHeaderID;
         bool bSearchComplete = false;
@@ -220,8 +220,8 @@ bool WINAPI SFileOpenArchive(
         pStream = NULL;
 
         // Set the archive read only if the stream is read-only
-        FileStream_GetFlags(ha->pStream, &dwStreamFlags);
-        ha->dwFlags |= (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? MPQ_FLAG_READ_ONLY : 0;
+        FileStream_GetFlags(ha->pStream, &dwStrmFlags);
+        ha->dwFlags |= (dwStrmFlags & STREAM_FLAG_READ_ONLY) ? MPQ_FLAG_READ_ONLY : 0;
 
         // Also remember if we shall check sector CRCs when reading file
         ha->dwFlags |= (dwFlags & MPQ_OPEN_CHECK_SECTOR_CRC) ? MPQ_FLAG_CHECK_SECTOR_CRC : 0;

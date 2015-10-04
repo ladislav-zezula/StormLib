@@ -671,7 +671,7 @@ int Patch_InitPatcher(TMPQPatcher * pPatcher, TMPQFile * hf)
     DWORD cbMaxFileData = 0;
 
     // Overflow check
-    if((sizeof(MPQ_PATCH_HEADER) + cbMaxFileData) < cbMaxFileData)
+    if((cbMaxFileData + (DWORD)sizeof(MPQ_PATCH_HEADER)) < cbMaxFileData)
         return ERROR_NOT_ENOUGH_MEMORY;
     if(hf->hfPatch == NULL)
         return ERROR_INVALID_PARAMETER;
