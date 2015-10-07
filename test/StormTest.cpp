@@ -2441,7 +2441,7 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
                 Logger.PrintMessage("Failed to add the listfile to the MPQ");
         }
 
-        // Attempt to open the listfile and attributes
+        // Attempt to open the (listfile)
         if(SFileHasFile(hMpq, LISTFILE_NAME))
         {
             pFileData = LoadMpqFile(&Logger, hMpq, LISTFILE_NAME);
@@ -2449,10 +2449,18 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
                 STORM_FREE(pFileData);
         }
 
-        // Attempt to open the listfile and attributes
+        // Attempt to open the (attributes)
         if(SFileHasFile(hMpq, ATTRIBUTES_NAME))
         {
             pFileData = LoadMpqFile(&Logger, hMpq, ATTRIBUTES_NAME);
+            if(pFileData != NULL)
+                STORM_FREE(pFileData);
+        }
+
+        // Attempt to open the (signature)
+        if(SFileHasFile(hMpq, SIGNATURE_NAME))
+        {
+            pFileData = LoadMpqFile(&Logger, hMpq, SIGNATURE_NAME);
             if(pFileData != NULL)
                 STORM_FREE(pFileData);
         }
@@ -4176,7 +4184,11 @@ int main(int argc, char * argv[])
     // Test working with an archive that has no listfile
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenById("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
-
+*/
+    // Open a file whose archive's (signature) file has flags = 0x90000000
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_1997_v1_Diablo1_STANDARD.SNP", "ListFile_Blizzard.txt");
+/*
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2012_v2_EmptyMpq.MPQ");
@@ -4303,11 +4315,11 @@ int main(int argc, char * argv[])
     // Open a patched archive with new format of BSDIFF patch
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_34644_Maps, "Maps\\Campaign\\THorner03.SC2Map\\BankList.xml", 3);
-*/
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
-/*
+
     // Open a patched archive where the "StreamingBuckets.txt" is not a patch file
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
@@ -4335,8 +4347,11 @@ int main(int argc, char * argv[])
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ", "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
-
+*/
     // Check archive signature
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_VerifySignature("MPQ_1997_v1_Diablo1_STANDARD.SNP", "STANDARD.SNP");
+/*
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_1999_v1_WeakSignature.exe", "War2Patch_202.exe");
 

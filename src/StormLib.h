@@ -213,11 +213,11 @@ extern "C" {
 #define MPQ_FILE_DELETE_MARKER      0x02000000  // File is a deletion marker. Used in MPQ patches, indicating that the file no longer exists.
 #define MPQ_FILE_SECTOR_CRC         0x04000000  // File has checksums for each sector.
                                                 // Ignored if file is not compressed or imploded.
-
-#define MPQ_FILE_COMPRESS_MASK      0x0000FF00  // Mask for a file being compressed
+#define MPQ_FILE_SIGNATURE          0x10000000  // Present on STANDARD.SNP\(signature). The only occurence ever observed
 #define MPQ_FILE_EXISTS             0x80000000  // Set if file exists, reset when the file was deleted
 #define MPQ_FILE_REPLACEEXISTING    0x80000000  // Replace when the file exist (SFileAddFile)
 
+#define MPQ_FILE_COMPRESS_MASK      0x0000FF00  // Mask for a file being compressed
 #define MPQ_FILE_EXISTS_MASK        0xF00000FF  // These must be either zero or MPQ_FILE_EXISTS
 
 #define MPQ_FILE_VALID_FLAGS     (MPQ_FILE_IMPLODE       |  \
@@ -228,6 +228,7 @@ extern "C" {
                                   MPQ_FILE_SINGLE_UNIT   |  \
                                   MPQ_FILE_DELETE_MARKER |  \
                                   MPQ_FILE_SECTOR_CRC    |  \
+                                  MPQ_FILE_SIGNATURE     |  \
                                   MPQ_FILE_EXISTS)
 
 // Compression types for multiple compressions

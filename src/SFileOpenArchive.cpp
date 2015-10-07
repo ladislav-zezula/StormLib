@@ -428,7 +428,7 @@ bool WINAPI SFileOpenArchive(
         if(pFileEntry != NULL)
         {
             // Just remember that the archive is weak-signed
-            assert(pFileEntry->dwFlags == MPQ_FILE_EXISTS);
+            assert((pFileEntry->dwFlags & MPQ_FILE_EXISTS) != 0);
             ha->dwFileFlags3 = pFileEntry->dwFlags;
         }
 
