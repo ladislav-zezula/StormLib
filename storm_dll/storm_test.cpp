@@ -25,12 +25,16 @@
 int main()
 {
     HANDLE hMpq = NULL;
+    HANDLE hFile = NULL;
 
-    _asm int 3;
-    StormOpenFileEx(NULL, NULL, 0, NULL);
+    if(StormOpenArchive("e:\\Multimedia\\MPQs\\1995 - Test MPQs\\MPQ_2015_v1_MessListFile.mpq", 0, 0, &hMpq))
+    {                             
+        _asm int 3;
+        if(StormOpenFileEx(hMpq, "\\\\\\*¹BTNGoblinPyrotechnician.blp", 0, &hFile))
+        {
+            StormCloseFile(hFile);
+        }
 
-    if(StormOpenArchive("E:\\Multimedia\\MPQs\\1995 - Test MPQs\\MPQ_2014_v1_ProtectedMap_Spazzler3.w3x", 0, 0, &hMpq))
-    {
         StormCloseArchive(hMpq);
     }
 

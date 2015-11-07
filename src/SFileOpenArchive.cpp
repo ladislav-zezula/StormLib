@@ -215,7 +215,7 @@ bool WINAPI SFileOpenArchive(
         bool bSearchComplete = false;
 
         memset(ha, 0, sizeof(TMPQArchive));
-        ha->pfnHashString = HashString;
+        ha->pfnHashString = HashStringSlash;
         ha->pStream = pStream;
         pStream = NULL;
 

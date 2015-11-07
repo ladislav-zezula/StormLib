@@ -138,7 +138,7 @@ static bool FileWasFoundBefore(
         }
 
         // Calculate the hash to the table
-        dwNameHash = HashString(szRealFileName, MPQ_HASH_NAME_A);
+        dwNameHash = ha->pfnHashString(szRealFileName, MPQ_HASH_NAME_A);
         dwStartIndex = dwIndex = (dwNameHash % hs->dwSearchTableItems);
 
         // The file might have been found before

@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Storm_dll", "Storm_dll.vcproj", "{BD600973-C6FA-4CE3-8821-67F6418B7F9C}"
