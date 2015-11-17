@@ -220,8 +220,18 @@ static const char * PatchList_SC2_36281_enGB[] =
     "s2-update-enGB-24540.MPQ",
     "s2-update-enGB-26147.MPQ",
     "s2-update-enGB-28522.MPQ",
-    "s2-update-enGB-30384.MPQ",
-    "s2-update-enGB-32281.MPQ",
+    "s2-update-enGB-30508.MPQ",
+    "s2-update-enGB-32283.MPQ",
+    "s2-update-enGB-32384.MPQ",
+    "s2-update-enGB-34644.MPQ",
+    "s2-update-enGB-36281.MPQ",
+    NULL
+};
+
+static const char * PatchList_HS_3604_enGB[] = 
+{
+    "MPQ_2014_v4_base-Win.MPQ",
+    "hs-0-3604-Win-final.MPQ",
     NULL
 };
 
@@ -999,7 +1009,7 @@ static int VerifyFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, const char * 
     // Check if there are any patches at all
     if(nExpectedPatchCount != 0 && nPatchCount == 0)
     {
-        pLogger->PrintMessage("There are no patches beyond %s", szFileName);
+        pLogger->PrintMessage("There are no patches for %s", szFileName);
         return ERROR_FILE_CORRUPT;
     }
 
@@ -4271,11 +4281,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_ProtectedMap_Spazy.w3x");
-*/
+
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_MessListFile.mpq");
-/*
+
     // Open an protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
@@ -4324,14 +4334,19 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
 
-    // Open a patched archive where the "StreamingBuckets.txt" is not a patch file
+    // Open a patched archive where the "StreamingBuckets.txt" in the patch
+    // doesn't contain MPQ_FILE_PATCH_FILE - THIS DOESN'T WORK PROPERLY
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_HS_3604_enGB, "Hearthstone.exe", 1);
+*/
+    // Open a patched archive
+    if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
-
+/*
     // Check the opening archive for read-only
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_ReadOnly("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", true);
@@ -4351,11 +4366,11 @@ int main(int argc, char * argv[])
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_MasterMirror("MPQ_2013_v4_alternate-downloaded.MPQ", "MPQ_2013_v4_alternate-original.MPQ", "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
-*/
+
     // Check archive signature
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_1997_v1_Diablo1_STANDARD.SNP", "STANDARD.SNP");
-/*
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_VerifySignature("MPQ_1999_v1_WeakSignature.exe", "War2Patch_202.exe");
 

@@ -277,6 +277,8 @@ static int ApplyFilePatch_BSD0(
 
         // Get the longest block that we can combine
         dwCombineSize = ((dwOldOffset + dwAddDataLength) >= dwOldSize) ? (dwOldSize - dwOldOffset) : dwAddDataLength;
+        if((dwNewOffset + dwCombineSize) > dwNewSize || (dwNewOffset + dwCombineSize) < dwNewOffset)
+            return ERROR_FILE_CORRUPT;
 
         // Now combine the patch data with the original file
         for(i = 0; i < dwCombineSize; i++)
