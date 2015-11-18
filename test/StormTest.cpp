@@ -220,8 +220,6 @@ static const char * PatchList_SC2_36281_enGB[] =
     "s2-update-enGB-24540.MPQ",
     "s2-update-enGB-26147.MPQ",
     "s2-update-enGB-28522.MPQ",
-    "s2-update-enGB-30508.MPQ",
-    "s2-update-enGB-32283.MPQ",
     "s2-update-enGB-32384.MPQ",
     "s2-update-enGB-34644.MPQ",
     "s2-update-enGB-36281.MPQ",
@@ -4305,7 +4303,7 @@ int main(int argc, char * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
-
+*/
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -4334,15 +4332,14 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
 
-    // Open a patched archive where the "StreamingBuckets.txt" in the patch
-    // doesn't contain MPQ_FILE_PATCH_FILE - THIS DOESN'T WORK PROPERLY
+    // Open a patched archive where the "StreamingBuckets.txt" in the patch doesn't contain MPQ_FILE_PATCH_FILE
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_3604_enGB, "Hearthstone.exe", 1);
-*/
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);

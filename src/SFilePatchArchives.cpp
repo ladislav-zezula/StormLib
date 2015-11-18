@@ -15,6 +15,8 @@
 //-----------------------------------------------------------------------------
 // Local structures
 
+#define MAX_SC2_PATCH_PREFIX   0x80
+
 #define PATCH_SIGNATURE_HEADER 0x48435450
 #define PATCH_SIGNATURE_MD5    0x5f35444d
 #define PATCH_SIGNATURE_XFRM   0x4d524658
@@ -412,28 +414,50 @@ static bool CreatePatchPrefix(TMPQArchive * ha, const char * szFileName, size_t 
 {
     TMPQNamePrefix * pNewPrefix;
 
-    // If the end of the patch prefix was not entered, find it
+    // If the length of the patch prefix was not entered, find it
+    // Not that the patch prefix must always begin with backslash
     if(szFileName != NULL && nLength == 0)
         nLength = strlen(szFileName);
 
     // Create the patch prefix
-    pNewPrefix = (TMPQNamePrefix *)STORM_ALLOC(BYTE, sizeof(TMPQNamePrefix) + nLength);
+    pNewPrefix = (TMPQNamePrefix *)STORM_ALLOC(BYTE, sizeof(TMPQNamePrefix) + nLength + 1);
     if(pNewPrefix != NULL)
     {
-        // Fill the name prefix
-        pNewPrefix->nLength = nLength;
-        pNewPrefix->szPatchPrefix[0] = 0;
-        
         // Fill the name prefix. Also add the backslash
         if(szFileName && nLength)
         {
             memcpy(pNewPrefix->szPatchPrefix, szFileName, nLength);
-            pNewPrefix->szPatchPrefix[nLength] = 0;
+            if(pNewPrefix->szPatchPrefix[nLength - 1] != '\\')
+                pNewPrefix->szPatchPrefix[nLength++] = '\\';
         }
+
+        // Terminate the string and fill the length
+        pNewPrefix->szPatchPrefix[nLength] = 0;
+        pNewPrefix->nLength = nLength;
     }
 
     ha->pPatchPrefix = pNewPrefix;
     return (pNewPrefix != NULL);
+}
+
+static bool CheckAndCreatePatchPrefix(TMPQArchive * ha, const char * szPatchPrefix, size_t nLength)
+{
+    char szTempName[MAX_SC2_PATCH_PREFIX + 0x41];
+    bool bResult = false;
+
+    // Prepare the patch file name
+    if(nLength > MAX_SC2_PATCH_PREFIX)
+        return false;
+
+    // Prepare the patched file name
+    memcpy(szTempName, szPatchPrefix, nLength);
+    memcpy(&szTempName[nLength], "\\(patch_metadata)", 18);
+
+    // Verifywhether that file exists
+    if(GetFileEntryLocale(ha, szTempName, 0) != NULL)
+        bResult = CreatePatchPrefix(ha, szPatchPrefix, nLength);
+
+    return bResult;
 }
 
 static bool IsMatchingPatchFile(
@@ -514,6 +538,9 @@ static const char * FindArchiveLanguage(TMPQArchive * ha, PLOCALIZED_MPQ_INFO pM
     return NULL;
 }
 
+//-----------------------------------------------------------------------------
+// Finding ratch prefix for an temporary build of WoW (Pre-Cataclysm)
+
 static bool FindPatchPrefix_WoW_13164_13623(TMPQArchive * haBase, TMPQArchive * haPatch)
 {
     const char * szPatchPrefix;
@@ -534,27 +561,213 @@ static bool FindPatchPrefix_WoW_13164_13623(TMPQArchive * haBase, TMPQArchive * 
     return CreatePatchPrefix(haPatch, szNamePrefix, 5);
 }
 
+//-----------------------------------------------------------------------------
+// Finding patch prefix for Starcraft II (Pre-Legacy of the Void)
+
+//
+// This method tries to match the patch by placement of the archive (in the game subdirectory)
+//
+// Archive Path: %GAME_DIR%\Mods\SwarmMulti.SC2Mod\Base.SC2Data
+// Patch Prefix: Mods\SwarmMulti.SC2Mod\Base.SC2Data
+//
+// Archive Path: %ANY_DIR%\MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data
+// Patch Prefix: Mods\Liberty.SC2Mod\enGB.SC2Data
+//
+
+static bool CheckPatchPrefix_SC2_ArchiveName(
+    TMPQArchive * haPatch,
+    const TCHAR * szPathPtr,
+    const TCHAR * szSeparator,
+    const TCHAR * szPathEnd,
+    const TCHAR * szExpectedString,
+    size_t cchExpectedString)
+{
+    char szPatchPrefix[MAX_SC2_PATCH_PREFIX+0x41];
+    size_t nLength = 0;
+    bool bResult = false;
+
+    // Check whether the length is equal to the length of the expected string
+    if((size_t)(szSeparator - szPathPtr) == cchExpectedString)
+    {
+        // Now check the string itself
+        if(!_tcsnicmp(szPathPtr, szExpectedString, szSeparator - szPathPtr))
+        {
+            // Copy the name string
+            for(; szPathPtr < szPathEnd; szPathPtr++)
+            {
+                if(szPathPtr[0] != _T('/') && szPathPtr[0] != _T('#'))
+                    szPatchPrefix[nLength++] = (char)szPathPtr[0];
+                else
+                    szPatchPrefix[nLength++] = '\\';
+            }
+
+            // Check and create the patch prefix
+            bResult = CheckAndCreatePatchPrefix(haPatch, szPatchPrefix, nLength);
+        }
+    }
+
+    return bResult;
+}
+
+static bool FindPatchPrefix_SC2_ArchiveName(TMPQArchive * haBase, TMPQArchive * haPatch)
+{
+    const TCHAR * szPathBegin = FileStream_GetFileName(haBase->pStream);
+    const TCHAR * szSeparator = NULL;
+    const TCHAR * szPathEnd = szPathBegin + _tcslen(szPathBegin);
+    const TCHAR * szPathPtr;
+    int nSlashCount = 0;
+    int nDotCount = 0;
+
+    // Skip the part where the patch prefix would be too long
+    if((szPathEnd - szPathBegin) > MAX_SC2_PATCH_PREFIX)
+        szPathBegin = szPathEnd - MAX_SC2_PATCH_PREFIX;
+
+    // Search for the file extension
+    for(szPathPtr = szPathEnd; szPathPtr > szPathBegin; szPathPtr--)
+    {
+        if(szPathPtr[0] == _T('.'))
+        {
+            nDotCount++;
+            break;
+        }
+    }
+
+    // Search for the possible begin of the prefix name
+    for(/* NOTHING */; szPathPtr > szPathBegin; szPathPtr--)
+    {
+        // Check the slashes, backslashes and hashes
+        if(szPathPtr[0] == _T('\\') || szPathPtr[0] == _T('/') || szPathPtr[0] == _T('#'))
+        {
+            if(nDotCount == 0)
+                return false;
+            szSeparator = szPathPtr;
+            nSlashCount++;
+        }
+
+        // Check the path parts
+        if(szSeparator != NULL && nSlashCount >= nDotCount)
+        {
+            if(CheckPatchPrefix_SC2_ArchiveName(haPatch, szPathPtr, szSeparator, szPathEnd, _T("Battle.net"), 10))
+                return true;
+            if(CheckPatchPrefix_SC2_ArchiveName(haPatch, szPathPtr, szSeparator, szPathEnd, _T("Campaigns"), 9))
+                return true;
+            if(CheckPatchPrefix_SC2_ArchiveName(haPatch, szPathPtr, szSeparator, szPathEnd, _T("Mods"), 4))
+                return true;
+        }
+    }
+
+    // Not matched, sorry
+    return false;
+}
+
+//
+// This method tries to read the patch prefix from a helper file
+//
+// Example
+// =========================================================
+// MPQ File Name: MPQ_2013_v4_Base1.SC2Data
+// Helper File  : MPQ_2013_v4_Base1.SC2Data-PATCH
+// File Contains: PatchPrefix=Mods\Core.SC2Mod\Base.SC2Data
+// Patch Prefix : Mods\Core.SC2Mod\Base.SC2Data
+//
+
+static bool ExtractPatchPrefixFromFile(const TCHAR * szHelperFile, char * szPatchPrefix, size_t nMaxChars, size_t * PtrLength)
+{
+    TFileStream * pStream;
+    ULONGLONG FileSize = 0;
+    size_t nLength;
+    char szFileData[MAX_PATH+1];
+    bool bResult = false;
+
+    pStream = FileStream_OpenFile(szHelperFile, STREAM_FLAG_READ_ONLY);
+    if(pStream != NULL)
+    {
+        // Retrieve and check the file size
+        FileStream_GetSize(pStream, &FileSize);
+        if(12 <= FileSize && FileSize < MAX_PATH)
+        {
+            // Read the entire file to memory
+            if(FileStream_Read(pStream, NULL, szFileData, (DWORD)FileSize))
+            {
+                // Terminate the buffer with zero
+                szFileData[(DWORD)FileSize] = 0;
+
+                // The file data must begin with the "PatchPrefix" variable
+                if(!_strnicmp(szFileData, "PatchPrefix", 11))
+                {
+                    char * szLinePtr = szFileData + 11;
+                    char * szLineEnd;
+                    
+                    // Skip spaces or '='
+                    while(szLinePtr[0] == ' ' || szLinePtr[0] == '=')
+                        szLinePtr++;
+                    szLineEnd = szLinePtr;
+
+                    // Find the end
+                    while(szLineEnd[0] != 0 && szLineEnd[0] != 0x0A && szLineEnd[0] != 0x0D)
+                        szLineEnd++;
+                    nLength = (size_t)(szLineEnd - szLinePtr);
+
+                    // Copy the variable
+                    if(szLineEnd > szLinePtr && nLength <= nMaxChars)
+                    {
+                        memcpy(szPatchPrefix, szLinePtr, nLength);
+                        szPatchPrefix[nLength] = 0;
+                        PtrLength[0] = nLength;
+                        bResult = true;
+                    }
+                }
+            }
+        }
+
+        // Close the stream
+        FileStream_Close(pStream);
+    }
+
+    return bResult;
+}
+
+
+static bool FindPatchPrefix_SC2_HelperFile(TMPQArchive * haBase, TMPQArchive * haPatch)
+{
+    TCHAR szHelperFile[MAX_PATH+1];
+    char szPatchPrefix[MAX_SC2_PATCH_PREFIX+0x41];
+    size_t nLength = 0;
+    bool bResult = false;
+
+    // Create the name of the patch helper file
+    _tcscpy(szHelperFile, FileStream_GetFileName(haBase->pStream));
+    if(_tcslen(szHelperFile) + 6 > MAX_PATH)
+        return false;
+    _tcscat(szHelperFile, _T("-PATCH"));
+
+    // Open the patch helper file and read the line
+    if(ExtractPatchPrefixFromFile(szHelperFile, szPatchPrefix, MAX_SC2_PATCH_PREFIX, &nLength))
+        bResult = CheckAndCreatePatchPrefix(haPatch, szPatchPrefix, nLength);
+
+    return bResult;
+}
+
 //
 // Find match in Starcraft II patch MPQs
 // Match a LST file in the root directory if the MPQ with any of the file in subdirectories
 //
 // The problem:
-// Base:  enGB-md5.lst
-// Patch: Campaigns\Liberty.SC2Campaign\enGB.SC2Assets\enGB-md5.lst
-//        Campaigns\Liberty.SC2Campaign\enGB.SC2Data\enGB-md5.lst
-//        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst
-//        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst Mods\Core.SC2Mod\enGB.SC2Assets\enGB-md5.lst
-//        Mods\Core.SC2Mod\enGB.SC2Data\enGB-md5.lst
-//        Mods\Liberty.SC2Mod\enGB.SC2Assets\enGB-md5.lst
-//        Mods\Liberty.SC2Mod\enGB.SC2Data\enGB-md5.lst
-//        Mods\LibertyMulti.SC2Mod\enGB.SC2Data\enGB-md5.lst
+// File in the base MPQ:  enGB-md5.lst
+// File in the patch MPQ: Campaigns\Liberty.SC2Campaign\enGB.SC2Assets\enGB-md5.lst
+//                        Campaigns\Liberty.SC2Campaign\enGB.SC2Data\enGB-md5.lst
+//                        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst
+//                        Campaigns\LibertyStory.SC2Campaign\enGB.SC2Data\enGB-md5.lst Mods\Core.SC2Mod\enGB.SC2Assets\enGB-md5.lst
+//                        Mods\Core.SC2Mod\enGB.SC2Data\enGB-md5.lst
+//                        Mods\Liberty.SC2Mod\enGB.SC2Assets\enGB-md5.lst
+//                        Mods\Liberty.SC2Mod\enGB.SC2Data\enGB-md5.lst
+//                        Mods\LibertyMulti.SC2Mod\enGB.SC2Data\enGB-md5.lst
 //
 // Solution:
 // We need to match the file by its MD5
 //
 
-// Note: pBaseEntry is the file entry of the base version of "StreamingBuckets.txt"
-static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch, TFileEntry * pBaseEntry)
+static bool FindPatchPrefix_SC2_MatchFiles(TMPQArchive * haBase, TMPQArchive * haPatch, TFileEntry * pBaseEntry)
 {
     TMPQNamePrefix * pPatchPrefix;
     char * szPatchFileName;
@@ -613,6 +826,59 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch, TFi
 
     return bResult;
 }
+
+// Note: pBaseEntry is the file entry of the base version of "StreamingBuckets.txt"
+static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch, TFileEntry * pBaseEntry)
+{
+    // Method 1: Try it by the placement of the archive.
+    // Works when someone is opening an archive in the game (sub)directory
+    if(FindPatchPrefix_SC2_ArchiveName(haBase, haPatch))
+        return true;
+
+    // Method 2: Try to locate the Name.Ext-PATCH file and read the patch prefix from it
+    if(FindPatchPrefix_SC2_HelperFile(haBase, haPatch))
+        return true;
+
+    // Method 3: Try to pair any version of "StreamingBuckets.txt" from the patch MPQ
+    // with the "StreamingBuckets.txt" in the base MPQ. Does not always work
+    if(FindPatchPrefix_SC2_MatchFiles(haBase, haPatch, pBaseEntry))
+        return true;
+
+    return false;
+}
+
+//
+// Patch prefix is the path subdirectory where the patched files are within MPQ.
+//
+// Example 1:
+// Main MPQ:  locale-enGB.MPQ
+// Patch MPQ: wow-update-12694.MPQ
+// File in main MPQ: DBFilesClient\Achievement.dbc
+// File in patch MPQ: enGB\DBFilesClient\Achievement.dbc
+// Path prefix: enGB
+//
+// Example 2:
+// Main MPQ:  expansion1.MPQ
+// Patch MPQ: wow-update-12694.MPQ
+// File in main MPQ: DBFilesClient\Achievement.dbc
+// File in patch MPQ: Base\DBFilesClient\Achievement.dbc
+// Path prefix: Base
+//
+// Example 3:
+// Main MPQ:  %GAME%\Battle.net\Battle.net.MPQ
+// Patch MPQ: s2-update-base-26147.MPQ
+// File in main MPQ: Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml 
+// File in patch MPQ: Battle.net\Battle.net.MPQ\Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml 
+// Path prefix: Battle.net\Battle.net.MPQ
+//
+// Example 4:
+// Main MPQ:  %GAME%\Campaigns\Liberty.SC2Campaign\enGB.SC2Data
+//   *OR*     %ANY_DIR%\%ANY_NAME%Campaigns#Liberty.SC2Campaign#enGB.SC2Data
+// Patch MPQ: s2-update-enGB-23258.MPQ
+// File in main MPQ: LocalizedData\GameHotkeys.txt
+// File in patch MPQ: Campaigns\Liberty.SC2Campaign\enGB.SC2Data\LocalizedData\GameHotkeys.txt
+// Patch Prefix: Campaigns\Liberty.SC2Campaign\enGB.SC2Data
+//
 
 static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const char * szPatchPathPrefix)
 {
@@ -818,24 +1084,6 @@ void Patch_Finalize(TMPQPatcher * pPatcher)
 
 //-----------------------------------------------------------------------------
 // Public functions
-
-//
-// Patch prefix is the path subdirectory where the patched files are within MPQ.
-//
-// Example 1:
-// Main MPQ:  locale-enGB.MPQ
-// Patch MPQ: wow-update-12694.MPQ
-// File in main MPQ: DBFilesClient\Achievement.dbc
-// File in patch MPQ: enGB\DBFilesClient\Achievement.dbc
-// Path prefix: enGB
-//
-// Example 2:
-// Main MPQ:  expansion1.MPQ
-// Patch MPQ: wow-update-12694.MPQ
-// File in main MPQ: DBFilesClient\Achievement.dbc
-// File in patch MPQ: Base\DBFilesClient\Achievement.dbc
-// Path prefix: Base
-//
 
 bool WINAPI SFileOpenPatchArchive(
     HANDLE hMpq,
