@@ -2821,11 +2821,11 @@ void FileStream_Close(TFileStream * pStream)
             FileStream_Close(pStream->pMaster);
         pStream->pMaster = NULL;
 
-        // Close the stream provider.
+        // Close the stream provider ...
         if(pStream->StreamClose != NULL)
             pStream->StreamClose(pStream);
         
-        // Also close base stream, if any
+        // ... or close base stream, if any
         else if(pStream->BaseClose != NULL)
             pStream->BaseClose(pStream);
 
