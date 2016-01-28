@@ -365,6 +365,13 @@ bool WINAPI SFileOpenArchive(
             ha->pUserData = NULL;
         }
 
+        // Anti-overflow. If the hash table size in the header is
+        // higher than 0x10000000, it would overflow in 32-bit version
+        // Observed in the malformed Warcraft III maps
+        // Example map: MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x
+        ha->pHeader->dwHashTableSize &= 0x0FFFFFFF;
+        ha->pHeader->dwBlockTableSize &= 0x0FFFFFFF;
+
         // Both MPQ_OPEN_NO_LISTFILE or MPQ_OPEN_NO_ATTRIBUTES trigger read only mode
         if(dwFlags & (MPQ_OPEN_NO_LISTFILE | MPQ_OPEN_NO_ATTRIBUTES))
             ha->dwFlags |= MPQ_FLAG_READ_ONLY;

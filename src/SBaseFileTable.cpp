@@ -685,6 +685,12 @@ static TMPQHash * DefragmentHashTable(
     // Parse the hash table and move the entries to the begin of it
     for(pSource = pHashTable; pSource < pHashTableEnd; pSource++)
     {
+        // We need to mask out the upper 4 bits of the block table index.
+        // This is because it gets shifted out when calculating block table offset
+        // BlockTableOffset = pHash->dwBlockIndex * 0x10
+        // Malformed MPQ maps may contain invalid entries
+        pSource->dwBlockIndex &= 0x0FFFFFFF;
+
         // Check whether this is a valid hash table entry
         if(IsValidHashEntry1(ha, pSource, pBlockTable))
         {
@@ -768,6 +774,12 @@ static int BuildFileTableFromBlockTable(
         DWORD dwBlockIndex = pHash->dwBlockIndex;
         DWORD dwNewIndex = pHash->dwBlockIndex;
 
+        // We need to mask out the upper 4 bits of the block table index.
+        // This is because it gets shifted out when calculating block table offset
+        // BlockTableOffset = pHash->dwBlockIndex * 0x10
+        // Malformed MPQ maps may contain invalid entries
+        pHash->dwBlockIndex &= 0x0FFFFFFF;
+
         //
         // We need to properly handle these cases:
         // - Multiple hash entries (same file name) point to the same block entry
@@ -776,6 +788,7 @@ static int BuildFileTableFromBlockTable(
         // Ignore all hash table entries where:
         // - dwBlockIndex >= BlockTableSize
         // - Flags of the appropriate block table entry
+        //
 
         if(IsValidHashEntry1(ha, pHash, pBlockTable))
         {
