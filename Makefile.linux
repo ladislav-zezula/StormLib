@@ -265,6 +265,7 @@ COBJS = src/libtomcrypt/src/hashes/sha1.o \
 
 LIB = libStorm.so
 SLIB = libStorm.a
+SLIBA = $(SLIB)
 
 all: $(OBJS) $(COBJS) $(LIB) $(SLIB)
 
@@ -272,7 +273,7 @@ $(LIB): $(OBJS) $(COBJS)
 	$(C++) $(ARCH) -shared -o $(LIB) $(OBJS) $(COBJS) $(LFLAGS)
 
 $(SLIB): $(OBJS) $(COBJS)
-	$(AR) rcs $(SLIB) $(OBJS) $(COBJS)
+	$(AR) rcS $(SLIB) $(OBJS) $(COBJS)
 
 clean:
 	rm -f $(OBJS) $(COBJS) $(LIB)
@@ -286,6 +287,7 @@ $(COBJS): %.o: %.c
 $(LIB): $(OBJS) $(COBJS)
 
 all: $(LIB)
+	ranlib -c $(SLIB)
 
 install: $(LIB)
 	install $(LIB) /usr/local/lib

@@ -4287,11 +4287,7 @@ int main(int argc, char * argv[])
     // Open an protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
-*/
-    // Open another protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
-/*
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4307,7 +4303,7 @@ int main(int argc, char * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
-
+*/
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -4347,7 +4343,7 @@ int main(int argc, char * argv[])
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
-
+/*
     // Check the opening archive for read-only
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_ReadOnly("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", true);
