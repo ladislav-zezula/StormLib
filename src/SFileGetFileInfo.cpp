@@ -773,6 +773,17 @@ bool WINAPI SFileGetFileInfo(
             }
             break;
 
+        case SFileInfoCRC32:
+            hf = IsValidFileHandle(hMpqOrFile);
+            if(hf != NULL && hf->pFileEntry != NULL)
+            {
+                dwInt32Value = hf->pFileEntry->dwCrc32;
+                pvSrcFileInfo = &dwInt32Value;
+                cbSrcFileInfo = sizeof(DWORD);
+                nInfoType = SFILE_INFO_TYPE_DIRECT_POINTER;
+            }
+            break;
+
         default:    // Invalid info class
             SetLastError(ERROR_INVALID_PARAMETER);
             return false;

@@ -435,6 +435,7 @@ typedef enum _SFileInfoClass
     SFileInfoFlags,                         // File flags from (DWORD)
     SFileInfoEncryptionKey,                 // File encryption key
     SFileInfoEncryptionKeyRaw,              // Unfixed value of the file key
+    SFileInfoCRC32,                         // CRC32 of the file
 } SFileInfoClass;
 
 //-----------------------------------------------------------------------------

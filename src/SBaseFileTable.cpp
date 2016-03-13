@@ -771,9 +771,6 @@ static int BuildFileTableFromBlockTable(
     pHashTableEnd = ha->pHashTable + pHeader->dwHashTableSize;
     for(pHash = ha->pHashTable; pHash < pHashTableEnd; pHash++)
     {
-        DWORD dwBlockIndex = pHash->dwBlockIndex;
-        DWORD dwNewIndex = pHash->dwBlockIndex;
-
         // We need to mask out the upper 4 bits of the block table index.
         // This is because it gets shifted out when calculating block table offset
         // BlockTableOffset = pHash->dwBlockIndex * 0x10
@@ -792,6 +789,9 @@ static int BuildFileTableFromBlockTable(
 
         if(IsValidHashEntry1(ha, pHash, pBlockTable))
         {
+            DWORD dwBlockIndex = pHash->dwBlockIndex;
+            DWORD dwNewIndex = pHash->dwBlockIndex;
+
             // Determine the new block index
             if(DefragmentTable != NULL)
             {

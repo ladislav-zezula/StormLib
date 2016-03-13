@@ -2420,6 +2420,54 @@ static int TestOpenFile_OpenById(const char * szPlainName)
     return nError;
 }
 
+static int TestOpenFile_OpenByName(const char * szPlainName, const char * szFileName)
+{
+    TLogHelper Logger("OpenFileById", szPlainName);
+    TFileData * pFileData = NULL;
+    HANDLE hFile;
+    HANDLE hMpq;
+    DWORD dwCrc32_1 = 0;
+    DWORD dwCrc32_2 = 0;
+    int nError;
+
+    // Copy the archive so we won't fuck up the original one
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, NULL, &hMpq);
+
+    // Now try to open the given file
+    if(nError == ERROR_SUCCESS)
+    {
+        // Retrieve the CRC32
+        if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
+        {
+            SFileGetFileInfo(hFile, SFileInfoCRC32, &dwCrc32_1, sizeof(dwCrc32_1), NULL);
+            SFileCloseFile(hFile);
+        }
+
+        // Load the entire file
+        pFileData = LoadMpqFile(&Logger, hMpq, szFileName);
+        if(pFileData != NULL)
+        {
+            // Compare the CRC32, if available
+            dwCrc32_2 = crc32(0, (Bytef *)pFileData->FileData, (uInt)pFileData->dwFileSize);
+            STORM_FREE(pFileData);
+        }
+        else
+            nError = Logger.PrintError("Failed to load the file %s", "File00000023.xxx");
+
+        // Compare the CRC32
+        if(nError == ERROR_SUCCESS && dwCrc32_1 && dwCrc32_2)
+        {
+            if(dwCrc32_1 != dwCrc32_2)
+                Logger.PrintError("Warning: CRC32 error on %s", szFileName);
+        }
+    }
+
+    // Close the archive
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
+    return nError;
+}
+
 static int TestOpenArchive(const char * szPlainName, const char * szListFile = NULL, bool bDontCopyArchive = false)
 {
     TLogHelper Logger("OpenMpqTest", szPlainName);
@@ -4192,7 +4240,11 @@ int main(int argc, char * argv[])
     // Test working with an archive that has no listfile
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenById("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
-
+*/
+    // Open the update MPQ from Diablo II (patch 2016)
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenFile_OpenByName("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq", "waitingroombkgd.dc6");
+/*
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_1997_v1_Diablo1_STANDARD.SNP", "ListFile_Blizzard.txt");
@@ -4288,6 +4340,10 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
 
+    // Open another protected map
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4303,7 +4359,7 @@ int main(int argc, char * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
-*/
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -4343,7 +4399,7 @@ int main(int argc, char * argv[])
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
-/*
+
     // Check the opening archive for read-only
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_ReadOnly("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", true);
