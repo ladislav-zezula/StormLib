@@ -2452,7 +2452,7 @@ static int TestOpenFile_OpenByName(const char * szPlainName, const char * szFile
             STORM_FREE(pFileData);
         }
         else
-            nError = Logger.PrintError("Failed to load the file %s", "File00000023.xxx");
+            nError = Logger.PrintError("Failed to load the file %s", szFileName);
 
         // Compare the CRC32
         if(nError == ERROR_SUCCESS && dwCrc32_1 && dwCrc32_2)
