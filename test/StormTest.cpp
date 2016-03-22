@@ -4240,11 +4240,11 @@ int main(int argc, char * argv[])
     // Test working with an archive that has no listfile
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenById("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
-*/
+
     // Open the update MPQ from Diablo II (patch 2016)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenByName("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq", "waitingroombkgd.dc6");
-/*
+
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_1997_v1_Diablo1_STANDARD.SNP", "ListFile_Blizzard.txt");
@@ -4343,7 +4343,11 @@ int main(int argc, char * argv[])
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
-
+*/
+    // Open another protected map
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x");
+/*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");

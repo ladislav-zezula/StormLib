@@ -2154,9 +2154,10 @@ static TMPQHash * LoadHashTable(TMPQArchive * ha)
     DWORD dwCmpSize;
     bool bHashTableIsCut = false;
 
-    // If the MPQ has no hash table, do nothing
-    if(pHeader->dwHashTablePos == 0 && pHeader->wHashTablePosHi == 0)
-        return NULL;
+    // Note: It is allowed to load hash table if it is at offset 0.
+    // Example: MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x
+//  if(pHeader->dwHashTablePos == 0 && pHeader->wHashTablePosHi == 0)
+//      return NULL;
 
     // If the hash table size is zero, do nothing
     if(pHeader->dwHashTableSize == 0)
@@ -2214,9 +2215,10 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool /* bDontFixEntries */)
     DWORD dwCmpSize;
     bool bBlockTableIsCut = false;
 
-    // Do nothing if the block table position is zero
-    if(pHeader->dwBlockTablePos == 0 && pHeader->wBlockTablePosHi == 0)
-        return NULL;
+    // Note: It is possible that the block table starts at offset 0
+    // Example: MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x
+//  if(pHeader->dwBlockTablePos == 0 && pHeader->wBlockTablePosHi == 0)
+//      return NULL;
 
     // Do nothing if the block table size is zero
     if(pHeader->dwBlockTableSize == 0)
@@ -2311,8 +2313,8 @@ int LoadAnyHashTable(TMPQArchive * ha)
     if(pHeader->HetTablePos64 != 0)
         ha->pHetTable = LoadHetTable(ha);
 
-    // Try to load the hash table
-    if(pHeader->wHashTablePosHi || pHeader->dwHashTablePos)
+    // Try to load classic hash table
+    if(pHeader->dwHashTableSize)
         ha->pHashTable = LoadHashTable(ha);
 
     // At least one of the tables must be present
