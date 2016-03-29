@@ -591,10 +591,12 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
     ULONGLONG ByteOffset;    
     TMPQBlock * pBlock = pBlockTable + pHash->dwBlockIndex;
 
-    // Storm.dll does not perform this check. However, if there will
-    // be an entry with (dwBlockIndex > dwBlockTableSize), the game would crash
-    // Hence we assume that dwBlockIndex must be less than dwBlockTableSize
-    if(pHash->dwBlockIndex < ha->pHeader->dwBlockTableSize)
+    // We need to mask out the upper 4 bits of the block table index.
+    // This is because it gets shifted out when calculating block table offset
+    // BlockTableOffset = pHash->dwBlockIndex * 0x10
+    // Malformed MPQ maps may contain invalid entries
+    // Note that Storm.dll does not perfom this check
+    if((pHash->dwBlockIndex & 0x0FFFFFFF) < ha->pHeader->dwBlockTableSize)
     {
         // Check whether this is an existing file
         // Also we do not allow to be file size greater than 2GB
@@ -685,12 +687,6 @@ static TMPQHash * DefragmentHashTable(
     // Parse the hash table and move the entries to the begin of it
     for(pSource = pHashTable; pSource < pHashTableEnd; pSource++)
     {
-        // We need to mask out the upper 4 bits of the block table index.
-        // This is because it gets shifted out when calculating block table offset
-        // BlockTableOffset = pHash->dwBlockIndex * 0x10
-        // Malformed MPQ maps may contain invalid entries
-        pSource->dwBlockIndex &= 0x0FFFFFFF;
-
         // Check whether this is a valid hash table entry
         if(IsValidHashEntry1(ha, pSource, pBlockTable))
         {
@@ -771,12 +767,6 @@ static int BuildFileTableFromBlockTable(
     pHashTableEnd = ha->pHashTable + pHeader->dwHashTableSize;
     for(pHash = ha->pHashTable; pHash < pHashTableEnd; pHash++)
     {
-        // We need to mask out the upper 4 bits of the block table index.
-        // This is because it gets shifted out when calculating block table offset
-        // BlockTableOffset = pHash->dwBlockIndex * 0x10
-        // Malformed MPQ maps may contain invalid entries
-        pHash->dwBlockIndex &= 0x0FFFFFFF;
-
         //
         // We need to properly handle these cases:
         // - Multiple hash entries (same file name) point to the same block entry
