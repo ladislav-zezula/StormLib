@@ -2079,8 +2079,70 @@ static int RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileN
     return ERROR_SUCCESS;
 }
 
+static ULONGLONG SFileGetFilePointer(HANDLE hFile)
+{
+    LONG FilePosHi = 0;
+    DWORD FilePosLo;
+
+    FilePosLo = SFileSetFilePointer(hFile, 0, &FilePosHi, FILE_CURRENT);
+    return MAKE_OFFSET64(FilePosHi, FilePosLo);
+}
+
 //-----------------------------------------------------------------------------
 // Tests
+
+static int TestSetFilePointer(
+    HANDLE hFile,
+    LONGLONG DeltaPos,
+    ULONGLONG ExpectedPos,
+    DWORD dwMoveMethod,
+    bool bUseFilePosHigh,
+    int nError)
+{
+    ULONGLONG NewPos = 0;
+    LONG DeltaPosHi = (LONG)(DeltaPos >> 32);
+    LONG DeltaPosLo = (LONG)(DeltaPos);
+
+    // If there was an error before, do nothing
+    if(nError == ERROR_SUCCESS)
+    {
+        SFileSetFilePointer(hFile, DeltaPosLo, bUseFilePosHigh ? &DeltaPosHi : NULL, dwMoveMethod);
+        NewPos = SFileGetFilePointer(hFile);
+        if(NewPos != ExpectedPos)
+            nError = ERROR_HANDLE_EOF;
+    }
+    
+    return nError;
+}
+
+static int TestSetFilePointers(HANDLE hFile, bool bUseFilePosHigh)
+{
+    LONGLONG FileSize;
+    int nError = ERROR_SUCCESS;
+
+    // We expect the file to be at least 2 pages long
+    FileSize = SFileGetFileSize(hFile, NULL);
+    if(FileSize < 0x2000)
+        return ERROR_NOT_SUPPORTED;
+
+    // Move 0x20 bytes from the beginning. Expected new pos is 0x20
+    nError = TestSetFilePointer(hFile, 0x20, 0x20, FILE_BEGIN, bUseFilePosHigh, nError);
+
+    // Move 0x20 bytes from the current position. Expected new pos is 0x20
+    nError = TestSetFilePointer(hFile, 0x20, 0x40, FILE_CURRENT, bUseFilePosHigh, nError);
+
+    // Move 0x40 bytes back. Because the offset can't be moved to negative position, it will be zero
+    nError = TestSetFilePointer(hFile, -64, 0x00, FILE_CURRENT, bUseFilePosHigh, nError);
+
+    // Move 0x40 bytes before the end of the file
+    nError = TestSetFilePointer(hFile, -64, FileSize-64, FILE_END, bUseFilePosHigh, nError);
+
+    // Move 0x80 bytes forward. Should be at end of file
+    nError = TestSetFilePointer(hFile, 0x80, FileSize, FILE_CURRENT, bUseFilePosHigh, nError);
+
+    return nError;
+}
+
 
 static void TestGetFileInfo(
     TLogHelper * pLogger,
@@ -2530,6 +2592,47 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
     return nError;
 }
 
+static int TestOpenArchive_SetPos(const char * szPlainName, const char * szFileName)
+{
+    TLogHelper Logger("SetPosTest", szPlainName);
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
+    TCHAR szMpqName[MAX_PATH];
+    char szFullPath[MAX_PATH];
+    int nError = ERROR_SUCCESS;
+
+    // Create the full path name for the archive
+    CreateFullPathName(szFullPath, szMpqSubDir, szPlainName);
+    CopyFileName(szMpqName, szFullPath, strlen(szFullPath));
+
+    // Try to open the archive. It is expected to fail
+    Logger.PrintProgress("Opening archive %s", szPlainName);
+    if(SFileOpenArchive(szMpqName, 0, MPQ_OPEN_READ_ONLY, &hMpq))
+    {
+        if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
+        {
+            // First, use the SFileSetFilePointer WITHOUT the high-dword position
+            if(nError == ERROR_SUCCESS)
+                nError = TestSetFilePointers(hFile, false);
+
+            // First, use the SFileSetFilePointer WITH the high-dword position
+            if(nError == ERROR_SUCCESS)
+                nError = TestSetFilePointers(hFile, false);
+
+            // Close the file
+            SFileCloseFile(hFile);
+        }
+        else
+            nError = GetLastError();
+
+        // Close the archive
+        SFileCloseArchive(hMpq);
+    }
+    else
+        nError = GetLastError();
+
+    return nError;
+}
 
 // Open an empty archive (found in WoW cache - it's just a header)
 static int TestOpenArchive_WillFail(const char * szPlainName)
@@ -4248,7 +4351,11 @@ int main(int argc, char * argv[])
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_1997_v1_Diablo1_STANDARD.SNP", "ListFile_Blizzard.txt");
-
+*/
+    // Test the SFileSetFilePointer operations
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_SetPos("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", "music\\dtowne.wav");
+/*
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2012_v2_EmptyMpq.MPQ");
@@ -4343,11 +4450,11 @@ int main(int argc, char * argv[])
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
-*/
+
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x");
-/*
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");

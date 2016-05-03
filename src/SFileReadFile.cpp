@@ -801,9 +801,10 @@ DWORD WINAPI SFileGetFileSize(HANDLE hFile, LPDWORD pdwFileSizeHigh)
 DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHigh, DWORD dwMoveMethod)
 {
     TMPQFile * hf = (TMPQFile *)hFile;
-    ULONGLONG FilePosition;
-    ULONGLONG MoveOffset;
-    DWORD dwFilePosHi;
+    ULONGLONG OldPosition;
+    ULONGLONG NewPosition;
+    ULONGLONG FileSize;
+    ULONGLONG DeltaPos;
 
     // If the hFile is not a valid file handle, return an error.
     if(!IsValidFileHandle(hFile))
@@ -812,33 +813,47 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
         return SFILE_INVALID_POS;
     }
 
+    // Retrieve the file size for handling the limits
+    if(hf->pStream != NULL)
+    {
+        FileStream_GetSize(hf->pStream, &FileSize);
+    }
+    else
+    {
+        FileSize = SFileGetFileSize(hFile, NULL);
+    }
+
+    // Handle the NULL and non-NULL values of plFilePosHigh
+    // Non-NULL: The DeltaPos is combined from lFilePos and *lpFilePosHigh
+    // NULL: The DeltaPos is sign-extended value of lFilePos
+    DeltaPos = (plFilePosHigh != NULL) ? MAKE_OFFSET64(plFilePosHigh[0], lFilePos) : (ULONGLONG)(LONGLONG)lFilePos;
+
     // Get the relative point where to move from
     switch(dwMoveMethod)
     {
         case FILE_BEGIN:
-            FilePosition = 0;
+
+            // Move relative to the file begin.
+            OldPosition = 0;
             break;
 
         case FILE_CURRENT:
+            
+            // Retrieve the current file position
             if(hf->pStream != NULL)
             {
-                FileStream_GetPos(hf->pStream, &FilePosition);
+                FileStream_GetPos(hf->pStream, &OldPosition);
             }
             else
             {
-                FilePosition = hf->dwFilePos;
+                OldPosition = hf->dwFilePos;
             }
             break;
 
         case FILE_END:
-            if(hf->pStream != NULL)
-            {
-                FileStream_GetSize(hf->pStream, &FilePosition);
-            }
-            else
-            {
-                FilePosition = SFileGetFileSize(hFile, NULL);
-            }
+
+            // Move relative to the end of the file
+            OldPosition = FileSize;
             break;
 
         default:
@@ -846,47 +861,36 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
             return SFILE_INVALID_POS;
     }
 
-    // Now get the move offset. Note that both values form
-    // a signed 64-bit value (a file pointer can be moved backwards)
-    if(plFilePosHigh != NULL)
-        dwFilePosHi = *plFilePosHigh;
-    else
-        dwFilePosHi = (lFilePos & 0x80000000) ? 0xFFFFFFFF : 0;
-    MoveOffset = MAKE_OFFSET64(dwFilePosHi, lFilePos);
+    // Calculate the new position
+    NewPosition = OldPosition + DeltaPos;
 
-    // Now calculate the new file pointer
-    // Do not allow the file pointer to overflow
-    FilePosition = ((FilePosition + MoveOffset) >= FilePosition) ? (FilePosition + MoveOffset) : 0;
+    // If moving backward, don't allow the new position go negative
+    if((LONGLONG)DeltaPos < 0)
+    {
+        if(NewPosition > FileSize)
+            NewPosition = 0;
+    }
+
+    // If moving forward, don't allow the new position go past the end of the file
+    else
+    {
+        if(NewPosition > FileSize)
+            NewPosition = FileSize;
+    }
 
     // Now apply the file pointer to the file
     if(hf->pStream != NULL)
     {
-        // Apply the new file position
-        if(!FileStream_Read(hf->pStream, &FilePosition, NULL, 0))
+        if(!FileStream_Read(hf->pStream, &NewPosition, NULL, 0))
             return SFILE_INVALID_POS;
-
-        // Return the new file position
-        if(plFilePosHigh != NULL)
-            *plFilePosHigh = (LONG)(FilePosition >> 32);
-        return (DWORD)FilePosition;
     }
     else
     {
-        // Files in MPQ can't be bigger than 4 GB.
-        // We don't allow to go past 4 GB
-        if(FilePosition >> 32)
-        {
-            SetLastError(ERROR_INVALID_PARAMETER);
-            return SFILE_INVALID_POS;
-        }
-
-        // Change the file position
-        hf->dwFilePos = (DWORD)FilePosition;
-
-        // Return the new file position
-        if(plFilePosHigh != NULL)
-            *plFilePosHigh = 0;
-        return (DWORD)FilePosition;
+        hf->dwFilePos = (DWORD)NewPosition;
     }
-}
 
+    // Return the new file position
+    if(plFilePosHigh != NULL)
+        *plFilePosHigh = (LONG)(NewPosition >> 32);
+    return (DWORD)NewPosition;
+}
