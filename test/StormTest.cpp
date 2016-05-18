@@ -3047,10 +3047,12 @@ static int TestOpenArchive_SignExisting(const char * szPlainName)
 }
 
 // Open an empty archive (found in WoW cache - it's just a header)
-static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char * szCopyName)
+static int TestOpenArchive_CompactArchive(const char * szPlainName, const char * szCopyName, bool bAddUserData)
 {
-    TLogHelper Logger("CraftedMpqTest", szPlainName);
-    HANDLE hMpq;
+    TLogHelper Logger("CompactMpqTest", szPlainName);
+	ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
+	ULONGLONG UserDataSize = (bAddUserData) ? 0x531 : 0;
+	HANDLE hMpq;
     DWORD dwFileCount1 = 0;
     DWORD dwFileCount2 = 0;
     BYTE FileHash1[MD5_DIGEST_SIZE];
@@ -3059,7 +3061,7 @@ static int TestOpenArchive_CraftedUserData(const char * szPlainName, const char 
     int nError;
 
     // Create copy of the archive, with interleaving some user data
-    nError = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, 0x400, 0x531);
+    nError = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, PreMpqDataSize, UserDataSize);
     
     // Open the archive and load some files
     if(nError == ERROR_SUCCESS)
@@ -4351,11 +4353,11 @@ int main(int argc, char * argv[])
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_1997_v1_Diablo1_STANDARD.SNP", "ListFile_Blizzard.txt");
-*/
+
     // Test the SFileSetFilePointer operations
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_SetPos("MPQ_1997_v1_Diablo1_DIABDAT.MPQ", "music\\dtowne.wav");
-/*
+
     // Open an empty archive (found in WoW cache - it's just a header)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2012_v2_EmptyMpq.MPQ");
@@ -4547,15 +4549,19 @@ int main(int argc, char * argv[])
 
     // Compact the archive
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CraftedUserData("MPQ_2010_v3_expansion-locale-frFR.MPQ", "StormLibTest_CraftedMpq1_v3.mpq");
+        nError = TestOpenArchive_CompactArchive("MPQ_2010_v3_expansion-locale-frFR.MPQ", "StormLibTest_CraftedMpq1_v3.mpq", true);
+*/
+    // Compact the archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_CompactArchive("00000.pak", "00000.pak", false);
+/*
+    // Open a MPQ (add custom user data to it)
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_CompactArchive("MPQ_2013_v4_SC2_EmptyMap.SC2Map", "StormLibTest_CraftedMpq2_v4.mpq", true);
 
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_SC2_EmptyMap.SC2Map", "StormLibTest_CraftedMpq2_v4.mpq");
-
-    // Open a MPQ (add custom user data to it)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CraftedUserData("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq");
+        nError = TestOpenArchive_CompactArchive("MPQ_2013_v4_expansion1.MPQ", "StormLibTest_CraftedMpq3_v4.mpq", true);
 
     if(nError == ERROR_SUCCESS)
         nError = TestAddFile_FullTable("MPQ_2014_v1_out1.w3x");

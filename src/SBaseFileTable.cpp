@@ -785,7 +785,7 @@ static int BuildFileTableFromBlockTable(
             // Determine the new block index
             if(DefragmentTable != NULL)
             {
-                // Need to handle case when multile hash
+                // Need to handle case when multiple hash
                 // entries point to the same block entry
                 if(DefragmentTable[dwBlockIndex] == HASH_ENTRY_FREE)
                 {
@@ -2602,6 +2602,13 @@ int DefragmentFileTable(TMPQArchive * ha)
                 // Update the block table size
                 dwBlockTableSize = (DWORD)(pSource - ha->pFileTable) + 1;
             }
+			else
+			{
+				// If there is file name left, free it
+				if(pSource->szFileName != NULL)
+					STORM_FREE(pSource->szFileName);
+				pSource->szFileName = NULL;
+			}
         }
 
         // Did we defragment something?
@@ -2615,14 +2622,17 @@ int DefragmentFileTable(TMPQArchive * ha)
             {
                 TMPQHash * pHashTableEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
                 TMPQHash * pHash;
+				DWORD dwNewBlockIndex;
 
                 for(pHash = ha->pHashTable; pHash < pHashTableEnd; pHash++)
                 {
                     if(pHash->dwBlockIndex < ha->dwFileTableSize)
-                    {
-                        assert(DefragmentTable[pHash->dwBlockIndex] != HASH_ENTRY_FREE);
-                        pHash->dwBlockIndex = DefragmentTable[pHash->dwBlockIndex];
-                    }
+					{
+						// If that block entry is there, set it to the hash entry
+						// If not, set it as DELETED
+						dwNewBlockIndex = DefragmentTable[pHash->dwBlockIndex];
+						pHash->dwBlockIndex = (dwNewBlockIndex != HASH_ENTRY_FREE) ? dwNewBlockIndex : HASH_ENTRY_DELETED;
+					}
                 }
             }
         }
