@@ -4456,7 +4456,11 @@ int main(int argc, char * argv[])
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x");
-
+*/
+    // Something like Somj 2.0
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_Somj2.w3x");
+/*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4550,11 +4554,11 @@ int main(int argc, char * argv[])
     // Compact the archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CompactArchive("MPQ_2010_v3_expansion-locale-frFR.MPQ", "StormLibTest_CraftedMpq1_v3.mpq", true);
-*/
+
     // Compact the archive
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactArchive("00000.pak", "00000.pak", false);
-/*
+        nError = TestOpenArchive_CompactArchive("MPQ_2016_v1_00000.pak", "MPQ_2016_v1_00000.pak", false);
+
     // Open a MPQ (add custom user data to it)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_CompactArchive("MPQ_2013_v4_SC2_EmptyMap.SC2Map", "StormLibTest_CraftedMpq2_v4.mpq", true);
