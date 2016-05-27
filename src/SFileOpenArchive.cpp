@@ -369,8 +369,8 @@ bool WINAPI SFileOpenArchive(
         // higher than 0x10000000, it would overflow in 32-bit version
         // Observed in the malformed Warcraft III maps
         // Example map: MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x
-        ha->pHeader->dwHashTableSize &= 0x0FFFFFFF;
-        ha->pHeader->dwBlockTableSize &= 0x0FFFFFFF;
+        ha->pHeader->dwBlockTableSize = MPQ_BLOCK_INDEX(ha->pHeader->dwBlockTableSize);
+        ha->pHeader->dwHashTableSize = MPQ_BLOCK_INDEX(ha->pHeader->dwHashTableSize);
 
         // Both MPQ_OPEN_NO_LISTFILE or MPQ_OPEN_NO_ATTRIBUTES trigger read only mode
         if(dwFlags & (MPQ_OPEN_NO_LISTFILE | MPQ_OPEN_NO_ATTRIBUTES))

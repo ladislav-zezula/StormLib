@@ -4273,11 +4273,11 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-
-    // Search all testing archives and verify their SHA1 hash
-//  if(nError == ERROR_SUCCESS)
-//      nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 /*
+    // Search all testing archives and verify their SHA1 hash
+    if(nError == ERROR_SUCCESS)
+        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+
     // Test sparse compression
     if(nError == ERROR_SUCCESS)
         nError = TestSparseCompression();
@@ -4456,10 +4456,17 @@ int main(int argc, char * argv[])
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x");
-*/
+
     // Something like Somj 2.0
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_Somj2.w3x");
+
+    // Protector from China (2016-05-27)
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_WME4_4.w3x");
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_AnotherProtectedMap.w3x");
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)

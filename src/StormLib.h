@@ -218,7 +218,6 @@ extern "C" {
 #define MPQ_FILE_REPLACEEXISTING    0x80000000  // Replace when the file exist (SFileAddFile)
 
 #define MPQ_FILE_COMPRESS_MASK      0x0000FF00  // Mask for a file being compressed
-#define MPQ_FILE_EXISTS_MASK        0xF00000FF  // These must be either zero or MPQ_FILE_EXISTS
 
 #define MPQ_FILE_VALID_FLAGS     (MPQ_FILE_IMPLODE       |  \
                                   MPQ_FILE_COMPRESS      |  \
@@ -230,6 +229,8 @@ extern "C" {
                                   MPQ_FILE_SECTOR_CRC    |  \
                                   MPQ_FILE_SIGNATURE     |  \
                                   MPQ_FILE_EXISTS)
+
+#define MPQ_BLOCK_INDEX(bi) ((bi) & 0x0FFFFFFF) // Index mask for block table index
 
 // Compression types for multiple compressions
 #define MPQ_COMPRESSION_HUFFMANN          0x01  // Huffmann compression (used on WAVE files only)

@@ -581,23 +581,33 @@ int ConvertMpqHeaderToFormat4(
 // Hash entry verification when the file table does not exist yet
 bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash)
 {
-    TFileEntry * pFileEntry = ha->pFileTable + pHash->dwBlockIndex;
-    return ((pHash->dwBlockIndex < ha->dwFileTableSize) && (pFileEntry->dwFlags & MPQ_FILE_EXISTS)) ? true : false;
+    TFileEntry * pFileEntry = ha->pFileTable + MPQ_BLOCK_INDEX(pHash->dwBlockIndex);
+    DWORD dwBlockIndex = MPQ_BLOCK_INDEX(pHash->dwBlockIndex);
+    
+    pFileEntry = ha->pFileTable + dwBlockIndex;
+    return ((dwBlockIndex < ha->dwFileTableSize) && (pFileEntry->dwFlags & MPQ_FILE_EXISTS)) ? true : false;
 }
 
 // Hash entry verification when the file table does not exist yet
 static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pBlockTable)
 {
     ULONGLONG ByteOffset;    
-    TMPQBlock * pBlock = pBlockTable + pHash->dwBlockIndex;
+    TMPQBlock * pBlock;
+    DWORD dwBlockIndex;
 
     // We need to mask out the upper 4 bits of the block table index.
     // This is because it gets shifted out when calculating block table offset
     // BlockTableOffset = pHash->dwBlockIndex * 0x10
     // Malformed MPQ maps may contain invalid entries
     // Note that Storm.dll does not perfom this check
-    if((pHash->dwBlockIndex & 0x0FFFFFFF) < ha->pHeader->dwBlockTableSize)
+    dwBlockIndex = MPQ_BLOCK_INDEX(pHash->dwBlockIndex);
+
+    // The block index is considered valid if it's less than block table size
+    if(dwBlockIndex < ha->pHeader->dwBlockTableSize)
     {
+        // Calculate the block table position
+        pBlock = pBlockTable + dwBlockIndex;
+
         // Check whether this is an existing file
         // Also we do not allow to be file size greater than 2GB
         if((pBlock->dwFlags & MPQ_FILE_EXISTS) && (pBlock->dwFSize & 0x8000000) == 0)
@@ -783,8 +793,8 @@ static int BuildFileTableFromBlockTable(
 
         if(IsValidHashEntry1(ha, pHash, pBlockTable))
         {
-            DWORD dwBlockIndex = pHash->dwBlockIndex;
-            DWORD dwNewIndex = pHash->dwBlockIndex;
+            DWORD dwBlockIndex = MPQ_BLOCK_INDEX(pHash->dwBlockIndex);
+            DWORD dwNewIndex = MPQ_BLOCK_INDEX(pHash->dwBlockIndex);
 
             // Determine the new block index
             if(DefragmentTable != NULL)
