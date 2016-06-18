@@ -4405,7 +4405,7 @@ int main(int argc, char * argv[])
     // Open a partial MPQ with compressed hash table
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
-
+*/
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x");
 
@@ -4464,9 +4464,9 @@ int main(int argc, char * argv[])
     // Protector from China (2016-05-27)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_WME4_4.w3x");
-*/
+
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2016_v1_AnotherProtectedMap.w3x");
+        nError = TestOpenArchive("MPQ_2016_v1_SP_(4)Adrenaline.w3x");
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)

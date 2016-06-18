@@ -299,7 +299,7 @@ static int DoMPQSearch_HashTable(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileDa
         if(IsValidHashEntry(ha, pHash))
         {
             // Check if this file entry should be included in the search result
-            if(DoMPQSearch_FileEntry(hs, lpFindFileData, ha, pHash, ha->pFileTable + pHash->dwBlockIndex))
+            if(DoMPQSearch_FileEntry(hs, lpFindFileData, ha, pHash, ha->pFileTable + MPQ_BLOCK_INDEX(pHash)))
                 return ERROR_SUCCESS;
         }
     }

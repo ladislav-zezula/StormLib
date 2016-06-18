@@ -187,7 +187,6 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
     TSQPHash * pSqpHashEnd;
     TSQPHash * pSqpHash;
     TMPQHash * pMpqHash;
-    DWORD dwBlockIndex;
     int nError = ERROR_SUCCESS;
 
     // Load the hash table
@@ -203,8 +202,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
             if(pSqpHash->dwBlockIndex != HASH_ENTRY_FREE)
             {
                 // Check block index against the size of the block table
-                dwBlockIndex = pSqpHash->dwBlockIndex;
-                if(pHeader->dwBlockTableSize <= dwBlockIndex && dwBlockIndex < HASH_ENTRY_DELETED)
+                if(pHeader->dwBlockTableSize <= MPQ_BLOCK_INDEX(pSqpHash) && MPQ_BLOCK_INDEX(pSqpHash) < HASH_ENTRY_DELETED)
                     nError = ERROR_FILE_CORRUPT;
 
                 // We do not support nonzero locale and platform ID
@@ -216,8 +214,8 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
                 pMpqHash->dwName2 = pSqpHash->dwName2;
 
                 // Store the rest. Note that this must be done last,
-                // because pSqpHash->dwBlockIndex corresponds to pMpqHash->dwName2
-                pMpqHash->dwBlockIndex = dwBlockIndex;
+                // because block index corresponds to pMpqHash->dwName2
+                pMpqHash->dwBlockIndex = MPQ_BLOCK_INDEX(pSqpHash);
                 pMpqHash->wPlatform = 0;
                 pMpqHash->lcLocale = 0;
             }

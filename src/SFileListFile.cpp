@@ -350,7 +350,7 @@ static int SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFil
         while(pHash != NULL)
         {
             // Allocate file name for the file entry
-            AllocateFileName(ha, ha->pFileTable + pHash->dwBlockIndex, szFileName);
+            AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
 
             // Now find the next language version of the file
             pHash = GetNextHashEntry(ha, pFirstHash, pHash);
