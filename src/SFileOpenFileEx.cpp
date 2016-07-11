@@ -30,7 +30,7 @@ static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
     pHashTableEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
     for(pHash = ha->pHashTable; pHash < pHashTableEnd; pHash++)
     {
-        if(pHash->dwBlockIndex == dwFileIndex)
+        if(MPQ_BLOCK_INDEX(pHash) == dwFileIndex)
         {
             // Duplicate hash entry found
             if(dwFirstIndex != HASH_ENTRY_FREE)

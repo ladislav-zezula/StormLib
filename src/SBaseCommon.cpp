@@ -255,6 +255,21 @@ DWORD HashStringLower(const char * szFileName, DWORD dwHashType)
 //-----------------------------------------------------------------------------
 // Calculates the hash table size for a given amount of files
 
+// Returns the nearest higher power of two.
+// If the value is already a power of two, returns the same value
+//static DWORD GetNearestPowerOfTwo(DWORD dwValue)
+//{
+//    dwValue --;
+//
+//    dwValue |= dwValue >> 1;
+//    dwValue |= dwValue >> 2;
+//    dwValue |= dwValue >> 4;
+//    dwValue |= dwValue >> 8;
+//    dwValue |= dwValue >> 16;
+//
+//    return dwValue + 1;
+//}
+
 DWORD GetHashTableSizeForFileCount(DWORD dwFileCount)
 {
     DWORD dwPowerOfTwo = HASH_TABLE_SIZE_MIN;
