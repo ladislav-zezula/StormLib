@@ -257,20 +257,20 @@ DWORD HashStringLower(const char * szFileName, DWORD dwHashType)
 
 // Returns the nearest higher power of two.
 // If the value is already a power of two, returns the same value
-//static DWORD GetNearestPowerOfTwo(DWORD dwValue)
-//{
-//    dwValue --;
-//
-//    dwValue |= dwValue >> 1;
-//    dwValue |= dwValue >> 2;
-//    dwValue |= dwValue >> 4;
-//    dwValue |= dwValue >> 8;
-//    dwValue |= dwValue >> 16;
-//
-//    return dwValue + 1;
-//}
+DWORD GetNearestPowerOfTwo(DWORD dwFileCount)
+{
+    dwFileCount --;
 
-DWORD GetHashTableSizeForFileCount(DWORD dwFileCount)
+    dwFileCount |= dwFileCount >> 1;
+    dwFileCount |= dwFileCount >> 2;
+    dwFileCount |= dwFileCount >> 4;
+    dwFileCount |= dwFileCount >> 8;
+    dwFileCount |= dwFileCount >> 16;
+
+    return dwFileCount + 1;
+}
+/*
+DWORD GetNearestPowerOfTwo(DWORD dwFileCount)
 {
     DWORD dwPowerOfTwo = HASH_TABLE_SIZE_MIN;
 
@@ -284,7 +284,7 @@ DWORD GetHashTableSizeForFileCount(DWORD dwFileCount)
         dwPowerOfTwo <<= 1;
     return dwPowerOfTwo;
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Calculates a Jenkin's Encrypting and decrypting MPQ file data
 

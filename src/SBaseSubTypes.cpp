@@ -202,7 +202,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
             if(pSqpHash->dwBlockIndex != HASH_ENTRY_FREE)
             {
                 // Check block index against the size of the block table
-                if(pHeader->dwBlockTableSize <= MPQ_BLOCK_INDEX(pSqpHash) && MPQ_BLOCK_INDEX(pSqpHash) < HASH_ENTRY_DELETED)
+                if(pHeader->dwBlockTableSize <= MPQ_BLOCK_INDEX(pSqpHash) && pSqpHash->dwBlockIndex < HASH_ENTRY_DELETED)
                     nError = ERROR_FILE_CORRUPT;
 
                 // We do not support nonzero locale and platform ID
@@ -523,7 +523,7 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
     if(pMpkHash != NULL)
     {
         // Calculate the hash table size as if it was real MPQ hash table
-        pHeader->dwHashTableSize = GetHashTableSizeForFileCount(pHeader->dwHashTableSize);
+        pHeader->dwHashTableSize = GetNearestPowerOfTwo(pHeader->dwHashTableSize);
         pHeader->HashTableSize64 = pHeader->dwHashTableSize * sizeof(TMPQHash);
 
         // Now allocate table that will serve like a true MPQ hash table,

@@ -701,7 +701,7 @@ static TMPQHash * DefragmentHashTable(
 
     // Calculate how many entries in the hash table we really need
     dwFirstFreeEntry = (DWORD)(pTarget - pHashTable);
-    dwNewTableSize = GetHashTableSizeForFileCount(dwFirstFreeEntry);
+    dwNewTableSize = GetNearestPowerOfTwo(dwFirstFreeEntry);
 
     // Fill the rest with entries that look like deleted
     pHashTableEnd = pHashTable + dwNewTableSize;

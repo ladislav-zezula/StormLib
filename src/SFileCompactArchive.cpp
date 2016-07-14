@@ -481,7 +481,7 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
         if(nError == ERROR_SUCCESS)
         {
             // Calculate the hash table size for the new file limit
-            dwNewHashTableSize = GetHashTableSizeForFileCount(dwMaxFileCount);
+            dwNewHashTableSize = GetNearestPowerOfTwo(dwMaxFileCount);
 
             // Rebuild both file tables
             nError = RebuildFileTable(ha, dwNewHashTableSize);

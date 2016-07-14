@@ -154,7 +154,7 @@ DWORD HashStringLower(const char * szFileName, DWORD dwHashType);
 
 void  InitializeMpqCryptography();
 
-DWORD GetHashTableSizeForFileCount(DWORD dwFileCount);
+DWORD GetNearestPowerOfTwo(DWORD dwFileCount);
 
 bool IsPseudoFileName(const char * szFileName, LPDWORD pdwFileIndex);
 ULONGLONG HashStringJenkins(const char * szFileName);
