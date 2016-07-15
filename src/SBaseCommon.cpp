@@ -147,7 +147,6 @@ void StringCatT(TCHAR * dest, const TCHAR * src, size_t nMaxChars)
 // Storm hashing functions
 
 #define STORM_BUFFER_SIZE       0x500
-
 #define HASH_INDEX_MASK(ha) (ha->pHeader->dwHashTableSize ? (ha->pHeader->dwHashTableSize - 1) : 0)
 
 static DWORD StormBuffer[STORM_BUFFER_SIZE];    // Buffer for the decryption engine
@@ -192,6 +191,22 @@ void InitializeMpqCryptography()
     }
 }
 
+//
+// Note: Implementation of this function in WorldEdit.exe and storm.dll
+// incorrectly treats the character as signed, which leads to the 
+// a buffer underflow if the character in the file name >= 0x80:
+// The following steps happen when *pbKey == 0xBF and dwHashType == 0x0000
+// (calculating hash index)
+//
+// 1) Result of AsciiToUpperTable_Slash[*pbKey++] is sign-extended to 0xffffffbf
+// 2) The "ch" is added to dwHashType (0xffffffbf + 0x0000 => 0xffffffbf)
+// 3) The result is used as index to the StormBuffer table,
+// thus dereferences a random value BEFORE the begin of StormBuffer.
+//
+// As result, MPQs containing files with non-ANSI characters will not work between
+// various game versions and localizations. Even WorldEdit, after importing a file
+// with Korean characters in the name, cannot open the file back.
+// 
 DWORD HashString(const char * szFileName, DWORD dwHashType)
 {
     LPBYTE pbKey   = (BYTE *)szFileName;

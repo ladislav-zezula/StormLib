@@ -22,15 +22,21 @@
 //-----------------------------------------------------------------------------
 // Main
 
+unsigned char szKoreanFileName[] = {0x77, 0x61, 0x72, 0x33, 0x6D, 0x61, 0x70, 0x49, 0x6D, 0x70, 0x6F, 0x72, 0x74, 0x65, 0x64, 0x5C, 0xBF, 0xD5, 0xB1, 0xB9, 0x2E, 0x6D, 0x70, 0x33, 0x00};
+
 int main()
 {
+    LPCSTR szArchiveName = "e:\\MPQ_2016_v1_KoreanFile.w3m";
     HANDLE hMpq = NULL;
     HANDLE hFile = NULL;
+    char szFileName[MAX_PATH];
 
-    if(StormOpenArchive("e:\\Multimedia\\MPQs\\1995 - Test MPQs\\MPQ_2015_v1_MessListFile.mpq", 0, 0, &hMpq))
+    _asm int 3;
+
+    if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
     {                             
-        _asm int 3;
-        if(StormOpenFileEx(hMpq, "\\\\\\*¹BTNGoblinPyrotechnician.blp", 0, &hFile))
+        memcpy(szFileName, szKoreanFileName, _countof(szKoreanFileName));
+        if(StormOpenFileEx(hMpq, szFileName, 0, &hFile))
         {
             StormCloseFile(hFile);
         }

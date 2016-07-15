@@ -4397,7 +4397,7 @@ int main(int argc, char * argv[])
     // Open a MPK archive from Longwu online
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPx_2013_v1_LongwuOnline.mpk");
-*/
+
     // Open a SQP archive from War of the Immortals
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPx_2013_v1_WarOfTheImmortals.sqp", "ListFile_WarOfTheImmortals.txt");
@@ -4470,7 +4470,10 @@ int main(int argc, char * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_1.4.w3x");
-
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
+/*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4673,7 +4676,7 @@ int main(int argc, char * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

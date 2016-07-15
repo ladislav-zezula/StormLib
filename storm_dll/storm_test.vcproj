@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="Storm_test"
+	Name="storm_test"
 	ProjectGUID="{5B0E680A-EC4E-402E-AE0D-18ADD2DC6EBE}"
-	RootNamespace="Storm_test"
+	RootNamespace="storm_test"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
 	>
@@ -65,11 +65,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/Storm_test.exe"
+				OutputFile="$(OutDir)/storm_test.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib32"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(OutDir)/Storm_test.pdb"
+				ProgramDatabaseFile="$(OutDir)/storm_test.pdb"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
@@ -144,11 +144,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/Storm_test.exe"
+				OutputFile="$(OutDir)/storm_test.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib64"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(OutDir)/Storm_test.pdb"
+				ProgramDatabaseFile="$(OutDir)/storm_test.pdb"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
@@ -219,7 +219,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/Storm_test.exe"
+				OutputFile="$(OutDir)/storm_test.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib32"
 				GenerateDebugInformation="true"
@@ -297,7 +297,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/Storm_test.exe"
+				OutputFile="$(OutDir)/storm_test.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib64"
 				GenerateDebugInformation="true"
@@ -341,7 +341,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\Storm_test.cpp"
+				RelativePath=".\storm_test.cpp"
 				>
 			</File>
 		</Filter>
