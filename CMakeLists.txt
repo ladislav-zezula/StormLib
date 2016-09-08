@@ -282,7 +282,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL FreeBSD)
     message(STATUS "Using FreeBSD port")
     set(LINK_LIBS z bz2)
     set(SRC_ADDITIONAL_FILES ${TOMCRYPT_FILES} ${TOMMATH_FILES})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DO_LARGEFILE -Dstat64=stat -Dlstat64=lstat -Dlseek64=lseek -Doff64_t=off_t -Dfstat64=fstat -Dftruncate64=ftruncate")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DO_LARGEFILE=0 -Dstat64=stat -Dlstat64=lstat -Dlseek64=lseek -Doff64_t=off_t -Dfstat64=fstat -Dftruncate64=ftruncate")
 endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
