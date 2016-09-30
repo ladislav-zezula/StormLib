@@ -1544,7 +1544,7 @@ static int CompareTwoLocalFilesRR(
     return nError;
 }
 
-static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileName)
+static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * szFileName, LCID lcLocale = 0)
 {
     TFileData * pFileData = NULL;
     HANDLE hFile;
@@ -1560,6 +1560,9 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
 //  if(!_stricmp(szFileName, "manifest-cards.csv"))
 //      DebugBreak();
 #endif
+
+    // Make sure that we open the proper locale file
+    SFileSetLocale(lcLocale);
 
     // Open the file from MPQ
     if(!SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
@@ -1714,7 +1717,7 @@ static int SearchArchive(
         if(dwTestFlags & TEST_FLAG_LOAD_FILES)
         {
             // Load the entire file to the MPQ
-            pFileData = LoadMpqFile(pLogger, hMpq, sf.cFileName);
+            pFileData = LoadMpqFile(pLogger, hMpq, sf.cFileName, sf.lcLocale);
             if(pFileData != NULL)
             {
                 // Hash the file data, if needed
@@ -4478,10 +4481,10 @@ int main(int argc, char * argv[])
     // Open a partial MPQ with compressed hash table
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
-
+*/
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x");
-
+        nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
+/*
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
 
@@ -4517,11 +4520,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_MessListFile.mpq");
-
+*/
     // Open an protected map
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("MPQ_2015_v1_flem1.w3x");
-
+        nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
+/*
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
@@ -4548,7 +4551,7 @@ int main(int argc, char * argv[])
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
 */
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
+        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_ProtectedMap123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
