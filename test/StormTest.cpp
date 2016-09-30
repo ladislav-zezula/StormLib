@@ -308,6 +308,25 @@ static bool IsMpqExtension(const char * szFileName)
     return false;
 }
 
+static void BinaryFromString(const char * szBinary, LPBYTE pbBuffer, DWORD cbBuffer)
+{
+    LPBYTE pbBufferEnd = pbBuffer + cbBuffer;
+    char * szTemp;
+    char szHexaDigit[4];
+
+    while(szBinary[0] != 0 && pbBuffer < pbBufferEnd)
+    {
+        // Get the 2-byte chunk
+        szHexaDigit[0] = szBinary[0];
+        szHexaDigit[1] = szBinary[1];
+        szHexaDigit[2] = 0;
+
+        // Convert to integer
+        *pbBuffer++ = (BYTE)strtoul(szHexaDigit, &szTemp, 16);
+        szBinary += 2;
+    }
+}
+
 static void AddStringBeforeExtension(char * szBuffer, const char * szFileName, const char * szExtraString)
 {
     const char * szExtension;
@@ -1675,7 +1694,7 @@ static int SearchArchive(
         // Increment number of files
         dwFileCount++;
 
-//      if(!_stricmp(sf.cFileName, "Interface\\Glues\\CREDITS\\1024px-Blade3_final2.blp"))
+//      if(!_stricmp(sf.cFileName, "war3map.j"))
 //          DebugBreak();
 
         if(dwTestFlags & TEST_FLAG_MOST_PATCHED)
@@ -2630,6 +2649,60 @@ static int TestOpenArchive_SetPos(const char * szPlainName, const char * szFileN
     }
     else
         nError = GetLastError();
+
+    return nError;
+}
+
+static int TestOpenArchive_ProtectedMap(const char * szPlainName, const char * szListFile = NULL, DWORD dwExpectedFileCount = 0, const char * szExpectedMD5 = NULL)
+{
+    TLogHelper Logger("ProtectedMapTest", szPlainName);
+    HANDLE hMpq;
+    DWORD dwTestFlags = TEST_FLAG_LOAD_FILES | TEST_FLAG_HASH_FILES;
+    DWORD dwFileCount = 0;
+    BYTE ExpectedMD5[MD5_DIGEST_SIZE];
+    BYTE OverallMD5[MD5_DIGEST_SIZE];
+    char szListFileBuff[MAX_PATH];
+    int nError;
+
+    // Copy the archive so we won't fuck up the original one
+    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // If the listfile was given, add it to the MPQ
+        if(szListFile != NULL)
+        {
+            Logger.PrintProgress("Adding listfile %s ...", szListFile);
+            CreateFullPathName(szListFileBuff, szMpqSubDir, szListFile);
+            nError = SFileAddListFile(hMpq, szListFileBuff);
+            if(nError != ERROR_SUCCESS)
+                Logger.PrintMessage("Failed to add the listfile to the MPQ");
+        }
+
+        // Search the archive and load every file
+        nError = SearchArchive(&Logger, hMpq, dwTestFlags, &dwFileCount, OverallMD5);
+        SFileCloseArchive(hMpq);
+    }
+
+    // Check the file count and hash, if required
+    if(nError == ERROR_SUCCESS && dwExpectedFileCount != 0)
+    {
+        if(dwFileCount != dwExpectedFileCount)
+        {
+            Logger.PrintMessage("File count mismatch(expected: %u, found:%u)", dwExpectedFileCount, dwFileCount);
+            nError = ERROR_CAN_NOT_COMPLETE;
+        }
+    }
+
+    // Check the overall hash, if required
+    if(nError == ERROR_SUCCESS && szExpectedMD5 != NULL && szExpectedMD5[0] != 0)
+    {
+        BinaryFromString(szExpectedMD5, ExpectedMD5, MD5_DIGEST_SIZE);
+        if(memcmp(ExpectedMD5, OverallMD5, MD5_DIGEST_SIZE))
+        {
+            Logger.PrintMessage("Extracted files MD5 mismatch");
+            nError = ERROR_CAN_NOT_COMPLETE;
+        }
+    }
 
     return nError;
 }
@@ -4470,9 +4543,12 @@ int main(int argc, char * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_1.4.w3x");
-*/
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)

@@ -721,7 +721,7 @@ TMPQHash * AllocateHashEntry(
         pHash->dwName1      = dwName1;
         pHash->dwName2      = dwName2;
         pHash->lcLocale     = (USHORT)lcLocale;
-        pHash->wPlatform    = 0;
+        pHash->Platform     = 0;
         pHash->dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
     }
 

@@ -617,12 +617,13 @@ typedef struct _TMPQHash
 
     // The platform the file is used for. 0 indicates the default platform.
     // No other values have been observed.
-    // Note: wPlatform is actually just BYTE, but since it has never been used, we don't care.
-    USHORT wPlatform;
+    BYTE   Platform;
+    BYTE   Reserved;
 
 #else
 
-    USHORT wPlatform;
+    BYTE   Platform;
+    BYTE   Reserved;
     USHORT lcLocale;
 
 #endif

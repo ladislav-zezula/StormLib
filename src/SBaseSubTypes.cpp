@@ -216,7 +216,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
                 // Store the rest. Note that this must be done last,
                 // because block index corresponds to pMpqHash->dwName2
                 pMpqHash->dwBlockIndex = MPQ_BLOCK_INDEX(pSqpHash);
-                pMpqHash->wPlatform = 0;
+                pMpqHash->Platform = 0;
                 pMpqHash->lcLocale = 0;
             }
         }
@@ -544,7 +544,7 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
 
                 // Copy the MPK hash entry to the hash table
                 pHash->dwBlockIndex = pMpkHash[i].dwBlockIndex;
-                pHash->wPlatform = 0;
+                pHash->Platform = 0;
                 pHash->lcLocale = 0;
                 pHash->dwName1 = pMpkHash[i].dwName2;
                 pHash->dwName2 = pMpkHash[i].dwName3;

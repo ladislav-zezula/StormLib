@@ -22,22 +22,22 @@
 //-----------------------------------------------------------------------------
 // Main
 
-unsigned char szKoreanFileName[] = {0x77, 0x61, 0x72, 0x33, 0x6D, 0x61, 0x70, 0x49, 0x6D, 0x70, 0x6F, 0x72, 0x74, 0x65, 0x64, 0x5C, 0xBF, 0xD5, 0xB1, 0xB9, 0x2E, 0x6D, 0x70, 0x33, 0x00};
-
 int main()
 {
-    LPCSTR szArchiveName = "e:\\MPQ_2016_v1_KoreanFile.w3m";
+    LPCSTR szArchiveName = "e:\\Multimedia\\MPQs\\1995 - Test MPQs\\MPQ_2016_v1_123.w3x";
     HANDLE hMpq = NULL;
     HANDLE hFile = NULL;
-    char szFileName[MAX_PATH];
+    BYTE Buffer[0x100];
+    DWORD dwBytesRead = 0;
 
     _asm int 3;
 
     if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
     {                             
-        memcpy(szFileName, szKoreanFileName, _countof(szKoreanFileName));
-        if(StormOpenFileEx(hMpq, szFileName, 0, &hFile))
+        if(StormOpenFileEx(hMpq, "war3map.j", 0, &hFile))
         {
+            dwBytesRead = StormGetFileSize(hFile, NULL);
+            StormReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL); 
             StormCloseFile(hFile);
         }
 

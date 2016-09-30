@@ -612,32 +612,42 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
 }
 
 // Returns a hash table entry in the following order:
-// 1) A hash table entry with the preferred locale
-// 2) A hash table entry with the neutral locale
+// 1) A hash table entry with the preferred locale and platform
+// 2) A hash table entry with the neutral|matching locale and neutral|matching platform
 // 3) NULL
-static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, LCID lcLocale)
+// Storm_2016.dll: 15020940
+static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, LCID lcLocale, BYTE Platform)
 {
-    TMPQHash * pHashNeutral = NULL;
     TMPQHash * pFirstHash = GetFirstHashEntry(ha, szFileName);
+    TMPQHash * pBestEntry = NULL;
     TMPQHash * pHash = pFirstHash;
 
     // Parse the found hashes
     while(pHash != NULL)
     {
-        // If the locales match, return it
-        if(lcLocale == pHash->lcLocale)
+        // Storm_2016.dll: 150209CB
+        // If the hash entry matches both locale and platform, return it immediately
+        // Note: We only succeed this check if the locale is non-neutral, because
+        // some Warcraft III maps have several items with neutral locale&platform, which leads
+        // to wrong item being returned
+        if((lcLocale || Platform) && pHash->lcLocale == lcLocale && pHash->Platform == Platform)
             return pHash;
-        
-        // If we found neutral hash, remember it
-        if(pHash->lcLocale == 0)
-            pHashNeutral = pHash;
+
+        // Storm_2016.dll: 150209D9
+        // If (locale matches or is neutral) OR (platform matches or is neutral)
+        // remember this as the best entry
+        if(pHash->lcLocale == 0 || pHash->lcLocale == lcLocale)
+        {
+            if(pHash->Platform == 0 || pHash->Platform == Platform)
+                pBestEntry = pHash;
+        }
 
         // Get the next hash entry for that file
         pHash = GetNextHashEntry(ha, pFirstHash, pHash); 
     }
 
     // At the end, return neutral hash (if found), otherwise NULL
-    return pHashNeutral;
+    return pBestEntry;
 }
 
 // Returns a hash table entry in the following order:
@@ -1803,7 +1813,7 @@ TFileEntry * GetFileEntryLocale2(TMPQArchive * ha, const char * szFileName, LCID
     // we will need the pointer to hash table entry
     if(ha->pHashTable != NULL)
     {
-        pHash = GetHashEntryLocale(ha, szFileName, lcLocale);
+        pHash = GetHashEntryLocale(ha, szFileName, lcLocale, 0);
         if(pHash != NULL && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
         {
             if(PtrHashIndex != NULL)
@@ -1987,7 +1997,8 @@ int RenameFileEntry(
         pHashEntry->dwName1      = 0xFFFFFFFF;
         pHashEntry->dwName2      = 0xFFFFFFFF;
         pHashEntry->lcLocale     = 0xFFFF;
-        pHashEntry->wPlatform    = 0xFFFF;
+        pHashEntry->Platform     = 0xFF;
+        pHashEntry->Reserved     = 0xFF;
         pHashEntry->dwBlockIndex = HASH_ENTRY_DELETED;
     }
 
@@ -2027,7 +2038,8 @@ int DeleteFileEntry(TMPQArchive * ha, TMPQFile * hf)
         pHashEntry->dwName1      = 0xFFFFFFFF;
         pHashEntry->dwName2      = 0xFFFFFFFF;
         pHashEntry->lcLocale     = 0xFFFF;
-        pHashEntry->wPlatform    = 0xFFFF;
+        pHashEntry->Platform     = 0xFF;
+        pHashEntry->Reserved     = 0xFF;
         pHashEntry->dwBlockIndex = HASH_ENTRY_DELETED;
     }
 

@@ -51,11 +51,11 @@ void DumpHashTable(TMPQHash * pHashTable, DWORD dwHashTableSize)
     printf("== Hash Table =================================\n");
     for(i = 0; i < dwHashTableSize; i++)
     {
-        printf("[%08x] %08X %08X %04X %04X %08X\n", i,
+        printf("[%08x] %08X %08X %04X %02X %08X\n", i,
                                                     pHashTable[i].dwName1,
                                                     pHashTable[i].dwName2,
                                                     pHashTable[i].lcLocale,
-                                                    pHashTable[i].wPlatform,
+                                                    pHashTable[i].Platform,
                                                     pHashTable[i].dwBlockIndex);
     }
     printf("-----------------------------------------------\n\n");
