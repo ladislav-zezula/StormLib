@@ -261,6 +261,11 @@ set(TEST_SRC_FILES
 
 add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)
 
+if (UNIX)
+    #Check for Bzip2
+    find_package (BZip2 REQUIRED)
+endif()
+
 if(WIN32)
     if(MSVC)
         message(STATUS "Using MSVC")
