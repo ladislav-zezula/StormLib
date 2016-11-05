@@ -80,10 +80,10 @@
     <ClInclude Include="src\StormCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\StormLib.h">
+    <ClInclude Include="include\StormLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\StormPort.h">
+    <ClInclude Include="include\StormPort.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\adpcm\adpcm.h">

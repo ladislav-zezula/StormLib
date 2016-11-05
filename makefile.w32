@@ -10,7 +10,7 @@
 
 CC        = @gcc
 CPP       = @g++
-CFLAGS    = -Wall
+CFLAGS    = -Wall -Iinclude
 DFLAGS    = -D_7ZIP_ST
 EXELFLAGS = -s -Wl,--subsystem,console -lwininet
 DLLLFLAGS = -shared -lwininet

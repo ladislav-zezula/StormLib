@@ -14,7 +14,7 @@
 //-----------------------------------------------------------------------------
 // Functions
 
-#include "../StormPort.h"
+#include <StormPort.h>
 
 int  CompressADPCM  (unsigned char * pbOutBuffer, int dwOutLength, short * pwInBuffer, int dwInLength, int nCmpType, int nChannels);
 int  DecompressADPCM(unsigned char * pbOutBuffer, int dwOutLength, unsigned char * pbInBuffer, int dwInLength, int nChannels);

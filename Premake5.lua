@@ -22,6 +22,8 @@ solution 'StormLib'
         'src/pklib/crc32.c',
         'src/zlib/compress.c',
     }
+	
+	includedirs { "include" }
 
     filter 'configurations:Debug*'
         flags { 'Symbols' }
