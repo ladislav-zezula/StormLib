@@ -1,6 +1,8 @@
 project(StormLib)
 cmake_minimum_required(VERSION 2.6)
 
+include_directories(include)
+
 set(LIBRARY_NAME storm)
 
 set(SRC_FILES
@@ -301,16 +303,16 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
     endif()
 endif()
 
-option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
-
-add_library(${LIBRARY_NAME} ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
-target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
-target_compile_definitions(${LIBRARY_NAME} PUBLIC -D__STORMLIB_NO_AUTO_LINK__) #CMake should take care of the linking
-target_include_directories(${LIBRARY_NAME} PUBLIC include/)
-set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "include/StormLib.h;include/StormPort.h")
-if(BUILD_SHARED_LIBS)
+option(WITH_STATIC "Compile static linked library" OFF)
+if(WITH_STATIC)
+    add_library(${LIBRARY_NAME} STATIC ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
+    target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
+else()
+    add_library(${LIBRARY_NAME} SHARED ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
+    target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
     if(APPLE)
         set_target_properties(${LIBRARY_NAME} PROPERTIES FRAMEWORK true)
+        set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "include/StormLib.h include/StormPort.h")
         set_target_properties(${LIBRARY_NAME} PROPERTIES LINK_FLAGS "-framework Carbon")
     endif()
     if(UNIX)
@@ -326,42 +328,37 @@ if(BUILD_SHARED_LIBS)
     if(WIN32)
         set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME StormLib)
     endif()
+
+    install(TARGETS ${LIBRARY_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib FRAMEWORK DESTINATION /Library/Frameworks)
+
+    #CPack configurtion
+    SET(CPACK_GENERATOR "DEB" "RPM")
+    SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MPQ manipulation library")
+    SET(CPACK_PACKAGE_VENDOR "Ladislav Zezula")
+    SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
+    SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    SET(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+    SET(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+    SET(CPACK_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
+
+    #DEB configuration
+    SET(CPACK_DEBIAN_PACKAGE_SECTION "libs")
+    SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.zezula.net/en/mpq/stormlib.html")
+    SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "imbacen@gmail.com")
+    SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "zlib1g,bzip2")
+
+    #RPM configuration
+    SET(CPACK_RPM_PACKAGE_RELEASE 1)
+    SET(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    SET(CPACK_RPM_PACKAGE_GROUP "${PROJECT_NAME}")
+    SET(CPACK_RPM_PACKAGE_URL "http://www.zezula.net/en/mpq/stormlib.html")
+    SET(CPACK_RPM_PACKAGE_REQUIRES "zlib,bzip2")
+
+    INCLUDE(CPack)
+
 endif()
-install(TARGETS ${LIBRARY_NAME} 
-	RUNTIME DESTINATION bin 
-	LIBRARY DESTINATION lib 
-	ARCHIVE DESTINATION lib 
-	FRAMEWORK DESTINATION /Library/Frameworks
-	PUBLIC_HEADER DESTINATION include
-	INCLUDES DESTINATION include)
-
-#CPack configurtion
-SET(CPACK_GENERATOR "DEB" "RPM")
-SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MPQ manipulation library")
-SET(CPACK_PACKAGE_VENDOR "Ladislav Zezula")
-SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
-SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-SET(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
-SET(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
-SET(CPACK_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
-
-#DEB configuration
-SET(CPACK_DEBIAN_PACKAGE_SECTION "libs")
-SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.zezula.net/en/mpq/stormlib.html")
-SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "imbacen@gmail.com")
-SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "zlib1g,bzip2")
-
-#RPM configuration
-SET(CPACK_RPM_PACKAGE_RELEASE 1)
-SET(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-SET(CPACK_RPM_PACKAGE_GROUP "${PROJECT_NAME}")
-SET(CPACK_RPM_PACKAGE_URL "http://www.zezula.net/en/mpq/stormlib.html")
-SET(CPACK_RPM_PACKAGE_REQUIRES "zlib,bzip2")
-
-INCLUDE(CPack)
-
 
 option(WITH_TEST "Compile Test application" OFF)
 if(WITH_TEST)

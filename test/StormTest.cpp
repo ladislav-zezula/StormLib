@@ -11,14 +11,14 @@
 #define _CRT_NON_CONFORMING_SWPRINTFS
 #define _CRT_SECURE_NO_DEPRECATE
 #define __INCLUDE_CRYPTOGRAPHY__
-#define __STORMLIB_SELF__                   // Don't use StormLib.lib
+#define __STORMLIB_NO_AUTO_LINK__           // Don't use StormLib.lib
 #include <stdio.h>
 
 #ifdef _MSC_VER
 #include <crtdbg.h>
 #endif
 
-#include "../src/StormLib.h"
+#include "../include/StormLib.h"
 #include "../src/StormCommon.h"
 
 #include "TLogHelper.cpp"                   // Helper class for showing test results
@@ -4482,8 +4482,8 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
 */
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
 /*
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
@@ -4522,8 +4522,8 @@ int main(int argc, char * argv[])
         nError = TestOpenArchive("MPQ_2015_v1_MessListFile.mpq");
 */
     // Open an protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
 /*
     // Open another protected map
     if(nError == ERROR_SUCCESS)
@@ -4550,8 +4550,12 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
 */
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_ProtectedMap123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
+
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_ProtectedMap123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
+        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_UnableToOpen.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
+
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)

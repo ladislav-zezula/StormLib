@@ -50,7 +50,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="./src/libtomcrypt/src/headers"
+				AdditionalIncludeDirectories="include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__;__STORMLIB_DUMP_DATA__"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -130,7 +130,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="./src/libtomcrypt/src/headers"
+				AdditionalIncludeDirectories="include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -208,7 +208,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="./src/libtomcrypt/src/headers"
+				AdditionalIncludeDirectories="include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;__STORMLIB_TEST__"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -286,7 +286,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="./src/libtomcrypt/src/headers"
+				AdditionalIncludeDirectories="include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;__STORMLIB_TEST__"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"

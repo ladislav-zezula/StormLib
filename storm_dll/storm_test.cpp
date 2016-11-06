@@ -30,8 +30,6 @@ int main()
     BYTE Buffer[0x100];
     DWORD dwBytesRead = 0;
 
-    _asm int 3;
-
     if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
     {                             
         if(StormOpenFileEx(hMpq, "war3map.j", 0, &hFile))

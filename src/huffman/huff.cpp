@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <string.h>
  
-#include <StormPort.h>
 #include "huff.h"
 
 //-----------------------------------------------------------------------------

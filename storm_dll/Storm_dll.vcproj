@@ -94,7 +94,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -173,7 +172,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="storm_dll.bat $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -251,7 +249,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -330,7 +327,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="storm_dll.bat $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 	</Configurations>
