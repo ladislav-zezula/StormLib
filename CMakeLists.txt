@@ -1,8 +1,6 @@
 project(StormLib)
 cmake_minimum_required(VERSION 2.6)
 
-include_directories(include)
-
 set(LIBRARY_NAME storm)
 
 set(SRC_FILES

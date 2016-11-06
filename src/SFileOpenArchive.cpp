@@ -13,8 +13,8 @@
 /* 19.11.03  1.01  Dan  Big endian handling                                  */
 /*****************************************************************************/
 
-#define __STORMLIB_NO_AUTO_LINK__
-#include <StormLib.h>
+#define __STORMLIB_SELF__
+#include "StormLib.h"
 #include "StormCommon.h"
 
 #define HEADER_SEARCH_BUFFER_SIZE   0x1000

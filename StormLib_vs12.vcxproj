@@ -313,7 +313,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -335,7 +334,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -354,7 +352,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -376,7 +373,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -393,7 +389,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -413,7 +408,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -430,7 +424,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -450,7 +443,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -469,7 +461,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -491,7 +482,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -510,7 +500,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -532,7 +521,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -549,7 +537,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -569,7 +556,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -586,7 +572,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -606,7 +591,6 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>

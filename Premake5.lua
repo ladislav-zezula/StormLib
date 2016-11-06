@@ -23,8 +23,6 @@ solution 'StormLib'
         'src/zlib/compress.c',
     }
 	
-	includedirs { "include" }
-
     filter 'configurations:Debug*'
         flags { 'Symbols' }
         defines { '_DEBUG' }

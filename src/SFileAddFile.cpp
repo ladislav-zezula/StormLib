@@ -9,8 +9,8 @@
 /* 21.04.13  1.01  Dea  AddFile callback now part of TMPQArchive             */
 /*****************************************************************************/
 
-#define __STORMLIB_NO_AUTO_LINK__
-#include <StormLib.h>
+#define __STORMLIB_SELF__
+#include "StormLib.h"
 #include "StormCommon.h"
 
 //-----------------------------------------------------------------------------

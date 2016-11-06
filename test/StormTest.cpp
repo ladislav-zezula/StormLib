@@ -11,14 +11,14 @@
 #define _CRT_NON_CONFORMING_SWPRINTFS
 #define _CRT_SECURE_NO_DEPRECATE
 #define __INCLUDE_CRYPTOGRAPHY__
-#define __STORMLIB_NO_AUTO_LINK__           // Don't use StormLib.lib
+#define __STORMLIB_SELF__                   // Don't use StormLib.lib
 #include <stdio.h>
 
 #ifdef _MSC_VER
 #include <crtdbg.h>
 #endif
 
-#include "../include/StormLib.h"
+#include "../src/StormLib.h"
 #include "../src/StormCommon.h"
 
 #include "TLogHelper.cpp"                   // Helper class for showing test results

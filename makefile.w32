@@ -10,7 +10,7 @@
 
 CC        = @gcc
 CPP       = @g++
-CFLAGS    = -Wall -Iinclude
+CFLAGS    = -Wall
 DFLAGS    = -D_7ZIP_ST
 EXELFLAGS = -s -Wl,--subsystem,console -lwininet
 DLLLFLAGS = -shared -lwininet
@@ -275,8 +275,8 @@ all: $(LIBRARY) $(TESTEXE)
 #install: $(LIBRARY)
 #   install $(LIBRARY) /usr/local/lib
 #   mkdir -p /usr/local/include/StormLib
-#   cp StormLib.h /usr/local/include/StormLib
-#   cp StormPort.h /usr/local/include/StormLib
+#   cp src/StormLib.h /usr/local/include/StormLib
+#   cp src/StormPort.h /usr/local/include/StormLib
 
 $(LIBRARY): $(COBJS) $(OBJS) $(OBJS_DLL)
 	$(CPP) $(CFLAGS) $(DFLAGS) -o $(LIBRARY) $(COBJS) $(OBJS) $(OBJS_DLL) $(DLLLFLAGS)

@@ -8,8 +8,8 @@
 /* 06.09.10  1.00  Lad  The first version of SBaseFileTable.cpp              */
 /*****************************************************************************/
 
-#define __STORMLIB_NO_AUTO_LINK__
-#include <StormLib.h>
+#define __STORMLIB_SELF__
+#include "StormLib.h"
 #include "StormCommon.h"
 
 //-----------------------------------------------------------------------------
