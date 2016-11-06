@@ -9,7 +9,7 @@
 /*****************************************************************************/
 
 #define __STORMLIB_SELF__
-#include "StormLib.h"
+#include <StormLib.h>
 #include "StormCommon.h"
 
 #ifdef __STORMLIB_DUMP_DATA__

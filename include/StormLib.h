@@ -98,7 +98,7 @@ extern "C" {
 //  Z - S for static-linked CRT library, D for multithreaded DLL CRT library
 //
 
-#if defined(_MSC_VER) && !defined(__STORMLIB_SELF__)
+#if defined(_MSC_VER) && !defined(__STORMLIB_NO_AUTO_LINK__)
   
   #ifdef _DEBUG                                 // DEBUG VERSIONS
     #ifndef _UNICODE                            

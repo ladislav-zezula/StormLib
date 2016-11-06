@@ -313,6 +313,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -334,6 +335,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -352,6 +354,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -373,6 +376,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -389,6 +393,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -408,6 +413,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -424,6 +430,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -443,6 +450,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -461,6 +469,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -482,6 +491,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -500,6 +510,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -521,6 +532,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -537,6 +549,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -556,6 +569,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -572,6 +586,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -591,6 +606,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level1</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
@@ -606,8 +622,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\StormCommon.h" />
-    <ClInclude Include="src\StormLib.h" />
-    <ClInclude Include="src\StormPort.h" />
+    <ClInclude Include="include\StormLib.h" />
+    <ClInclude Include="include\StormPort.h" />
     <ClInclude Include="src\adpcm\adpcm.h" />
     <ClInclude Include="src\huffman\huff.h" />
     <ClInclude Include="src\pklib\pklib.h" />

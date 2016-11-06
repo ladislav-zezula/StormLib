@@ -10,7 +10,7 @@
 
 CPP    = g++
 CC     = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -Iinclude
 LFLAGS = -lbz2 -lz -framework Carbon
 ARCH = -arch x86_64
 DFLAGS = -D__SYS_BZLIB -D__SYS_ZLIB -D_7ZIP_ST

@@ -11,7 +11,7 @@
 #ifndef __PKLIB_H__
 #define __PKLIB_H__
 
-#include "../StormPort.h"
+#include <StormPort.h>
 
 //-----------------------------------------------------------------------------
 // Defines
