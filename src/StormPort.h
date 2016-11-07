@@ -33,12 +33,12 @@
   #define false 0
 #endif
 
-//-----------------------------------------------------------------------------
-// Defines for Windows
+/*-----------------------------------------------------------------------------*/
+/* Defines for Windows */
 
 #if !defined(PLATFORM_DEFINED) && defined(_WIN32)
 
-  // In MSVC 8.0, there are some functions declared as deprecated.
+  /* In MSVC 8.0, there are some functions declared as deprecated. */
   #if _MSC_VER >= 1400
   #define _CRT_SECURE_NO_DEPRECATE
   #define _CRT_NON_CONFORMING_SWPRINTFS
@@ -59,16 +59,16 @@
   #endif
 
   #define PLATFORM_WINDOWS
-  #define PLATFORM_DEFINED                  // The platform is known now
+  #define PLATFORM_DEFINED                  /* The platform is known now */
 
 #endif
 
-//-----------------------------------------------------------------------------
-// Defines for Mac
+/*-----------------------------------------------------------------------------*/
+/* Defines for Mac */
 
-#if !defined(PLATFORM_DEFINED) && defined(__APPLE__)  // Mac BSD API
+#if !defined(PLATFORM_DEFINED) && defined(__APPLE__)  /* Mac BSD API */
 
-  // Macintosh
+  /* Macintosh */
   #include <sys/types.h>
   #include <sys/stat.h>
   #include <sys/mman.h>
@@ -77,7 +77,7 @@
   #include <stdlib.h>
   #include <errno.h>
 
-  // Support for PowerPC on Max OS X
+  /* Support for PowerPC on Max OS X */
   #if (__ppc__ == 1) || (__POWERPC__ == 1) || (_ARCH_PPC == 1)
     #include <stdint.h>
     #include <CoreFoundation/CFByteOrder.h>
@@ -92,12 +92,12 @@
   #endif
 
   #define PLATFORM_MAC
-  #define PLATFORM_DEFINED                  // The platform is known now
+  #define PLATFORM_DEFINED                  /* The platform is known now */
 
 #endif
 
-//-----------------------------------------------------------------------------
-// Assumption: we are not on Windows nor Macintosh, so this must be linux *grin*
+/*-----------------------------------------------------------------------------*/
+/* Assumption: we are not on Windows nor Macintosh, so this must be linux *grin* */
 
 #if !defined(PLATFORM_DEFINED)
 
@@ -121,8 +121,8 @@
 
 #endif
 
-//-----------------------------------------------------------------------------
-// Definition of Windows-specific types for non-Windows platforms
+/*-----------------------------------------------------------------------------*/
+/* Definition of Windows-specific types for non-Windows platforms */
 
 #ifndef PLATFORM_WINDOWS
   #if __LP64__
@@ -131,7 +131,7 @@
     #define PLATFORM_32BIT
   #endif
 
-  // Typedefs for ANSI C
+  /* Typedefs for ANSI C */
   typedef unsigned char  BYTE;
   typedef unsigned short USHORT;
   typedef int            LONG;
@@ -142,7 +142,7 @@
   typedef long long      LONGLONG;
   typedef unsigned long long ULONGLONG;
   typedef void         * HANDLE;
-  typedef void         * LPOVERLAPPED; // Unsupported on Linux and Mac
+  typedef void         * LPOVERLAPPED; /* Unsupported on Linux and Mac */
   typedef char           TCHAR;
   typedef unsigned int   LCID;
   typedef LONG         * PLONG;
@@ -153,7 +153,7 @@
     #define _LZMA_UINT32_IS_ULONG
   #endif
 
-  // Some Windows-specific defines
+  /* Some Windows-specific defines */
   #ifndef MAX_PATH
     #define MAX_PATH 1024
   #endif
@@ -181,9 +181,9 @@
   #define _tcsicmp  strcasecmp
   #define _tcsnicmp strncasecmp
 
-#endif // !PLATFORM_WINDOWS
+#endif /* !PLATFORM_WINDOWS */
 
-// 64-bit calls are supplied by "normal" calls on Mac
+/* 64-bit calls are supplied by "normal" calls on Mac */
 #if defined(PLATFORM_MAC)
   #define stat64  stat
   #define fstat64 fstat
@@ -193,7 +193,7 @@
   #define O_LARGEFILE 0
 #endif
                                                 
-// Platform-specific error codes for UNIX-based platforms
+/* Platform-specific error codes for UNIX-based platforms */
 #if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
   #define ERROR_SUCCESS                  0
   #define ERROR_FILE_NOT_FOUND           ENOENT
@@ -205,15 +205,15 @@
   #define ERROR_DISK_FULL                ENOSPC
   #define ERROR_ALREADY_EXISTS           EEXIST
   #define ERROR_INSUFFICIENT_BUFFER      ENOBUFS
-  #define ERROR_BAD_FORMAT               1000        // No such error code under Linux
-  #define ERROR_NO_MORE_FILES            1001        // No such error code under Linux
-  #define ERROR_HANDLE_EOF               1002        // No such error code under Linux
-  #define ERROR_CAN_NOT_COMPLETE         1003        // No such error code under Linux
-  #define ERROR_FILE_CORRUPT             1004        // No such error code under Linux
+  #define ERROR_BAD_FORMAT               1000        /* No such error code under Linux */
+  #define ERROR_NO_MORE_FILES            1001        /* No such error code under Linux */
+  #define ERROR_HANDLE_EOF               1002        /* No such error code under Linux */
+  #define ERROR_CAN_NOT_COMPLETE         1003        /* No such error code under Linux */
+  #define ERROR_FILE_CORRUPT             1004        /* No such error code under Linux */
 #endif
 
-//-----------------------------------------------------------------------------
-// Swapping functions
+/*-----------------------------------------------------------------------------*/
+/* Swapping functions */
 
 #ifdef PLATFORM_LITTLE_ENDIAN
     #define    BSWAP_INT16_UNSIGNED(a)          (a)
@@ -261,10 +261,10 @@
     #define    BSWAP_TMPKHEADER(a)              ConvertTMPKHeader((a))
 #endif
 
-//-----------------------------------------------------------------------------
-// Macro for deprecated symbols
+/*-----------------------------------------------------------------------------*/
+/* Macro for deprecated symbols */
 
-/*
+#if 0
 #ifdef _MSC_VER
   #if _MSC_FULL_VER >= 140050320
     #define STORMLIB_DEPRECATED(_Text) __declspec(deprecated(_Text))
@@ -279,13 +279,13 @@
   #endif
 #endif
 
-// When a flag is deprecated, use this macro
+/* When a flag is deprecated, use this macro */
 #ifndef _STORMLIB_NO_DEPRECATE
   #define STORMLIB_DEPRECATED_FLAG(type, oldflag, newflag)    \
     const STORMLIB_DEPRECATED(#oldflag " is deprecated. Use " #newflag ". To supress this warning, define _STORMLIB_NO_DEPRECATE") static type oldflag = (type)newflag;
 #else
 #define STORMLIB_DEPRECATED_FLAG(type, oldflag, newflag) static type oldflag = (type)newflag;
 #endif
-*/
+#endif
 
-#endif // __STORMPORT_H__
+#endif /* __STORMPORT_H__ */
