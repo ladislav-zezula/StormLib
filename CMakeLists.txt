@@ -305,7 +305,7 @@ option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
 
 add_library(${LIBRARY_NAME} ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
 target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
-target_compile_definitions(${LIBRARY_NAME} PUBLIC) #CMake should take care of the linking
+target_compile_definitions(${LIBRARY_NAME} PUBLIC -D__STORMLIB_SELF__) #CMake should take care of the linking
 target_include_directories(${LIBRARY_NAME} PUBLIC src/)
 set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "src/StormLib.h;src/StormPort.h")
 if(BUILD_SHARED_LIBS)
