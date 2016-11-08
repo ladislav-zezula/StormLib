@@ -301,16 +301,16 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
     endif()
 endif()
 
-option(WITH_STATIC "Compile static linked library" OFF)
-if(WITH_STATIC)
-    add_library(${LIBRARY_NAME} STATIC ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
-    target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
-else()
-    add_library(${LIBRARY_NAME} SHARED ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
-    target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
+option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
+
+add_library(${LIBRARY_NAME} ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
+target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
+target_compile_definitions(${LIBRARY_NAME} PUBLIC) #CMake should take care of the linking
+target_include_directories(${LIBRARY_NAME} PUBLIC src/)
+set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "src/StormLib.h;src/StormPort.h")
+if(BUILD_SHARED_LIBS)
     if(APPLE)
         set_target_properties(${LIBRARY_NAME} PROPERTIES FRAMEWORK true)
-        set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "include/StormLib.h include/StormPort.h")
         set_target_properties(${LIBRARY_NAME} PROPERTIES LINK_FLAGS "-framework Carbon")
     endif()
     if(UNIX)
@@ -326,8 +326,15 @@ else()
     if(WIN32)
         set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME StormLib)
     endif()
+endif()
 
-    install(TARGETS ${LIBRARY_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib FRAMEWORK DESTINATION /Library/Frameworks)
+install(TARGETS ${LIBRARY_NAME} 
+	RUNTIME DESTINATION bin 
+	LIBRARY DESTINATION lib 
+	ARCHIVE DESTINATION lib 
+	FRAMEWORK DESTINATION /Library/Frameworks
+	PUBLIC_HEADER DESTINATION include
+	INCLUDES DESTINATION include)
 
     #CPack configurtion
     SET(CPACK_GENERATOR "DEB" "RPM")
@@ -355,8 +362,6 @@ else()
     SET(CPACK_RPM_PACKAGE_REQUIRES "zlib,bzip2")
 
     INCLUDE(CPack)
-
-endif()
 
 option(WITH_TEST "Compile Test application" OFF)
 if(WITH_TEST)
