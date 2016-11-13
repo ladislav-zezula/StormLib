@@ -34,14 +34,14 @@
 // Local functions - platform-specific functions
 
 #ifndef PLATFORM_WINDOWS
-static int nLastError = ERROR_SUCCESS;
+static DWORD nLastError = ERROR_SUCCESS;
 
-int GetLastError()
+DWORD GetLastError()
 {
     return nLastError;
 }
 
-void SetLastError(int nError)
+void SetLastError(DWORD nError)
 {
     nLastError = nError;
 }

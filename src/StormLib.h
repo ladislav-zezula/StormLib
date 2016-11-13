@@ -1085,8 +1085,8 @@ int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pv
 
 #ifndef PLATFORM_WINDOWS
 
-void  SetLastError(int err);
-int   GetLastError();
+void  SetLastError(DWORD err);
+DWORD   GetLastError();
 
 #endif
 
