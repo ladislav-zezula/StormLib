@@ -71,6 +71,7 @@
 /* 27.08.14  9.10  Lad  Signing archives with weak digital signature         */
 /* 25.11.14  9.11  Lad  Fixed bug reading & creating HET table               */
 /* 18.09.15  9.20  Lad  Release 9.20                                         */
+/* 12.12.16  9.20  Lad  Release 9.21                                         */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -135,8 +136,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0914  // Current version of StormLib (9.20)
-#define STORMLIB_VERSION_STRING         "9.20"  // String version of StormLib version
+#define STORMLIB_VERSION                0x0915  // Current version of StormLib (9.21)
+#define STORMLIB_VERSION_STRING         "9.21"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
