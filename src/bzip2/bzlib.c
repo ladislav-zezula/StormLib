@@ -8,8 +8,8 @@
    This file is part of bzip2/libbzip2, a program and library for
    lossless, block-sorting data compression.
 
-   bzip2/libbzip2 version 1.0.6 of 6 September 2010
-   Copyright (C) 1996-2010 Julian Seward <jseward@bzip.org>
+   bzip2/libbzip2 version 1.0.5 of 10 December 2007
+   Copyright (C) 1996-2007 Julian Seward <jseward@bzip.org>
 
    Please read the WARNING, DISCLAIMER and PATENTS sections in the 
    README file.
@@ -28,6 +28,7 @@
      bzBuffToBuffDecompress.  Fixed.
 */
 
+#define _CRT_SECURE_NO_WARNINGS
 #include "bzlib_private.h"
 
 
@@ -1375,7 +1376,7 @@ const char * BZ_API(BZ2_bzlibVersion)(void)
 #if defined(_WIN32) || defined(OS2) || defined(MSDOS)
 #   include <fcntl.h>
 #   include <io.h>
-#   define SET_BINARY_MODE(file) setmode(fileno(file),O_BINARY)
+#   define SET_BINARY_MODE(file) _setmode(_fileno(file),O_BINARY)
 #else
 #   define SET_BINARY_MODE(file)
 #endif
@@ -1428,7 +1429,7 @@ BZFILE * bzopen_or_bzdopen
 #ifdef BZ_STRICT_ANSI
       fp = NULL;
 #else
-      fp = fdopen(fd,mode2);
+      fp = _fdopen(fd,mode2);
 #endif
    }
    if (fp == NULL) return NULL;
