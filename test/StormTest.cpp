@@ -4550,11 +4550,9 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
 */
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_ProtectedMap123.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
 
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2016_v1_UnableToOpen.w3x", NULL, 17, "23b09ad3b8d89ec97df8860447abc7eb");
+        nError = TestOpenArchive_ProtectedMap("War3TFT_127b_Russian.exe", NULL, 17, "War3patch.mpq");
 
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it

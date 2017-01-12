@@ -600,7 +600,7 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
 
         // Check whether this is an existing file
         // Also we do not allow to be file size greater than 2GB
-        if((pBlock->dwFlags & MPQ_FILE_EXISTS) && (pBlock->dwFSize & 0x8000000) == 0)
+        if((pBlock->dwFlags & MPQ_FILE_EXISTS) && (pBlock->dwFSize & 0x80000000) == 0)
         {
             // The begin of the file must be within the archive
             ByteOffset = FileOffsetFromMpqOffset(ha, pBlock->dwFilePos);
