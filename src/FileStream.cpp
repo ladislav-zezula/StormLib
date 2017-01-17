@@ -156,6 +156,7 @@ static bool BaseFile_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
         if(fstat64(handle, &fileinfo) == -1)
         {
             nLastError = errno;
+            close(handle);
             return false;
         }
 
