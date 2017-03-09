@@ -80,12 +80,6 @@
     <ClInclude Include="src\StormCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\StormLib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\StormPort.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\adpcm\adpcm.h">
       <Filter>Source Files\adpcm</Filter>
     </ClInclude>
@@ -100,6 +94,12 @@
     </ClInclude>
     <ClInclude Include="src\jenkins\lookup.h">
       <Filter>Source Files\jenkins</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StormLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StormPort.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
