@@ -11,6 +11,11 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#ifdef _WIN32
+  #pragma comment(linker, "/export:GetLastError=Kernel32.GetLastError")
+  #pragma comment(linker, "/export:SetLastError=Kernel32.SetLastError")
+#endif
+
 //-----------------------------------------------------------------------------
 // DllMain
 
