@@ -4550,10 +4550,9 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
 */
-
+    // Load map protected by PG1.11.973
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("War3TFT_127b_Russian.exe", NULL, 17, "War3patch.mpq");
-
+        nError = TestOpenArchive("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x");
 /*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)

@@ -338,7 +338,8 @@ int ConvertMpqHeaderToFormat4(
     TMPQArchive * ha,
     ULONGLONG MpqOffset,
     ULONGLONG FileSize,
-    DWORD dwFlags)
+    DWORD dwFlags,
+    bool bIsWarcraft3Map)
 {
     TMPQHeader * pHeader = (TMPQHeader *)ha->HeaderData;
     ULONGLONG BlockTablePos64 = 0;
@@ -350,7 +351,7 @@ int ConvertMpqHeaderToFormat4(
 
     // If version 1.0 is forced, then the format version is forced to be 1.0
     // Reason: Storm.dll in Warcraft III ignores format version value
-    if(dwFlags & MPQ_OPEN_FORCE_MPQ_V1)
+    if((dwFlags & MPQ_OPEN_FORCE_MPQ_V1) || (bIsWarcraft3Map))
         wFormatVersion = MPQ_FORMAT_VERSION_1;
 
     // Format-specific fixes

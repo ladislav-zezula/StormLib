@@ -301,13 +301,13 @@ bool WINAPI SFileOpenArchive(
                 if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
                 {
                     // Now convert the header to version 4
-                    nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags);
+                    nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags, bIsWarcraft3Map);
                     bSearchComplete = true;
                     break;
                 }
 
                 // Check for MPK archives (Longwu Online - MPQ fork)
-                if(dwHeaderID == ID_MPK)
+                if(dwHeaderID == ID_MPK && bIsWarcraft3Map == false)
                 {
                     // Now convert the MPK header to MPQ Header version 4
                     nError = ConvertMpkHeaderToFormat4(ha, FileSize, dwFlags);

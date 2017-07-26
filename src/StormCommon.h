@@ -185,7 +185,7 @@ TMPQFile * IsValidFileHandle(HANDLE hFile);
 ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset);
 ULONGLONG CalculateRawSectorOffset(TMPQFile * hf, DWORD dwSectorOffset);
 
-int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags);
+int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags, bool bIsWarcraft3Map);
 
 bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash);
 
