@@ -231,6 +231,15 @@ extern "C" {
                                   MPQ_FILE_SIGNATURE     |  \
                                   MPQ_FILE_EXISTS)
 
+#define MPQ_FILE_VALID_FLAGS_W3X (MPQ_FILE_IMPLODE       |  \
+                                  MPQ_FILE_COMPRESS      |  \
+                                  MPQ_FILE_ENCRYPTED     |  \
+                                  MPQ_FILE_FIX_KEY       |  \
+                                  MPQ_FILE_DELETE_MARKER |  \
+                                  MPQ_FILE_SECTOR_CRC    |  \
+                                  MPQ_FILE_SIGNATURE     |  \
+                                  MPQ_FILE_EXISTS)
+
 // We need to mask out the upper 4 bits of the block table index.
 // This is because it gets shifted out when calculating block table offset
 // BlockTableOffset = pHash->dwBlockIndex << 0x04

@@ -792,7 +792,7 @@ bool WINAPI SFileCreateFile(
     if(nError == ERROR_SUCCESS)
     {
         // Mask all unsupported flags out
-        dwFlags &= MPQ_FILE_VALID_FLAGS;
+        dwFlags &= (ha->dwFlags & MPQ_FLAG_WAR3_MAP) ? MPQ_FILE_VALID_FLAGS_W3X : MPQ_FILE_VALID_FLAGS;
 
         // Check for valid flag combinations
         if((dwFlags & (MPQ_FILE_IMPLODE | MPQ_FILE_COMPRESS)) == (MPQ_FILE_IMPLODE | MPQ_FILE_COMPRESS))

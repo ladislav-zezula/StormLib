@@ -307,7 +307,7 @@ bool WINAPI SFileOpenArchive(
                 }
 
                 // Check for MPK archives (Longwu Online - MPQ fork)
-                if(dwHeaderID == ID_MPK && bIsWarcraft3Map == false)
+                if(bIsWarcraft3Map == false && dwHeaderID == ID_MPK)
                 {
                     // Now convert the MPK header to MPQ Header version 4
                     nError = ConvertMpkHeaderToFormat4(ha, FileSize, dwFlags);
