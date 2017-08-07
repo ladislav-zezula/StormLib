@@ -3553,6 +3553,43 @@ static int TestCreateArchive_TestGaps(const char * szPlainName)
     return nError;
 }
 
+static int TestCreateArchive_NonStdNames(const char * szPlainName)
+{
+    TLogHelper Logger("NonStdNamesTest", szPlainName);
+    HANDLE hMpq = NULL;
+    int nError = ERROR_SUCCESS;
+
+    // Create new MPQ
+    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1, 4000, &hMpq);
+    if(nError == ERROR_SUCCESS)
+    {
+        // Add few files and close the archive
+        AddFileToMpq(&Logger, hMpq, "AddedFile000.txt", "This is the file data 000.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\/\\/\\/\\AddedFile001.txt", "This is the file data 001.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\\\\\\\\\\\\\\\", "This is the file data 002.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "////////////////", "This is the file data 003.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "//\\//\\//\\//\\", "This is the file data 004.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "................", "This is the file data 005.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "//****//****//****//****.***", "This is the file data 006.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "//*??*//*??*//*??*//?**?.?*?", "This is the file data 007.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt", "This is the file data 008.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt..", "This is the file data 009.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 010.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 011.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\\\Dir1\\\\Dir2\\\\Dir3\\\\File.txt..", "This is the file data 012.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "/Dir1/Dir2/Dir3/File.txt..", "This is the file data 013.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "////Dir1////Dir2////Dir3////File.txt..", "This is the file data 014.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\\//\\Dir1\\//\\Dir2\\//\\File.txt..", "This is the file data 015.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\x10\x11\x12\x13\\\x14\x15\x16\x17\\\x18\x19\x1a\x1b\\\x1c\x1D\x1E\x1F.txt", "This is the file data 016.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\x09\x20\x09\x20\\\x20\x09\x20\x09\\\x09\x20\x09\x20\\\x20\x09\x20\x09.txt", "This is the file data 017.", MPQ_FILE_COMPRESS);
+        AddFileToMpq(&Logger, hMpq, "\x80\x91\xA2\xB3\\\xC4\xD5\xE6\xF7\\\x80\x91\xA2\xB3.txt", "This is the file data 018.", MPQ_FILE_COMPRESS);
+
+        SFileCloseArchive(hMpq);
+    }
+
+    return ERROR_SUCCESS;
+}
+
 static int TestCreateArchive_Signed(const char * szPlainName, bool bSignAtCreate)
 {
     TLogHelper Logger("CreateSignedMpq", szPlainName);
@@ -4549,11 +4586,11 @@ int main(int argc, char * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_KoreanFile.w3m");
-*/
+
     // Load map protected by PG1.11.973
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x");
-/*
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4685,7 +4722,11 @@ int main(int argc, char * argv[])
     // Test creating of an archive the same way like MPQ Editor does
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_TestGaps("StormLibTest_GapsTest.mpq");
-
+*/
+    // Test creating of an archive with non standard file names
+    if(nError == ERROR_SUCCESS)
+        nError = TestCreateArchive_NonStdNames("StormLibTest_NonStdNames.mpq");
+/*
     // Sign an existing non-signed archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_SignExisting("MPQ_1998_v1_StarDat.mpq");

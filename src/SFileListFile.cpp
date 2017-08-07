@@ -175,8 +175,8 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
     LPBYTE pbLineEnd;
     LPBYTE pbExtraString = NULL;
     
-    // Skip newlines, spaces, tabs and another non-printable stuff
-    while(pCache->pPos < pCache->pEnd && pCache->pPos[0] <= 0x20)
+    // Skip newlines. Keep spaces and tabs, as they can be a legal part of the file name
+    while(pCache->pPos < pCache->pEnd && (pCache->pPos[0] == 0x0A || pCache->pPos[0] == 0x0D))
         pCache->pPos++;
     
     // Set the line begin and end
