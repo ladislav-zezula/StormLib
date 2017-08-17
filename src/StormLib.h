@@ -220,6 +220,8 @@ extern "C" {
 
 #define MPQ_FILE_COMPRESS_MASK      0x0000FF00  // Mask for a file being compressed
 
+#define MPQ_FILE_DEFAULT_INTERNAL   0xFFFFFFFF  // Use default flags for internal files
+
 #define MPQ_FILE_VALID_FLAGS     (MPQ_FILE_IMPLODE       |  \
                                   MPQ_FILE_COMPRESS      |  \
                                   MPQ_FILE_ENCRYPTED     |  \
@@ -915,9 +917,9 @@ typedef struct _SFILE_CREATE_MPQ
     void *pvUserData;                           // Reserved, must be NULL
     DWORD cbUserData;                           // Reserved, must be 0
     DWORD dwStreamFlags;                        // Stream flags for creating the MPQ
-    DWORD dwFileFlags1;                         // File flags for (listfile). 0 = default
-    DWORD dwFileFlags2;                         // File flags for (attributes). 0 = default
-    DWORD dwFileFlags3;                         // File flags for (signature). 0 = default
+    DWORD dwFileFlags1;                         // File flags for (listfile). Use MPQ_FILE_DEFAULT_INTERNAL to set default flags
+    DWORD dwFileFlags2;                         // File flags for (attributes). Use MPQ_FILE_DEFAULT_INTERNAL to set default flags
+    DWORD dwFileFlags3;                         // File flags for (signature). Use MPQ_FILE_DEFAULT_INTERNAL to set default flags
     DWORD dwAttrFlags;                          // Flags for the (attributes) file. If 0, no attributes will be created
     DWORD dwSectorSize;                         // Sector size for compressed files
     DWORD dwRawChunkSize;                       // Size of raw data chunk

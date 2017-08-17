@@ -385,7 +385,7 @@ int SListFileSaveToMpq(TMPQArchive * ha)
         if(pbListFile != NULL)
         {
             // Determine the real flags for (listfile)
-            if(ha->dwFileFlags1 == MPQ_FILE_EXISTS)
+            if(ha->dwFileFlags1 == MPQ_FILE_DEFAULT_INTERNAL)
                 ha->dwFileFlags1 = GetDefaultSpecialFileFlags(cbListFile, ha->pHeader->wFormatVersion);
 
             // Create the listfile in the MPQ

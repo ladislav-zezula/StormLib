@@ -429,7 +429,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
         if(pbAttrFile != NULL)
         {
             // Determine the real flags for (attributes)
-            if(ha->dwFileFlags2 == MPQ_FILE_EXISTS)
+            if(ha->dwFileFlags2 == MPQ_FILE_DEFAULT_INTERNAL)
                 ha->dwFileFlags2 = GetDefaultSpecialFileFlags(cbAttrFile, ha->pHeader->wFormatVersion);
 
             // Create the attributes file in the MPQ
