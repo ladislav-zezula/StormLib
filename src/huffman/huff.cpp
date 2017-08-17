@@ -517,7 +517,7 @@ unsigned int THuffmannTree::FixupItemPosByWeight(THTreeItem * pNewItem, unsigned
 }
 
 // Builds Huffman tree. Called with the first 8 bits loaded from input stream
-void THuffmannTree::BuildTree(unsigned int CompressionType)
+bool THuffmannTree::BuildTree(unsigned int CompressionType)
 {
     THTreeItem * pNewItem;
     THTreeItem * pChildLo;
@@ -530,7 +530,8 @@ void THuffmannTree::BuildTree(unsigned int CompressionType)
     MaxWeight = 0;
  
     // Ensure that the compression type is in range
-    assert((CompressionType & 0x0F) <= 0x08);
+    if((CompressionType & 0x0F) > 0x08)
+        return false;
     WeightTable  = WeightTables[CompressionType & 0x0F];
  
     // Build the linear list of entries that is sorted by byte weight
@@ -581,6 +582,7 @@ void THuffmannTree::BuildTree(unsigned int CompressionType)
 
     // Initialize the MinValidValue to 1, which invalidates all quick-link items
     MinValidValue = 1;
+    return true;
 }
 
 void THuffmannTree::IncWeightsAndRebalance(THTreeItem * pItem)
@@ -765,7 +767,8 @@ unsigned int THuffmannTree::Compress(TOutputStream * os, void * pvInBuffer, int 
     unsigned char * pbOutBuff = os->pbOutBuffer;
     unsigned char InputByte;
  
-    BuildTree(CompressionType);
+    if(!BuildTree(CompressionType))
+        return 0;
     bIsCmp0 = (CompressionType == 0);
 
     // Store the compression type into output buffer
@@ -832,7 +835,8 @@ unsigned int THuffmannTree::Decompress(void * pvOutBuffer, unsigned int cbOutLen
     bIsCmp0 = (CompressionType == 0) ? 1 : 0;
  
     // Build the Huffman tree
-    BuildTree(CompressionType);    
+    if(!BuildTree(CompressionType))
+        return 0;
  
     // Process the entire input buffer until end of the stream
     while((DecompressedValue = DecodeOneByte(is)) != 0x100)

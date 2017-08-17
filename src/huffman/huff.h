@@ -115,7 +115,7 @@ class THuffmannTree
     THTreeItem * CreateNewItem(unsigned int DecompressedValue, unsigned int Weight, TInsertPoint InsertPoint);
 
     unsigned int FixupItemPosByWeight(THTreeItem * pItem, unsigned int MaxWeight);
-    void  BuildTree(unsigned int CompressionType);
+    bool  BuildTree(unsigned int CompressionType);
 
     void  IncWeightsAndRebalance(THTreeItem * pItem);
     void  InsertNewBranchAndRebalance(unsigned int Value1, unsigned int Value2);
