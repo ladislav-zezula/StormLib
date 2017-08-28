@@ -867,8 +867,8 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
     // If moving backward, don't allow the new position go negative
     if((LONGLONG)DeltaPos < 0)
     {
-        if(NewPosition > FileSize)
-            NewPosition = 0;
+        if(NewPosition > FileSize) // Position is negative
+            return SFILE_INVALID_POS;
     }
 
     // If moving forward, don't allow the new position go past the end of the file
