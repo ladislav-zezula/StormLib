@@ -122,6 +122,13 @@ static const wchar_t szUnicodeName6[] = {   // Arabic
     0x0627, 0x0644, 0x0639, 0x0639, 0x0631, 0x0628, 0x064A, 0x0629, _T('.'), _T('m'), _T('p'), _T('q'), 0
 };
 
+static const char * PatchList_StarCraft[] =
+{
+    "MPQ_1998_v1_StarCraft.mpq",
+    "s1-1998-BroodWar.mpq",
+    NULL
+};
+
 static const char * PatchList_WoW_OldWorld13286[] =
 {
     "MPQ_2012_v4_OldWorld.MPQ",
@@ -4522,10 +4529,10 @@ int main(int argc, char * argv[])
     // Open a partial MPQ with compressed hash table
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
-*/
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
-/*
+  
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
+  
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
 
@@ -4561,11 +4568,11 @@ int main(int argc, char * argv[])
     // Open an Warcraft III map locked by Spazy protector
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_MessListFile.mpq");
-*/
+
     // Open an protected map
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
-/*
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
+
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
@@ -4610,7 +4617,11 @@ int main(int argc, char * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
-
+*/
+    // Open a patched archive
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
+/*
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
@@ -4722,11 +4733,11 @@ int main(int argc, char * argv[])
     // Create an empty archive v4
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_EmptyMpq("StormLibTest_EmptyMpq_v4.mpq", MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
-*/
+
     // Test creating of an archive the same way like MPQ Editor does
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_TestGaps("StormLibTest_GapsTest.mpq");
-/*
+
     // Test creating of an archive with non standard file names
     if(nError == ERROR_SUCCESS)
         nError = TestCreateArchive_NonStdNames("StormLibTest_NonStdNames.mpq");
