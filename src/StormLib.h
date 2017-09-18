@@ -99,8 +99,11 @@ extern "C" {
 //  Z - S for static-linked CRT library, D for multithreaded DLL CRT library
 //
 
-#if defined(_MSC_VER) && !defined(__STORMLIB_SELF__)
-  
+#if defined(__STORMLIB_SELF__) && !defined(STORMLIB_NO_AUTO_LINK)
+#define STORMLIB_NO_AUTO_LINK // Define this if you don't want to link using pragmas when using msvc
+#endif
+
+#if defined(_MSC_VER) && !defined(STORMLIB_NO_AUTO_LINK)
   #ifdef _DEBUG                                 // DEBUG VERSIONS
     #ifndef _UNICODE                            
       #ifdef _DLL                               

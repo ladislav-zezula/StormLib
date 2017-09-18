@@ -1,5 +1,5 @@
 project(StormLib)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 
 set(LIBRARY_NAME storm)
 
@@ -308,7 +308,7 @@ endif()
 add_library(${LIBRARY_NAME} ${LIB_TYPE} ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
 
 target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
-target_compile_definitions(${LIBRARY_NAME} PUBLIC) #CMake should take care of the linking
+target_compile_definitions(${LIBRARY_NAME} INTERFACE STORMLIB_NO_AUTO_LINK) #CMake will take care of the linking
 target_include_directories(${LIBRARY_NAME} PUBLIC src/)
 set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "src/StormLib.h;src/StormPort.h")
 if(BUILD_SHARED_LIBS)
