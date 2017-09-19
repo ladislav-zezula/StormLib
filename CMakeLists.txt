@@ -3,6 +3,14 @@ cmake_minimum_required(VERSION 2.8.12)
 
 set(LIBRARY_NAME storm)
 
+include(CMakeDependentOption)
+
+option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
+cmake_dependent_option(STORM_BUILD_TESTS
+    "Compile StormLib test application" OFF
+    "BUILD_TESTING" OFF # Stay coherent with CTest variables
+)
+
 set(SRC_FILES
            src/adpcm/adpcm.cpp
            src/huffman/huff.cpp
@@ -35,6 +43,14 @@ set(SRC_FILES
            src/libtomcrypt/src/pk/rsa/rsa_verify_simple.c
            src/libtomcrypt/src/misc/crypt_libc.c
 )
+
+if(MSVC)
+    # This file is used to create a DLL on windows
+    # Use BUILD_SHARED_LIBS to create StormLib.dll
+    set(STORM_DEF_FILES
+           stormlib_dll/StormLib.def
+    )
+endif()
 
 set(TOMCRYPT_FILES
            src/libtomcrypt/src/hashes/hash_memory.c
@@ -262,18 +278,6 @@ set(TEST_SRC_FILES
 add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)
 
 if(WIN32)
-    if(MSVC)
-        option(UNICODE "Enable UNICODE mode" OFF)
-        if (UNICODE)
-            message(STATUS "Using UNICODE")
-        else()
-            message(STATUS "Using ASCII")
-        endif()
-        message(STATUS "Using MSVC")
-        add_definitions(-DWIN32)
-    else()
-        message(STATUS "Using mingw")
-    endif()
     set(SRC_ADDITIONAL_FILES ${ZLIB_BZIP2_FILES} ${TOMCRYPT_FILES} ${TOMMATH_FILES})
     set(LINK_LIBS wininet)
 else()
@@ -294,18 +298,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL FreeBSD)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DO_LARGEFILE=0 -Dstat64=stat -Dlstat64=lstat -Dlseek64=lseek -Doff64_t=off_t -Dfstat64=fstat -Dftruncate64=ftruncate")
 endif()
 
-option(BUILD_SHARED_LIBS "Link against dependent libraries dynamically" ON)
-option(BUILD_DYNAMIC_MODULE "Output dynamically loadable module" OFF)
-
-if (BUILD_DYNAMIC_MODULE)
-    set(LIB_TYPE SHARED)
-    message(STATUS "Building dynamic module")
-else()
-    set(LIB_TYPE STATIC)
-    message(STATUS "Building static module")
-endif()
-
-add_library(${LIBRARY_NAME} ${LIB_TYPE} ${SRC_FILES} ${SRC_ADDITIONAL_FILES})
+add_library(${LIBRARY_NAME} ${LIB_TYPE} ${SRC_FILES} ${SRC_ADDITIONAL_FILES} ${STORM_DEF_FILES})
 
 target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
 target_compile_definitions(${LIBRARY_NAME} INTERFACE STORMLIB_NO_AUTO_LINK) #CMake will take care of the linking
@@ -328,26 +321,6 @@ if(BUILD_SHARED_LIBS)
     endif()
 else()
     message(STATUS "Linking against dependent libraries statically")
-endif()
-
-if(WIN32)
-    if (UNICODE)
-        if (BUILD_SHARED_LIBS)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG StormLibDUD)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_RELEASE StormLibRUD)
-        else()
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG StormLibDUS)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_RELEASE StormLibRUS)
-        endif()
-    else()
-        if (BUILD_SHARED_LIBS)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG StormLibDAD)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_RELEASE StormLibRAD)
-        else()
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG StormLibDAS)
-            set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME_RELEASE StormLibRAS)
-        endif()
-    endif()
 endif()
 
 install(TARGETS ${LIBRARY_NAME} 
@@ -385,8 +358,7 @@ install(TARGETS ${LIBRARY_NAME}
 
     INCLUDE(CPack)
 
-option(WITH_TEST "Compile Test application" OFF)
-if(WITH_TEST)
+if(STORM_BUILD_TESTS)
     add_executable(storm_test ${TEST_SRC_FILES})
     target_link_libraries(storm_test ${LIBRARY_NAME})
     install(TARGETS storm_test DESTINATION bin)
