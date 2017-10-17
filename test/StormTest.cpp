@@ -1016,7 +1016,7 @@ static int GetFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, const char * szF
     }
     else
     {
-        pLogger->PrintError("Failed to open file %s", szFileName);
+        pLogger->PrintError("Open failed: %s", szFileName);
     }
 
     return nPatchCount;
@@ -1445,7 +1445,7 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, const char * szFileName, 
     if(pStream == NULL)
     {
         if(pLogger != NULL && bMustSucceed == true)
-            pLogger->PrintError("Failed to open the file %s", szFileName);
+            pLogger->PrintError("Open failed: %s", szFileName);
         return NULL;
     }
 
@@ -1573,7 +1573,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
 
     // Open the file from MPQ
     if(!SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
-        nError = pLogger->PrintError("Failed to open the file %s", szFileName);
+        nError = pLogger->PrintError("Open failed: %s", szFileName);
 
     // Get the size of the file
     if(nError == ERROR_SUCCESS)
@@ -1621,7 +1621,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, const char * s
         // Read the file data
         SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
         if(dwBytesRead != dwFileSizeLo)
-            nError = pLogger->PrintError("Failed to read the content of the file %s", szFileName);
+            nError = pLogger->PrintError("Read failed: %s", szFileName);
     }
 
     // If failed, free the buffer
@@ -2367,7 +2367,7 @@ static int TestFileStreamOperations(const char * szPlainName, DWORD dwStreamFlag
     {
         pStream = FileStream_OpenFileA(szFullPath, dwStreamFlags);
         if(pStream == NULL)
-            return Logger.PrintError("Failed to open %s", szFullPath);
+            return Logger.PrintError("Open failed: %s", szFullPath);
     }
 
     // Get the size of the file stream
@@ -2561,12 +2561,13 @@ static int TestOpenFile_OpenByName(const char * szPlainName, const char * szFile
     return nError;
 }
 
-static int TestOpenArchive(const char * szPlainName, const char * szListFile = NULL, bool bDontCopyArchive = false)
+static int TestOpenArchive(const char * szPlainName, const char * szListFile = NULL, const char * szFileName = NULL, bool bDontCopyArchive = false)
 {
     TLogHelper Logger("OpenMpqTest", szPlainName);
     TFileData * pFileData;
     const char * szCopyName = (bDontCopyArchive) ? NULL : szPlainName;
     HANDLE hMpq;
+    HANDLE hFile;
     DWORD dwFileCount = 0;
     DWORD dwTestFlags;
     char szListFileBuff[MAX_PATH];
@@ -2612,6 +2613,26 @@ static int TestOpenArchive(const char * szPlainName, const char * szListFile = N
             pFileData = LoadMpqFile(&Logger, hMpq, SIGNATURE_NAME);
             if(pFileData != NULL)
                 STORM_FREE(pFileData);
+        }
+
+        // Attempt to open an arbitrary file
+        if(szFileName != NULL && szFileName[0] != 0)
+        {
+            if(SFileOpenFileEx(hMpq, "1.blp", 0, &hFile))
+            {
+                DWORD dwFileSize;
+                DWORD dwBytesRead = 0;
+                BYTE Buffer[0x10];
+
+                dwFileSize = SFileGetFileSize(hFile, NULL);
+                if(dwFileSize > sizeof(Buffer))
+                {
+                    SFileSetFilePointer(hFile, dwFileSize - sizeof(Buffer), NULL, FILE_BEGIN);
+                    SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+                }
+
+                SFileCloseFile(hFile);
+            }
         }
 
         // Search the archive and load every file
@@ -3405,7 +3426,7 @@ static int TestCreateArchive_Deprotect(const char * szPlainName)
         AddStringBeforeExtension(szMpqName1, szPlainName, "_original");
         nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName1, &hMpq1);
         if(nError != ERROR_SUCCESS)
-            Logger.PrintMessage("Failed to open %s", szMpqName1);
+            Logger.PrintMessage("Open failed: %s", szMpqName1);
     }
 
     // Second copy: Will be deprotected
@@ -3414,7 +3435,7 @@ static int TestCreateArchive_Deprotect(const char * szPlainName)
         AddStringBeforeExtension(szMpqName2, szPlainName, "_deprotected");
         nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName2, &hMpq2);
         if(nError != ERROR_SUCCESS)
-            Logger.PrintMessage("Failed to open %s", szMpqName2);
+            Logger.PrintMessage("Open failed: %s", szMpqName2);
     }
 
     // Deprotect the second map
@@ -4530,9 +4551,16 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part");
   
+    // Open an protected map
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
+
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_ProtectedMap("000-new_sds14vv.w3x", NULL, 20, "0.blp");
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_ProtectedMap("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x", NULL, 114, "5250975ed917375fc6540d7be436d4de");
-  
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x");
 
@@ -4569,10 +4597,6 @@ int main(int argc, char * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2015_v1_MessListFile.mpq");
 
-    // Open an protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap("MPQ_2015_v1_flem1.w3x", NULL, 20, "1c4c13e627658c473e84d94371e31f37");
-
     // Open another protected map
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x");
@@ -4601,7 +4625,11 @@ int main(int argc, char * argv[])
     // Load map protected by PG1.11.973
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x");
-
+*/
+    // Load map protected by PG1.11.973
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive("MPQ_2017_v1_BigDummyFiles.w3x", NULL, "1.blp");
+/*
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
@@ -4617,11 +4645,11 @@ int main(int argc, char * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt("MPQ_2013_vX_Battle.net.MPQ");
-*/
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
-/*
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
