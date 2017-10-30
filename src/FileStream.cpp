@@ -631,61 +631,55 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
         return false;
 
     // Connect to the server
-    if(nError == ERROR_SUCCESS)
-    {
-        TCHAR szServerName[MAX_PATH];
-        DWORD dwFlags = INTERNET_FLAG_KEEP_CONNECTION | INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE;
+    TCHAR szServerName[MAX_PATH];
+    DWORD dwFlags = INTERNET_FLAG_KEEP_CONNECTION | INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE;
 
-        // Initiate connection with the server
-        szFileName = BaseHttp_ExtractServerName(szFileName, szServerName);
-        pStream->Base.Http.hConnect = InternetConnect(pStream->Base.Http.hInternet,
-                                                      szServerName,
-                                                      INTERNET_DEFAULT_HTTP_PORT,
-                                                      NULL,
-                                                      NULL,
-                                                      INTERNET_SERVICE_HTTP,
-                                                      dwFlags,
-                                                      0);
-        if(pStream->Base.Http.hConnect == NULL)
-        {
-            InternetCloseHandle(pStream->Base.Http.hInternet);
-            return false;
-        }
+    // Initiate connection with the server
+    szFileName = BaseHttp_ExtractServerName(szFileName, szServerName);
+    pStream->Base.Http.hConnect = InternetConnect(pStream->Base.Http.hInternet,
+                                                  szServerName,
+                                                  INTERNET_DEFAULT_HTTP_PORT,
+                                                  NULL,
+                                                  NULL,
+                                                  INTERNET_SERVICE_HTTP,
+                                                  dwFlags,
+                                                  0);
+    if(pStream->Base.Http.hConnect == NULL)
+    {
+        InternetCloseHandle(pStream->Base.Http.hInternet);
+        return false;
     }
 
     // Now try to query the file size
-    if(nError == ERROR_SUCCESS)
+    // Open HTTP request to the file
+    hRequest = HttpOpenRequest(pStream->Base.Http.hConnect, _T("GET"), szFileName, NULL, NULL, NULL, INTERNET_FLAG_NO_CACHE_WRITE, 0);
+    if(hRequest != NULL)
     {
-        // Open HTTP request to the file
-        hRequest = HttpOpenRequest(pStream->Base.Http.hConnect, _T("GET"), szFileName, NULL, NULL, NULL, INTERNET_FLAG_NO_CACHE_WRITE, 0);
-        if(hRequest != NULL)
+        if(HttpSendRequest(hRequest, NULL, 0, NULL, 0))
         {
-            if(HttpSendRequest(hRequest, NULL, 0, NULL, 0))
+            ULONGLONG FileTime = 0;
+            DWORD dwFileSize = 0;
+            DWORD dwDataSize;
+            DWORD dwIndex = 0;
+
+            // Check if the MPQ has Last Modified field
+            dwDataSize = sizeof(ULONGLONG);
+            if(HttpQueryInfo(hRequest, HTTP_QUERY_LAST_MODIFIED | HTTP_QUERY_FLAG_SYSTEMTIME, &FileTime, &dwDataSize, &dwIndex))
+                pStream->Base.Http.FileTime = FileTime;
+
+			// Verify if the server supports random access
+            dwDataSize = sizeof(DWORD);
+            if(HttpQueryInfo(hRequest, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, &dwFileSize, &dwDataSize, &dwIndex))
             {
-                ULONGLONG FileTime = 0;
-                DWORD dwFileSize = 0;
-                DWORD dwDataSize;
-                DWORD dwIndex = 0;
-
-                // Check if the MPQ has Last Modified field
-                dwDataSize = sizeof(ULONGLONG);
-                if(HttpQueryInfo(hRequest, HTTP_QUERY_LAST_MODIFIED | HTTP_QUERY_FLAG_SYSTEMTIME, &FileTime, &dwDataSize, &dwIndex))
-                    pStream->Base.Http.FileTime = FileTime;
-
-                // Verify if the server supports random access
-                dwDataSize = sizeof(DWORD);
-                if(HttpQueryInfo(hRequest, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, &dwFileSize, &dwDataSize, &dwIndex))
+                if(dwFileSize != 0)
                 {
-                    if(dwFileSize != 0)
-                    {
-                        pStream->Base.Http.FileSize = dwFileSize;
-                        pStream->Base.Http.FilePos = 0;
-                        bFileAvailable = true;
-                    }
+                    pStream->Base.Http.FileSize = dwFileSize;
+                    pStream->Base.Http.FilePos = 0;
+                    bFileAvailable = true;
                 }
             }
-            InternetCloseHandle(hRequest);
         }
+        InternetCloseHandle(hRequest);
     }
 
     // If the file is not there and is not available for random access,
