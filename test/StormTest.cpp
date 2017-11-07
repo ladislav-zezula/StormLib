@@ -4418,7 +4418,7 @@ int main(int argc, char * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-/*
+
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -4625,18 +4625,18 @@ int main(int argc, char * argv[])
     // Load map protected by PG1.11.973
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x");
-*/
+
     // Load map protected by PG1.11.973
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive("MPQ_2017_v1_BigDummyFiles.w3x", NULL, "1.blp");
-/*
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail("flat-file://streaming/model.MPQ.0");
 
     // Open an archive that is merged with multiple files
     if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0", NULL, true);
+        nError = TestOpenArchive("blk4-file://streaming/model.MPQ.0", NULL, NULL, true);
 
     // Open every MPQ that we have in the storage
     if(nError == ERROR_SUCCESS)
@@ -4840,7 +4840,7 @@ int main(int argc, char * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile("MPQ_2014_v4_Base.StormReplay", "AddFile-replay.message.events");
-*/
+
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER
