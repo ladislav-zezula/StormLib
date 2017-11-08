@@ -46,7 +46,7 @@ static int CheckIfAllFilesKnown(TMPQArchive * ha)
     return nError;
 }
 
-static int CheckIfAllKeysKnown(TMPQArchive * ha, const char * szListFile, LPDWORD pFileKeys)
+static int CheckIfAllKeysKnown(TMPQArchive * ha, const TCHAR * szListFile, LPDWORD pFileKeys)
 {
     TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
     TFileEntry * pFileEntry;
@@ -523,7 +523,7 @@ bool WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK pfnCompa
     return true;
 }
 
-bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bReserved */)
+bool WINAPI SFileCompactArchive(HANDLE hMpq, const TCHAR * szListFile, bool /* bReserved */)
 {
     TFileStream * pTempStream = NULL;
     TMPQArchive * ha = (TMPQArchive *)hMpq;
@@ -568,8 +568,8 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool /* bR
     if(nError == ERROR_SUCCESS)
     {
         // Create temporary file name. Prevent buffer overflow
-        StringCopyT(szTempFile, FileStream_GetFileName(ha->pStream), MAX_PATH);
-        StringCatT(szTempFile, _T(".tmp"), MAX_PATH);
+        StringCopy(szTempFile, _countof(szTempFile), FileStream_GetFileName(ha->pStream));
+        StringCat(szTempFile, _countof(szTempFile), _T(".tmp"));
 
         // Create temporary file
         pTempStream = FileStream_CreateFile(szTempFile, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);

@@ -190,9 +190,9 @@ static TFileEntry * FindPatchEntry(TMPQArchive * ha, TFileEntry * pFileEntry)
             szFileName[0] = 0;
 
             // Prepare the prefix for the file name
-            if(ha->pPatchPrefix != NULL)
-                StringCopyA(szFileName, ha->pPatchPrefix->szPatchPrefix, MAX_PATH);
-            StringCatA(szFileName, pFileEntry->szFileName, MAX_PATH);
+            if(ha->pPatchPrefix && ha->pPatchPrefix->nLength)
+                StringCopy(szFileName, _countof(szFileName), ha->pPatchPrefix->szPatchPrefix);
+            StringCat(szFileName, _countof(szFileName), pFileEntry->szFileName);
 
             // Try to find the file there
             pTempEntry = GetFileEntryExact(ha, szFileName, 0, NULL);
@@ -275,7 +275,7 @@ static bool DoMPQSearch_FileEntry(
                     }
 
                     // Fill the file name and plain file name
-                    StringCopyA(lpFindFileData->cFileName, szFileName + nPrefixLength, MAX_PATH-1);
+                    StringCopy(lpFindFileData->cFileName, _countof(lpFindFileData->cFileName), szFileName + nPrefixLength);
                     lpFindFileData->szPlainName = (char *)GetPlainFileName(lpFindFileData->cFileName);
                     return true;
                 }
@@ -378,7 +378,7 @@ static void FreeMPQSearch(TMPQSearch *& hs)
 //-----------------------------------------------------------------------------
 // Public functions
 
-HANDLE WINAPI SFileFindFirstFile(HANDLE hMpq, const char * szMask, SFILE_FIND_DATA * lpFindFileData, const char * szListFile)
+HANDLE WINAPI SFileFindFirstFile(HANDLE hMpq, const char * szMask, SFILE_FIND_DATA * lpFindFileData, const TCHAR * szListFile)
 {
     TMPQArchive * ha = (TMPQArchive *)hMpq;
     TMPQSearch * hs = NULL;

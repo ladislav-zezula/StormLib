@@ -451,12 +451,11 @@ int SFileAddFile_Init(
         }
         else
         {
-            // Free all internal files - (listfile), (attributes), (signature)
-            InvalidateInternalFiles(ha);
-            
             // Attempt to allocate new file entry
             pFileEntry = AllocateFileEntry(ha, szFileName, lcLocale, &dwHashIndex);
-            if(pFileEntry == NULL)
+            if(pFileEntry != NULL)
+                InvalidateInternalFiles(ha);
+            else
                 nError = ERROR_DISK_FULL;   
         }
 

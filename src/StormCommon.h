@@ -133,11 +133,15 @@ extern unsigned char AsciiToUpperTable[256];
 //-----------------------------------------------------------------------------
 // Safe string functions
 
-void StringCopyA(char * dest, const char * src, size_t nMaxChars);
-void StringCatA(char * dest, const char * src, size_t nMaxChars);
+void StringCopy(char * szTarget, size_t cchTarget, const char * szSource);
+void StringCat(char * szTarget, size_t cchTargetMax, const char * szSource);
 
-void StringCopyT(TCHAR * dest, const TCHAR * src, size_t nMaxChars);
-void StringCatT(TCHAR * dest, const TCHAR * src, size_t nMaxChars);
+#ifdef _UNICODE
+void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource);
+void StringCopy(char * szTarget, size_t cchTarget, const TCHAR * szSource);
+void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource);
+void StringCat(TCHAR * szTarget, size_t cchTargetMax, const TCHAR * szSource);
+#endif
 
 //-----------------------------------------------------------------------------
 // Encryption and decryption functions
@@ -296,11 +300,20 @@ void Patch_Finalize(TMPQPatcher * pPatcher);
 bool CheckWildCard(const char * szString, const char * szWildCard);
 bool IsInternalMpqFileName(const char * szFileName);
 
-const TCHAR * GetPlainFileName(const TCHAR * szFileName);
-const char * GetPlainFileName(const char * szFileName);
+template <typename XCHAR>
+const XCHAR * GetPlainFileName(const XCHAR * szFileName)
+{
+    const XCHAR * szPlainName = szFileName;
 
-void CopyFileName(TCHAR * szTarget, const char * szSource, size_t cchLength);
-void CopyFileName(char * szTarget, const TCHAR * szSource, size_t cchLength);
+    while(*szFileName != 0)
+    {
+        if(*szFileName == '\\' || *szFileName == '/')
+            szPlainName = szFileName + 1;
+        szFileName++;
+    }
+
+    return szPlainName;
+}
 
 //-----------------------------------------------------------------------------
 // Internal support for MPQ modifications

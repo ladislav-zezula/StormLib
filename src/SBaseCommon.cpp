@@ -93,55 +93,93 @@ unsigned char AsciiToUpperTable_Slash[256] =
 };
 
 //-----------------------------------------------------------------------------
-// Safe string functions
+// Safe string functions (for ANSI builds)
 
-void StringCopyA(char * dest, const char * src, size_t nMaxChars)
+void StringCopy(char * szTarget, size_t cchTarget, const char * szSource)
 {
-    size_t nLength = strlen(src);
-
-    // Don't copy more than nMaxChars
-    nLength = STORMLIB_MIN(nLength, nMaxChars);
-    memcpy(dest, src, nLength);
-    dest[nLength] = 0;
-}
-
-void StringCatA(char * dest, const char * src, size_t nMaxChars)
-{
-    size_t nLength1 = strlen(dest);
-    size_t nLength2 = strlen(src);
-
-    // Don't copy more than nMaxChars
-    if(nLength1 < nMaxChars)
+    if(cchTarget > 0)
     {
-        nLength2 = STORMLIB_MIN(nLength2, (nMaxChars - nLength1));
-        memcpy(dest + nLength1, src, nLength2);
-        dest[nLength1 + nLength2] = 0;
+        size_t cchSource = strlen(szSource);
+
+        if(cchSource >= cchTarget)
+            cchSource = cchTarget - 1;
+        
+        memcpy(szTarget, szSource, cchSource);
+        szTarget[cchSource] = 0;
     }
 }
 
-void StringCopyT(TCHAR * dest, const TCHAR * src, size_t nMaxChars)
+void StringCat(char * szTarget, size_t cchTargetMax, const char * szSource)
 {
-    size_t nLength = _tcslen(src);
+    // Get the current length of the target
+    size_t cchTarget = strlen(szTarget);
 
-    // Don't copy more than nMaxChars
-    nLength = STORMLIB_MIN(nLength, nMaxChars);
-    memcpy(dest, src, (nLength * sizeof(TCHAR)));
-    dest[nLength] = 0;
-}
-
-void StringCatT(TCHAR * dest, const TCHAR * src, size_t nMaxChars)
-{
-    size_t nLength1 = _tcslen(dest);
-    size_t nLength2 = _tcslen(src);
-
-    // Don't copy more than nMaxChars
-    if(nLength1 < nMaxChars)
+    // Copy the string to the target
+    if(cchTarget < cchTargetMax)
     {
-        nLength2 = STORMLIB_MIN(nLength2, (nMaxChars - nLength1));
-        memcpy(dest + nLength1, src, (nLength2 * sizeof(TCHAR)));
-        dest[nLength1 + nLength2] = 0;
+        StringCopy(szTarget + cchTarget, (cchTargetMax - cchTarget), szSource);
     }
 }
+
+//-----------------------------------------------------------------------------
+// Utility functions (UNICODE) only exist in the ANSI version of the library
+// In ANSI builds, TCHAR = char, so we don't need these functions implemented
+
+#ifdef _UNICODE
+void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource)
+{
+    if(cchTarget > 0)
+    {
+        size_t cchSource = strlen(szSource);
+
+        if(cchSource >= cchTarget)
+            cchSource = cchTarget - 1;
+        
+        mbstowcs(szTarget, szSource, cchSource);
+        szTarget[cchSource] = 0;
+    }
+}
+
+void StringCopy(char * szTarget, size_t cchTarget, const TCHAR * szSource)
+{
+    if(cchTarget > 0)
+    {
+        size_t cchSource = _tcslen(szSource);
+
+        if(cchSource >= cchTarget)
+            cchSource = cchTarget - 1;
+        
+        wcstombs(szTarget, szSource, cchSource);
+        szTarget[cchSource] = 0;
+    }
+}
+
+void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource)
+{
+    if(cchTarget > 0)
+    {
+        size_t cchSource = _tcslen(szSource);
+
+        if(cchSource >= cchTarget)
+            cchSource = cchTarget - 1;
+        
+        memcpy(szTarget, szSource, cchSource * sizeof(TCHAR));
+        szTarget[cchSource] = 0;
+    }
+}
+
+void StringCat(TCHAR * szTarget, size_t cchTargetMax, const TCHAR * szSource)
+{
+    // Get the current length of the target
+    size_t cchTarget = _tcslen(szTarget);
+
+    // Copy the string to the target
+    if(cchTarget < cchTargetMax)
+    {
+        StringCopy(szTarget + cchTarget, (cchTargetMax - cchTarget), szSource);
+    }
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Storm hashing functions

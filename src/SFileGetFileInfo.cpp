@@ -990,7 +990,7 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
             if(szFileName != NULL)
             {
                 const TCHAR * szStreamName = FileStream_GetFileName(hf->pStream);
-                CopyFileName(szFileName, szStreamName, _tcslen(szStreamName));
+                StringCopy(szFileName, MAX_PATH, szStreamName);
             }
             nError = ERROR_SUCCESS;
         }

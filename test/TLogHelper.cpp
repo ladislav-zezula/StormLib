@@ -16,7 +16,7 @@ class TLogHelper
 {
     public:
 
-    TLogHelper(const char * szNewMainTitle = NULL, const char * szNewSubTitle1 = NULL, const char * szNewSubTitle2 = NULL);
+    TLogHelper(const char * szNewMainTitle = NULL, const TCHAR * szNewSubTitle1 = NULL, const TCHAR * szNewSubTitle2 = NULL);
     ~TLogHelper();
 
 #if defined(UNICODE) || defined(UNICODE)
@@ -24,6 +24,7 @@ class TLogHelper
     // On ANSI builds is TCHAR = char, so we don't need them at all
     int  PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine);
     void PrintProgress(const TCHAR * szFormat, ...);
+    void PrintMessage(const TCHAR * szFormat, ...);
     int  PrintErrorVa(const TCHAR * szFormat, ...);
     int  PrintError(const TCHAR * szFormat, const TCHAR * szFileName = NULL);
 #endif  // defined(UNICODE) || defined(UNICODE)
@@ -48,9 +49,9 @@ class TLogHelper
     char * CopyFormatCharacter(char * szBuffer, const char *& szFormat);
     int  GetConsoleWidth();
 
-    const char * szMainTitle;                       // Title of the text (usually name)
-    const char * szSubTitle1;                       // Title of the text (can be name of the tested file)
-    const char * szSubTitle2;                       // Title of the text (can be name of the tested file)
+    const char  * szMainTitle;                      // Title of the text (usually name)
+    const TCHAR * szSubTitle1;                      // Title of the text (can be name of the tested file)
+    const TCHAR * szSubTitle2;                      // Title of the text (can be name of the tested file)
     size_t nTextLength;                             // Length of the previous progress message
     bool bMessagePrinted;
 };
@@ -74,7 +75,7 @@ class TLogHelper
 // Constructor and destructor
     
 
-TLogHelper::TLogHelper(const char * szNewMainTitle, const char * szNewSubTitle1, const char * szNewSubTitle2)
+TLogHelper::TLogHelper(const char * szNewMainTitle, const TCHAR * szNewSubTitle1, const TCHAR * szNewSubTitle2)
 {
     UserString = "";
     UserCount = 1;
@@ -102,12 +103,15 @@ TLogHelper::TLogHelper(const char * szNewMainTitle, const char * szNewSubTitle1,
 
 TLogHelper::~TLogHelper()
 {
-    const char * szSaveMainTitle = szMainTitle;
-    const char * szSaveSubTitle1 = szSubTitle1;
-    const char * szSaveSubTitle2 = szSubTitle2;
+    const TCHAR * szSaveSubTitle1 = szSubTitle1;
+    const TCHAR * szSaveSubTitle2 = szSubTitle2;
+    TCHAR szSaveMainTitle[0x80];
 
-    // Set both to NULL so the won't be printed
-    szMainTitle = szSubTitle1 = szSubTitle2 = NULL;
+    // Set both to NULL so they won't be printed
+    StringCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
+    szSubTitle1 = NULL;
+    szSubTitle2 = NULL;
+    szMainTitle = NULL;
 
     // Print the final information
     if(szSaveMainTitle != NULL && bMessagePrinted == false)
@@ -115,11 +119,11 @@ TLogHelper::~TLogHelper()
         if(bDontPrintResult == false)
         {
             if(szSaveSubTitle1 != NULL && szSaveSubTitle2 != NULL)
-                PrintMessage("%s (%s+%s) succeeded.", szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2);
+                PrintMessage(_T("%s (%s+%s) succeeded."), szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2);
             else if(szSaveSubTitle1 != NULL)
-                PrintMessage("%s (%s) succeeded.", szSaveMainTitle, szSaveSubTitle1);
+                PrintMessage(_T("%s (%s) succeeded."), szSaveMainTitle, szSaveSubTitle1);
             else
-                PrintMessage("%s succeeded.", szSaveMainTitle);
+                PrintMessage(_T("%s succeeded."), szSaveMainTitle);
         }
         else
         {
@@ -167,8 +171,10 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
     // Copy the message format itself. Replace %s with "%s", unless it's (%s)
     if(szFormat != NULL)
     {
-        szBuffer = CopyFormatCharacter(szBuffer, szFormat);
-        szFormat += nLength;
+        while(szFormat[0] != 0)
+        {
+            szBuffer = CopyFormatCharacter(szBuffer, szFormat);
+        }
     }
 
     // Append the last error
@@ -216,6 +222,15 @@ void TLogHelper::PrintProgress(const TCHAR * szFormat, ...)
     va_end(argList);
 }
 
+void TLogHelper::PrintMessage(const TCHAR * szFormat, ...)
+{
+    va_list argList;
+
+    va_start(argList, szFormat);
+    PrintWithClreol(szFormat, argList, true, false, true);
+    va_end(argList);
+}
+
 int TLogHelper::PrintErrorVa(const TCHAR * szFormat, ...)
 {
     va_list argList;
@@ -254,7 +269,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
     if(szMainTitle != NULL && bPrintPrefix)
     {
         while(szMainTitle[nLength] != 0)
-            *szBuffer++ = szMainTitle[nLength++];
+            *szBuffer++ = (char)szMainTitle[nLength++];
         
         *szBuffer++ = ':';
         *szBuffer++ = ' ';
@@ -337,7 +352,12 @@ int TLogHelper::PrintErrorVa(const char * szFormat, ...)
 
 int TLogHelper::PrintError(const char * szFormat, const char * szFileName)
 {
-    return PrintErrorVa(szFormat, szFileName);
+    TCHAR szFileNameT[MAX_PATH];
+    TCHAR szFormatT[0x200];
+
+    StringCopy(szFileNameT, _countof(szFileNameT), szFileName);
+    StringCopy(szFormatT, _countof(szFormatT), szFormat);
+    return PrintErrorVa(szFormatT, szFileNameT);
 }
 
 //-----------------------------------------------------------------------------

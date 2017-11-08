@@ -998,11 +998,11 @@ bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 // Adds another listfile into MPQ. The currently added listfile(s) remain,
 // so you can use this API to combining more listfiles.
 // Note that this function is internally called by SFileFindFirstFile
-int    WINAPI SFileAddListFile(HANDLE hMpq, const char * szListFile);
+int    WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile);
 
 // Archive compacting
 bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvUserData);
-bool   WINAPI SFileCompactArchive(HANDLE hMpq, const char * szListFile, bool bReserved);
+bool   WINAPI SFileCompactArchive(HANDLE hMpq, const TCHAR * szListFile, bool bReserved);
 
 // Changing the maximum file count
 DWORD  WINAPI SFileGetMaxFileCount(HANDLE hMpq);
@@ -1058,11 +1058,11 @@ DWORD  WINAPI SFileVerifyArchive(HANDLE hMpq);
 //-----------------------------------------------------------------------------
 // Functions for file searching
 
-HANDLE WINAPI SFileFindFirstFile(HANDLE hMpq, const char * szMask, SFILE_FIND_DATA * lpFindFileData, const char * szListFile);
+HANDLE WINAPI SFileFindFirstFile(HANDLE hMpq, const char * szMask, SFILE_FIND_DATA * lpFindFileData, const TCHAR * szListFile);
 bool   WINAPI SFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData);
 bool   WINAPI SFileFindClose(HANDLE hFind);
 
-HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const char * szListFile, const char * szMask, SFILE_FIND_DATA * lpFindFileData);
+HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const TCHAR * szListFile, const char * szMask, SFILE_FIND_DATA * lpFindFileData);
 bool   WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData);
 bool   WINAPI SListFileFindClose(HANDLE hFind);
 

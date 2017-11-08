@@ -891,8 +891,8 @@ TMPQBlock * TranslateBlockTable(
     TFileEntry * pFileEntry = ha->pFileTable;
     TMPQBlock * pBlockTable;
     TMPQBlock * pBlock;
-    DWORD dwBlockTableSize = ha->pHeader->dwBlockTableSize;
     DWORD NeedHiBlockTable = 0;
+    DWORD dwBlockTableSize = ha->pHeader->dwBlockTableSize;
 
     // Allocate copy of the hash table
     pBlockTable = pBlock = STORM_ALLOC(TMPQBlock, dwBlockTableSize);
@@ -2617,7 +2617,7 @@ int DefragmentFileTable(TMPQArchive * ha)
                 pTarget++;
 
                 // Update the block table size
-                dwBlockTableSize = (DWORD)(pSource - ha->pFileTable) + 1;
+                dwBlockTableSize = (DWORD)(pTarget - ha->pFileTable);
             }
 			else
 			{

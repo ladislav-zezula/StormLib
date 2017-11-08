@@ -75,7 +75,7 @@ static bool OpenLocalFile(const char * szFileName, HANDLE * PtrFile)
     TCHAR szFileNameT[MAX_PATH];
 
     // Convert the file name to UNICODE (if needed)
-    CopyFileName(szFileNameT, szFileName, strlen(szFileName));
+    StringCopy(szFileNameT, _countof(szFileNameT), szFileName);
 
     // Open the file and create the TMPQFile structure
     pStream = FileStream_OpenFile(szFileNameT, STREAM_FLAG_READ_ONLY);
