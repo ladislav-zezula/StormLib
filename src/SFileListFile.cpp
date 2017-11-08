@@ -265,7 +265,6 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
 {
     LPBYTE pbLineBegin;
     LPBYTE pbLineEnd;
-    LPBYTE pbExtraString = NULL;
     
     // Skip newlines. Keep spaces and tabs, as they can be a legal part of the file name
     while(pCache->pPos < pCache->pEnd && (pCache->pPos[0] == 0x0A || pCache->pPos[0] == 0x0D))
@@ -276,32 +275,13 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
         return NULL;
     pbLineBegin = pbLineEnd = pCache->pPos;
 
-    // Copy the remaining characters
+    // Find the end of the line
     while(pCache->pPos < pCache->pEnd && pCache->pPos[0] != 0x0A && pCache->pPos[0] != 0x0D)
-    {
-        // Blizzard listfiles can also contain information about patch:
-        // Pass1\Files\MacOS\unconditional\user\Background Downloader.app\Contents\Info.plist~Patch(Data#frFR#base-frFR,1326)
-        if(pCache->pPos[0] == '~')
-            pbExtraString = pCache->pPos;
-
-        // Copy the character
         pCache->pPos++;
-    }
 
-    // If there was extra string after the file name, clear it
-    if(pbExtraString != NULL)
-    {
-        if(pbExtraString[0] == '~' && pbExtraString[1] == 'P')
-        {
-            pbLineEnd = pbExtraString;
-            pbLineEnd[0] = 0;
-        }
-    }
-    else
-    {
-        pbLineEnd = pCache->pPos++;
-        pbLineEnd[0] = 0;
-    }
+    // Remember the end of the line
+    pbLineEnd = pCache->pPos++;
+    pbLineEnd[0] = 0;
 
     // Give the line to the caller
     if(PtrLength != NULL)
