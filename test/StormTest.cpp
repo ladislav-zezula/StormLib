@@ -47,12 +47,12 @@ static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', '
 
 #ifdef PLATFORM_LINUX
 #define WORK_PATH_ROOT "/home/ladik/MPQs"
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', 0xe6, 0x96, 0xB0, 0xE5, 0xBB, 0xBA, 0xE6, 0x96, 0x87, 0xE4, 0xBB, 0xB6, 0xE5, 0xA4, 0xB9, 0 };
+static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
 #ifdef PLATFORM_MAC
 #define WORK_PATH_ROOT "/Users/sam/StormLib/test"
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', 0xe6, 0x96, 0xB0, 0xE5, 0xBB, 0xBA, 0xE6, 0x96, 0x87, 0xE4, 0xBB, 0xB6, 0xE5, 0xA4, 0xB9, 0 };
+static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
 // Global for the work MPQ
@@ -273,7 +273,7 @@ static LPCTSTR g_szPathSeparator = _T("\\");
 static const TCHAR PATH_SEPARATOR = _T('\\');       // Path separator for Windows platforms
 #else
 static LPCSTR g_szPathSeparator = "/";
-static const TCHAR PATH_SEPARATOR = '/'             // Path separator for Non-Windows platforms
+static const TCHAR PATH_SEPARATOR = '/';            // Path separator for Non-Windows platforms
 #endif
 
 // This must be the directory where our test MPQs are stored.
