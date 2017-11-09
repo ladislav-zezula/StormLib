@@ -158,6 +158,10 @@
     #define MAX_PATH 1024
   #endif
 
+  #ifndef _countof
+    #define _countof(x)  (sizeof(x) / sizeof(x[0]))
+  #endif
+  
   #define WINAPI 
 
   #define FILE_BEGIN    SEEK_SET
@@ -175,6 +179,7 @@
   #define _tprintf  printf
   #define _stprintf sprintf
   #define _tremove  remove
+  #define _tmain    main
 
   #define _stricmp  strcasecmp
   #define _strnicmp strncasecmp

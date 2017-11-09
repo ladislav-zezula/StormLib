@@ -77,6 +77,8 @@ class TLogHelper
 
 TLogHelper::TLogHelper(const char * szNewMainTitle, const TCHAR * szNewSubTitle1, const TCHAR * szNewSubTitle2)
 {
+    TCHAR szMainTitleT[0x80];
+
     UserString = "";
     UserCount = 1;
     UserTotal = 1;
@@ -89,15 +91,18 @@ TLogHelper::TLogHelper(const char * szNewMainTitle, const TCHAR * szNewSubTitle1
     bMessagePrinted = false;
     bDontPrintResult = false;
 
+    // Copy the UNICODE main title
+    StringCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
+
     // Print the initial information
     if(szMainTitle != NULL)
     {
         if(szSubTitle1 != NULL && szSubTitle2 != NULL)
-            printf("Running %s (%s+%s) ...", szMainTitle, szSubTitle1, szSubTitle2);
+            _tprintf(_T("Running %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
         else if(szSubTitle1 != NULL)
-            printf("Running %s (%s) ...", szMainTitle, szSubTitle1);
+            _tprintf(_T("Running %s (%s) ..."), szMainTitleT, szSubTitle1);
         else
-            printf("Running %s ...", szMainTitle);
+            _tprintf(_T("Running %s ..."), szMainTitleT);
     }
 }
 
