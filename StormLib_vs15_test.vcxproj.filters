@@ -2,67 +2,67 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Doc Files">
-      <UniqueIdentifier>{595d6bc1-89d0-4fb8-98f6-be35e73727c4}</UniqueIdentifier>
+      <UniqueIdentifier>{1dbbb48c-9db9-4fdb-a903-223ed233cc21}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{721663d8-8692-476f-b0fd-71fdadf69929}</UniqueIdentifier>
+      <UniqueIdentifier>{ab878eef-1074-4594-bac5-272c05774bd8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{9cc24144-d198-4bd1-b941-b946bd61b982}</UniqueIdentifier>
+      <UniqueIdentifier>{640f063a-5028-4ba1-9007-96d98a634561}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\adpcm">
-      <UniqueIdentifier>{be0080d3-fc04-4442-9e28-b4cc2641177d}</UniqueIdentifier>
+      <UniqueIdentifier>{6e8cfdab-fca3-4737-8905-6154bc657e15}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\bzip2">
-      <UniqueIdentifier>{adb84a97-8a0c-4988-9473-452326110dff}</UniqueIdentifier>
+      <UniqueIdentifier>{a810fdb6-0d21-4279-8e39-b2de644170c0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\huffman">
-      <UniqueIdentifier>{87256d6a-e658-4f60-8759-6bff32a35eb2}</UniqueIdentifier>
+      <UniqueIdentifier>{7861b4fb-1471-4573-92ea-08c06dc14b93}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt">
-      <UniqueIdentifier>{d730d7c1-2960-49d2-ba0d-d1a91dd08964}</UniqueIdentifier>
+      <UniqueIdentifier>{8ba6c5c7-3ad0-44e6-8829-5020fce13d49}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\hashes">
-      <UniqueIdentifier>{13e5ccb1-06f1-4d10-bdc1-825b51c64dbf}</UniqueIdentifier>
+      <UniqueIdentifier>{92cb0c1d-86f0-4735-9e4e-b07df664c359}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\math">
-      <UniqueIdentifier>{73f7f025-7366-4d76-8d60-4327e00b9d18}</UniqueIdentifier>
+      <UniqueIdentifier>{f7fb3d55-94af-4a6e-be7b-76cb909e7325}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\misc">
-      <UniqueIdentifier>{be21c641-7727-4d7b-919e-c895d801db17}</UniqueIdentifier>
+      <UniqueIdentifier>{337159fe-94a7-45a8-a91b-fa8b9d06b2ae}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk">
-      <UniqueIdentifier>{694a7758-f909-4b8e-aa13-4d06a8c70eff}</UniqueIdentifier>
+      <UniqueIdentifier>{359bb3d3-71d5-47e7-967a-1fada7882e4d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\asn1">
-      <UniqueIdentifier>{3f01cae6-5676-4f33-bb38-215341eedfc4}</UniqueIdentifier>
+      <UniqueIdentifier>{775dbb7e-ef06-4660-9d84-50ff2557ef54}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\ecc">
-      <UniqueIdentifier>{63d75851-c430-4c76-aa08-3398523aab4a}</UniqueIdentifier>
+      <UniqueIdentifier>{2e5d39cc-482c-4775-8830-79f8314e72e4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\pkcs1">
-      <UniqueIdentifier>{11175e9e-e9f1-405c-961b-933e72503cdd}</UniqueIdentifier>
+      <UniqueIdentifier>{1e0ef267-228e-4c59-8d88-e3b33aeaff49}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtomcrypt\pk\rsa">
-      <UniqueIdentifier>{e30512f4-bdf8-4460-823d-475bd8f08d28}</UniqueIdentifier>
+      <UniqueIdentifier>{98330deb-0b92-4f02-8016-8a33dc5f5d29}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\libtommath">
-      <UniqueIdentifier>{d2889ef6-3f12-4a9b-8624-8d061748ff03}</UniqueIdentifier>
+      <UniqueIdentifier>{fa78c716-784a-43a0-a548-db413431973b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\lzma">
-      <UniqueIdentifier>{02c6dfb8-4a58-46c5-bb35-69ba6215a3a6}</UniqueIdentifier>
+      <UniqueIdentifier>{5308566b-d3fd-4561-a7fb-982a63662793}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\pklib">
-      <UniqueIdentifier>{563829a0-aaa3-4af2-88a2-8c6445d2754b}</UniqueIdentifier>
+      <UniqueIdentifier>{d5371a5f-1630-4e79-9e7e-1ef654a2ddec}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\sparse">
-      <UniqueIdentifier>{e82b0d03-77ff-46dc-b5a4-5b469224222a}</UniqueIdentifier>
+      <UniqueIdentifier>{c2971fba-aff1-42ab-9f4f-71707edabf77}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\zlib">
-      <UniqueIdentifier>{cb92df18-9435-4db9-997a-e0e7d532cd26}</UniqueIdentifier>
+      <UniqueIdentifier>{4f4fe3d6-6f2b-4c83-9cf9-f1d108ecd854}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\jenkins">
-      <UniqueIdentifier>{2920175c-439c-4fd5-b94e-8cf1d3aaadd3}</UniqueIdentifier>
+      <UniqueIdentifier>{5aaea51e-4b7c-4a35-b35c-96c2fc7750f1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -77,13 +77,16 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\FileStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="src\StormCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\StormLib.h">
+    <ClInclude Include="src\StormLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\StormPort.h">
+    <ClInclude Include="src\StormPort.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\adpcm\adpcm.h">
@@ -109,7 +112,13 @@
     <ClCompile Include="src\SBaseCommon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\SBaseDumpData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\SBaseFileTable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SBaseSubTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SCompression.cpp">
@@ -152,6 +161,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SFileVerify.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\StormTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\adpcm\adpcm.cpp">
@@ -280,6 +292,48 @@
     <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_decode_utf8_string.c">
       <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
     </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_bit_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_boolean.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_ia5_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_object_identifier.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_octet_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_printable_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_ex.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_multi.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_set.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_setof.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_short_integer.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utctime.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utf8_string.c">
+      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
+    </ClCompile>
     <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_length_bit_string.c">
       <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
     </ClCompile>
@@ -343,7 +397,13 @@
     <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_pss_decode.c">
       <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
     </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_pss_encode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
     <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_v1_5_decode.c">
+      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_v1_5_encode.c">
       <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
     </ClCompile>
     <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_exptmod.c">
@@ -356,6 +416,9 @@
       <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
     </ClCompile>
     <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_make_key.c">
+      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_sign_hash.c">
       <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
     </ClCompile>
     <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_verify_hash.c">
@@ -745,6 +808,9 @@
     <ClCompile Include="src\zlib\adler32.c">
       <Filter>Source Files\zlib</Filter>
     </ClCompile>
+    <ClCompile Include="src\zlib\compress_zlib.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
     <ClCompile Include="src\zlib\crc32.c">
       <Filter>Source Files\zlib</Filter>
     </ClCompile>
@@ -768,63 +834,6 @@
     </ClCompile>
     <ClCompile Include="src\jenkins\lookup3.c">
       <Filter>Source Files\jenkins</Filter>
-    </ClCompile>
-    <ClCompile Include="src\zlib\compress_zlib.c">
-      <Filter>Source Files\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SBaseSubTypes.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_bit_string.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_boolean.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_ia5_string.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_integer.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_object_identifier.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_octet_string.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_printable_string.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_ex.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_sequence_multi.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_set.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_setof.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_short_integer.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utctime.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\asn1\der_encode_utf8_string.c">
-      <Filter>Source Files\libtomcrypt\pk\asn1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_pss_encode.c">
-      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\pkcs1\pkcs_1_v1_5_encode.c">
-      <Filter>Source Files\libtomcrypt\pk\pkcs1</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libtomcrypt\src\pk\rsa\rsa_sign_hash.c">
-      <Filter>Source Files\libtomcrypt\pk\rsa</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
