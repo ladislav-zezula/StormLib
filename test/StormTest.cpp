@@ -28,13 +28,8 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
-#ifdef PLATFORM_LINUX
+#ifndef PLATFORM_WINDOWS
 #include <dirent.h>
-
-typedef const char * LPCTSTR;
-typedef const char * LPCSTR;
-typedef char * LPTSTR;
-typedef char * LPSTR;
 #endif
 
 //------------------------------------------------------------------------------
