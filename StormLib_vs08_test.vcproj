@@ -183,7 +183,7 @@
 			OutputDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="2"
+			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
 			<Tool
