@@ -357,12 +357,7 @@ int TLogHelper::PrintErrorVa(const char * szFormat, ...)
 
 int TLogHelper::PrintError(const char * szFormat, const char * szFileName)
 {
-    TCHAR szFileNameT[MAX_PATH];
-    TCHAR szFormatT[0x200];
-
-    StringCopy(szFileNameT, _countof(szFileNameT), szFileName);
-    StringCopy(szFormatT, _countof(szFormatT), szFormat);
-    return PrintErrorVa(szFormatT, szFileNameT);
+    return PrintErrorVa(szFormat, szFileName);
 }
 
 //-----------------------------------------------------------------------------
