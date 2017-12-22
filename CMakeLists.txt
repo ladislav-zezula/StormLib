@@ -359,9 +359,7 @@ install(TARGETS ${LIBRARY_NAME}
     INCLUDE(CPack)
 
 if(STORM_BUILD_TESTS)
+    add_executable(storm_test ${TEST_SRC_FILES})
     target_link_libraries(storm_test ${LIBRARY_NAME})
-    install(TARGETS storm_test DESTINATION bin)
+    install(TARGETS storm_test RUNTIME DESTINATION bin)
 endif()
-
-add_executable(storm_test ${SRC_FILES} ${TOMCRYPT_FILES} ${TOMMATH_FILES} ${ZLIB_BZIP2_FILES} ${TEST_SRC_FILES})
-install(TARGETS storm_test RUNTIME DESTINATION bin)
