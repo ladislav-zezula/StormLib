@@ -6,9 +6,9 @@ set(LIBRARY_NAME storm)
 include(CMakeDependentOption)
 
 option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
-cmake_dependent_option(STORM_BUILD_TESTS
+option(STORM_BUILD_TESTS
     "Compile StormLib test application" OFF
-    "BUILD_TESTING" OFF # Stay coherent with CTest variables
+#   "BUILD_TESTING" OFF # Stay coherent with CTest variables
 )
 
 set(SRC_FILES

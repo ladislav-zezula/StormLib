@@ -37,7 +37,7 @@
 
 #ifdef PLATFORM_WINDOWS
 #define WORK_PATH_ROOT _T("E:\\Multimedia\\MPQs")
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', 0x65B0, 0x5EFA, 0x6587, 0x4EF6, 0x5939, 0 };
+static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0x65B0, (TCHAR)0x5EFA, (TCHAR)0x6587, (TCHAR)0x4EF6, (TCHAR)0x5939, 0 };
 #endif
 
 #ifdef PLATFORM_LINUX

@@ -101,9 +101,9 @@ class TADPCMStream
         return true;
     }
 
-    int LengthProcessed(void * pvBuffer)
+    int LengthProcessed(void * pvOutBuffer)
     {
-        return pbBuffer - (unsigned char *)pvBuffer;
+        return (int)((unsigned char *)pbBuffer - (unsigned char *)pvOutBuffer);
     }
 
     unsigned char * pbBufferEnd;
