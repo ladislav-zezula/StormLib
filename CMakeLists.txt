@@ -363,3 +363,4 @@ if(STORM_BUILD_TESTS)
     target_link_libraries(storm_test ${LIBRARY_NAME})
     install(TARGETS storm_test RUNTIME DESTINATION bin)
 endif()
+
