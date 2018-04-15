@@ -9,7 +9,6 @@ _SFileGetLocale
 
 _SFileOpenArchive
 _SFileCreateArchive
-_SFileGetArchiveBitmap
 _SFileFlushArchive
 _SFileCloseArchive
 
