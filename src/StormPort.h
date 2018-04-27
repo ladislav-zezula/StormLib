@@ -211,6 +211,7 @@
   #define ERROR_NOT_ENOUGH_MEMORY        ENOMEM
   #define ERROR_NOT_SUPPORTED            ENOTSUP
   #define ERROR_INVALID_PARAMETER        EINVAL
+  #define ERROR_NEGATIVE_SEEK            EINVAL
   #define ERROR_DISK_FULL                ENOSPC
   #define ERROR_ALREADY_EXISTS           EEXIST
   #define ERROR_INSUFFICIENT_BUFFER      ENOBUFS
