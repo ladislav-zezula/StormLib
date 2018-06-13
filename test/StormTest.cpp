@@ -4406,7 +4406,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-
+/*
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -4482,7 +4482,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Open the update MPQ from Diablo II (patch 2016)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenByName(_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), "waitingroombkgd.dc6");
-
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenFile_OpenByName(_T("MPQ_2018_v1_icon_error.w3m"), "file00000002.blp");
+/*
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
@@ -4832,7 +4835,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

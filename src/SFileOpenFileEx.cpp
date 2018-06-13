@@ -259,27 +259,16 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
             case SFILE_OPEN_BASE_FILE:
             case SFILE_OPEN_CHECK_EXISTS:
                 
-                // Check the pseudo-file name
-                if((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
+                // If this MPQ has no patches, open the file from this MPQ directly
+                if(ha->haPatch == NULL || dwSearchScope == SFILE_OPEN_BASE_FILE)
                 {
-                    // Get the file entry for the file
-                    if(dwFileIndex > ha->dwFileTableSize)
-                        break;
-                    pFileEntry = ha->pFileTable + dwFileIndex;
+                    pFileEntry = GetFileEntryLocale2(ha, szFileName, lcFileLocale, &dwHashIndex);
                 }
+
+                // If this MPQ is a patched archive, open the file as patched
                 else
                 {
-                    // If this MPQ has no patches, open the file from this MPQ directly
-                    if(ha->haPatch == NULL || dwSearchScope == SFILE_OPEN_BASE_FILE)
-                    {
-                        pFileEntry = GetFileEntryLocale2(ha, szFileName, lcFileLocale, &dwHashIndex);
-                    }
-
-                    // If this MPQ is a patched archive, open the file as patched
-                    else
-                    {
-                        return OpenPatchedFile(hMpq, szFileName, PtrFile);
-                    }
+                    return OpenPatchedFile(hMpq, szFileName, PtrFile);
                 }
                 break;
 
@@ -308,7 +297,19 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
     if(nError == ERROR_SUCCESS)
     {
         if(pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
+        {
+            // Check the pseudo-file name
+            if((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
+            {
+                // Get the file entry for the file
+                if(dwFileIndex < ha->dwFileTableSize)
+                {
+                    pFileEntry = ha->pFileTable + dwFileIndex;
+                }
+            }
+
             nError = ERROR_FILE_NOT_FOUND;
+        }
 
         // Ignore unknown loading flags (example: MPQ_2016_v1_WME4_4.w3x)
 //      if(pFileEntry != NULL && pFileEntry->dwFlags & ~MPQ_FILE_VALID_FLAGS)
