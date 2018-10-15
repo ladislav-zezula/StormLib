@@ -406,6 +406,14 @@ int ConvertMpqHeaderToFormat4(
                 pHeader->ArchiveSize64 = DetermineArchiveSize_V1(ha, pHeader, MpqOffset, FileSize);
                 pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
             }
+
+            // EWIX_v8_7.w3x: TMPQHeader::dwBlockTableSize = 0x00319601
+            // Size of TFileTable goes to ~200MB, so we artificially cut it
+            if(BlockTablePos64 + (pHeader->dwBlockTableSize * sizeof(TMPQBlock)) > FileSize)
+            {
+                pHeader->dwBlockTableSize = (DWORD)((FileSize - BlockTablePos64) / sizeof(TMPQBlock));
+                pHeader->BlockTableSize64 = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
+            }
             break;
 
         case MPQ_FORMAT_VERSION_2:

@@ -118,7 +118,6 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     return ERROR_SUCCESS;
 }
 
-
 /*****************************************************************************/
 /* Public functions                                                          */
 /*****************************************************************************/

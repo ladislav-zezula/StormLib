@@ -308,7 +308,10 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                 }
             }
 
-            nError = ERROR_FILE_NOT_FOUND;
+            if(pFileEntry == NULL)
+            {
+                nError = ERROR_FILE_NOT_FOUND;
+            }
         }
 
         // Ignore unknown loading flags (example: MPQ_2016_v1_WME4_4.w3x)

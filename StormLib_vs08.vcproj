@@ -25,6 +25,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -88,6 +89,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -152,6 +154,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -215,6 +218,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -529,6 +533,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -592,6 +597,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -656,6 +662,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -719,6 +726,7 @@
 			IntermediateDirectory="./bin/$(ProjectName)/$(PlatformName)/$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"

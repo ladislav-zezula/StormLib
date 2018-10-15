@@ -1611,7 +1611,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         // Read the file data
         SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
         if(dwBytesRead != dwFileSizeLo)
-            nError = pLogger->PrintError("Read failed: %s", szFileName);
+//          nError = pLogger->PrintError("Read failed: %s", szFileName);
+            nError = ERROR_FILE_CORRUPT;
     }
 
     // If failed, free the buffer
@@ -2503,10 +2504,10 @@ static int TestOpenFile_OpenById(LPCTSTR szPlainName)
 
 static int TestOpenFile_OpenByName(LPCTSTR szPlainName, LPCSTR szFileName)
 {
-    TLogHelper Logger("OpenFileById", szPlainName);
+    TLogHelper Logger("OpenFileByName", szPlainName);
     TFileData * pFileData = NULL;
-    HANDLE hFile;
-    HANDLE hMpq;
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
     DWORD dwCrc32_1 = 0;
     DWORD dwCrc32_2 = 0;
     int nError;
@@ -2541,11 +2542,11 @@ static int TestOpenFile_OpenByName(LPCTSTR szPlainName, LPCSTR szFileName)
             if(dwCrc32_1 != dwCrc32_2)
                 Logger.PrintError("Warning: CRC32 error on %s", szFileName);
         }
+
+        // Close the archive
+        SFileCloseArchive(hMpq);
     }
 
-    // Close the archive
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
     return nError;
 }
 
@@ -4462,11 +4463,11 @@ int _tmain(int argc, TCHAR * argv[])
     // Open a stream, paired with local master
     if(nError == ERROR_SUCCESS)
         nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-complete.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), true);
-
+*/
     // Open a stream, paired with remote master (takes hell lot of time!!!)
     if(nError == ERROR_SUCCESS)
         nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("http://www.zezula.net\\mpqs\\alternate.zip"), false);
-
+/*
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile(_T("ListFile_Blizzard.txt"));
@@ -4482,10 +4483,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Open the update MPQ from Diablo II (patch 2016)
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenByName(_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), "waitingroombkgd.dc6");
-*/
+
     if(nError == ERROR_SUCCESS)
         nError = TestOpenFile_OpenByName(_T("MPQ_2018_v1_icon_error.w3m"), "file00000002.blp");
-/*
+
     // Open a file whose archive's (signature) file has flags = 0x90000000
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
@@ -4625,6 +4626,9 @@ int _tmain(int argc, TCHAR * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2017_v1_TildeInFileName.mpq"), NULL, "1.blp");
 
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive(_T("MPQ_2018_v1_EWIX_v8_7.w3x"), NULL, "BlueCrystal.mdx");
+
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
@@ -4696,7 +4700,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Check the SFileGetFileInfo function
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
-
+*/
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
@@ -4835,7 +4839,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-*/
+
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

@@ -652,6 +652,19 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
                     DWORD dwFileSize = 0;
                     DWORD dwDataSize;
                     DWORD dwIndex = 0;
+                    TCHAR StatusCode[0x08];
+
+                    // Check if the file succeeded to open
+                    dwDataSize = sizeof(StatusCode);
+                    if(HttpQueryInfo(hRequest, HTTP_QUERY_STATUS_CODE, StatusCode, &dwDataSize, &dwIndex))
+                    {
+                        if(_tcscmp(StatusCode, _T("200")))
+                        {
+                            InternetCloseHandle(hRequest);
+                            SetLastError(ERROR_FILE_NOT_FOUND);
+                            return false;
+                        }
+                    }
 
                     // Check if the MPQ has Last Modified field
                     dwDataSize = sizeof(ULONGLONG);
