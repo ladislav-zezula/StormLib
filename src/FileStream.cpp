@@ -41,9 +41,9 @@ DWORD GetLastError()
     return nLastError;
 }
 
-void SetLastError(DWORD nError)
+void SetLastError(DWORD dwErrCode)
 {
-    nLastError = nError;
+    nLastError = dwErrCode;
 }
 #endif
 

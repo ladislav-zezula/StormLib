@@ -4404,6 +4404,15 @@ int _tmain(int argc, TCHAR * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
+    HANDLE hMpq = NULL;
+
+    if(SFileOpenArchive(_T("e:\\hm.w3x"), 0, MPQ_OPEN_FORCE_LISTFILE, &hMpq))
+    {
+        SFileAddListFile(hMpq, _T("c:\\Tools32\\ListFiles\\Warcraft III Maps.txt"));
+        SFileAddFile(hMpq, _T("e:\\dummy.txt"), "dummy.txt", 0);
+        SFileCloseArchive(hMpq);
+    }
+
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
@@ -4463,11 +4472,11 @@ int _tmain(int argc, TCHAR * argv[])
     // Open a stream, paired with local master
     if(nError == ERROR_SUCCESS)
         nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-complete.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), true);
-*/
+
     // Open a stream, paired with remote master (takes hell lot of time!!!)
     if(nError == ERROR_SUCCESS)
         nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("http://www.zezula.net\\mpqs\\alternate.zip"), false);
-/*
+
     // Search in listfile
     if(nError == ERROR_SUCCESS)
         nError = TestSearchListFile(_T("ListFile_Blizzard.txt"));
@@ -4700,7 +4709,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Check the SFileGetFileInfo function
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
-*/
+
     // Downloadable MPQ archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
@@ -4839,7 +4848,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

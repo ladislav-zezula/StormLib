@@ -2069,10 +2069,10 @@ int DeleteFileEntry(TMPQArchive * ha, TMPQFile * hf)
     return ERROR_SUCCESS;    
 }
 
-DWORD InvalidateInternalFile(TMPQArchive * ha, const char * szFileName, DWORD dwFlagNone, DWORD dwFlagNew)
+DWORD InvalidateInternalFile(TMPQArchive * ha, const char * szFileName, DWORD dwFlagNone, DWORD dwFlagNew, DWORD dwForceAddTheFile = 0)
 {
     TMPQFile * hf = NULL;
-    DWORD dwFileFlags = 0;
+    DWORD dwFileFlags = MPQ_FILE_DEFAULT_INTERNAL;
     int nError = ERROR_FILE_NOT_FOUND;
 
     // Open the file from the MPQ
@@ -2084,17 +2084,25 @@ DWORD InvalidateInternalFile(TMPQArchive * ha, const char * szFileName, DWORD dw
         // Delete the file entry
         nError = DeleteFileEntry(ha, hf);
         if(nError == ERROR_SUCCESS)
-        {
-            ha->dwFlags |= dwFlagNew;
-            ha->dwReservedFiles++;
-        }
+            dwForceAddTheFile = 1;
 
-        // Free the file entry
+        // Close the file
         FreeFileHandle(hf);
     }
 
-    // If the deletion failed, set the "none" flag
-    ha->dwFlags |= (nError != ERROR_SUCCESS) ? dwFlagNone : 0;
+    // Are we going to add the file?
+    if(dwForceAddTheFile)
+    {
+        ha->dwFlags |= dwFlagNew;
+        ha->dwReservedFiles++;
+    }
+    else
+    {
+        ha->dwFlags |= dwFlagNone;
+        dwFileFlags = 0; 
+    }
+
+    // Return the intended file flags
     return dwFileFlags;
 }
 
@@ -2112,7 +2120,7 @@ void InvalidateInternalFiles(TMPQArchive * ha)
         // Invalidate the (listfile), if not done yet
         if((ha->dwFlags & (MPQ_FLAG_LISTFILE_NONE | MPQ_FLAG_LISTFILE_NEW)) == 0)
         {
-            ha->dwFileFlags1 = InvalidateInternalFile(ha, LISTFILE_NAME, MPQ_FLAG_LISTFILE_NONE, MPQ_FLAG_LISTFILE_NEW);
+            ha->dwFileFlags1 = InvalidateInternalFile(ha, LISTFILE_NAME, MPQ_FLAG_LISTFILE_NONE, MPQ_FLAG_LISTFILE_NEW, (ha->dwFlags & MPQ_FLAG_LISTFILE_FORCE));
         }
 
         // Invalidate the (attributes), if not done yet
