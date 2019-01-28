@@ -13,6 +13,7 @@ EXPORTS
 
     SFileOpenArchive
     SFileCreateArchive
+    SFileCreateArchive2
     SFileFlushArchive
     SFileCloseArchive
 
