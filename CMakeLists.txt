@@ -252,6 +252,7 @@ set(TOMMATH_FILES
            src/libtommath/bn_s_mp_sub.c
 )
 
+# Needed for Windows
 set(ZLIB_BZIP2_FILES
            src/bzip2/blocksort.c
            src/bzip2/bzlib.c
@@ -283,8 +284,12 @@ if(WIN32)
 else()
     find_package(ZLIB REQUIRED)
     find_package(BZip2 REQUIRED)
+
     include_directories(${ZLIB_INCLUDE_DIR} ${BZIP2_INCLUDE_DIR})
     set(LINK_LIBS ${ZLIB_LIBRARY} ${BZIP2_LIBRARIES})
+
+    add_definitions(-D__SYS_ZLIB -D__SYS_BZLIB)
+
     option(WITH_LIBTOMCRYPT "Use system LibTomCrypt library" OFF)
     if(WITH_LIBTOMCRYPT)
         set(LINK_LIBS ${LINK_LIBS} tomcrypt)
