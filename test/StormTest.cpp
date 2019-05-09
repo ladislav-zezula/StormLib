@@ -718,7 +718,7 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 
 #endif
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
 
     // Keep compilers happy
     return (HANDLE)opendir(szDirectory);
@@ -753,7 +753,7 @@ static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry
 
 #endif
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
 
     struct dirent * directory_entry;
 
@@ -776,7 +776,7 @@ static void FreeDirectorySearch(HANDLE hFind)
     FindClose(hFind);
 #endif
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
     closedir((DIR *)hFind);
 #endif
 }
