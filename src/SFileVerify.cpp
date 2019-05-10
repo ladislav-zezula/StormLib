@@ -767,7 +767,7 @@ bool QueryMpqSignatureInfo(
 
         // Check the signature header "NGIS"
         if(pSI->Signature[0] != 'N' || pSI->Signature[1] != 'G' || pSI->Signature[2] != 'I' || pSI->Signature[3] != 'S')
-            return false;
+            return true; //Not a valid signature, but another filetype could've been appended so not always an error.
 
         pSI->SignatureTypes |= SIGNATURE_TYPE_STRONG;
         return true;
