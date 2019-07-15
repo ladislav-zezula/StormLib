@@ -89,7 +89,7 @@ static bool BaseFile_Create(TFileStream * pStream)
     }
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     {
         intptr_t handle;
         
@@ -139,7 +139,7 @@ static bool BaseFile_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
     }
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     {
         struct stat64 fileinfo;
         int oflag = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? O_RDONLY : O_RDWR;
@@ -210,7 +210,7 @@ static bool BaseFile_Read(
     }
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     {
         ssize_t bytes_read;
 
@@ -281,7 +281,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
     }
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     {
         ssize_t bytes_written;
 
@@ -348,7 +348,7 @@ static bool BaseFile_Resize(TFileStream * pStream, ULONGLONG NewFileSize)
     }
 #endif
     
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     {
         if(ftruncate64((intptr_t)pStream->Base.File.hFile, (off64_t)NewFileSize) == -1)
         {
@@ -392,7 +392,7 @@ static bool BaseFile_Replace(TFileStream * pStream, TFileStream * pNewStream)
     return (bool)MoveFile(pNewStream->szFileName, pStream->szFileName);
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     // "rename" on Linux also works if the target file exists
     if(rename(pNewStream->szFileName, pStream->szFileName) == -1)
     {
@@ -412,7 +412,7 @@ static void BaseFile_Close(TFileStream * pStream)
         CloseHandle(pStream->Base.File.hFile);
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
         close((intptr_t)pStream->Base.File.hFile);
 #endif
     }
@@ -551,7 +551,7 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
         return false;
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU) || defined(PLATFORM_AMIGA)
     struct stat64 fileinfo;
     intptr_t handle;
     bool bResult = false;
@@ -563,6 +563,7 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
         // Get the file size
         if(fstat64(handle, &fileinfo) != -1)
         {
+#if !defined(PLATFORM_AMIGA)
             pStream->Base.Map.pbFile = (LPBYTE)mmap(NULL, (size_t)fileinfo.st_size, PROT_READ, MAP_PRIVATE, handle, 0);
             if(pStream->Base.Map.pbFile != NULL)
             {
@@ -574,6 +575,7 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
                 pStream->Base.Map.FilePos = 0;
                 bResult = true;
             }
+#endif
         }
         close(handle);
     }
@@ -620,7 +622,8 @@ static void BaseMap_Close(TFileStream * pStream)
         UnmapViewOfFile(pStream->Base.Map.pbFile);
 #endif
 
-#if defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if (defined(PLATFORM_MAC) || defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)) && !defined(PLATFORM_AMIGA)
+    //Todo(Amiga): Fix a proper solution for this
     if(pStream->Base.Map.pbFile != NULL)
         munmap(pStream->Base.Map.pbFile, (size_t )pStream->Base.Map.FileSize);
 #endif
