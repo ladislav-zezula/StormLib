@@ -345,6 +345,14 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="Header Files"
+			>
+			<File
+				RelativePath=".\storm_dll.h"
+				>
+			</File>
+		</Filter>
 	</Files>
 	<Globals>
 	</Globals>

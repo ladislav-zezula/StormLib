@@ -13,13 +13,13 @@
 /* 11.04.03  1.00  Lad  Added some functions                                 */
 /*****************************************************************************/
 
-// We need the Windows data types for the Storm prototypes
-#include <windows.h>
-
 #ifndef __STORM_H__
 #define __STORM_H__
 
-// Somethimes is necessary to change the function names so they
+// We need the Windows data types for the Storm prototypes
+#include <windows.h>
+
+// Sometimes is necessary to change the function names so they
 // will not conflict with other MPQ tools.
 #ifdef STORM_ALTERNATE_NAMES
   #define SFILE(Name) Storm##Name
@@ -58,6 +58,7 @@ BOOL  WINAPI SCOMP(Decompress)(char * pbOutBuffer, int * pdwOutLength, char * pb
 }
 #endif
 
+#pragma message("Huhu1")
 #if defined(_MSC_VER) && !defined(BUILDING_STORM_CPP)
 #pragma comment(lib, "Storm.lib")    // Force linking Storm.lib and thus Storm.dll
 #endif
