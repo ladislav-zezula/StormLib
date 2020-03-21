@@ -41,12 +41,12 @@ static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', '
 #endif
 
 #ifdef PLATFORM_LINUX
-#define WORK_PATH_ROOT "/home/ladik/MPQs"
+#define WORK_PATH_ROOT "~/StormLib/test"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
 #ifdef PLATFORM_MAC
-#define WORK_PATH_ROOT "/Users/sam/StormLib/test"
+#define WORK_PATH_ROOT "~/StormLib/test"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
@@ -4421,7 +4421,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-/*
+
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -4853,7 +4853,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-*/
+
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER
