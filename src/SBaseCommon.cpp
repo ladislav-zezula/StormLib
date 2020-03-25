@@ -1376,7 +1376,6 @@ int WriteSectorOffsets(TMPQFile * hf)
     return ERROR_SUCCESS;
 }
 
-
 int WriteSectorChecksums(TMPQFile * hf)
 {
     TMPQArchive * ha = hf->ha;

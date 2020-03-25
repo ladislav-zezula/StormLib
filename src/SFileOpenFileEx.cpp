@@ -296,27 +296,45 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
     // Check whether the file really exists in the MPQ
     if(nError == ERROR_SUCCESS)
     {
-        if(pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
+        // If we didn't find the file, try to open it using pseudo file name ("File
+        if (pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
         {
-            // Check the pseudo-file name
-            if((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
+            // Check the pseudo-file name ("File00000001.ext")
+            if ((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
             {
                 // Get the file entry for the file
-                if(dwFileIndex < ha->dwFileTableSize)
+                if (dwFileIndex < ha->dwFileTableSize)
                 {
                     pFileEntry = ha->pFileTable + dwFileIndex;
                 }
             }
 
-            if(pFileEntry == NULL)
+            // Still not found?
+            if (pFileEntry == NULL)
             {
                 nError = ERROR_FILE_NOT_FOUND;
             }
         }
 
-        // Ignore unknown loading flags (example: MPQ_2016_v1_WME4_4.w3x)
-//      if(pFileEntry != NULL && pFileEntry->dwFlags & ~MPQ_FILE_VALID_FLAGS)
-//          nError = ERROR_NOT_SUPPORTED;
+        // Perform some checks of invalid files
+        if (pFileEntry != NULL)
+        {
+            // MPQ protectors use insanely amount of fake files, often with very high size.
+            // We won't open any files whose compressed size is bigger than archive size
+            // If the file is not compressed, its size cannot be bigger than archive size
+            if ((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
+            {
+                nError = ERROR_FILE_CORRUPT;
+                pFileEntry = NULL;
+            }
+
+            // Ignore unknown loading flags (example: MPQ_2016_v1_WME4_4.w3x)
+//          if(pFileEntry->dwFlags & ~MPQ_FILE_VALID_FLAGS)
+//          {
+//              nError = ERROR_NOT_SUPPORTED;
+//              pFileEntry = NULL;
+//          }
+        }
     }
 
     // Did the caller just wanted to know if the file exists?

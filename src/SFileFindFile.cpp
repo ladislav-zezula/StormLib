@@ -222,6 +222,10 @@ static bool DoMPQSearch_FileEntry(
     // Is it a file but not a patch file?
     if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
     {
+        // Ignore fake files which are not compressed but have size higher than the archive
+        if ((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
+            return false;
+
         // Now we have to check if this file was not enumerated before
         if(!FileWasFoundBefore(ha, hs, pFileEntry))
         {
