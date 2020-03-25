@@ -42,6 +42,9 @@ typedef bool (*LOAD_LISTFILE)(TListFileHandle * pHandle, void * pvBuffer, DWORD 
 //-----------------------------------------------------------------------------
 // Local functions (cache)
 
+// In SFileFindFile.cll
+bool SFileCheckWildCard(const char * szString, const char * szWildCard);
+
 static char * CopyListLine(char * szListLine, const char * szFileName)
 {
     // Copy the string
@@ -579,7 +582,7 @@ static bool DoListFileSearch(TListFileCache * pCache, SFILE_FIND_DATA * lpFindFi
         while((szFileName = ReadListFileLine(pCache, &nLength)) != NULL)
         {
             // Check search mask
-            if(nLength != 0 && CheckWildCard(szFileName, pCache->szWildCard))
+            if(nLength != 0 && SFileCheckWildCard(szFileName, pCache->szWildCard))
             {
                 if(nLength >= sizeof(lpFindFileData->cFileName))
                     nLength = sizeof(lpFindFileData->cFileName) - 1;

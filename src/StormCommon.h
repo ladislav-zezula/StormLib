@@ -297,7 +297,6 @@ void Patch_Finalize(TMPQPatcher * pPatcher);
 //-----------------------------------------------------------------------------
 // Utility functions
 
-bool CheckWildCard(const char * szString, const char * szWildCard);
 bool IsInternalMpqFileName(const char * szFileName);
 
 template <typename XCHAR>

@@ -39,7 +39,7 @@ static TMPQSearch * IsValidSearchHandle(HANDLE hFind)
     return NULL;
 }
 
-bool CheckWildCard(const char * szString, const char * szWildCard)
+bool SFileCheckWildCard(const char * szString, const char * szWildCard)
 {
     const char * szWildCardPtr;
 
@@ -71,7 +71,7 @@ bool CheckWildCard(const char * szString, const char * szWildCard)
 
                 if(AsciiToUpperTable[szWildCardPtr[0]] == AsciiToUpperTable[szString[0]])
                 {
-                    if(CheckWildCard(szString, szWildCardPtr))
+                    if(SFileCheckWildCard(szString, szWildCardPtr))
                         return true;
                 }
             }
@@ -253,7 +253,7 @@ static bool DoMPQSearch_FileEntry(
             if(szFileName != NULL)
             {
                 // Check the file name against the wildcard
-                if(CheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
+                if(SFileCheckWildCard(szFileName + nPrefixLength, hs->szSearchMask))
                 {
                     // Fill the found entry. hash entry and block index are taken from the base MPQ
                     lpFindFileData->dwHashIndex  = HASH_ENTRY_FREE;
