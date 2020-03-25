@@ -41,12 +41,25 @@ static bool IsWarcraft3Map(DWORD * HeaderData)
     return (DwordValue0 == 0x57334D48 && DwordValue1 == 0x00000000);
 }
 
+static bool IsDllFile(LPBYTE pbHeaderBuffer, size_t cbBytesAvailable)
+{
+    // MIX files are DLL files that contain MPQ in overlay.
+    // Only Warcraft III is able to load them, so we consider them MPQs v 1.0
+    if(cbBytesAvailable > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
+    {
+        DWORD e_lfanew = *(PDWORD)(pbHeaderBuffer + 0x3C);
+        if(0 < e_lfanew && e_lfanew < 0x10000)
+            return true;
+    }
+    return false;
+}
+
 static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSize, void * pvUserData)
 {
     TMPQUserData * pUserData;
 
     // BSWAP the source data and copy them to our buffer
-    BSWAP_ARRAY32_UNSIGNED(&pvUserData, sizeof(TMPQUserData));
+    BSWAP_ARRAY32_UNSIGNED(pvUserData, sizeof(TMPQUserData));
     pUserData = (TMPQUserData *)pvUserData;
 
     // Check the sizes
@@ -260,7 +273,10 @@ bool WINAPI SFileOpenArchive(
                     break;
                 }
 
-                bIsWarcraft3Map = IsWarcraft3Map((DWORD *)pbHeaderBuffer);
+                if (IsWarcraft3Map((DWORD *)pbHeaderBuffer))
+                    bIsWarcraft3Map = true;
+                if (IsDllFile(pbHeaderBuffer, dwBytesAvailable))
+                    bIsWarcraft3Map = true;
             }
 
             // Search the header buffer

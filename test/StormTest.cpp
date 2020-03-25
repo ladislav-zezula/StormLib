@@ -4421,7 +4421,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-
+/*
     // Search all testing archives and verify their SHA1 hash
     if(nError == ERROR_SUCCESS)
         nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
@@ -4540,6 +4540,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"));
+*/
+    // Open a MIX file
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive(_T("MPQ_2020_v1_AHF04patch.mix"));
 
     // Open a MPQ archive v 3.0
     if(nError == ERROR_SUCCESS)
