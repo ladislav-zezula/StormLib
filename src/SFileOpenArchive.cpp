@@ -47,7 +47,7 @@ static bool IsDllFile(LPBYTE pbHeaderBuffer, size_t cbBytesAvailable)
     // Only Warcraft III is able to load them, so we consider them MPQs v 1.0
     if(cbBytesAvailable > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
     {
-        DWORD e_lfanew = *(PDWORD)(pbHeaderBuffer + 0x3C);
+        DWORD e_lfanew = *(LPDWORD)(pbHeaderBuffer + 0x3C);
         if(0 < e_lfanew && e_lfanew < 0x10000)
             return true;
     }
