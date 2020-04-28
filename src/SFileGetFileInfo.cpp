@@ -910,6 +910,12 @@ static TFileHeader2Ext data2ext[] =
     {0xE0FFD8FF, 0xFFFFFFFF, 0x00000000, 0x00000000, "jpg"},    // JPEG image
     {0x503B4449, 0xFFFFFFFF, 0x3B4C5857, 0xFFFFFFFF, "slk"},    // SLK file (usually starts with "ID;PWXL;N;E")
     {0x61754C1B, 0xFFFFFFFF, 0x00000000, 0x00000000, "lua"},    // Compiled LUA files
+    {0x20534444, 0xFFFFFFFF, 0x00000000, 0x00000000, "dds"},    // DDS textures
+    {0x43614C66, 0xFFFFFFFF, 0x00000000, 0x00000000, "flac"},   // FLAC sound files
+    {0x6F643357, 0xFFFFFFFF, 0x00000000, 0x00000000, "doo"},    // Warcraft III doodad files
+    {0x21453357, 0xFFFFFFFF, 0x00000000, 0x00000000, "w3e"},    // Warcraft III environment files
+    {0x5733504D, 0xFFFFFFFF, 0x00000000, 0x00000000, "wpm"},    // Warcraft III pathing map files
+    {0x21475457, 0xFFFFFFFF, 0x00000000, 0x00000000, "wtg"},    // Warcraft III trigger files
     {0x00000000, 0x00000000, 0x00000000, 0x00000000, "xxx"},    // Default extension
     {0, 0, 0, 0, NULL}                                          // Terminator 
 };
