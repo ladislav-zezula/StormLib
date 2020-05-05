@@ -4411,10 +4411,8 @@ int _tmain(int argc, TCHAR * argv[])
 
     HANDLE hMpq = NULL;
 
-    if(SFileOpenArchive(_T("e:\\hm.w3x"), 0, MPQ_OPEN_FORCE_LISTFILE, &hMpq))
+    if(SFileOpenArchive(_T("War3_MPQ_NWU_Protected.mix"), 0, MPQ_OPEN_FORCE_LISTFILE | BASE_PROVIDER_MAP, &hMpq))
     {
-        SFileAddListFile(hMpq, _T("c:\\Tools32\\ListFiles\\Warcraft III Maps.txt"));
-        SFileAddFile(hMpq, _T("e:\\dummy.txt"), "dummy.txt", 0);
         SFileCloseArchive(hMpq);
     }
 
@@ -4540,7 +4538,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"));
-*/
+
     // Open a MIX file
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2020_v1_AHF04patch.mix"));
@@ -4646,6 +4644,9 @@ int _tmain(int argc, TCHAR * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2018_v1_EWIX_v8_7.w3x"), NULL, "BlueCrystal.mdx");
+*/
+    if(nError == ERROR_SUCCESS)
+        nError = TestOpenArchive(_T("e:\\Ladik\\Incoming\\Human6proto.w3x"), NULL, "BlueCrystal.mdx", true);
 
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
