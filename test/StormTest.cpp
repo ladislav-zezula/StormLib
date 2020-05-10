@@ -1559,8 +1559,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-//  if(!_stricmp(szFileName, "manifest-cards.csv"))
-//      DebugBreak();
+    if(!_stricmp(szFileName, "File00000733.wav"))
+        __debugbreak();
 #endif
 
     // Make sure that we open the proper locale file
@@ -4409,13 +4409,6 @@ int _tmain(int argc, TCHAR * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
-    HANDLE hMpq = NULL;
-
-    if(SFileOpenArchive(_T("War3_MPQ_NWU_Protected.mix"), 0, MPQ_OPEN_FORCE_LISTFILE | BASE_PROVIDER_MAP, &hMpq))
-    {
-        SFileCloseArchive(hMpq);
-    }
-
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
@@ -4477,8 +4470,8 @@ int _tmain(int argc, TCHAR * argv[])
         nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-complete.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), true);
 
     // Open a stream, paired with remote master (takes hell lot of time!!!)
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("http://www.zezula.net\\mpqs\\alternate.zip"), false);
+//  if(nError == ERROR_SUCCESS)
+//      nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("http://www.zezula.net\\mpqs\\alternate.zip"), false);
 
     // Search in listfile
     if(nError == ERROR_SUCCESS)
@@ -4644,9 +4637,6 @@ int _tmain(int argc, TCHAR * argv[])
 
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive(_T("MPQ_2018_v1_EWIX_v8_7.w3x"), NULL, "BlueCrystal.mdx");
-*/
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("e:\\Ladik\\Incoming\\Human6proto.w3x"), NULL, "BlueCrystal.mdx", true);
 
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
     if(nError == ERROR_SUCCESS)
@@ -4663,7 +4653,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt(_T("MPQ_2013_vX_Battle.net.MPQ"));
-
+*/
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);

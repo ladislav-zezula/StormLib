@@ -12,32 +12,32 @@
 #include <stdlib.h>
 #include "../headers/tomcrypt.h"
 
-void * LibTomMalloc(size_t n)
+LTC_EXPORT void * LTC_CALL LibTomMalloc(size_t n)
 {
     return malloc(n);
 }
 
-void * LibTomCalloc(size_t n, size_t s)
+LTC_EXPORT void * LTC_CALL LibTomCalloc(size_t n, size_t s)
 {
     return calloc(n, s);
 }
 
-void * LibTomRealloc(void *p, size_t n)
+LTC_EXPORT void * LTC_CALL LibTomRealloc(void *p, size_t n)
 {
     return realloc(p, n);
 }
 
-void LibTomFree(void * p)
+LTC_EXPORT void LTC_CALL LibTomFree(void * p)
 {
     free(p);
 }
 
-clock_t LibTomClock(void)
+LTC_EXPORT clock_t LTC_CALL LibTomClock(void)
 {
     return clock();
 }
 
-void LibTomQsort(void *base, size_t nmemb, size_t size, int(*compar)(const void *, const void *))
+LTC_EXPORT void LTC_CALL LibTomQsort(void *base, size_t nmemb, size_t size, int(__cdecl*compar)(const void *, const void *))
 {
     qsort(base, nmemb, size, compar);
 }

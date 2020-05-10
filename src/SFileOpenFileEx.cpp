@@ -124,36 +124,37 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, HANDLE * PtrFile)
     }
 
     // If we couldn't find the base file in any of the patches, it doesn't exist
-    if((ha = haBase) == NULL)
+    if((ha = haBase) != NULL)
     {
-        SetLastError(ERROR_FILE_NOT_FOUND);
-        return false;
-    }
-
-    // Now open the base file
-    if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
-    {
-        // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
-        assert((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0);
-        hf = hfBase;
-
-        // Now open all patches and attach them on top of the base file
-        for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
+        // Now open the base file
+        if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, (HANDLE *)&hfBase))
         {
-            // Prepare the file name with a correct prefix
-            if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
+            // The file must be a base file, i.e. without MPQ_FILE_PATCH_FILE
+            assert((hfBase->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0);
+            hf = hfBase;
+
+            // Now open all patches and attach them on top of the base file
+            for(ha = ha->haPatch; ha != NULL; ha = ha->haPatch)
             {
-                // Remember the new version
-                hfPatch = (TMPQFile *)hPatchFile;
+                // Prepare the file name with a correct prefix
+                if(SFileOpenFileEx((HANDLE)ha, GetPatchFileName(ha, szFileName, szNameBuffer), SFILE_OPEN_BASE_FILE, &hPatchFile))
+                {
+                    // Remember the new version
+                    hfPatch = (TMPQFile *)hPatchFile;
 
-                // We should not find patch file
-                assert((hfPatch->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) != 0);
+                    // We should not find patch file
+                    assert((hfPatch->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) != 0);
 
-                // Attach the patch to the base file
-                hf->hfPatch = hfPatch;
-                hf = hfPatch;
+                    // Attach the patch to the base file
+                    hf->hfPatch = hfPatch;
+                    hf = hfPatch;
+                }
             }
         }
+    }
+    else
+    {
+        SetLastError(ERROR_FILE_NOT_FOUND);
     }
 
     // Give the updated base MPQ

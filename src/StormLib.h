@@ -105,32 +105,34 @@ extern "C" {
 #endif
 
 #if defined(_MSC_VER) && !defined(STORMLIB_NO_AUTO_LINK)
-  #ifdef _DEBUG                                 // DEBUG VERSIONS
-    #ifndef _UNICODE                            
-      #ifdef _DLL                               
-        #pragma comment(lib, "StormLibDAD.lib") // Debug Ansi CRT-DLL version
-      #else        
-        #pragma comment(lib, "StormLibDAS.lib") // Debug Ansi CRT-LIB version
+  #ifndef WDK_BUILD
+    #ifdef _DEBUG                                 // DEBUG VERSIONS
+      #ifndef _UNICODE                           
+        #ifdef _DLL                               
+          #pragma comment(lib, "StormLibDAD.lib") // Debug Ansi CRT-DLL version
+        #else        
+          #pragma comment(lib, "StormLibDAS.lib") // Debug Ansi CRT-LIB version
+        #endif
+      #else
+        #ifdef _DLL                               
+          #pragma comment(lib, "StormLibDUD.lib") // Debug Unicode CRT-DLL version
+        #else        
+          #pragma comment(lib, "StormLibDUS.lib") // Debug Unicode CRT-LIB version
+        #endif
       #endif
-    #else
-      #ifdef _DLL                               
-        #pragma comment(lib, "StormLibDUD.lib") // Debug Unicode CRT-DLL version
-      #else        
-        #pragma comment(lib, "StormLibDUS.lib") // Debug Unicode CRT-LIB version
-      #endif
-    #endif
-  #else                                         // RELEASE VERSIONS
-    #ifndef _UNICODE                            
-      #ifdef _DLL
-        #pragma comment(lib, "StormLibRAD.lib") // Release Ansi CRT-DLL version
-      #else        
-        #pragma comment(lib, "StormLibRAS.lib") // Release Ansi CRT-LIB version
-      #endif
-    #else
-      #ifdef _DLL
-        #pragma comment(lib, "StormLibRUD.lib") // Release Unicode CRT-DLL version
-      #else        
-        #pragma comment(lib, "StormLibRUS.lib") // Release Unicode CRT-LIB version
+    #else                                         // RELEASE VERSIONS
+      #ifndef _UNICODE                            
+        #ifdef _DLL
+          #pragma comment(lib, "StormLibRAD.lib") // Release Ansi CRT-DLL version
+        #else        
+          #pragma comment(lib, "StormLibRAS.lib") // Release Ansi CRT-LIB version
+        #endif
+      #else
+        #ifdef _DLL
+          #pragma comment(lib, "StormLibRUD.lib") // Release Unicode CRT-DLL version
+        #else        
+          #pragma comment(lib, "StormLibRUS.lib") // Release Unicode CRT-LIB version
+        #endif
       #endif
     #endif
   #endif

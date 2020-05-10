@@ -40,7 +40,7 @@ static int ltc_to_asn1(int v)
 }         
       
 
-static int qsort_helper(const void *a, const void *b)
+static int __cdecl qsort_helper1(const void *a, const void *b)
 {
    ltc_asn1_list *A = (ltc_asn1_list *)a, *B = (ltc_asn1_list *)b;
    int            r;
@@ -84,7 +84,7 @@ int der_encode_set(ltc_asn1_list *list, unsigned long inlen,
    }       
    
    /* sort it by the "type" field */
-   XQSORT(copy, inlen, sizeof(*copy), &qsort_helper);   
+   XQSORT(copy, inlen, sizeof(*copy), &qsort_helper1);   
    
    /* call der_encode_sequence_ex() */
    err = der_encode_sequence_ex(copy, inlen, out, outlen, LTC_ASN1_SET);   

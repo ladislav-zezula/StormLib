@@ -22,7 +22,7 @@ struct edge {
    unsigned long  size;
 };
 
-static int qsort_helper(const void *a, const void *b)
+static int __cdecl qsort_helper2(const void *a, const void *b)
 {
    struct edge   *A = (struct edge *)a, *B = (struct edge *)b;
    int            r;
@@ -133,7 +133,7 @@ int der_encode_setof(ltc_asn1_list *list, unsigned long inlen,
    }      
       
    /* sort based on contents (using edges) */
-   XQSORT(edges, inlen, sizeof(*edges), &qsort_helper);
+   XQSORT(edges, inlen, sizeof(*edges), &qsort_helper2);
    
    /* copy static header */
    XMEMCPY(out, buf, hdrlen);
