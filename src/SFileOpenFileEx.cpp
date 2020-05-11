@@ -12,6 +12,10 @@
 #include "StormLib.h"
 #include "StormCommon.h"
 
+#ifndef _countof
+	#define _countof(x)  (sizeof(x) / sizeof(x[0]))
+#endif
+
 /*****************************************************************************/
 /* Local functions                                                           */
 /*****************************************************************************/

@@ -104,7 +104,7 @@ extern "C" {
 #define STORMLIB_NO_AUTO_LINK // Define this if you don't want to link using pragmas when using msvc
 #endif
 
-#if defined(_MSC_VER) && !defined(STORMLIB_NO_AUTO_LINK)
+#if defined(_MSC_VER) && !defined(_XBOX) && !defined(STORMLIB_NO_AUTO_LINK)
   #ifndef WDK_BUILD
     #ifdef _DEBUG                                 // DEBUG VERSIONS
       #ifndef _UNICODE                           
