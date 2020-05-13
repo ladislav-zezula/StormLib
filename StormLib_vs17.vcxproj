@@ -318,7 +318,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAD|x64'">
@@ -338,7 +338,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAS|Win32'">
@@ -355,7 +355,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAS|x64'">
@@ -375,7 +375,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAD|Win32'">
@@ -391,7 +391,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAD|x64'">
@@ -410,7 +410,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAS|Win32'">
@@ -426,7 +426,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAS|x64'">
@@ -445,7 +445,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUD|Win32'">
@@ -462,7 +462,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUD|x64'">
@@ -482,7 +482,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUS|Win32'">
@@ -499,7 +499,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUS|x64'">
@@ -519,7 +519,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUD|Win32'">
@@ -535,7 +535,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUD|x64'">
@@ -554,7 +554,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUS|Win32'">
@@ -570,7 +570,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUS|x64'">
@@ -589,7 +589,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>StormLib.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
