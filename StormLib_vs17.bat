@@ -16,26 +16,26 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxilia
 
 :BUILD_32BIT
 call "%VCVARS_BAT%" x86
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugAD|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugAS|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugUD|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugUS|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseAD|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseAS|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseUD|Win32"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseUS|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugAD|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugAS|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugUD|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugUS|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseAD|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseAS|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseUD|Win32"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseUS|Win32"
 call :RestoreEnvVars
 
 :BUILD_64BIT
 call "%VCVARS_BAT%" x64
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugAD|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugAS|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugUD|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "DebugUS|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseAD|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseAS|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseUD|x64"
-devenv.com StormLib_vs17.sln /project "StormLib" /build "ReleaseUS|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugAD|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugAS|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugUD|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "DebugUS|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseAD|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseAS|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseUD|x64"
+devenv.com StormLib_vs17.sln /project "StormLib" /rebuild "ReleaseUS|x64"
 call :RestoreEnvVars
 
 :RestoreEnvVars
