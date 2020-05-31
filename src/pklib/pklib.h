@@ -101,7 +101,7 @@ typedef struct
     unsigned char LengthCodes[0x100];       // 2B34: Table of length codes
     unsigned char offs2C34[0x100];          // 2C34: Buffer for 
     unsigned char offs2D34[0x100];          // 2D34: Buffer for 
-    unsigned char offs2E34[0x80];           // 2EB4: Buffer for 
+    unsigned char offs2E34[0x80];           // 2E34: Buffer for 
     unsigned char offs2EB4[0x100];          // 2EB4: Buffer for 
     unsigned char ChBitsAsc[0x100];         // 2FB4: Buffer for 
     unsigned char DistBits[0x40];           // 30B4: Numbers of bytes to skip copied block length
