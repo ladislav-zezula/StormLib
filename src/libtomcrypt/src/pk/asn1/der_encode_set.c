@@ -40,7 +40,7 @@ static int ltc_to_asn1(int v)
 }         
       
 
-static int __cdecl qsort_helper1(const void *a, const void *b)
+static int LTC_CALL qsort_helper1(const void *a, const void *b)
 {
    ltc_asn1_list *A = (ltc_asn1_list *)a, *B = (ltc_asn1_list *)b;
    int            r;

@@ -22,7 +22,7 @@ struct edge {
    unsigned long  size;
 };
 
-static int __cdecl qsort_helper2(const void *a, const void *b)
+static int LTC_CALL qsort_helper2(const void *a, const void *b)
 {
    struct edge   *A = (struct edge *)a, *B = (struct edge *)b;
    int            r;
