@@ -37,7 +37,7 @@ LTC_EXPORT clock_t LTC_CALL LibTomClock(void)
     return clock();
 }
 
-LTC_EXPORT void LTC_CALL LibTomQsort(void *base, size_t nmemb, size_t size, int(__cdecl*compar)(const void *, const void *))
+LTC_EXPORT void LTC_CALL LibTomQsort(void *base, size_t nmemb, size_t size, int(LTC_CALL * compar)(const void *, const void *))
 {
     qsort(base, nmemb, size, compar);
 }
