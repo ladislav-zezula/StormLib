@@ -62,6 +62,8 @@
     #define PLATFORM_32BIT
   #endif
 
+  #define STORMLIB_CDECL __cdecl
+
   #define PLATFORM_WINDOWS
   #define PLATFORM_DEFINED                  // The platform is known now
 
@@ -160,6 +162,9 @@
   #else
     #define PLATFORM_32BIT
   #endif
+
+  // __cdecl meand nothing on non-Windows
+  #define STORMLIB_CDECL /* */
 
   // Typedefs for ANSI C
   typedef unsigned char  BYTE;

@@ -292,7 +292,7 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
     return (char *)pbLineBegin;
 }
 
-static int __cdecl CompareFileNodes(const void * p1, const void * p2) 
+static int STORMLIB_CDECL CompareFileNodes(const void * p1, const void * p2) 
 {
     char * szFileName1 = *(char **)p1;
     char * szFileName2 = *(char **)p2;
