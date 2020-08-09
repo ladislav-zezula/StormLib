@@ -553,8 +553,11 @@ int ConvertMpqHeaderToFormat4(
             // Verify header MD5. Header MD5 is calculated from the MPQ header since the 'MPQ\x1A'
             // signature until the position of header MD5 at offset 0xC0
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_4);
+
+            // Apparently, Starcraft II only accepts MPQ headers where the MPQ header hash matches
+            // If MD5 doesn't match, we ignore this offset
             if(!VerifyDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader))
-                nError = ERROR_FILE_CORRUPT;
+                return ERROR_FAKE_MPQ_HEADER;
 
             // Calculate the block table position
             BlockTablePos64 = MpqOffset + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
@@ -2214,7 +2217,7 @@ static TMPQHash * LoadHashTable(TMPQArchive * ha)
             break;
     }
 
-    // Remember the size of the hash table
+    // Return the loaded hash table
     return pHashTable;
 }
 
@@ -2337,7 +2340,7 @@ int LoadAnyHashTable(TMPQArchive * ha)
         ha->pHetTable = LoadHetTable(ha);
 
     // Try to load classic hash table
-    if(pHeader->dwHashTableSize)
+    if(pHeader->dwHashTableSize && ha->pHetTable == NULL)
         ha->pHashTable = LoadHashTable(ha);
 
     // At least one of the tables must be present

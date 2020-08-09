@@ -36,7 +36,7 @@
 // Defines
 
 #ifdef PLATFORM_WINDOWS
-#define WORK_PATH_ROOT _T("E:\\Multimedia\\MPQs")
+#define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0x65B0, (TCHAR)0x5EFA, (TCHAR)0x6587, (TCHAR)0x4EF6, (TCHAR)0x5939, 0 };
 #endif
 
@@ -4654,6 +4654,10 @@ int _tmain(int argc, TCHAR * argv[])
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Corrupt(_T("MPQ_2013_vX_Battle.net.MPQ"));
 */
+    // Test on an archive that has two fake headers before the real one
+    if (nError == ERROR_SUCCESS)
+        nError = TestOpenArchive_Corrupt(_T("MPQ_2020_v4_FakeMpqHeaders.SC2Mod"));
+/*
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
@@ -4848,7 +4852,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-
+*/
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

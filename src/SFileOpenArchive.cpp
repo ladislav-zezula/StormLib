@@ -317,8 +317,11 @@ bool WINAPI SFileOpenArchive(
                 {
                     // Now convert the header to version 4
                     nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags, bIsWarcraft3Map);
-                    bSearchComplete = true;
-                    break;
+                    if(nError != ERROR_FAKE_MPQ_HEADER)
+                    {
+                        bSearchComplete = true;
+                        break;
+                    }
                 }
 
                 // Check for MPK archives (Longwu Online - MPQ fork)
