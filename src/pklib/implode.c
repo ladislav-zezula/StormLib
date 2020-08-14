@@ -660,14 +660,11 @@ unsigned int PKEXPORT implode(
 
     for(i = 0; i < 0x10; i++)
     {
-        if(1 << ExLenBits[i])
+        for(nCount2 = 0; nCount2 < (1 << ExLenBits[i]); nCount2++)
         {
-            for(nCount2 = 0; nCount2 < (1 << ExLenBits[i]); nCount2++)
-            {
-                pWork->nChBits[nCount]  = (unsigned char)(ExLenBits[i] + LenBits[i] + 1);
-                pWork->nChCodes[nCount] = (unsigned short)((nCount2 << (LenBits[i] + 1)) | ((LenCode[i] & 0xFFFF00FF) * 2) | 1);
-                nCount++;
-            }
+            pWork->nChBits[nCount]  = (unsigned char)(ExLenBits[i] + LenBits[i] + 1);
+            pWork->nChCodes[nCount] = (unsigned short)((nCount2 << (LenBits[i] + 1)) | ((LenCode[i] & 0xFFFF00FF) * 2) | 1);
+            nCount++;
         }
     }
 
