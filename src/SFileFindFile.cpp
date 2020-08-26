@@ -244,7 +244,7 @@ static bool DoMPQSearch_FileEntry(
             if(szFileName == NULL)
             {
                 // Open the file by its pseudo-name.
-                sprintf(szNameBuff, "File%08u.xxx", (unsigned int)dwBlockIndex);
+                StringCreatePseudoFileName(szNameBuff, _countof(szNameBuff), dwBlockIndex, "xxx");
                 if(SFileOpenFileEx((HANDLE)hs->ha, szNameBuff, SFILE_OPEN_BASE_FILE, &hFile))
                 {
                     SFileGetFileName(hFile, szNameBuff);

@@ -1559,8 +1559,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-    if(!_stricmp(szFileName, "File00000733.wav"))
-        __debugbreak();
+//  if(!_stricmp(szFileName, "File00000733.wav"))
+//      __debugbreak();
 #endif
 
     // Make sure that we open the proper locale file
@@ -4409,6 +4409,9 @@ int _tmain(int argc, TCHAR * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
+    HANDLE hMpq = NULL;
+    SFileOpenArchive(_T("e:\\Multimedia\\MPQs\\2010 - Starcraft II\\25092\\Updates\\enGB\\s2-update-enGB-24540.MPQ"), 0, 0, &hMpq);
+
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)
 //      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
@@ -4656,8 +4659,8 @@ int _tmain(int argc, TCHAR * argv[])
 */
     // Test on an archive that has two fake headers before the real one
     if (nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Corrupt(_T("MPQ_2020_v4_FakeMpqHeaders.SC2Mod"));
-/*
+        nError = TestOpenArchive(_T("MPQ_2020_v4_FakeMpqHeaders.SC2Mod"));
+
     // Open a patched archive
     if(nError == ERROR_SUCCESS)
         nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
@@ -4852,7 +4855,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(nError == ERROR_SUCCESS)
         nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-*/
+
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER

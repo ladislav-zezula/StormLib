@@ -95,11 +95,13 @@ unsigned char AsciiToUpperTable_Slash[256] =
 //-----------------------------------------------------------------------------
 // Safe string functions (for ANSI builds)
 
-void StringCopy(char * szTarget, size_t cchTarget, const char * szSource)
+char * StringCopy(char * szTarget, size_t cchTarget, const char * szSource)
 {
+    size_t cchSource = 0;
+
     if(cchTarget > 0)
     {
-        size_t cchSource = strlen(szSource);
+        cchSource = strlen(szSource);
 
         if(cchSource >= cchTarget)
             cchSource = cchTarget - 1;
@@ -107,6 +109,8 @@ void StringCopy(char * szTarget, size_t cchTarget, const char * szSource)
         memcpy(szTarget, szSource, cchSource);
         szTarget[cchSource] = 0;
     }
+
+    return szTarget + cchSource;
 }
 
 void StringCat(char * szTarget, size_t cchTargetMax, const char * szSource)
@@ -119,6 +123,26 @@ void StringCat(char * szTarget, size_t cchTargetMax, const char * szSource)
     {
         StringCopy(szTarget + cchTarget, (cchTargetMax - cchTarget), szSource);
     }
+}
+
+void StringCreatePseudoFileName(char * szBuffer, size_t cchMaxChars, unsigned int nIndex, const char * szExtension)
+{
+    char * szBufferEnd = szBuffer + cchMaxChars;
+
+    // "File"
+    szBuffer = StringCopy(szBuffer, (szBufferEnd - szBuffer), "File");
+
+    // Number
+    szBuffer = IntToString(szBuffer, szBufferEnd - szBuffer + 1, nIndex, 8);
+
+    // Dot
+    if(szBuffer < szBufferEnd)
+        *szBuffer++ = '.';
+
+    // Extension
+    while(szExtension[0] == '.')
+        szExtension++;
+    StringCopy(szBuffer, (szBufferEnd - szBuffer), szExtension);
 }
 
 //-----------------------------------------------------------------------------

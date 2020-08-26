@@ -133,8 +133,46 @@ extern unsigned char AsciiToUpperTable[256];
 //-----------------------------------------------------------------------------
 // Safe string functions
 
-void StringCopy(char * szTarget, size_t cchTarget, const char * szSource);
+template <typename XCHAR, typename XINT>
+XCHAR * IntToString(XCHAR * szBuffer, size_t cchMaxChars, XINT nValue, size_t nDigitCount = 0)
+{
+    XCHAR * szBufferEnd = szBuffer + cchMaxChars - 1;
+    XCHAR szNumberRev[0x20];
+    size_t nLength = 0;
+
+    // Always put the first digit
+    szNumberRev[nLength++] = (nValue % 10) + '0';
+    nValue /= 10;
+
+    // Continue as long as we have non-zero
+    while(nValue != 0)
+    {
+        szNumberRev[nLength++] = (nValue % 10) + '0';
+        nValue /= 10;
+    }
+
+    // Fill zeros, if needed
+    while(szBuffer < szBufferEnd && nLength < nDigitCount)
+    {
+        *szBuffer++ = '0';
+        nDigitCount--;
+    }
+
+    // Fill the buffer
+    while(szBuffer < szBufferEnd && nLength > 0)
+    {
+        nLength--;
+        *szBuffer++ = szNumberRev[nLength];
+    }
+
+    // Terminate the number with zeros
+    szBuffer[0] = 0;
+    return szBuffer;
+}
+
+char * StringCopy(char * szTarget, size_t cchTarget, const char * szSource);
 void StringCat(char * szTarget, size_t cchTargetMax, const char * szSource);
+void StringCreatePseudoFileName(char * szBuffer, size_t cchMaxChars, unsigned int nIndex, const char * szExtension);
 
 #ifdef _UNICODE
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource);

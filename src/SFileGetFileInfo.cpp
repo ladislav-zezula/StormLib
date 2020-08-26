@@ -926,6 +926,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
     DWORD FirstBytes[2] = {0, 0};       // The first 4 bytes of the file
     DWORD dwBytesRead = 0;
     DWORD dwFilePos;                    // Saved file position
+    char szPseudoName[20];
 
     // Read the first 2 DWORDs bytes from the file
     dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);   
@@ -944,10 +945,8 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
             if((FirstBytes[0] & data2ext[i].dwOffset00Mask) == data2ext[i].dwOffset00Data &&
                (FirstBytes[1] & data2ext[i].dwOffset04Mask) == data2ext[i].dwOffset04Data)
             {
-                char szPseudoName[20] = "";    
-
                 // Format the pseudo-name
-                sprintf(szPseudoName, "File%08u.%s", (unsigned int)(pFileEntry - hf->ha->pFileTable), data2ext[i].szExt);
+                StringCreatePseudoFileName(szPseudoName, _countof(szPseudoName), (unsigned int)(pFileEntry - hf->ha->pFileTable), data2ext[i].szExt);
 
                 // Save the pseudo-name in the file entry as well
                 AllocateFileName(hf->ha, pFileEntry, szPseudoName);

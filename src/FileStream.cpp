@@ -53,11 +53,27 @@ static DWORD StringToInt(const char * szString)
 
     while('0' <= szString[0] && szString[0] <= '9')
     {
-        dwValue = (dwValue * 10) + (szString[0] - '9');
+        dwValue = (dwValue * 10) + (szString[0] - '0');
         szString++;
     }
 
     return dwValue;
+}
+
+static void CreateNameWithSuffix(LPTSTR szBuffer, size_t cchMaxChars, LPCTSTR szName, unsigned int nValue)
+{
+    LPTSTR szBufferEnd = szBuffer + cchMaxChars - 1;
+
+    // Copy the name
+    while(szBuffer < szBufferEnd && szName[0] != 0)
+        *szBuffer++ = *szName++;
+
+    // Append "."
+    if(szBuffer < szBufferEnd)
+        *szBuffer++ = '.';
+
+    // Append the number
+    IntToString(szBuffer, szBufferEnd - szBuffer + 1, nValue);
 }
 
 //-----------------------------------------------------------------------------
@@ -800,7 +816,7 @@ static bool BaseHttp_Read(
         {
             // Add range request to the HTTP headers
             // http://www.clevercomponents.com/articles/article015/resuming.asp
-            _stprintf(szRangeRequest, _T("Range: bytes=%u-%u"), (unsigned int)dwStartOffset, (unsigned int)dwEndOffset);
+            wsprintf(szRangeRequest, _T("Range: bytes=%u-%u"), (unsigned int)dwStartOffset, (unsigned int)dwEndOffset);
             HttpAddRequestHeaders(hRequest, szRangeRequest, 0xFFFFFFFF, HTTP_ADDREQ_FLAG_ADD_IF_NEW); 
 
             // Send the request to the server
@@ -1738,7 +1754,7 @@ static void PartStream_Close(TBlockStream * pStream)
         
         // Make sure that the header is properly BSWAPed
         BSWAP_ARRAY32_UNSIGNED(&PartHeader, sizeof(PART_FILE_HEADER));
-        sprintf(PartHeader.GameBuildNumber, "%u", (unsigned int)pStream->BuildNumber);
+        IntToString(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
 
         // Write the part header
         pStream->BaseWrite(pStream, &ByteOffset, &PartHeader, sizeof(PART_FILE_HEADER));
@@ -2323,7 +2339,7 @@ static TFileStream * Block4Stream_Open(const TCHAR * szFileName, DWORD dwStreamF
         for(int nSuffix = 0; nSuffix < 30; nSuffix++)
         {
             // Open the n-th file
-            _stprintf(szNameBuff, _T("%s.%u"), pStream->szFileName, nSuffix);
+            CreateNameWithSuffix(szNameBuff, nNameLength + 4, pStream->szFileName, nSuffix);
             if(!pStream->BaseOpen(pStream, szNameBuff, dwBaseFlags))
                 break;
 
@@ -2887,10 +2903,10 @@ void FileStream_Close(TFileStream * pStream)
             FileStream_Close(pStream->pMaster);
         pStream->pMaster = NULL;
 
-        // Close the stream provider ...
+        // Close the stream provider
         if(pStream->StreamClose != NULL)
             pStream->StreamClose(pStream);
-        
+
         // ... or close base stream, if any
         else if(pStream->BaseClose != NULL)
             pStream->BaseClose(pStream);
