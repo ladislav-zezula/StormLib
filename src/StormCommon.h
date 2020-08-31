@@ -141,13 +141,13 @@ XCHAR * IntToString(XCHAR * szBuffer, size_t cchMaxChars, XINT nValue, size_t nD
     size_t nLength = 0;
 
     // Always put the first digit
-    szNumberRev[nLength++] = (nValue % 10) + '0';
+    szNumberRev[nLength++] = (XCHAR)(nValue % 10) + '0';
     nValue /= 10;
 
     // Continue as long as we have non-zero
     while(nValue != 0)
     {
-        szNumberRev[nLength++] = (nValue % 10) + '0';
+        szNumberRev[nLength++] = (XCHAR)(nValue % 10) + '0';
         nValue /= 10;
     }
 
