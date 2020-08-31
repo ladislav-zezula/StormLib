@@ -4409,8 +4409,19 @@ int _tmain(int argc, TCHAR * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     nError = InitializeMpqDirectory(argv, argc);
 
+    SFILE_FIND_DATA sf;
+    HANDLE hFind = NULL;
     HANDLE hMpq = NULL;
-    SFileOpenArchive(_T("e:\\Multimedia\\MPQs\\2010 - Starcraft II\\25092\\Updates\\enGB\\s2-update-enGB-24540.MPQ"), 0, 0, &hMpq);
+    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\mpq-issue\\SampleB-by861.SC2Map"), 0, MPQ_OPEN_FORCE_LISTFILE, &hMpq))
+    {
+        if((hFind = SFileFindFirstFile(hMpq, "*", &sf, NULL)) != NULL)
+        {
+            SFileFindNextFile(hFind, &sf);
+            SFileFindClose(hFind);
+        }
+
+        SFileCloseArchive(hMpq);
+    }
 
     // Not a test, but rather a tool for creating links to duplicated files
 //  if(nError == ERROR_SUCCESS)

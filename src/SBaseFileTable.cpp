@@ -2340,7 +2340,9 @@ int LoadAnyHashTable(TMPQArchive * ha)
         ha->pHetTable = LoadHetTable(ha);
 
     // Try to load classic hash table
-    if(pHeader->dwHashTableSize && ha->pHetTable == NULL)
+    // Note that we load the classic hash table even when HET table exists,
+    // because if the MPQ gets modified and saved, hash table must be there
+    if(pHeader->dwHashTableSize)
         ha->pHashTable = LoadHashTable(ha);
 
     // At least one of the tables must be present
