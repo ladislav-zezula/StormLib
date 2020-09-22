@@ -71,6 +71,17 @@
 #define MAKE_OFFSET64(hi, lo)      (((ULONGLONG)hi << 32) | (ULONGLONG)lo)
 
 //-----------------------------------------------------------------------------
+// MTYPE definition - specifies what kind of MPQ is the map type
+
+typedef enum _MTYPE
+{
+    MapTypeNotRecognized,               // The file does not seems to be a map
+    MapTypeAviFile,                     // The file is actually an AVI file (Warcraft III cinematics)
+    MapTypeWarcraft3,                   // The file is a Warcraft III map
+    MapTypeStarcraft2                   // The file is a Starcraft II map
+} MTYPE, *PMTYPE;
+
+//-----------------------------------------------------------------------------
 // MPQ signature information
 
 // Size of each signature type
@@ -227,7 +238,7 @@ TMPQFile * IsValidFileHandle(HANDLE hFile);
 ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset);
 ULONGLONG CalculateRawSectorOffset(TMPQFile * hf, DWORD dwSectorOffset);
 
-int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags, bool bIsWarcraft3Map);
+int ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG FileSize, DWORD dwFlags, MTYPE MapType);
 
 bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash);
 

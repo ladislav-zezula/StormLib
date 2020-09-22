@@ -19,39 +19,53 @@
 
 #define HEADER_SEARCH_BUFFER_SIZE   0x1000
 
-/*****************************************************************************/
-/* Local functions                                                           */
-/*****************************************************************************/
+//-----------------------------------------------------------------------------
+// Local functions
 
-static bool IsAviFile(DWORD * HeaderData)
+static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHeaderBuffer)
 {
-    DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(HeaderData[0]);
-    DWORD DwordValue2 = BSWAP_INT32_UNSIGNED(HeaderData[2]);
-    DWORD DwordValue3 = BSWAP_INT32_UNSIGNED(HeaderData[3]);
+    LPDWORD HeaderInt32 = (LPDWORD)pbHeaderBuffer;
+    LPCTSTR szExtension;
 
-    // Test for 'RIFF', 'AVI ' or 'LIST'
-    return (DwordValue0 == 0x46464952 && DwordValue2 == 0x20495641 && DwordValue3 == 0x5453494C);
-}
-
-static bool IsWarcraft3Map(DWORD * HeaderData)
-{
-    DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(HeaderData[0]);
-    DWORD DwordValue1 = BSWAP_INT32_UNSIGNED(HeaderData[1]);
-
-    return (DwordValue0 == 0x57334D48 && DwordValue1 == 0x00000000);
-}
-
-static bool IsDllFile(LPBYTE pbHeaderBuffer, size_t cbBytesAvailable)
-{
-    // MIX files are DLL files that contain MPQ in overlay.
-    // Only Warcraft III is able to load them, so we consider them MPQs v 1.0
-    if(cbBytesAvailable > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
+    // Don't do any checks if there is not at least 16 bytes
+    if(cbHeaderBuffer > 0x10)
     {
-        DWORD e_lfanew = *(LPDWORD)(pbHeaderBuffer + 0x3C);
-        if(0 < e_lfanew && e_lfanew < 0x10000)
-            return true;
+        DWORD DwordValue0 = BSWAP_INT32_UNSIGNED(HeaderInt32[0]);
+        DWORD DwordValue1 = BSWAP_INT32_UNSIGNED(HeaderInt32[1]);
+        DWORD DwordValue2 = BSWAP_INT32_UNSIGNED(HeaderInt32[2]);
+        DWORD DwordValue3 = BSWAP_INT32_UNSIGNED(HeaderInt32[3]);
+
+        // Test for AVI files (Warcraft III cinematics) - 'RIFF', 'AVI ' or 'LIST'
+        if(DwordValue0 == 0x46464952 && DwordValue2 == 0x20495641 && DwordValue3 == 0x5453494C)
+            return MapTypeAviFile;
+
+        // Check for Starcraft II maps
+        if((szExtension = _tcsrchr(szFileName, _T('.'))) != NULL)
+        {
+            // The "NP_Protect" protector places fake Warcraft III header
+            // into the Starcraft II maps, whilst SC2 maps have no other header but MPQ v4
+            if(!_tcsicmp(szExtension, _T(".s2ma")) || !_tcsicmp(szExtension, _T(".SC2Map")) || !_tcsicmp(szExtension, _T(".SC2Mod")))
+            {
+                return MapTypeStarcraft2;
+            }
+        }
+
+        // Check for Warcraft III maps
+        if(DwordValue0 == 0x57334D48 && DwordValue1 == 0x00000000)
+            return MapTypeWarcraft3;
     }
-    return false;
+
+    // MIX files are DLL files that contain MPQ in overlay.
+    // Only Warcraft III is able to load them, so we consider them Warcraft III maps
+    if(cbHeaderBuffer > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
+    {
+        // Check the value of IMAGE_DOS_HEADER::e_lfanew at offset 0x3C
+        if(0 < HeaderInt32[0x0F] && HeaderInt32[0x0F] < 0x10000)
+            return MapTypeWarcraft3;
+    }
+
+    // No special map type recognized
+    return MapTypeNotRecognized;
 }
 
 static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSize, void * pvUserData)
@@ -171,7 +185,7 @@ bool WINAPI SFileOpenArchive(
     ULONGLONG FileSize = 0;             // Size of the file
     LPBYTE pbHeaderBuffer = NULL;       // Buffer for searching MPQ header
     DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
-    bool bIsWarcraft3Map = false;
+    MTYPE MapType = MapTypeNotRecognized;
     int nError = ERROR_SUCCESS;   
 
     // Verify the parameters
@@ -264,19 +278,15 @@ bool WINAPI SFileOpenArchive(
                 break;
             }
 
-            // There are AVI files from Warcraft III with 'MPQ' extension.
+            // Check whether the file is AVI file or a Warcraft III/Starcraft II map
             if(SearchOffset == 0)
             {
-                if(IsAviFile((DWORD *)pbHeaderBuffer))
+                // Do nothing if the file is an AVI file
+                if((MapType = CheckMapType(szMpqName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
                 {
                     nError = ERROR_AVI_FILE;
                     break;
                 }
-
-                if (IsWarcraft3Map((DWORD *)pbHeaderBuffer))
-                    bIsWarcraft3Map = true;
-                if (IsDllFile(pbHeaderBuffer, dwBytesAvailable))
-                    bIsWarcraft3Map = true;
             }
 
             // Search the header buffer
@@ -288,7 +298,7 @@ bool WINAPI SFileOpenArchive(
                 // If there is the MPQ user data, process it
                 // Note that Warcraft III does not check for user data, which is abused by many map protectors
                 dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
-                if(bIsWarcraft3Map == false && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
+                if(MapType == MapTypeNotRecognized && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
                 {
                     if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                     {
@@ -316,7 +326,7 @@ bool WINAPI SFileOpenArchive(
                 if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
                 {
                     // Now convert the header to version 4
-                    nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags, bIsWarcraft3Map);
+                    nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags, MapType);
                     if(nError != ERROR_FAKE_MPQ_HEADER)
                     {
                         bSearchComplete = true;
@@ -325,7 +335,7 @@ bool WINAPI SFileOpenArchive(
                 }
 
                 // Check for MPK archives (Longwu Online - MPQ fork)
-                if(bIsWarcraft3Map == false && dwHeaderID == ID_MPK)
+                if(MapType == MapTypeNotRecognized && dwHeaderID == ID_MPK)
                 {
                     // Now convert the MPK header to MPQ Header version 4
                     nError = ConvertMpkHeaderToFormat4(ha, FileSize, dwFlags);
@@ -399,7 +409,7 @@ bool WINAPI SFileOpenArchive(
             ha->dwFlags |= MPQ_FLAG_LISTFILE_FORCE;
 
         // Remember whether whis is a map for Warcraft III
-        if(bIsWarcraft3Map)
+        if(MapType == MapTypeWarcraft3)
             ha->dwFlags |= MPQ_FLAG_WAR3_MAP;
 
         // Set the size of file sector

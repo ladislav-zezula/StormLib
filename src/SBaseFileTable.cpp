@@ -216,6 +216,28 @@ void SetBits(
 //-----------------------------------------------------------------------------
 // Support for MPQ header
 
+static bool VerifyTablePosition64(
+    ULONGLONG MpqOffset,                // Position of the MPQ header
+    ULONGLONG TableOffset,              // Position of the MPQ table, relative to MPQ header
+    ULONGLONG TableSize,                // Size of the MPQ table, in bytes
+    ULONGLONG FileSize)                 // Size of the entire file, in bytes
+{
+    // Verify overflows
+    if((MpqOffset + TableOffset) < MpqOffset)
+        return false;
+    if((MpqOffset + TableOffset + TableSize) < MpqOffset)
+        return false;
+
+    // Verify sizes
+    if(TableOffset >= FileSize || TableSize >= FileSize)
+        return false;
+    if((MpqOffset + TableOffset) >= FileSize)
+        return false;
+    if((MpqOffset + TableOffset + TableSize) >= FileSize)
+        return false;
+    return true;
+}
+
 static ULONGLONG DetermineArchiveSize_V1(
     TMPQArchive * ha,
     TMPQHeader * pHeader,
@@ -288,6 +310,38 @@ static ULONGLONG DetermineArchiveSize_V2(
     return (EndOfMpq - MpqOffset);
 }
 
+static ULONGLONG DetermineArchiveSize_V4(
+    TMPQHeader * pHeader,
+    ULONGLONG /* MpqOffset */,
+    ULONGLONG /* FileSize */)
+{
+    ULONGLONG ArchiveSize = 0;
+    ULONGLONG EndOfTable;
+
+    // This could only be called for MPQs version 4
+    assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_4);
+
+    // Determine the archive size as the greatest of all valid values
+    EndOfTable = pHeader->BetTablePos64 + pHeader->BetTableSize64;
+    if(EndOfTable > ArchiveSize)
+        ArchiveSize = EndOfTable;
+
+    EndOfTable = pHeader->dwHashTablePos + pHeader->dwHashTableSize * sizeof(TMPQHash);
+    if(EndOfTable > ArchiveSize)
+        ArchiveSize = EndOfTable;
+
+    EndOfTable = pHeader->dwBlockTablePos + pHeader->dwBlockTableSize * sizeof(TMPQBlock);
+    if(EndOfTable > ArchiveSize)
+        ArchiveSize = EndOfTable;
+
+    EndOfTable = pHeader->HetTablePos64 + pHeader->HetTableSize64;
+    if(EndOfTable > ArchiveSize)
+        ArchiveSize = EndOfTable;
+
+    // Return the calculated archive size
+    return ArchiveSize;
+}
+
 ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset)
 {
     if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
@@ -339,7 +393,7 @@ int ConvertMpqHeaderToFormat4(
     ULONGLONG MpqOffset,
     ULONGLONG FileSize,
     DWORD dwFlags,
-    bool bIsWarcraft3Map)
+    MTYPE MapType)
 {
     TMPQHeader * pHeader = (TMPQHeader *)ha->HeaderData;
     ULONGLONG BlockTablePos64 = 0;
@@ -351,8 +405,10 @@ int ConvertMpqHeaderToFormat4(
 
     // If version 1.0 is forced, then the format version is forced to be 1.0
     // Reason: Storm.dll in Warcraft III ignores format version value
-    if((dwFlags & MPQ_OPEN_FORCE_MPQ_V1) || bIsWarcraft3Map)
+    if((dwFlags & MPQ_OPEN_FORCE_MPQ_V1) || (MapType == MapTypeWarcraft3))
         wFormatVersion = MPQ_FORMAT_VERSION_1;
+    if(MapType == MapTypeStarcraft2)
+        wFormatVersion = MPQ_FORMAT_VERSION_4;
 
     // Format-specific fixes
     switch(wFormatVersion)
@@ -558,6 +614,24 @@ int ConvertMpqHeaderToFormat4(
             // If MD5 doesn't match, we ignore this offset
             if(!VerifyDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader))
                 return ERROR_FAKE_MPQ_HEADER;
+            if(!VerifyTablePosition64(MpqOffset, pHeader->HiBlockTablePos64, pHeader->HiBlockTableSize64, FileSize))
+                return ERROR_FAKE_MPQ_HEADER;
+
+            // Check for malformed MPQs
+            if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_4 || (ha->MpqPos + pHeader->ArchiveSize64) != FileSize || (ha->MpqPos + pHeader->HiBlockTablePos64) >= FileSize)
+            {
+                pHeader->wFormatVersion = MPQ_FORMAT_VERSION_4;
+                pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V4;
+                ha->dwFlags |= MPQ_FLAG_MALFORMED;
+            }
+
+            // Recalculate archive size
+            if(ha->dwFlags & MPQ_FLAG_MALFORMED)
+            {
+                // Calculate the archive size
+                pHeader->ArchiveSize64 = DetermineArchiveSize_V4(pHeader, MpqOffset, FileSize);
+                pHeader->dwArchiveSize = (DWORD)pHeader->ArchiveSize64;
+            }
 
             // Calculate the block table position
             BlockTablePos64 = MpqOffset + MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
@@ -1327,7 +1401,7 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
     if(pHetHeader->ExtHdr.dwDataSize >= (sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader)))
     {
         // Verify the size of the table in the header
-        if(pHetHeader->dwTableSize == pHetHeader->ExtHdr.dwDataSize)
+        if(pHetHeader->ExtHdr.dwDataSize >= pHetHeader->dwTableSize)
         {
             // The size of the HET table must be sum of header, hash and index table size
             assert((sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader) + pHetHeader->dwTotalCount + pHetHeader->dwIndexTableSize) == pHetHeader->dwTableSize);
@@ -1597,10 +1671,11 @@ static TMPQBetTable * TranslateBetTable(
     if(pBetHeader->ExtHdr.dwDataSize >= (sizeof(TMPQBetHeader) - sizeof(TMPQExtHeader)))
     {
         // Verify the size of the table in the header
-        if(pBetHeader->dwTableSize == pBetHeader->ExtHdr.dwDataSize)
+        if(pBetHeader->ExtHdr.dwDataSize >= pBetHeader->dwTableSize)
         {
             // The number of entries in the BET table must be the same like number of entries in the block table
-            assert(pBetHeader->dwEntryCount == ha->pHeader->dwBlockTableSize);
+            // Note: Ignored if there is no block table
+            //assert(pBetHeader->dwEntryCount == ha->pHeader->dwBlockTableSize);
             assert(pBetHeader->dwEntryCount <= ha->dwMaxFileCount);
 
             // The number of entries in the BET table must be the same like number of entries in the HET table

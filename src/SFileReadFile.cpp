@@ -344,11 +344,10 @@ static int ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos
 
         // Give the number of bytes read
         *pdwBytesRead = dwToRead;
-        return ERROR_SUCCESS;
     }
 
     // An error, sorry
-    return ERROR_CAN_NOT_COMPLETE;
+    return nError;
 }
 
 static int ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFilePos, DWORD dwToRead, LPDWORD pdwBytesRead)

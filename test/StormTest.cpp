@@ -33,7 +33,19 @@
 #endif
 
 //------------------------------------------------------------------------------
-// Defines
+// Local structures
+
+typedef struct _TEST_INFO
+{
+    LPCTSTR szMpqName1;
+    LPCTSTR szMpqName2;
+    DWORD   dwFlags;
+    LPCSTR  szFileName1;
+    LPCSTR  szFileName2;
+} TEST_INFO, PTEST_INFO;
+
+//------------------------------------------------------------------------------
+// Local variables
 
 #ifdef PLATFORM_WINDOWS
 #define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
@@ -838,75 +850,6 @@ static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, LPCTSTR szSubDirectory)
 
     CreateFullPathName(szWorkBuff, _countof(szWorkBuff), szSubDirectory, NULL);
     return FindFilesInternal(pfnFindFile, szWorkBuff);
-}
-
-static int FindFilePairsInternal(
-    FIND_PAIR_CALLBACK pfnFilePair,
-    TCHAR * szSource,
-    TCHAR * szTarget)
-{
-    TCHAR * szPlainName1;
-    TCHAR * szPlainName2;
-    int nError = ERROR_SUCCESS;
-
-    // Setup the search masks
-    _tcscat(szSource, _T("\\*"));
-    szPlainName1 = _tcsrchr(szSource, '*');
-    _tcscat(szTarget, _T("\\*"));
-    szPlainName2 = _tcsrchr(szTarget, '*');
-
-    // If both paths are OK, perform the search
-    if(szPlainName1 != NULL && szPlainName2 != NULL)
-    {
-#ifdef PLATFORM_WINDOWS
-        WIN32_FIND_DATA wf;
-        HANDLE hFind;
-
-        // Search the second directory
-        hFind = FindFirstFile(szTarget, &wf);
-        if(hFind != INVALID_HANDLE_VALUE)
-        {
-            // Skip the first entry, since it's always "." or ".."
-            while(FindNextFile(hFind, &wf) && nError == ERROR_SUCCESS)
-            {
-                // Found a directory?
-                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                {
-                    if(wf.cFileName[0] != '.')
-                    {
-                        _tcscpy(szPlainName1, wf.cFileName);
-                        _tcscpy(szPlainName2, wf.cFileName);
-                        nError = FindFilePairsInternal(pfnFilePair, szSource, szTarget);
-                    }
-                }
-                else
-                {
-                    if(pfnFilePair != NULL)
-                    {
-                        _tcscpy(szPlainName1, wf.cFileName);
-                        _tcscpy(szPlainName2, wf.cFileName);
-                        nError = pfnFilePair(szSource, szTarget);
-                    }
-                }
-            }
-
-            FindClose(hFind);
-        }
-#endif
-    }
-
-    return nError;
-}
-
-static int FindFilePairs(FIND_PAIR_CALLBACK pfnFindPair, LPCTSTR szSourceSubDir, LPCTSTR szTargetSubDir)
-{
-    TCHAR szSource[MAX_PATH];
-    TCHAR szTarget[MAX_PATH];
-
-    // Create the source search mask
-    CreateFullPathName(szSource, _countof(szSource), szSourceSubDir, NULL);
-    CreateFullPathName(szTarget, _countof(szTarget), szTargetSubDir, NULL);
-    return FindFilePairsInternal(pfnFindPair, szSource, szTarget);
 }
 
 static int InitializeMpqDirectory(TCHAR * argv[], int argc)
@@ -2314,31 +2257,6 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
 }
 
 // Test of the TFileStream object
-static int TestSparseCompression()
-{
-    BYTE InpBuffer[0x1000];
-    BYTE Compressed[0x1000];
-    BYTE Decompressed[0x1000];
-    int cbCompressed = sizeof(Compressed);
-    int cbDecompressed = sizeof(Compressed);
-
-    // Prepare compressed buffer
-    memset(InpBuffer, 0, sizeof(InpBuffer));
-
-    // Compress and decompress
-    CompressSparse(Compressed, &cbCompressed, InpBuffer, sizeof(InpBuffer));
-    DecompressSparse(Decompressed, &cbDecompressed, Compressed, cbCompressed);
-
-    // Check the result of decompression
-    if(cbDecompressed != sizeof(InpBuffer))
-        return ERROR_FILE_CORRUPT;
-    if(memcmp(Decompressed, InpBuffer, sizeof(InpBuffer)))
-        return ERROR_FILE_CORRUPT;
-
-    return ERROR_SUCCESS;
-}
-
-// Test of the TFileStream object
 static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
 {
     TFileStream * pStream = NULL;
@@ -2459,6 +2377,16 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
     if(pStream != NULL)
         FileStream_Close(pStream);
     return nError;
+}
+
+static DWORD TestArchive(
+    LPCTSTR szPlainName,                // Plain name of the MPQ
+    LPCTSTR szListFile,
+    DWORD dwWhatToDo,
+    LPCSTR szFileName1,
+    LPCSTR szFileName2)
+{
+    return ERROR_CAN_NOT_COMPLETE;
 }
 
 static int TestOpenFile_OpenById(LPCTSTR szPlainName)
@@ -4329,77 +4257,44 @@ static int TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFileN
 }
 
 //-----------------------------------------------------------------------------
-// Comparing two directories, creating links
+// Tables
 
-#define LINK_COMPARE_BLOCK_SIZE 0x200
-/*
-static int CreateArchiveLinkFile(LPCTSTR szFullPath1, LPCTSTR szFullPath2, LPCSTR szFileHash)
+static const TEST_INFO TestList_StreamOps[] =
 {
-    TFileStream * pStream;
-    TCHAR szLinkData[MAX_PATH + 0x80];
-    TCHAR szLinkFile[MAX_PATH];
-    TCHAR szLinkPath[MAX_PATH];
-    int nLength;
-    int nError = ERROR_SUCCESS;
+    {_T("MPQ_2013_v4_alternate-original.MPQ"),         NULL, 0},
+    {_T("MPQ_2013_v4_alternate-original.MPQ"),         NULL, STREAM_FLAG_READ_ONLY},
+    {_T("MPQ_2013_v4_alternate-complete.MPQ"),         NULL, STREAM_FLAG_USE_BITMAP},
+    {_T("part-file://MPQ_2009_v2_WoW_patch.MPQ.part"), NULL, 0},
+    {_T("blk4-file://streaming/model.MPQ.0"),          NULL, STREAM_PROVIDER_BLOCK4},
+    {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),  NULL, STREAM_PROVIDER_MPQE}
+};
 
-    // Construct the link file name
-    CalculateRelativePath(szFullPath1, szFullPath2, szLinkPath);
-    sprintf(szLinkFile, "%s.link", szFullPath2);
-
-    // Format the content of the link file
-    nLength = sprintf(szLinkData, "LINK:%s\x0D\x0ASHA1:%s", szLinkPath, szFileHash);
-
-    // Create the link file
-    pStream = FileStream_CreateFile(szLinkFile, 0);
-    if(pStream == NULL)
-        return GetLastError();
-
-    // Write the content of the link file
-    if(!FileStream_Write(pStream, NULL, szLinkData, (DWORD)nLength))
-        nError = GetLastError();
-
-    FileStream_Close(pStream);
-    return ERROR_SUCCESS;
-}
-
-static int ForEachFile_CreateArchiveLink(LPCTSTR szFullPath1, LPCTSTR szFullPath2)
+static const TEST_INFO TestList_MasterMirror[] =
 {
-    TLogHelper Logger("CreateMpqLink");
-    TCHAR szFileHash1[0x40];
-    TCHAR szFileHash2[0x40];
-    int nError;
+    {_T("part-file://MPQ_2009_v1_patch-created.MPQ.part"),  _T("MPQ_2009_v1_patch-original.MPQ"),       0},
+    {_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"),  _T("MPQ_2009_v1_patch-original.MPQ"),       1},
+    {_T("part-file://MPQ_2009_v1_patch-complete.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"),       1},
+    {_T("MPQ_2013_v4_alternate-created.MPQ"),               _T("MPQ_2013_v4_alternate-original.MPQ"),   0},
+    {_T("MPQ_2013_v4_alternate-incomplete.MPQ"),            _T("MPQ_2013_v4_alternate-incomplete.MPQ"), 1},
+    {_T("MPQ_2013_v4_alternate-complete.MPQ"),              _T("MPQ_2013_v4_alternate-original.MPQ"),   1},
 
-    // Prevent logger from witing any result messages
-    Logger.bDontPrintResult = true;
+    // Takes hell a lot of time!!!
+//  {_T("MPQ_2013_v4_alternate-downloaded.MPQ"),            _T("http://www.zezula.net\\mpqs\\alternate.zip"), 0}
+};
 
-    // Create SHA1 of both files
-    nError = CalculateFileSha1(&Logger, szFullPath1, szFileHash1);
-    if(nError == ERROR_SUCCESS)
-    {
-        nError = CalculateFileSha1(&Logger, szFullPath2, szFileHash2);
-        if(nError == ERROR_SUCCESS)
-        {
-            // If the hashes are identical, we can create link
-            if(!_tcscmp(szFileHash1, szFileHash2))
-            {
-                nError = CreateArchiveLinkFile(szFullPath1, szFullPath2, szFileHash1);
-                if(nError == ERROR_SUCCESS)
-                {
-                    Logger.PrintMessage("Created link to %s", szFullPath2);
-                }
-            }
-        }
-    }
+#define TEST_OPEN_COMPARE_TWO_FILES    0x01
 
-    return ERROR_SUCCESS;
-}
-*/
+static const TEST_INFO Test_Mpqs[] =
+{
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), NULL, TEST_OPEN_COMPARE_TWO_FILES, "music\\dintro.wav", "File00000023.xxx"},
+};
+
 //-----------------------------------------------------------------------------
 // Main
 
 int _tmain(int argc, TCHAR * argv[])
 {
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -4407,469 +4302,492 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Initialize storage and mix the random number generator
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
-    nError = InitializeMpqDirectory(argv, argc);
+    dwErrCode = InitializeMpqDirectory(argv, argc);
 
-    SFILE_FIND_DATA sf;
-    HANDLE hFind = NULL;
-    HANDLE hMpq = NULL;
-    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\mpq-issue\\SampleB-by861.SC2Map"), 0, MPQ_OPEN_FORCE_LISTFILE, &hMpq))
+    // Open all files from the command line
+    for(int i = 1; i < argc; i++)
     {
-        if((hFind = SFileFindFirstFile(hMpq, "*", &sf, NULL)) != NULL)
-        {
-            SFileFindNextFile(hFind, &sf);
-            SFileFindClose(hFind);
-        }
+        SFILE_FIND_DATA sf;
+        HANDLE hFile = NULL;
+        HANDLE hMpq = NULL;
+        BYTE Buffer[0x40];
 
-        SFileCloseArchive(hMpq);
+        if(SFileOpenArchive(argv[i], 0, 0, &hMpq))
+        {
+            if(SFileOpenFileEx(hMpq, "koKR.SC2Data\\LocalizedData\\ObjectStrings.txt", 0, &hFile))
+            {
+                SFileReadFile(hFile, Buffer, sizeof(Buffer), NULL, NULL);
+                SFileCloseFile(hFile);
+            }
+
+            //if((hFind = SFileFindFirstFile(hMpq, "*", &sf, NULL)) != NULL)
+            //{
+            //    SFileFindNextFile(hFind, &sf);
+            //    SFileFindClose(hFind);
+            //}
+
+            SFileCloseArchive(hMpq);
+        }
     }
 
-    // Not a test, but rather a tool for creating links to duplicated files
-//  if(nError == ERROR_SUCCESS)
-//      nError = FindFilePairs(ForEachFile_CreateArchiveLink, "2004 - WoW\\06080", "2004 - WoW\\06299");
-/*
+    //
     // Search all testing archives and verify their SHA1 hash
-    if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+    //
 
-    // Test sparse compression
-    if(nError == ERROR_SUCCESS)
-        nError = TestSparseCompression();
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+    //}
 
-    // Test reading linear file without bitmap
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("MPQ_2013_v4_alternate-original.MPQ"), 0);
+    //
+    // Test file stream operations
+    //
 
-    // Test reading linear file without bitmap (read only)
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("MPQ_2013_v4_alternate-original.MPQ"), STREAM_FLAG_READ_ONLY);
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
+        {
+            dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
 
-    // Test reading linear file with bitmap
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("MPQ_2013_v4_alternate-complete.MPQ"), STREAM_FLAG_USE_BITMAP);
+    //
+    // Test master-mirror reading operations
+    //
 
-    // Test reading partial file
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("part-file://MPQ_2009_v2_WoW_patch.MPQ.part"), 0);
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
+        {
+            dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
+                                                  TestList_MasterMirror[i].szMpqName2,
+                                                  TestList_MasterMirror[i].dwFlags != 0);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
 
-    // Test reading Block4K file
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("blk4-file://streaming/model.MPQ.0"), STREAM_PROVIDER_BLOCK4);
-
-    // Test reading encrypted file
-    if(nError == ERROR_SUCCESS)
-        nError = TestFileStreamOperations(_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"), STREAM_PROVIDER_MPQE);
-
-    // Open a stream, paired with local master. The mirror file is created new
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("part-file://MPQ_2009_v1_patch-created.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), false);
-
-    // Open a stream, paired with local master. Only part of the mirror exists
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), true);
-
-    // Open a stream, paired with local master. Only part of the mirror exists
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("part-file://MPQ_2009_v1_patch-complete.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), true);
-
-    // Open a stream, paired with local master
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-created.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), false);
-
-    // Open a stream, paired with local master
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-incomplete.MPQ"), _T("MPQ_2013_v4_alternate-incomplete.MPQ"), true);
-
-    // Open a stream, paired with local master
-    if(nError == ERROR_SUCCESS)
-        nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-complete.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), true);
-
-    // Open a stream, paired with remote master (takes hell lot of time!!!)
-//  if(nError == ERROR_SUCCESS)
-//      nError = TestReadFile_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("http://www.zezula.net\\mpqs\\alternate.zip"), false);
-
+    //
     // Search in listfile
-    if(nError == ERROR_SUCCESS)
-        nError = TestSearchListFile(_T("ListFile_Blizzard.txt"));
+    //
 
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = TestSearchListFile(_T("ListFile_Blizzard.txt"));
+    }
+
+    //
     // Test opening local file with SFileOpenFileEx
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenLocalFile(_T("ListFile_Blizzard.txt"));
+    //
 
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = TestOpenLocalFile(_T("ListFile_Blizzard.txt"));
+    }
+
+    //
+    // Test opening various archives - correct, damaged, protected
+    //
+/*
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(Test_Mpqs); i++)
+        {
+            dwErrCode = TestArchive(Test_Mpqs[i].szMpqName1,         // Plain archive name
+                                    Test_Mpqs[i].szMpqName2,         // List file (NULL if none)
+                                    Test_Mpqs[i].dwFlags,            // What exactly to do
+                                    Test_Mpqs[i].szFileName1,        // The first name of the open file
+                                    Test_Mpqs[i].szFileName2);       // The second name of the open file
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
+*/
     // Test working with an archive that has no listfile
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenFile_OpenById(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenFile_OpenById(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"));
 
     // Open the update MPQ from Diablo II (patch 2016)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenFile_OpenByName(_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), "waitingroombkgd.dc6");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenFile_OpenByName(_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), "waitingroombkgd.dc6");
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenFile_OpenByName(_T("MPQ_2018_v1_icon_error.w3m"), "file00000002.blp");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenFile_OpenByName(_T("MPQ_2018_v1_icon_error.w3m"), "file00000002.blp");
 
     // Open a file whose archive's (signature) file has flags = 0x90000000
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
 
     // Test the SFileSetFilePointer operations
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_SetPos(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), "music\\dtowne.wav");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_SetPos(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), "music\\dtowne.wav");
 
     // Open an empty archive (found in WoW cache - it's just a header)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2012_v2_EmptyMpq.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2012_v2_EmptyMpq.MPQ"));
 
     // Open an empty archive (created artificially - it's just a header)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2013_v4_EmptyMpq.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2013_v4_EmptyMpq.MPQ"));
 
     // Open an empty archive (found in WoW cache - it's just a header)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2013_v4_patch-base-16357.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2013_v4_patch-base-16357.MPQ"));
 
     // Open an empty archive (A buggy MPQ with invalid HET entry count)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ"));
 
     // Open a truncated archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2002_v1_BlockTableCut.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_BlockTableCut.MPQ"));
 
     // Open a MPQ that actually has user data
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2010_v2_HasUserData.s2ma"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2010_v2_HasUserData.s2ma"));
 
     // Open a file whose archive's (signature) file has flags = 0x90000000
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
 
     // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"));
 
     // Open a MIX file
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2020_v1_AHF04patch.mix"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2020_v1_AHF04patch.mix"));
 
     // Open a MPQ archive v 3.0
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"));
 
     // Open an encrypted archive from Starcraft II installer
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"));
 
     // Open a MPK archive from Longwu online
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPx_2013_v1_LongwuOnline.mpk"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPx_2013_v1_LongwuOnline.mpk"));
 
     // Open a SQP archive from War of the Immortals
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPx_2013_v1_WarOfTheImmortals.sqp"), _T("ListFile_WarOfTheImmortals.txt"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPx_2013_v1_WarOfTheImmortals.sqp"), _T("ListFile_WarOfTheImmortals.txt"));
 
     // Open a partial MPQ with compressed hash table
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"));
 
     // Open an protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap(_T("MPQ_2015_v1_flem1.w3x"), NULL, 20, "1c4c13e627658c473e84d94371e31f37");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_ProtectedMap(_T("MPQ_2015_v1_flem1.w3x"), NULL, 20, "1c4c13e627658c473e84d94371e31f37");
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ProtectedMap(_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, 114, "5250975ed917375fc6540d7be436d4de");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_ProtectedMap(_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, 114, "5250975ed917375fc6540d7be436d4de");
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x"));
 
     // Open an Warcraft III map locked by the Spazzler protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_Spazzler.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_Spazzler.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x"));
 
     // Open an Warcraft III map locked by the BOBA protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_BOBA.w3m"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_ProtectedMap_BOBA.w3m"));
 
     // Open an Warcraft III map locked by a protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"));
 
     // Open an Warcraft III map locked by a protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x"));
 
     // Open an Warcraft III map locked by Spazy protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_Spazy.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2015_v1_ProtectedMap_Spazy.w3x"));
 
     // Open an Warcraft III map locked by Spazy protector
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2015_v1_MessListFile.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2015_v1_MessListFile.mpq"));
 
     // Open another protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x"));
 
     // Open another protected map
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x"));
 
     // Something like Somj 2.0
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_Somj2.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_Somj2.w3x"));
 
     // Protector from China (2016-05-27)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_WME4_4.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_WME4_4.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2016_v1_KoreanFile.w3m"));
-
-    // Load map protected by PG1.11.973
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2016_v1_KoreanFile.w3m"));
 
     // Load map protected by PG1.11.973
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2017_v1_BigDummyFiles.w3x"), NULL, "1.blp");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2017_v1_TildeInFileName.mpq"), NULL, "1.blp");
+    // Load map protected by PG1.11.973
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2017_v1_BigDummyFiles.w3x"), NULL, "1.blp");
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2018_v1_EWIX_v8_7.w3x"), NULL, "BlueCrystal.mdx");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2017_v1_TildeInFileName.mpq"), NULL, "1.blp");
+
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2018_v1_EWIX_v8_7.w3x"), NULL, "BlueCrystal.mdx");
 
     // Open the multi-file archive with wrong prefix to see how StormLib deals with it
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
 
     // Open an archive that is merged with multiple files
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("blk4-file://streaming/model.MPQ.0"), NULL, NULL, true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("blk4-file://streaming/model.MPQ.0"), NULL, NULL, true);
 
     // Open every MPQ that we have in the storage
-    if(nError == ERROR_SUCCESS)
-        nError = FindFiles(ForEachFile_OpenArchive, NULL);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = FindFiles(ForEachFile_OpenArchive, NULL);
 
     // Test on an archive that has been invalidated by extending an old valid MPQ
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Corrupt(_T("MPQ_2013_vX_Battle.net.MPQ"));
-*/
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Corrupt(_T("MPQ_2013_vX_Battle.net.MPQ"));
+
     // Test on an archive that has two fake headers before the real one
-    if (nError == ERROR_SUCCESS)
-        nError = TestOpenArchive(_T("MPQ_2020_v4_FakeMpqHeaders.SC2Mod"));
+    if (dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2020_v4_FakeMpqHeaders.SC2Mod"));
+
+    // Test on an SC2 map that is protected by the NP_Protect
+    if (dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2020_v4_NP_Protect_1.s2ma"));
+
+    // Test on an SC2 map that is protected by the NP_Protect
+    if (dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive(_T("MPQ_2020_v4_NP_Protect_2.s2ma"));
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_StarCraft, "music\\terran1.wav", 0);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob", 2);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_WoW_15050, "World\\Model.blob", 8);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_WoW_15050, "World\\Model.blob", 8);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_WoW_16965, "DBFilesClient\\BattlePetNPCTeamMember.db2", 0);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_SC2_32283, "TriggerLibs\\natives.galaxy", 6);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_34644, "TriggerLibs\\GameData\\GameData.galaxy", 2);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_SC2_34644, "TriggerLibs\\GameData\\GameData.galaxy", 2);
 
     // Open a patched archive with new format of BSDIFF patch
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_34644_Maps, "Maps\\Campaign\\THorner03.SC2Map\\BankList.xml", 3);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_SC2_34644_Maps, "Maps\\Campaign\\THorner03.SC2Map\\BankList.xml", 3);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_SC2_32283_enGB, "LocalizedData\\GameHotkeys.txt", 0, true);
 
     // Open a patched archive where the "StreamingBuckets.txt" in the patch doesn't contain MPQ_FILE_PATCH_FILE
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_SC2_36281_enGB, "LocalizedData\\GameHotkeys.txt", 6);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_HS_3604_enGB, "Hearthstone.exe", 1);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_HS_3604_enGB, "Hearthstone.exe", 1);
 
     // Open a patched archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_Patched(PatchList_HS_6898_enGB, "Hearthstone_Data\\Managed\\Assembly-Csharp.dll", 10);
 
     // Check the opening archive for read-only
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), true);
 
     // Check the opening archive for read-only
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), false);
 
     // Check the SFileGetFileInfo function
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
 
     // Downloadable MPQ archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
 
     // Downloadable MPQ archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
 
     // Check archive signature
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_VerifySignature(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("STANDARD.SNP"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("STANDARD.SNP"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_VerifySignature(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_VerifySignature(_T("MPQ_2003_v1_WeakSignatureEmpty.exe"), _T("WoW-1.2.3.4211-enUS-patch.exe"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_2003_v1_WeakSignatureEmpty.exe"), _T("WoW-1.2.3.4211-enUS-patch.exe"));
 
     // Check archive signature
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_VerifySignature(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("(10)DustwallowKeys.w3m"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("(10)DustwallowKeys.w3m"));
 
     // Compact the archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"), _T("StormLibTest_CraftedMpq1_v3.mpq"), true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"), _T("StormLibTest_CraftedMpq1_v3.mpq"), true);
 
     // Compact the archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactArchive(_T("MPQ_2016_v1_00000.pak"), _T("MPQ_2016_v1_00000.pak"), false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2016_v1_00000.pak"), _T("MPQ_2016_v1_00000.pak"), false);
 
     // Open a MPQ (add custom user data to it)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"), _T("StormLibTest_CraftedMpq2_v4.mpq"), true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"), _T("StormLibTest_CraftedMpq2_v4.mpq"), true);
 
     // Open a MPQ (add custom user data to it)
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_expansion1.MPQ"), _T("StormLibTest_CraftedMpq3_v4.mpq"), true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_expansion1.MPQ"), _T("StormLibTest_CraftedMpq3_v4.mpq"), true);
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_FullTable(_T("MPQ_2014_v1_out1.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestAddFile_FullTable(_T("MPQ_2014_v1_out1.w3x"));
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_FullTable(_T("MPQ_2014_v1_out2.w3x"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestAddFile_FullTable(_T("MPQ_2014_v1_out2.w3x"));
 
     // Test modifying file with no (listfile) and no (attributes)
-    if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_ListFileTest(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), false, false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestAddFile_ListFileTest(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), false, false);
 
     // Test modifying an archive that contains (listfile) and (attributes)
-    if(nError == ERROR_SUCCESS)
-        nError = TestAddFile_ListFileTest(_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"), true, true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestAddFile_ListFileTest(_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"), true, true);
 
     // Create an empty archive v2
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v2.mpq"), MPQ_CREATE_ARCHIVE_V2 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v2.mpq"), MPQ_CREATE_ARCHIVE_V2 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
 
     // Create an empty archive v4
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v4.mpq"), MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v4.mpq"), MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
 
     // Test creating of an archive the same way like MPQ Editor does
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
 
     // Test creating of an archive with non standard file names
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_NonStdNames(_T("StormLibTest_NonStdNames.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_NonStdNames(_T("StormLibTest_NonStdNames.mpq"));
 
     // Sign an existing non-signed archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_SignExisting(_T("MPQ_1998_v1_StarDat.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_SignExisting(_T("MPQ_1998_v1_StarDat.mpq"));
 
     // Open a signed archive, add a file and verify the signature
-    if(nError == ERROR_SUCCESS)
-        nError = TestOpenArchive_ModifySigned(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_ModifySigned(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
 
     // Create new archive and sign it
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned1.mpq"), true);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned1.mpq"), true);
 
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned2.mpq"), false);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned2.mpq"), false);
 
     // Test creating of an archive the same way like MPQ Editor does
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_MpqEditor(_T("StormLibTest_MpqEditorTest.mpq"), "AddedFile.exe");
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_MpqEditor(_T("StormLibTest_MpqEditorTest.mpq"), "AddedFile.exe");
 
     // Create an archive and fill it with files up to the max file count
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), 0);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), 0);
 
     // Create an archive and fill it with files up to the max file count
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_LISTFILE);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_LISTFILE);
 
     // Create an archive and fill it with files up to the max file count
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_ATTRIBUTES);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_ATTRIBUTES);
 
     // Create an archive and fill it with files up to the max file count
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_FillArchive(_T("StormLibTest_FileTableFull.mpq"), MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_LISTFILE);
 
     // Create an archive, and increment max file count several times
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_IncMaxFileCount(_T("StormLibTest_IncMaxFileCount.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_IncMaxFileCount(_T("StormLibTest_IncMaxFileCount.mpq"));
 
     // Create a MPQ archive with UNICODE names
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_UnicodeNames();
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_UnicodeNames();
 
     // Create a MPQ file, add files with various flags
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_FileFlagTest(_T("StormLibTest_FileFlagTest.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_FileFlagTest(_T("StormLibTest_FileFlagTest.mpq"));
 
     // Create a MPQ file, add a mono-WAVE file with various compressions
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("AddFile-Mono.wav"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("AddFile-Mono.wav"));
 
     // Create a MPQ file, add a mono-WAVE with 8 bits per sample file with various compressions
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("AddFile-MonoBad.wav"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("AddFile-MonoBad.wav"));
 
     // Create a MPQ file, add a stereo-WAVE file with various compressions
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("AddFile-Stereo.wav"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("AddFile-Stereo.wav"));
 
     // Check if the listfile is always created at the end of the file table in the archive
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_ListFilePos(_T("StormLibTest_ListFilePos.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_ListFilePos(_T("StormLibTest_ListFilePos.mpq"));
 
     // Open a MPQ (add custom user data to it)
-    if(nError == ERROR_SUCCESS)
-        nError = TestCreateArchive_BigArchive(_T("StormLibTest_BigArchive_v4.mpq"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestCreateArchive_BigArchive(_T("StormLibTest_BigArchive_v4.mpq"));
 
     // Test replacing a file with zero size file
-    if(nError == ERROR_SUCCESS)
-        nError = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
 #endif  // _MSC_VER
 
-    return nError;
+    return dwErrCode;
 }

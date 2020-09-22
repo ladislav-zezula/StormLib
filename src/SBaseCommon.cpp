@@ -945,6 +945,7 @@ void * LoadMpqTable(
         // On archives v 1.0, hash table and block table can go beyond EOF.
         // Storm.dll reads as much as possible, then fills the missing part with zeros.
         // Abused by Spazzler map protector which sets hash table size to 0x00100000
+        // Abused by NP_Protect in MPQs v4 as well
         if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
         {
             // Cut the table size
