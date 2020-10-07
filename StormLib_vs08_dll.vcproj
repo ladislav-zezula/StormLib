@@ -65,7 +65,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="2"
-				ModuleDefinitionFile=".\StormLib_dll\StormLib.def"
+				ModuleDefinitionFile=".\src\DllMain.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -92,6 +92,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -141,7 +142,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="2"
-				ModuleDefinitionFile=".\StormLib_dll\StormLib.def"
+				ModuleDefinitionFile=".\src\DllMain.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -168,6 +169,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -214,7 +216,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="1"
-				ModuleDefinitionFile=".\StormLib_dll\StormLib.def"
+				ModuleDefinitionFile=".\src\DllMain.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -243,6 +245,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -290,7 +293,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="1"
-				ModuleDefinitionFile=".\StormLib_dll\StormLib.def"
+				ModuleDefinitionFile=".\src\DllMain.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -319,6 +322,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 	</Configurations>
@@ -361,7 +365,7 @@
 			Name="Source Files"
 			>
 			<File
-				RelativePath=".\stormlib_dll\DllMain.c"
+				RelativePath=".\src\DllMain.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -395,6 +399,10 @@
 						WarningLevel="4"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\DllMain.rc"
+				>
 			</File>
 			<File
 				RelativePath=".\src\FileStream.cpp"
@@ -1660,10 +1668,6 @@
 					/>
 				</FileConfiguration>
 			</File>
-			<File
-				RelativePath=".\stormlib_dll\StormLib.def"
-				>
-			</File>
 			<Filter
 				Name="adpcm"
 				>
@@ -2649,6 +2653,10 @@
 				</File>
 			</Filter>
 		</Filter>
+		<File
+			RelativePath=".\src\resource.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

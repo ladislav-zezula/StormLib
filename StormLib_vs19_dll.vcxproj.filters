@@ -103,9 +103,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stormlib_dll\DllMain.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\FileStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -829,10 +826,13 @@
     <ClCompile Include="src\jenkins\lookup3.c">
       <Filter>Source Files\jenkins</Filter>
     </ClCompile>
+    <ClCompile Include="src\DllMain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="stormlib_dll\StormLib.def">
+    <ResourceCompile Include="src\DllMain.rc">
       <Filter>Source Files</Filter>
-    </None>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

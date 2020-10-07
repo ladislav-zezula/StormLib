@@ -73,7 +73,7 @@
     <XPDeprecationWarning>false</XPDeprecationWarning>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -274,7 +274,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAD|x64'">
@@ -294,7 +294,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAS|Win32'">
@@ -311,7 +311,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAS|x64'">
@@ -331,7 +331,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAD|Win32'">
@@ -347,7 +347,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAD|x64'">
@@ -366,7 +366,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAS|Win32'">
@@ -382,7 +382,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAS|x64'">
@@ -401,7 +401,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUD|Win32'">
@@ -418,7 +418,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUD|x64'">
@@ -438,7 +438,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUS|Win32'">
@@ -455,7 +455,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUS|x64'">
@@ -475,7 +475,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUD|Win32'">
@@ -491,7 +491,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUD|x64'">
@@ -510,7 +510,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUS|Win32'">
@@ -526,7 +526,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUS|x64'">
@@ -545,7 +545,7 @@
       <OutputFile>./bin/$(ProjectName)/$(Platform)/$(Configuration)/$(TargetName).lib</OutputFile>
     </Lib>
     <PostBuildEvent>
-      <Command>PostBuild.bat $(Platform) $(Configuration)</Command>
+      <Command>PostBuild.bat $(ProjectName) $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
