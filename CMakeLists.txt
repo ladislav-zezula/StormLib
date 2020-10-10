@@ -49,7 +49,7 @@ if(MSVC)
     # This file is used to create a DLL on windows
     # Use BUILD_SHARED_LIBS to create StormLib.dll
     set(STORM_DEF_FILES
-           stormlib_dll/StormLib.def
+           src/DllMain.def
     )
 endif()
 
