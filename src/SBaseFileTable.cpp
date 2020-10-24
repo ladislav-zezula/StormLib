@@ -57,7 +57,17 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
 }
 
 //-----------------------------------------------------------------------------
-// Support functions for BIT_ARRAY
+// Support functions for TBitArray
+
+struct TBitArray
+{
+    void GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
+    void SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
+
+    DWORD NumberOfBytes;                        // Total number of bytes in "Elements"
+    DWORD NumberOfBits;                         // Total number of bits that are available
+    BYTE Elements[1];                           // Array of elements (variable length)
+};
 
 static USHORT SetBitsMask[] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
 
@@ -80,8 +90,7 @@ static TBitArray * CreateBitArray(
     return pBitArray;
 }
 
-void GetBits(
-    TBitArray * pArray,
+void TBitArray::GetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
@@ -114,11 +123,11 @@ void GetBits(
         // Is the current position in the Elements byte-aligned?
         if(nBitOffset != 0)
         {
-            BitBuffer = (unsigned char)((pArray->Elements[nBytePosition0] >> nBitOffset) | (pArray->Elements[nBytePosition1] << (0x08 - nBitOffset)));
+            BitBuffer = (unsigned char)((Elements[nBytePosition0] >> nBitOffset) | (Elements[nBytePosition1] << (0x08 - nBitOffset)));
         }
         else
         {
-            BitBuffer = pArray->Elements[nBytePosition0];
+            BitBuffer = Elements[nBytePosition0];
         }
 
 #ifdef PLATFORM_LITTLE_ENDIAN
@@ -137,17 +146,16 @@ void GetBits(
     nBitLength = (nBitLength & 0x07);
     if(nBitLength != 0)
     {
-        *pbBuffer = (unsigned char)(pArray->Elements[nBytePosition0] >> nBitOffset);
+        *pbBuffer = (unsigned char)(Elements[nBytePosition0] >> nBitOffset);
 
         if(nBitLength > (8 - nBitOffset))
-            *pbBuffer = (unsigned char)((pArray->Elements[nBytePosition1] << (8 - nBitOffset)) | (pArray->Elements[nBytePosition0] >> nBitOffset));
+            *pbBuffer = (unsigned char)((Elements[nBytePosition1] << (8 - nBitOffset)) | (Elements[nBytePosition0] >> nBitOffset));
 
         *pbBuffer &= (0x01 << nBitLength) - 1;
     }
 }
 
-void SetBits(
-    TBitArray * pArray,
+void TBitArray::SetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
@@ -182,7 +190,7 @@ void SetBits(
         AndMask = (AndMask >> 0x08) | (0x00FF << nBitOffset);
 
         // Update the byte in the array
-        pArray->Elements[nBytePosition] = (BYTE)((pArray->Elements[nBytePosition] & ~AndMask) | BitBuffer);
+        Elements[nBytePosition] = (BYTE)((Elements[nBytePosition] & ~AndMask) | BitBuffer);
 
         // Move byte positions and lengths
         nBytePosition++;
@@ -199,7 +207,7 @@ void SetBits(
         AndMask = (AndMask >> 0x08) | (SetBitsMask[nBitLength] << nBitOffset);
 
         // Update the byte in the array
-        pArray->Elements[nBytePosition] = (BYTE)((pArray->Elements[nBytePosition] & ~AndMask) | BitBuffer);
+        Elements[nBytePosition] = (BYTE)((Elements[nBytePosition] & ~AndMask) | BitBuffer);
 
         // Update the next byte, if needed
         if(AndMask & 0xFF00)
@@ -208,7 +216,7 @@ void SetBits(
             BitBuffer >>= 0x08;
             AndMask >>= 0x08;
 
-            pArray->Elements[nBytePosition] = (BYTE)((pArray->Elements[nBytePosition] & ~AndMask) | BitBuffer);
+            Elements[nBytePosition] = (BYTE)((Elements[nBytePosition] & ~AndMask) | BitBuffer);
         }
     }
 }
@@ -1368,7 +1376,7 @@ static int InsertHetEntry(TMPQHetTable * pHetTable, ULONGLONG FileNameHash, DWOR
             pHetTable->pNameHashes[Index] = NameHash1;
 
             // Set the entry in the file index table
-            SetBits(pHetTable->pBetIndexes, pHetTable->dwIndexSizeTotal * Index,
+            pHetTable->pBetIndexes->SetBits(pHetTable->dwIndexSizeTotal * Index,
                                             pHetTable->dwIndexSize,
                                            &dwFileIndex,
                                             4);
@@ -1510,7 +1518,7 @@ static DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
             DWORD dwFileIndex = 0;
 
             // Get the file index
-            GetBits(pHetTable->pBetIndexes, pHetTable->dwIndexSizeTotal * Index,
+            pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * Index,
                                             pHetTable->dwIndexSize,
                                            &dwFileIndex,
                                             sizeof(DWORD));
@@ -1794,22 +1802,22 @@ TMPQExtHeader * TranslateBetTable(
                 //
 
                 // Save the byte offset
-                SetBits(pBitArray, nBitOffset + BetHeader.dwBitIndex_FilePos,
+                pBitArray->SetBits(nBitOffset + BetHeader.dwBitIndex_FilePos,
                                    BetHeader.dwBitCount_FilePos,
                                   &pFileEntry->ByteOffset,
                                    8);
-                SetBits(pBitArray, nBitOffset + BetHeader.dwBitIndex_FileSize,
+                pBitArray->SetBits(nBitOffset + BetHeader.dwBitIndex_FileSize,
                                    BetHeader.dwBitCount_FileSize,
                                   &pFileEntry->dwFileSize,
                                    4);
-                SetBits(pBitArray, nBitOffset + BetHeader.dwBitIndex_CmpSize,
+                pBitArray->SetBits(nBitOffset + BetHeader.dwBitIndex_CmpSize,
                                    BetHeader.dwBitCount_CmpSize,
                                   &pFileEntry->dwCmpSize,
                                    4);
 
                 // Save the flag index
                 dwFlagIndex = GetFileFlagIndex(FlagArray, pFileEntry->dwFlags);
-                SetBits(pBitArray, nBitOffset + BetHeader.dwBitIndex_FlagIndex,
+                pBitArray->SetBits(nBitOffset + BetHeader.dwBitIndex_FlagIndex,
                                    BetHeader.dwBitCount_FlagIndex,
                                   &dwFlagIndex,
                                    4);
@@ -1842,7 +1850,7 @@ TMPQExtHeader * TranslateBetTable(
             for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
             {
                 // Insert the name hash to the bit array
-                SetBits(pBitArray, BetHeader.dwBitTotal_NameHash2 * dwFileIndex,
+                pBitArray->SetBits(BetHeader.dwBitTotal_NameHash2 * dwFileIndex,
                                    BetHeader.dwBitCount_NameHash2,
                                   &pFileEntry->FileNameHash,
                                    8);
@@ -2532,7 +2540,7 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
             if(pHetTable->pNameHashes[i] != HET_ENTRY_FREE)
             {
                 // Load the index to the BET table
-                GetBits(pHetTable->pBetIndexes, pHetTable->dwIndexSizeTotal * i,
+                pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * i,
                                                 pHetTable->dwIndexSize,
                                                &dwFileIndex,
                                                 4);
@@ -2543,7 +2551,7 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
                     ULONGLONG NameHash2 = 0;
 
                     // Load the BET hash
-                    GetBits(pBetTable->pNameHashes, pBetTable->dwBitTotal_NameHash2 * dwFileIndex,
+                    pBetTable->pNameHashes->GetBits(pBetTable->dwBitTotal_NameHash2 * dwFileIndex,
                                                     pBetTable->dwBitCount_NameHash2,
                                                    &NameHash2,
                                                     8);
@@ -2563,19 +2571,19 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
             DWORD dwFlagIndex = 0;
 
             // Read the file position
-            GetBits(pBitArray, dwBitPosition + pBetTable->dwBitIndex_FilePos,
+            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FilePos,
                                pBetTable->dwBitCount_FilePos,
                               &pFileEntry->ByteOffset,
                                8);
 
             // Read the file size
-            GetBits(pBitArray, dwBitPosition + pBetTable->dwBitIndex_FileSize,
+            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FileSize,
                                pBetTable->dwBitCount_FileSize,
                               &pFileEntry->dwFileSize,
                                4);
 
             // Read the compressed size
-            GetBits(pBitArray, dwBitPosition + pBetTable->dwBitIndex_CmpSize,
+            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_CmpSize,
                                pBetTable->dwBitCount_CmpSize,
                               &pFileEntry->dwCmpSize,
                                4);
@@ -2584,7 +2592,7 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
             // Read the flag index
             if(pBetTable->dwFlagCount != 0)
             {
-                GetBits(pBitArray, dwBitPosition + pBetTable->dwBitIndex_FlagIndex,
+                pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FlagIndex,
                                    pBetTable->dwBitCount_FlagIndex,
                                   &dwFlagIndex,
                                    4);
