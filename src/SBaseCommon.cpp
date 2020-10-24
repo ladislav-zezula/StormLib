@@ -1738,7 +1738,7 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
 //-----------------------------------------------------------------------------
 // Swapping functions
 
-#ifndef PLATFORM_LITTLE_ENDIAN
+#ifndef STORMLIB_LITTLE_ENDIAN
 
 //
 // Note that those functions are implemented for Mac operating system,
@@ -1863,4 +1863,4 @@ void ConvertTMPQHeader(void *header, uint16_t version)
     }
 }
 
-#endif  // PLATFORM_LITTLE_ENDIAN
+#endif  // STORMLIB_LITTLE_ENDIAN

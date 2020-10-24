@@ -57,7 +57,7 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
 }
 
 //-----------------------------------------------------------------------------
-// Support functions for TBitArray
+// Implementation of the TBitArray struc
 
 struct TBitArray
 {
@@ -112,7 +112,7 @@ void TBitArray::GetBits(
         assert(pbBuffer[i] == 0);
 #endif
 
-#ifndef PLATFORM_LITTLE_ENDIAN
+#ifndef STORMLIB_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
     pbBuffer += (nResultByteSize - 1);
 #endif    
@@ -130,7 +130,7 @@ void TBitArray::GetBits(
             BitBuffer = Elements[nBytePosition0];
         }
 
-#ifdef PLATFORM_LITTLE_ENDIAN
+#ifdef STORMLIB_LITTLE_ENDIAN
         *pbBuffer++ = BitBuffer;
 #else
         *pbBuffer-- = BitBuffer;
@@ -171,7 +171,7 @@ void TBitArray::SetBits(
     // Keep compiler happy for platforms where nResultByteSize is not used
     nResultByteSize = nResultByteSize;
 
-#ifndef PLATFORM_LITTLE_ENDIAN
+#ifndef STORMLIB_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
     pbBuffer += (nResultByteSize - 1);
 #endif    
@@ -180,7 +180,7 @@ void TBitArray::SetBits(
     while(nBitLength > 8)
     {
         // Reload the bit buffer
-#ifdef PLATFORM_LITTLE_ENDIAN
+#ifdef STORMLIB_LITTLE_ENDIAN
         OneByte = *pbBuffer++;
 #else
         OneByte = *pbBuffer--;
