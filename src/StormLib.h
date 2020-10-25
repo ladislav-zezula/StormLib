@@ -480,7 +480,7 @@ typedef void (WINAPI * SFILE_ADDFILE_CALLBACK)(void * pvUserData, DWORD dwBytesW
 typedef void (WINAPI * SFILE_COMPACT_CALLBACK)(void * pvUserData, DWORD dwWorkType, ULONGLONG BytesProcessed, ULONGLONG TotalBytes);
 
 struct TFileStream;
-struct TBitArray;
+class TBitArray;
 
 //-----------------------------------------------------------------------------
 // Structures related to MPQ format

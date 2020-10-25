@@ -59,8 +59,10 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
 //-----------------------------------------------------------------------------
 // Implementation of the TBitArray struc
 
-struct TBitArray
+class TBitArray
 {
+    public:
+
     void GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
     void SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
 
