@@ -28,7 +28,7 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
-#ifndef PLATFORM_WINDOWS
+#ifndef STORMLIB_WINDOWS
 #include <dirent.h>
 #endif
 
@@ -47,22 +47,22 @@ typedef struct _TEST_INFO
 //------------------------------------------------------------------------------
 // Local variables
 
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
 #define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0x65B0, (TCHAR)0x5EFA, (TCHAR)0x6587, (TCHAR)0x4EF6, (TCHAR)0x5939, 0 };
 #endif
 
-#ifdef PLATFORM_LINUX
+#ifdef STORMLIB_LINUX
 #define WORK_PATH_ROOT "/home/ladik/StormLib/test"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
-#ifdef PLATFORM_MAC
+#ifdef STORMLIB_MAC
 #define WORK_PATH_ROOT "/home/sam/StormLib/test"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
-#ifdef PLATFORM_HAIKU
+#ifdef STORMLIB_HAIKU
 #define WORK_PATH_ROOT "~/StormLib/test"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
@@ -280,7 +280,7 @@ static LPCTSTR PatchList_HS_6898_enGB[] =
 // Local file functions
 
 // Definition of the path separator
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
 static LPCTSTR g_szPathSeparator = _T("\\");
 static const TCHAR PATH_SEPARATOR = _T('\\');       // Path separator for Windows platforms
 #else
@@ -296,7 +296,7 @@ size_t cchMpqDirectory = 0;
 template <typename XCHAR>
 static bool IsFullPath(const XCHAR * szFileName)
 {
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
     if(('A' <= szFileName[0] && szFileName[0] <= 'Z') || ('a' <= szFileName[0] && szFileName[0] <= 'z'))
     {
         return (szFileName[1] == ':' && szFileName[2] == PATH_SEPARATOR);
@@ -715,7 +715,7 @@ static int CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * s
 
 static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 {
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
 
     WIN32_FIND_DATA wf;
     HANDLE hFind;
@@ -730,7 +730,7 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 
 #endif
 
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
 
     // Keep compilers happy
     return (HANDLE)opendir(szDirectory);
@@ -740,7 +740,7 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 
 static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry, bool & IsDirectory)
 {
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
 
     WIN32_FIND_DATA wf;
     TCHAR szDirEntryT[MAX_PATH];
@@ -765,7 +765,7 @@ static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry
 
 #endif
 
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
 
     struct dirent * directory_entry;
 
@@ -784,11 +784,11 @@ static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry
 
 static void FreeDirectorySearch(HANDLE hFind)
 {
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
     FindClose(hFind);
 #endif
 
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
     closedir((DIR *)hFind);
 #endif
 }
@@ -2225,7 +2225,7 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
     // Retrieve the provider
     FileStream_Prefix(szMasterName, &dwProvider);
 
-#ifndef PLATFORM_WINDOWS
+#ifndef STORMLIB_WINDOWS
     if((dwProvider & BASE_PROVIDER_MASK) == BASE_PROVIDER_HTTP)
         return ERROR_SUCCESS;
 #endif

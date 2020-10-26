@@ -425,7 +425,7 @@ char * TLogHelper::CopyFormatCharacter(char * szBuffer, const char *& szFormat)
 
 int TLogHelper::GetConsoleWidth()
 {
-#ifdef PLATFORM_WINDOWS
+#ifdef STORMLIB_WINDOWS
 
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo);

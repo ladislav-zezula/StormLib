@@ -66,7 +66,7 @@ struct TStormBits
     void GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
     void SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
 
-    static const USHORT SetBitsMask[];
+    static const USHORT SetBitsMask[];          // Bit mask for each number of bits (0-8)
 
     DWORD NumberOfBytes;                        // Total number of bytes in "Elements"
     DWORD NumberOfBits;                         // Total number of bits that are available
