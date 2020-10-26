@@ -57,31 +57,33 @@ static DWORD GetNecessaryBitCount(ULONGLONG MaxValue)
 }
 
 //-----------------------------------------------------------------------------
-// Implementation of the TBitArray struc
+// Implementation of the TStormBits struc
 
-class TBitArray
+struct TStormBits
 {
-    public:
+    static TStormBits * Create(DWORD NumberOfBits, BYTE FillValue);
 
     void GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
     void SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
+
+    static const USHORT SetBitsMask[];
 
     DWORD NumberOfBytes;                        // Total number of bytes in "Elements"
     DWORD NumberOfBits;                         // Total number of bits that are available
     BYTE Elements[1];                           // Array of elements (variable length)
 };
 
-static USHORT SetBitsMask[] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
+const USHORT TStormBits::SetBitsMask[] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
 
-static TBitArray * CreateBitArray(
+TStormBits * TStormBits::Create(
     DWORD NumberOfBits,
     BYTE FillValue)
 {
-    TBitArray * pBitArray;
-    size_t nSize = sizeof(TBitArray) + (NumberOfBits + 7) / 8;
+    TStormBits * pBitArray;
+    size_t nSize = sizeof(TStormBits) + (NumberOfBits + 7) / 8;
 
     // Allocate the bit array
-    pBitArray = (TBitArray *)STORM_ALLOC(BYTE, nSize);
+    pBitArray = (TStormBits *)STORM_ALLOC(BYTE, nSize);
     if(pBitArray != NULL)
     {
         memset(pBitArray, FillValue, nSize);
@@ -92,7 +94,7 @@ static TBitArray * CreateBitArray(
     return pBitArray;
 }
 
-void TBitArray::GetBits(
+void TStormBits::GetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
@@ -157,7 +159,7 @@ void TBitArray::GetBits(
     }
 }
 
-void TBitArray::SetBits(
+void TStormBits::SetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
@@ -1330,7 +1332,7 @@ TMPQHetTable * CreateHetTable(DWORD dwEntryCount, DWORD dwTotalCount, DWORD dwNa
             memset(pHetTable->pNameHashes, 0, dwTotalCount);
 
             // Allocate the bit array for file indexes
-            pHetTable->pBetIndexes = CreateBitArray(dwTotalCount * pHetTable->dwIndexSizeTotal, 0xFF);
+            pHetTable->pBetIndexes = TStormBits::Create(dwTotalCount * pHetTable->dwIndexSizeTotal, 0xFF);
             if(pHetTable->pBetIndexes != NULL)
             {
                 // Initialize the HET table from the source data (if given)
@@ -1730,7 +1732,7 @@ static TMPQBetTable * TranslateBetTable(
                 }
 
                 // Load the bit-based file table
-                pBetTable->pFileTable = CreateBitArray(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
+                pBetTable->pFileTable = TStormBits::Create(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
                 if(pBetTable->pFileTable != NULL)
                 {
                     LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
@@ -1744,7 +1746,7 @@ static TMPQBetTable * TranslateBetTable(
                 pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
                 
                 // Create and load the array of BET hashes
-                pBetTable->pNameHashes = CreateBitArray(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
+                pBetTable->pNameHashes = TStormBits::Create(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
                 if(pBetTable->pNameHashes != NULL)
                 {
                     LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
@@ -1769,7 +1771,7 @@ TMPQExtHeader * TranslateBetTable(
     TMPQBetHeader BetHeader;
     TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
     TFileEntry * pFileEntry;
-    TBitArray * pBitArray = NULL;
+    TStormBits * pBitArray = NULL;
     LPBYTE pbLinearTable = NULL;
     LPBYTE pbTrgData;
     DWORD LengthInBytes;
@@ -1789,7 +1791,7 @@ TMPQExtHeader * TranslateBetTable(
         pbTrgData = (LPBYTE)(pBetHeader + 1);
 
         // Save the bit-based block table
-        pBitArray = CreateBitArray(BetHeader.dwEntryCount * BetHeader.dwTableEntrySize, 0);
+        pBitArray = TStormBits::Create(BetHeader.dwEntryCount * BetHeader.dwTableEntrySize, 0);
         if(pBitArray != NULL)
         {
             DWORD dwFlagIndex = 0;
@@ -1844,7 +1846,7 @@ TMPQExtHeader * TranslateBetTable(
         }
 
         // Create bit array for name hashes
-        pBitArray = CreateBitArray(BetHeader.dwBitTotal_NameHash2 * BetHeader.dwEntryCount, 0);
+        pBitArray = TStormBits::Create(BetHeader.dwBitTotal_NameHash2 * BetHeader.dwEntryCount, 0);
         if(pBitArray != NULL)
         {
             DWORD dwFileIndex = 0;
@@ -2516,7 +2518,7 @@ static int BuildFileTable_HetBet(TMPQArchive * ha)
     TMPQHetTable * pHetTable = ha->pHetTable;
     TMPQBetTable * pBetTable;
     TFileEntry * pFileEntry = ha->pFileTable;
-    TBitArray * pBitArray;
+    TStormBits * pBitArray;
     DWORD dwBitPosition = 0;
     DWORD i;
     int nError = ERROR_FILE_CORRUPT;

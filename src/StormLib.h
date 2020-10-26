@@ -480,7 +480,7 @@ typedef void (WINAPI * SFILE_ADDFILE_CALLBACK)(void * pvUserData, DWORD dwBytesW
 typedef void (WINAPI * SFILE_COMPACT_CALLBACK)(void * pvUserData, DWORD dwWorkType, ULONGLONG BytesProcessed, ULONGLONG TotalBytes);
 
 struct TFileStream;
-class TBitArray;
+struct TStormBits;
 
 //-----------------------------------------------------------------------------
 // Structures related to MPQ format
@@ -748,7 +748,7 @@ typedef struct _TMPQBetHeader
 // Structure for parsed HET table
 typedef struct _TMPQHetTable
 {
-    TBitArray * pBetIndexes;                    // Bit array of FileIndex values
+    TStormBits * pBetIndexes;                   // Bit array of FileIndex values
     LPBYTE     pNameHashes;                     // Array of NameHash1 values (NameHash1 = upper 8 bits of FileName hashe)
     ULONGLONG  AndMask64;                       // AND mask used for calculating file name hash
     ULONGLONG  OrMask64;                        // OR mask used for setting the highest bit of the file name hash
@@ -764,8 +764,8 @@ typedef struct _TMPQHetTable
 // Structure for parsed BET table
 typedef struct _TMPQBetTable
 {
-    TBitArray * pNameHashes;                    // Array of NameHash2 entries (lower 24 bits of FileName hash)
-    TBitArray * pFileTable;                     // Bit-based file table
+    TStormBits * pNameHashes;                   // Array of NameHash2 entries (lower 24 bits of FileName hash)
+    TStormBits * pFileTable;                    // Bit-based file table
     LPDWORD pFileFlags;                         // Array of file flags
 
     DWORD dwTableEntrySize;                     // Size of one table entry, in bits
