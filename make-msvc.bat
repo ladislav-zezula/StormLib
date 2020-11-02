@@ -19,10 +19,10 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxil
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
 ::Build all libraries using Visual Studio 2008 and 2017
-call :BuildStormLib "%VCVARS_2008%" x86 StormLib_vs08.sln
-call :BuildStormLib "%VCVARS_2008%" x64 StormLib_vs08.sln
-call :BuildStormLib "%VCVARS_2019%" x86 StormLib_vs19.sln
-call :BuildStormLib "%VCVARS_2019%" x64 StormLib_vs19.sln
+call :BuildLibs "%VCVARS_2008%" x86 %LIB_NAME%_vs08.sln
+call :BuildLibs "%VCVARS_2008%" x64 %LIB_NAME%_vs08.sln
+call :BuildLibs "%VCVARS_2019%" x86 %LIB_NAME%_vs19.sln
+call :BuildLibs "%VCVARS_2019%" x64 %LIB_NAME%_vs19.sln
 goto:eof
 
 ::-----------------------------------------------------------------------------
@@ -32,10 +32,10 @@ goto:eof
 ::
 ::   %1     Full path to the VCVARS.BAT file
 ::   %2     Target build platform (x86 or x64)
-::   %3     Plain name of the solution file (for example "StormLib_vs19.sln")
+::   %3     Plain name of the /sln solution file
 ::
 
-:BuildStormLib
+:BuildLibs
 ::set VSCMD_DEBUG=1
 call %1 %2
 if "%2" == "x86" set SLN_TRG=Win32
