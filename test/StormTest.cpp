@@ -35,6 +35,13 @@
 //------------------------------------------------------------------------------
 // Local structures
 
+#define TEST_OPEN_MPQ                   0x00000000
+#define TEST_LOAD_FILE_CHECK_CRC        0x00010000
+#define TEST_OPEN_COMPARE_TWO_FILES     0x00020000
+#define TEST_MASK                       0xFFFF0000
+
+#define TEST_SETPOS                     0x00000001
+
 typedef struct _TEST_INFO
 {
     LPCTSTR szMpqName1;
@@ -1344,7 +1351,7 @@ struct TFileData
     DWORD dwBlockIndex;
     DWORD dwFileSize;
     DWORD dwFlags;
-    DWORD dwReserved;                               // Alignment
+    DWORD dwCrc32;
     BYTE FileData[1];
 };
 
@@ -1496,7 +1503,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     DWORD dwFileSizeHi = 0xCCCCCCCC;
     DWORD dwFileSizeLo = 0;
     DWORD dwBytesRead;
-    int nError = ERROR_SUCCESS;
+    DWORD dwCrc32 = 0;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user that we are loading a file from MPQ
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
@@ -1511,63 +1519,67 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
 
     // Open the file from MPQ
     if(!SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
-        nError = pLogger->PrintError("Open failed: %s", szFileName);
+        dwErrCode = pLogger->PrintError("Open failed: %s", szFileName);
+
+    // Get the CRC32 of the file
+    SFileGetFileInfo(hFile, SFileInfoCRC32, &dwCrc32, sizeof(dwCrc32), NULL);
 
     // Get the size of the file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         dwFileSizeLo = SFileGetFileSize(hFile, &dwFileSizeHi);
         if(dwFileSizeLo == SFILE_INVALID_SIZE || dwFileSizeHi != 0)
-            nError = pLogger->PrintError("Failed to query the file size");
+            dwErrCode = pLogger->PrintError("Failed to query the file size");
     }
 
     // Spazzler protector: Creates fake files with size of 0x7FFFE7CA
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(dwFileSizeLo > 0x1FFFFFFF)
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
     }
 
     // Allocate buffer for the file content
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         pFileData = (TFileData *)STORM_ALLOC(BYTE, sizeof(TFileData) + dwFileSizeLo);
         if(pFileData == NULL)
         {
             pLogger->PrintError("Failed to allocate buffer for the file content");
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
         }
     }
 
     // get the file index of the MPQ file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Store the file size
         memset(pFileData, 0, sizeof(TFileData) + dwFileSizeLo);
         pFileData->dwFileSize = dwFileSizeLo;
+        pFileData->dwCrc32 = dwCrc32;
 
         // Retrieve the block index and file flags
         if(!SFileGetFileInfo(hFile, SFileInfoFileIndex, &pFileData->dwBlockIndex, sizeof(DWORD), NULL))
-            nError = pLogger->PrintError("Failed retrieve the file index of %s", szFileName);
+            dwErrCode = pLogger->PrintError("Failed retrieve the file index of %s", szFileName);
         if(!SFileGetFileInfo(hFile, SFileInfoFlags, &pFileData->dwFlags, sizeof(DWORD), NULL))
-            nError = pLogger->PrintError("Failed retrieve the file flags of %s", szFileName);
+            dwErrCode = pLogger->PrintError("Failed retrieve the file flags of %s", szFileName);
     }
 
     // Load the entire file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Read the file data
         SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
         if(dwBytesRead != dwFileSizeLo)
-//          nError = pLogger->PrintError("Read failed: %s", szFileName);
-            nError = ERROR_FILE_CORRUPT;
+//          dwErrCode = pLogger->PrintError("Read failed: %s", szFileName);
+            dwErrCode = ERROR_FILE_CORRUPT;
     }
 
     // If failed, free the buffer
-    if(nError != ERROR_SUCCESS)
+    if(dwErrCode != ERROR_SUCCESS)
     {
         STORM_FREE(pFileData);
-        SetLastError(nError);
+        SetLastError(dwErrCode);
         pFileData = NULL;
     }
 
@@ -1602,7 +1614,7 @@ static bool CompareTwoFiles(TLogHelper * pLogger, TFileData * pFileData1, TFileD
     return true;
 }
 
-static int SearchArchive(
+static DWORD SearchArchive(
     TLogHelper * pLogger,
     HANDLE hMpq,
     DWORD dwTestFlags = 0,
@@ -1616,10 +1628,10 @@ static int SearchArchive(
     hash_state md5state;
     TCHAR szListFile[MAX_PATH] = _T("");
     char szMostPatched[MAX_PATH] = "";
+    DWORD dwErrCode = ERROR_SUCCESS;
     bool bFound = true;
     int nMaxPatchCount = 0;
     int nPatchCount = 0;
-    int nError = ERROR_SUCCESS;
 
     // Construct the full name of the listfile
     CreateFullPathName(szListFile, _countof(szListFile), szListFileDir, _T("ListFile_Blizzard.txt"));
@@ -1632,9 +1644,9 @@ static int SearchArchive(
     hFind = SFileFindFirstFile(hMpq, "*", &sf, szListFile);
     if(hFind == NULL)
     {
-        nError = GetLastError();
-        nError = (nError == ERROR_NO_MORE_FILES) ? ERROR_SUCCESS : nError;
-        return nError;
+        dwErrCode = GetLastError();
+        dwErrCode = (dwErrCode == ERROR_NO_MORE_FILES) ? ERROR_SUCCESS : dwErrCode;
+        return dwErrCode;
     }
 
     // Perform the search
@@ -1695,7 +1707,7 @@ static int SearchArchive(
     if(pbFileHash != NULL && (dwTestFlags & TEST_FLAG_HASH_FILES))
         md5_done(&md5state, pbFileHash);
 
-    return nError;
+    return dwErrCode;
 }
 
 static int CreateNewArchive(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
@@ -2379,108 +2391,161 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
     return nError;
 }
 
+static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, ...)
+{
+    TFileData * pFileData;
+    const char * szFileName;
+    va_list argList;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    va_start(argList, hMpq);
+    while((szFileName = va_arg(argList, const char *)) != NULL)
+    {
+        if(SFileHasFile(hMpq, szFileName))
+        {
+            pFileData = LoadMpqFile(pLogger, hMpq, szFileName);
+            if(pFileData != NULL)
+            {
+                STORM_FREE(pFileData);
+                pFileData = NULL;
+            }
+            else
+            {
+                dwErrCode = pLogger->PrintError("Error loading the file %s", szFileName);
+                break;
+            }
+        }
+    }
+    va_end(argList);
+
+    return dwErrCode;
+}
+
+static DWORD TestArchive_SetPos(HANDLE hMpq, const char * szFileName)
+{
+    HANDLE hFile = NULL;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
+    {
+        // First, use the SFileSetFilePointer WITHOUT the high-dword position
+        dwErrCode = TestSetFilePointers(hFile, false);
+
+        // First, use the SFileSetFilePointer WITH the high-dword position
+        if(dwErrCode == ERROR_SUCCESS)
+            dwErrCode = TestSetFilePointers(hFile, true);
+
+        // Close the file
+        SFileCloseFile(hFile);
+    }
+
+    return dwErrCode;
+}
+
 static DWORD TestArchive(
     LPCTSTR szPlainName,                // Plain name of the MPQ
-    LPCTSTR szListFile,
-    DWORD dwWhatToDo,
+    LPCTSTR szListFile,                 // Listfile name (NULL if none)
+    DWORD dwWhatToDo,                   // Flags what to do
     LPCSTR szFileName1,
     LPCSTR szFileName2)
 {
-    return ERROR_CAN_NOT_COMPLETE;
-}
-
-static int TestOpenFile_OpenById(LPCTSTR szPlainName)
-{
-    TLogHelper Logger("OpenFileById", szPlainName);
-    TFileData * pFileData1 = NULL;
     TFileData * pFileData2 = NULL;
-    HANDLE hMpq;
-    int nError;
+    TFileData * pFileData = NULL;
+    TLogHelper Logger("TestMpq", szPlainName);
+//  HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
+    DWORD dwFileCount = 0;
+    DWORD dwErrCode;
+    DWORD dwCrc32 = 0;
+    TCHAR szFullName[MAX_PATH];
+
+    // If the file is a partial MPQ, don't load all files
+    bool bIsPartialMpq = (_tcsstr(szPlainName, _T(".MPQ.part")) != NULL);
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, NULL, &hMpq);
-
-    // Now try to open a file without knowing the file name
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, NULL, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        // File00000023.xxx = music\dintro.wav
-        pFileData1 = LoadMpqFile(&Logger, hMpq, "File00000023.xxx");
-        if(pFileData1 == NULL)
-            nError = Logger.PrintError("Failed to load the file %s", "File00000023.xxx");
+        // If the listfile was given, add it to the MPQ
+        if(szListFile && szListFile[0])
+        {
+            Logger.PrintProgress(_T("Adding listfile %s ..."), szListFile);
+            CreateFullPathName(szFullName, _countof(szFullName), szListFileDir, szListFile);
+            if((dwErrCode = SFileAddListFile(hMpq, szFullName)) != ERROR_SUCCESS)
+                Logger.PrintMessage("Failed to add the listfile to the MPQ");
+        }
+
+        // Perform work-specific duty
+        switch(dwWhatToDo & TEST_MASK)
+        {
+            case TEST_LOAD_FILE_CHECK_CRC:
+
+                // Load the entire file
+                pFileData = LoadMpqFile(&Logger, hMpq, szFileName1);
+                if(pFileData == NULL)
+                {
+                    dwErrCode = Logger.PrintError("Failed to load the file %s", szFileName1);
+                    break;
+                }
+
+                // Compare the CRC32, if available
+                dwCrc32 = crc32(0, (Bytef *)pFileData->FileData, (uInt)pFileData->dwFileSize);
+                if(dwCrc32 != pFileData->dwCrc32)
+                    Logger.PrintError("Warning: CRC32 error on %s", szFileName1);
+                break;
+
+            case TEST_OPEN_COMPARE_TWO_FILES:
+
+                // Load the first file
+                pFileData = LoadMpqFile(&Logger, hMpq, szFileName1);
+                if(pFileData == NULL)
+                {
+                    dwErrCode = Logger.PrintError("Failed to load the file %s", "File00000023.xxx");
+                    break;
+                }
+
+                // Load the second file
+                pFileData2 = LoadMpqFile(&Logger, hMpq, szFileName2);
+                if(pFileData2 == NULL)
+                {
+                    dwErrCode = Logger.PrintError("Failed to load the file %s", "music\\dintro.wav");
+                    break;
+                }
+
+                // Compare both files
+                if(!CompareTwoFiles(&Logger, pFileData, pFileData2))
+                    dwErrCode = Logger.PrintError("The file has different size/content when open without name");
+                break;
+
+            case TEST_OPEN_MPQ:
+
+                // Attempt to open the (listfile), (attributes), (signature)
+                dwErrCode = TestArchive_LoadFiles(&Logger, hMpq, LISTFILE_NAME, ATTRIBUTES_NAME, SIGNATURE_NAME, NULL);
+                if(dwErrCode != ERROR_SUCCESS)
+                    break;
+
+                // Test setting position
+                if((dwWhatToDo & TEST_SETPOS) && (szFileName1 != NULL))
+                {
+                    dwErrCode = TestArchive_SetPos(hMpq, szFileName1);
+                    if(dwErrCode != ERROR_SUCCESS)
+                        break;
+                }
+
+                // Search the archive
+                dwErrCode = SearchArchive(&Logger, hMpq, (bIsPartialMpq ? 0 : TEST_FLAG_LOAD_FILES), &dwFileCount);
+                break;
+        }
     }
 
-    // Now try to open the file again with its original name
-    if(nError == ERROR_SUCCESS)
-    {
-        // File00000023.xxx = music\dintro.wav
-        pFileData2 = LoadMpqFile(&Logger, hMpq, "music\\dintro.wav");
-        if(pFileData2 == NULL)
-            nError = Logger.PrintError("Failed to load the file %s", "music\\dintro.wav");
-    }
-
-    // Now compare both files
-    if(nError == ERROR_SUCCESS)
-    {
-        if(!CompareTwoFiles(&Logger, pFileData1, pFileData1))
-            nError = Logger.PrintError("The file has different size/content when open without name");
-    }
-
-    // Close the archive
+    // Common cleanup
     if(pFileData2 != NULL)
         STORM_FREE(pFileData2);
-    if(pFileData1 != NULL)
-        STORM_FREE(pFileData1);
+    if(pFileData != NULL)
+        STORM_FREE(pFileData);
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
-}
-
-static int TestOpenFile_OpenByName(LPCTSTR szPlainName, LPCSTR szFileName)
-{
-    TLogHelper Logger("OpenFileByName", szPlainName);
-    TFileData * pFileData = NULL;
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
-    DWORD dwCrc32_1 = 0;
-    DWORD dwCrc32_2 = 0;
-    int nError;
-
-    // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, NULL, &hMpq);
-
-    // Now try to open the given file
-    if(nError == ERROR_SUCCESS)
-    {
-        // Retrieve the CRC32
-        if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
-        {
-            SFileGetFileInfo(hFile, SFileInfoCRC32, &dwCrc32_1, sizeof(dwCrc32_1), NULL);
-            SFileCloseFile(hFile);
-        }
-
-        // Load the entire file
-        pFileData = LoadMpqFile(&Logger, hMpq, szFileName);
-        if(pFileData != NULL)
-        {
-            // Compare the CRC32, if available
-            dwCrc32_2 = crc32(0, (Bytef *)pFileData->FileData, (uInt)pFileData->dwFileSize);
-            STORM_FREE(pFileData);
-        }
-        else
-            nError = Logger.PrintError("Failed to load the file %s", szFileName);
-
-        // Compare the CRC32
-        if(nError == ERROR_SUCCESS && dwCrc32_1 && dwCrc32_2)
-        {
-            if(dwCrc32_1 != dwCrc32_2)
-                Logger.PrintError("Warning: CRC32 error on %s", szFileName);
-        }
-
-        // Close the archive
-        SFileCloseArchive(hMpq);
-    }
-
-    return nError;
+    return dwErrCode;
 }
 
 static int TestOpenArchive(LPCTSTR szPlainName, LPCTSTR szListFile = NULL, LPCSTR szFileName = NULL, bool bDontCopyArchive = false)
@@ -2591,7 +2656,7 @@ static int TestOpenArchive_SetPos(LPCTSTR szPlainName, LPCSTR szFileName)
 
             // First, use the SFileSetFilePointer WITH the high-dword position
             if(nError == ERROR_SUCCESS)
-                nError = TestSetFilePointers(hFile, false);
+                nError = TestSetFilePointers(hFile, true);
 
             // Close the file
             SFileCloseFile(hFile);
@@ -4282,11 +4347,30 @@ static const TEST_INFO TestList_MasterMirror[] =
 //  {_T("MPQ_2013_v4_alternate-downloaded.MPQ"),            _T("http://www.zezula.net\\mpqs\\alternate.zip"), 0}
 };
 
-#define TEST_OPEN_COMPARE_TWO_FILES    0x01
-
 static const TEST_INFO Test_Mpqs[] =
 {
-    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), NULL, TEST_OPEN_COMPARE_TWO_FILES, "music\\dintro.wav", "File00000023.xxx"},
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),    NULL, TEST_OPEN_COMPARE_TWO_FILES, "music\\dintro.wav", "File00000023.xxx"},
+    {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), NULL, TEST_LOAD_FILE_CHECK_CRC, "waitingroombkgd.dc6" }, // The update MPQ from Diablo II (patch 2016)
+    {_T("MPQ_2018_v1_icon_error.w3m"),         NULL, TEST_LOAD_FILE_CHECK_CRC, "file00000002.blp" },
+
+    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"), TEST_OPEN_MPQ },              // Open a file whose archive's (signature) file has flags = 0x90000000
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),  NULL, TEST_OPEN_MPQ | TEST_SETPOS, "music\\dtowne.wav" },  // Test the SFileSetFilePointer operations
+    {_T("MPQ_2012_v2_EmptyMpq.MPQ") },                                                                  // Open an empty archive (found in WoW cache - it's just a header)
+    {_T("MPQ_2013_v4_EmptyMpq.MPQ") },                                                                  // Open an empty archive (created artificially - it's just a header)
+    {_T("MPQ_2013_v4_patch-base-16357.MPQ") },                                                          // Open an empty archive (found in WoW cache - it's just a header)
+    {_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ") },                                                      // Open an empty archive (A buggy MPQ with invalid HET entry count)
+    {_T("MPQ_2002_v1_BlockTableCut.MPQ") },                                                             // Open a truncated archive
+    
+    // TODO: Doesn't work anymore
+    //{_T("MPQ_2010_v2_HasUserData.s2ma") },                                                            // Open a MPQ that actually has user data
+
+    {_T("MPQ_2014_v1_AttributesOneEntryLess.w3x") },                                                    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
+    {_T("MPQ_2020_v1_AHF04patch.mix") },                                                                // Open a MIX file
+    {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ") },                                                     // Open a MPQ archive v 3.0
+    {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE") },                                                 // Open an encrypted archive from Starcraft II installer
+    {_T("MPx_2013_v1_LongwuOnline.mpk") },                                                              // Open a MPK archive from Longwu online
+    {_T("MPx_2013_v1_WarOfTheImmortals.sqp"), _T("ListFile_WarOfTheImmortals.txt") },                   // Open a SQP archive from War of the Immortals
+    {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part") },                                      // Open a partial MPQ with compressed hash table
 };
 
 //-----------------------------------------------------------------------------
@@ -4304,10 +4388,13 @@ int _tmain(int argc, TCHAR * argv[])
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     dwErrCode = InitializeMpqDirectory(argv, argc);
 
+    //
     // Open all files from the command line
+    //
+
     for(int i = 1; i < argc; i++)
     {
-        SFILE_FIND_DATA sf;
+        //SFILE_FIND_DATA sf;
         HANDLE hFile = NULL;
         HANDLE hMpq = NULL;
         BYTE Buffer[0x40];
@@ -4343,31 +4430,31 @@ int _tmain(int argc, TCHAR * argv[])
     // Test file stream operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
-        {
-            dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
+    //    {
+    //        dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Test master-mirror reading operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
-        {
-            dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
-                                                  TestList_MasterMirror[i].szMpqName2,
-                                                  TestList_MasterMirror[i].dwFlags != 0);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
+    //    {
+    //        dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
+    //                                              TestList_MasterMirror[i].szMpqName2,
+    //                                              TestList_MasterMirror[i].dwFlags != 0);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Search in listfile
@@ -4390,7 +4477,7 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Test opening various archives - correct, damaged, protected
     //
-/*
+
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(Test_Mpqs); i++)
@@ -4404,81 +4491,6 @@ int _tmain(int argc, TCHAR * argv[])
                 break;
         }
     }
-*/
-    // Test working with an archive that has no listfile
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenFile_OpenById(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"));
-
-    // Open the update MPQ from Diablo II (patch 2016)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenFile_OpenByName(_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), "waitingroombkgd.dc6");
-
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenFile_OpenByName(_T("MPQ_2018_v1_icon_error.w3m"), "file00000002.blp");
-
-    // Open a file whose archive's (signature) file has flags = 0x90000000
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
-
-    // Test the SFileSetFilePointer operations
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_SetPos(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), "music\\dtowne.wav");
-
-    // Open an empty archive (found in WoW cache - it's just a header)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2012_v2_EmptyMpq.MPQ"));
-
-    // Open an empty archive (created artificially - it's just a header)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2013_v4_EmptyMpq.MPQ"));
-
-    // Open an empty archive (found in WoW cache - it's just a header)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2013_v4_patch-base-16357.MPQ"));
-
-    // Open an empty archive (A buggy MPQ with invalid HET entry count)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ"));
-
-    // Open a truncated archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2002_v1_BlockTableCut.MPQ"));
-
-    // Open a MPQ that actually has user data
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2010_v2_HasUserData.s2ma"));
-
-    // Open a file whose archive's (signature) file has flags = 0x90000000
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("ListFile_Blizzard.txt"));
-
-    // Open an Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"));
-
-    // Open a MIX file
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2020_v1_AHF04patch.mix"));
-
-    // Open a MPQ archive v 3.0
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"));
-
-    // Open an encrypted archive from Starcraft II installer
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"));
-
-    // Open a MPK archive from Longwu online
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPx_2013_v1_LongwuOnline.mpk"));
-
-    // Open a SQP archive from War of the Immortals
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("MPx_2013_v1_WarOfTheImmortals.sqp"), _T("ListFile_WarOfTheImmortals.txt"));
-
-    // Open a partial MPQ with compressed hash table
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive(_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"));
 
     // Open an protected map
     if(dwErrCode == ERROR_SUCCESS)

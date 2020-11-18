@@ -5,7 +5,7 @@
 /* E-mail : ladik@zezula.net                                                 */
 /* WWW    : www.zezula.net                                                   */
 /*---------------------------------------------------------------------------*/
-/*                       Archive functions of Storm.dll                      */
+/* Implementation of archive functions                                       */
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
@@ -100,6 +100,7 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
 {
     TMPQHeader * pHeader = ha->pHeader;
     ULONGLONG ByteOffset;
+    //bool bMalformed = (ha->dwFlags & MPQ_FLAG_MALFORMED) ? true : false;
 
     // Check the begin of HET table
     if(pHeader->HetTablePos64)
@@ -298,7 +299,7 @@ bool WINAPI SFileOpenArchive(
                 // If there is the MPQ user data, process it
                 // Note that Warcraft III does not check for user data, which is abused by many map protectors
                 dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
-                if(MapType == MapTypeNotRecognized && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
+                if(MapType != MapTypeWarcraft3 && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0)
                 {
                     if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                     {
