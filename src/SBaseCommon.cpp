@@ -962,7 +962,7 @@ void * LoadMpqTable(
             }
         }
 
-        // If everything succeeded, read the raw table form the MPQ
+        // If everything succeeded, read the raw table from the MPQ
         if(FileStream_Read(ha->pStream, &ByteOffset, pbToRead, dwBytesToRead))
         {
             // First of all, decrypt the table

@@ -480,7 +480,7 @@ typedef void (WINAPI * SFILE_ADDFILE_CALLBACK)(void * pvUserData, DWORD dwBytesW
 typedef void (WINAPI * SFILE_COMPACT_CALLBACK)(void * pvUserData, DWORD dwWorkType, ULONGLONG BytesProcessed, ULONGLONG TotalBytes);
 
 struct TFileStream;
-struct TStormBits;
+struct TMPQBits;
 
 //-----------------------------------------------------------------------------
 // Structures related to MPQ format
@@ -748,7 +748,7 @@ typedef struct _TMPQBetHeader
 // Structure for parsed HET table
 typedef struct _TMPQHetTable
 {
-    TStormBits * pBetIndexes;                   // Bit array of FileIndex values
+    TMPQBits * pBetIndexes;                     // Bit array of FileIndex values
     LPBYTE     pNameHashes;                     // Array of NameHash1 values (NameHash1 = upper 8 bits of FileName hashe)
     ULONGLONG  AndMask64;                       // AND mask used for calculating file name hash
     ULONGLONG  OrMask64;                        // OR mask used for setting the highest bit of the file name hash
@@ -764,8 +764,8 @@ typedef struct _TMPQHetTable
 // Structure for parsed BET table
 typedef struct _TMPQBetTable
 {
-    TStormBits * pNameHashes;                   // Array of NameHash2 entries (lower 24 bits of FileName hash)
-    TStormBits * pFileTable;                    // Bit-based file table
+    TMPQBits * pNameHashes;                     // Array of NameHash2 entries (lower 24 bits of FileName hash)
+    TMPQBits * pFileTable;                      // Bit-based file table
     LPDWORD pFileFlags;                         // Array of file flags
 
     DWORD dwTableEntrySize;                     // Size of one table entry, in bits
@@ -925,10 +925,15 @@ typedef struct _SFILE_CREATE_MPQ
 } SFILE_CREATE_MPQ, *PSFILE_CREATE_MPQ;
 
 //-----------------------------------------------------------------------------
+// TMPQBits support - functions
+
+void GetMPQBits(TMPQBits * pBits, unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultByteSize);
+
+//-----------------------------------------------------------------------------
 // Stream support - functions
 
 // Structure used by FileStream_GetBitmap
-typedef struct _TStreamBitmap
+struct TStreamBitmap
 {
     ULONGLONG StreamSize;                       // Size of the stream, in bytes
     DWORD BitmapSize;                           // Size of the block map, in bytes
@@ -937,8 +942,7 @@ typedef struct _TStreamBitmap
     DWORD IsComplete;                           // Nonzero if the file is complete
 
     // Followed by the BYTE array, each bit means availability of one block
-
-} TStreamBitmap;
+};
 
 // UNICODE versions of the file access functions
 TFileStream * FileStream_CreateFile(const TCHAR * szFileName, DWORD dwStreamFlags);
@@ -948,7 +952,7 @@ size_t FileStream_Prefix(const TCHAR * szFileName, DWORD * pdwProvider);
 
 bool FileStream_SetCallback(TFileStream * pStream, SFILE_DOWNLOAD_CALLBACK pfnCallback, void * pvUserData);
 
-bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD cbBitmap, LPDWORD pcbLengthNeeded);
+bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD cbBitmap, DWORD * pcbLengthNeeded);
 bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead);
 bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite);
 bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize);
