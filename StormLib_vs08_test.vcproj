@@ -50,7 +50,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__;__STORMLIB_DUMP_DATA__"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;__STORMLIB_TEST__"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"

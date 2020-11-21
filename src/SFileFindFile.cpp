@@ -238,6 +238,8 @@ static bool DoMPQSearch_FileEntry(
 
             // Prepare the block index
             dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
+            if(dwBlockIndex == 569)
+                szNameBuff[0] = 'F';
 
             // Get the file name. If it's not known, we will create pseudo-name
             szFileName = pFileEntry->szFileName;

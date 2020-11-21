@@ -236,7 +236,7 @@ static int WriteDataToMpqFile(
                     // We have to calculate sector CRC, if enabled
                     if(hf->SectorChksums != NULL)
                         hf->SectorChksums[dwSectorIndex] = adler32(0, pbCompressed, nOutBuffer);
-                }                 
+                }
 
                 // Encrypt the sector, if necessary
                 if(pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED)
@@ -592,7 +592,7 @@ int SFileAddFile_Write(TMPQFile * hf, const void * pvData, DWORD dwSize, DWORD d
         if(hf->pPatchInfo == NULL && IsIncrementalPatchFile(pvData, dwSize, &hf->dwPatchedFileSize))
         {
             // Set the MPQ_FILE_PATCH_FILE flag
-            hf->pFileEntry->dwFlags |= MPQ_FILE_PATCH_FILE;
+            pFileEntry->dwFlags |= MPQ_FILE_PATCH_FILE;
 
             // Allocate the patch info
             hf->nAddFileError = nError = AllocatePatchInfo(hf, false);
@@ -659,10 +659,10 @@ int SFileAddFile_Write(TMPQFile * hf, const void * pvData, DWORD dwSize, DWORD d
         if(hf->dwFilePos >= pFileEntry->dwFileSize)
         {
             // Finish calculating CRC32
-            hf->pFileEntry->dwCrc32 = hf->dwCrc32;
+            pFileEntry->dwCrc32 = hf->dwCrc32;
 
             // Finish calculating MD5
-            md5_done((hash_state *)hf->hctx, hf->pFileEntry->md5);
+            md5_done((hash_state *)hf->hctx, pFileEntry->md5);
 
             // If we also have sector checksums, write them to the file
             if(hf->SectorChksums != NULL)
@@ -673,9 +673,9 @@ int SFileAddFile_Write(TMPQFile * hf, const void * pvData, DWORD dwSize, DWORD d
             // Now write patch info
             if(hf->pPatchInfo != NULL)
             {
-                memcpy(hf->pPatchInfo->md5, hf->pFileEntry->md5, MD5_DIGEST_SIZE);
-                hf->pPatchInfo->dwDataSize  = hf->pFileEntry->dwFileSize;
-                hf->pFileEntry->dwFileSize = hf->dwPatchedFileSize;
+                memcpy(hf->pPatchInfo->md5, pFileEntry->md5, MD5_DIGEST_SIZE);
+                hf->pPatchInfo->dwDataSize  = pFileEntry->dwFileSize;
+                pFileEntry->dwFileSize = hf->dwPatchedFileSize;
                 nError = WritePatchInfo(hf);
             }
 
@@ -689,12 +689,16 @@ int SFileAddFile_Write(TMPQFile * hf, const void * pvData, DWORD dwSize, DWORD d
             if(ha->pHeader->dwRawChunkSize != 0)
             {
                 nError = WriteMpqDataMD5(ha->pStream,
-                                         ha->MpqPos + hf->pFileEntry->ByteOffset,
+                                         ha->MpqPos + pFileEntry->ByteOffset,
                                          hf->pFileEntry->dwCmpSize,
                                          ha->pHeader->dwRawChunkSize);
             }
         }
     }
+
+    // Update the archive size
+    if((ha->MpqPos + pFileEntry->ByteOffset + pFileEntry->dwCmpSize) > ha->FileSize)
+        ha->FileSize = ha->MpqPos + pFileEntry->ByteOffset + pFileEntry->dwCmpSize;
 
     // Store the error code from the Write File operation
     hf->nAddFileError = nError;

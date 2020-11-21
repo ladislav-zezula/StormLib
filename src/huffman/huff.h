@@ -118,7 +118,7 @@ class THuffmannTree
     bool  BuildTree(unsigned int CompressionType);
 
     void  IncWeightsAndRebalance(THTreeItem * pItem);
-    void  InsertNewBranchAndRebalance(unsigned int Value1, unsigned int Value2);
+    bool  InsertNewBranchAndRebalance(unsigned int Value1, unsigned int Value2);
 
     void  EncodeOneByte(TOutputStream * os, THTreeItem * pItem);
     unsigned int DecodeOneByte(TInputStream * is);

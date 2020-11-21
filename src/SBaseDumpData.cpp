@@ -111,39 +111,33 @@ void DumpHetAndBetTable(TMPQHetTable * pHetTable, TMPQBetTable * pBetTable)
         DWORD dwFlags = 0;
         DWORD dwBetIndex = 0;
 
-        GetBits(pHetTable->pBetIndexes, i * pHetTable->dwIndexSizeTotal,
-                                        pHetTable->dwIndexSize,
-                                       &dwBetIndex,
-                                        4);
+        GetMPQBits(pHetTable->pBetIndexes, i * pHetTable->dwIndexSizeTotal,
+                                           pHetTable->dwIndexSize,
+                                          &dwBetIndex, 4);
         
         if(dwBetIndex < pHetTable->dwTotalCount)
         {
             DWORD dwEntryIndex = pBetTable->dwTableEntrySize * dwBetIndex;
 
-            GetBits(pBetTable->pNameHashes, dwBetIndex * pBetTable->dwBitTotal_NameHash2,
-                                            pBetTable->dwBitCount_NameHash2,
-                                           &BetHash,
-                                            8);
+            GetMPQBits(pBetTable->pNameHashes, dwBetIndex * pBetTable->dwBitTotal_NameHash2,
+                                               pBetTable->dwBitCount_NameHash2,
+                                              &BetHash, 8);
 
-            GetBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FilePos,
-                                           pBetTable->dwBitCount_FilePos,
-                                          &ByteOffset,
-                                           8);
+            GetMPQBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FilePos,
+                                              pBetTable->dwBitCount_FilePos,
+                                             &ByteOffset, 8);
 
-            GetBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FileSize,
-                                           pBetTable->dwBitCount_FileSize,
-                                          &dwFileSize,
-                                           4);
+            GetMPQBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FileSize,
+                                              pBetTable->dwBitCount_FileSize,
+                                             &dwFileSize, 4);
 
-            GetBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_CmpSize,
-                                           pBetTable->dwBitCount_CmpSize,
-                                          &dwCmpSize,
-                                           4);
+            GetMPQBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_CmpSize,
+                                              pBetTable->dwBitCount_CmpSize,
+                                             &dwCmpSize, 4);
 
-            GetBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FlagIndex,
-                                           pBetTable->dwBitCount_FlagIndex,
-                                          &dwFlagIndex,
-                                           4);
+            GetMPQBits(pBetTable->pFileTable, dwEntryIndex + pBetTable->dwBitIndex_FlagIndex,
+                                              pBetTable->dwBitCount_FlagIndex,
+                                             &dwFlagIndex, 4);
 
             dwFlags = pBetTable->pFileFlags[dwFlagIndex];
         }

@@ -142,8 +142,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0916  // Current version of StormLib (9.21)
-#define STORMLIB_VERSION_STRING         "9.22"  // String version of StormLib version
+#define STORMLIB_VERSION                0x0917  // Current version of StormLib (9.23)
+#define STORMLIB_VERSION_STRING         "9.23"  // String version of StormLib version
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')

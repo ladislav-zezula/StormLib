@@ -17,7 +17,7 @@
 // Listfile entry structure
 
 #define CACHE_BUFFER_SIZE  0x1000       // Size of the cache buffer
-#define MAX_LISTFILE_SIZE  0x04000000   // Maximum accepted listfile size is about 68 MB
+#define MAX_LISTFILE_SIZE  0x8000000    // Maximum accepted listfile size is 128 MB
 
 union TListFileHandle
 {
@@ -148,6 +148,10 @@ static TListFileCache * CreateListFileCache(
     TListFileCache * pCache = NULL;
     TListFileHandle ListHandle = {NULL};
 
+    // Put default value to dwMaxSize
+    if(dwMaxSize == 0)
+        dwMaxSize = MAX_LISTFILE_SIZE;
+
     // Internal listfile: hMPQ must be non NULL and szListFile must be NULL.
     // We load the MPQ::(listfile) file
     if(hMpq != NULL && szListFile == NULL)
@@ -181,7 +185,7 @@ static TListFileCache * CreateListFileCache(
         {
             // Verify the file size
             FileStream_GetSize(ListHandle.pStream, &FileSize);
-            if(0 < FileSize && FileSize < MAX_LISTFILE_SIZE)
+            if(0 < FileSize && FileSize < dwMaxSize)
             {
                 pCache = CreateListFileCache(LoadListFile_Stream, &ListHandle, szWildCard, (DWORD)FileSize, dwMaxSize, dwFlags);
             }

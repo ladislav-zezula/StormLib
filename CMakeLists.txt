@@ -367,8 +367,8 @@ if (NOT STORM_SKIP_INSTALL)
 endif()
 
 if(STORM_BUILD_TESTS)
-    add_executable(storm_test ${TEST_SRC_FILES})
-    target_link_libraries(storm_test ${LIBRARY_NAME})
-    install(TARGETS storm_test RUNTIME DESTINATION bin)
+    add_executable(StormLib_test ${TEST_SRC_FILES})
+    target_link_libraries(StormLib_test ${LIBRARY_NAME})
+    install(TARGETS StormLib_test RUNTIME DESTINATION bin)
 endif()
 

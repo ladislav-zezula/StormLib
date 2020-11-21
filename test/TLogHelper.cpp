@@ -30,11 +30,11 @@ class TLogHelper
 #endif  // defined(UNICODE) || defined(UNICODE)
 
     // ANSI functions
-    int  PrintWithClreol(const char * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine);
-    void PrintProgress(const char * szFormat, ...);
-    void PrintMessage(const char * szFormat, ...);
-    int  PrintErrorVa(const char * szFormat, ...);
-    int  PrintError(const char * szFormat, const char * szFileName = NULL);
+    DWORD PrintWithClreol(const char * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine);
+    void  PrintProgress(const char * szFormat, ...);
+    void  PrintMessage(const char * szFormat, ...);
+    DWORD PrintErrorVa(const char * szFormat, ...);
+    DWORD PrintError(const char * szFormat, const char * szFileName = NULL);
 
     const char * UserString;
     unsigned int UserCount;
@@ -140,7 +140,7 @@ TLogHelper::~TLogHelper()
 #if defined(_MSC_VER) && defined(_DEBUG)
     if(_CrtDumpMemoryLeaks())
     {
-        PrintMessage("Memory leak detected after %s\n.", szSaveMainTitle);
+        PrintMessage(_T("Memory leak(s) detected after %s.\n"), szSaveMainTitle);
     }
 #endif  // _MSC_VER
 }
@@ -257,7 +257,7 @@ int TLogHelper::PrintError(const TCHAR * szFormat, const TCHAR * szFileName)
 //-----------------------------------------------------------------------------
 // ANSI functions
 
-int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine)
+DWORD TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine)
 {
     char szFormatBuff[0x200];
     char szMessage[0x200];
@@ -265,7 +265,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
     int nRemainingWidth;
     int nConsoleWidth = GetConsoleWidth();
     int nLength = 0;
-    int nError = GetLastError();
+    DWORD dwErrCode = GetLastError();
 
     // Always start the buffer with '\r'
     *szBuffer++ = '\r';
@@ -292,7 +292,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
     // Append the last error
     if(bPrintLastError)
     {
-        nLength = sprintf(szBuffer, " (error code: %u)", nError);
+        nLength = sprintf(szBuffer, " (error code: %u)", dwErrCode);
         szBuffer += nLength;
     }
 
@@ -322,7 +322,7 @@ int TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool bPr
 
     // Spit out the text in one single printf
     printf("%s", szMessage);
-    return nError;
+    return dwErrCode;
 }
 
 void TLogHelper::PrintProgress(const char * szFormat, ...)
@@ -343,19 +343,19 @@ void TLogHelper::PrintMessage(const char * szFormat, ...)
     va_end(argList);
 }
 
-int TLogHelper::PrintErrorVa(const char * szFormat, ...)
+DWORD TLogHelper::PrintErrorVa(const char * szFormat, ...)
 {
     va_list argList;
-    int nResult;
+    DWORD dwErrCode;
 
     va_start(argList, szFormat);
-    nResult = PrintWithClreol(szFormat, argList, true, true, true);
+    dwErrCode = PrintWithClreol(szFormat, argList, true, true, true);
     va_end(argList);
 
-    return nResult;
+    return dwErrCode;
 }
 
-int TLogHelper::PrintError(const char * szFormat, const char * szFileName)
+DWORD TLogHelper::PrintError(const char * szFormat, const char * szFileName)
 {
     return PrintErrorVa(szFormat, szFileName);
 }

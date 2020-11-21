@@ -432,9 +432,9 @@ int ConvertMpqHeaderToFormat4(
 
     // If version 1.0 is forced, then the format version is forced to be 1.0
     // Reason: Storm.dll in Warcraft III ignores format version value
-    if((dwFlags & MPQ_OPEN_FORCE_MPQ_V1) || (MapType == MapTypeWarcraft3))
+    if((MapType == MapTypeWarcraft3) || (dwFlags & MPQ_OPEN_FORCE_MPQ_V1))
         wFormatVersion = MPQ_FORMAT_VERSION_1;
-    if(MapType == MapTypeStarcraft2)
+    if((MapType == MapTypeStarcraft2) && (pHeader->wFormatVersion > MPQ_FORMAT_VERSION_4))
         wFormatVersion = MPQ_FORMAT_VERSION_4;
 
     // Format-specific fixes
@@ -647,7 +647,7 @@ int ConvertMpqHeaderToFormat4(
                 return ERROR_FAKE_MPQ_HEADER;
 
             // Check for malformed MPQs
-            if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_4 || (ha->MpqPos + pHeader->ArchiveSize64) != FileSize || (ha->MpqPos + pHeader->HiBlockTablePos64) >= FileSize)
+            if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_4 || (MpqOffset + pHeader->ArchiveSize64) != FileSize || (MpqOffset + pHeader->HiBlockTablePos64) >= FileSize)
             {
                 pHeader->wFormatVersion = MPQ_FORMAT_VERSION_4;
                 pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V4;

@@ -725,7 +725,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
 
     // Otherwise read it as sector based MPQ file
     else
-    {                                                                   
+    {
         nError = ReadMpqFileSectorFile(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }
 

@@ -478,19 +478,24 @@ THTreeItem * THuffmannTree::FindHigherOrEqualItem(THTreeItem * pItem, unsigned i
 
 THTreeItem * THuffmannTree::CreateNewItem(unsigned int DecompressedValue, unsigned int Weight, TInsertPoint InsertPoint)
 {
-    THTreeItem * pNewItem;
+    THTreeItem * pNewItem = NULL;
 
-    // Allocate new item from the item pool
-    pNewItem = &ItemBuffer[ItemsUsed++];
+    // Don't let the item buffer run out of space
+    if(ItemsUsed < HUFF_ITEM_COUNT)
+    {
+        // Allocate new item from the item pool
+        pNewItem = &ItemBuffer[ItemsUsed++];
 
-    // Insert this item to the top of the tree
-    InsertItem(pNewItem, InsertPoint, NULL);
+        // Insert this item to the top of the tree
+        InsertItem(pNewItem, InsertPoint, NULL);
 
-    // Fill the rest of the item
-    pNewItem->DecompressedValue = DecompressedValue;
-    pNewItem->Weight = Weight;
-    pNewItem->pParent = NULL;
-    pNewItem->pChildLo = NULL;
+        // Fill the rest of the item
+        pNewItem->DecompressedValue = DecompressedValue;
+        pNewItem->Weight = Weight;
+        pNewItem->pParent = NULL;
+        pNewItem->pChildLo = NULL;
+    }
+    
     return pNewItem;
 }
 
@@ -567,6 +572,8 @@ bool THuffmannTree::BuildTree(unsigned int CompressionType)
 
         // Create new parent item for the children
         pNewItem = CreateNewItem(0, pChildHi->Weight + pChildLo->Weight, InsertAfter);
+        if(pNewItem == NULL)
+            return false;
 
         // Link both child items to their new parent
         pChildLo->pParent = pNewItem;
@@ -631,7 +638,7 @@ void THuffmannTree::IncWeightsAndRebalance(THTreeItem * pItem)
     }
 }
 
-void THuffmannTree::InsertNewBranchAndRebalance(unsigned int Value1, unsigned int Value2)
+bool THuffmannTree::InsertNewBranchAndRebalance(unsigned int Value1, unsigned int Value2)
 {
     THTreeItem * pLastItem = pLast;
     THTreeItem * pChildHi;
@@ -639,16 +646,26 @@ void THuffmannTree::InsertNewBranchAndRebalance(unsigned int Value1, unsigned in
 
     // Create higher-weight child
     pChildHi = CreateNewItem(Value1, pLastItem->Weight, InsertBefore);
-    pChildHi->pParent = pLastItem;
-    ItemsByByte[Value1] = pChildHi;
+    if(pChildHi != NULL)
+    {
+        pChildHi->pParent = pLastItem;
+        ItemsByByte[Value1] = pChildHi;
 
-    // Create lower-weight child
-    pChildLo = CreateNewItem(Value2, 0, InsertBefore);
-    pChildLo->pParent = pLastItem;
-    pLastItem->pChildLo = pChildLo;
-    ItemsByByte[Value2] = pChildLo;
+        // Create lower-weight child
+        pChildLo = CreateNewItem(Value2, 0, InsertBefore);
+        if(pChildLo != NULL)
+        {
+            pChildLo->pParent = pLastItem;
+            pLastItem->pChildLo = pChildLo;
+            ItemsByByte[Value2] = pChildLo;
 
-    IncWeightsAndRebalance(pChildLo);
+            IncWeightsAndRebalance(pChildLo);
+            return true;
+        }
+    }
+
+    // No more space in the tree buffer
+    return false;
 }
 
 void THuffmannTree::EncodeOneByte(TOutputStream * os, THTreeItem * pItem)
@@ -789,7 +806,8 @@ unsigned int THuffmannTree::Compress(TOutputStream * os, void * pvInBuffer, int 
             // Store the loaded byte into output stream
             os->PutBits(InputByte, 8);
  
-            InsertNewBranchAndRebalance(pLast->DecompressedValue, InputByte);
+            if(!InsertNewBranchAndRebalance(pLast->DecompressedValue, InputByte))
+                return 0;
 
             if(bIsCmp0)
             {
@@ -851,7 +869,8 @@ unsigned int THuffmannTree::Decompress(void * pvOutBuffer, unsigned int cbOutLen
             // The decompressed byte is stored in the next 8 bits
             DecompressedValue = is->Get8Bits();
 
-            InsertNewBranchAndRebalance(pLast->DecompressedValue, DecompressedValue);
+            if(!InsertNewBranchAndRebalance(pLast->DecompressedValue, DecompressedValue))
+                return 0;
 
             if(bIsCmp0 == 0)
                 IncWeightsAndRebalance(ItemsByByte[DecompressedValue]);
