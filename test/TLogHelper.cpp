@@ -45,7 +45,7 @@ class TLogHelper
 
 #if defined(UNICODE) || defined(UNICODE)
     TCHAR * CopyFormatCharacter(TCHAR * szBuffer, const TCHAR *& szFormat);
-#endif    
+#endif
     char * CopyFormatCharacter(char * szBuffer, const char *& szFormat);
     int  GetConsoleWidth();
 
@@ -73,7 +73,7 @@ class TLogHelper
 
 //-----------------------------------------------------------------------------
 // Constructor and destructor
-    
+
 
 TLogHelper::TLogHelper(const char * szNewMainTitle, const TCHAR * szNewSubTitle1, const TCHAR * szNewSubTitle2)
 {
@@ -168,7 +168,7 @@ int TLogHelper::PrintWithClreol(const TCHAR * szFormat, va_list argList, bool bP
     {
         while(szMainTitle[nLength] != 0)
             *szBuffer++ = szMainTitle[nLength++];
-        
+
         *szBuffer++ = ':';
         *szBuffer++ = ' ';
     }
@@ -275,7 +275,7 @@ DWORD TLogHelper::PrintWithClreol(const char * szFormat, va_list argList, bool b
     {
         while(szMainTitle[nLength] != 0)
             *szBuffer++ = (char)szMainTitle[nLength++];
-        
+
         *szBuffer++ = ':';
         *szBuffer++ = ' ';
     }

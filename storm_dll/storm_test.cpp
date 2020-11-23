@@ -31,11 +31,11 @@ int main()
     DWORD dwBytesRead = 0;
 
     if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
-    {                             
+    {
         if(StormOpenFileEx(hMpq, "(1)TheDeathSheep.w3m", 0, &hFile))
         {
             dwBytesRead = StormGetFileSize(hFile, NULL);
-            StormReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL); 
+            StormReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
             StormCloseFile(hFile);
         }
 

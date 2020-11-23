@@ -31,7 +31,7 @@ typedef struct _MPQ_PATCH_HEADER
     DWORD dwSizeOfPatchData;                    // Size of the entire patch (decompressed)
     DWORD dwSizeBeforePatch;                    // Size of the file before patch
     DWORD dwSizeAfterPatch;                     // Size of file after patch
-    
+
     //-- MD5 block --------------------------------------
     DWORD dwMD5;                                // 'MD5_'
     DWORD dwMd5BlockSize;                       // Size of the MD5 block, including the signature and size itself
@@ -78,14 +78,14 @@ static const char * LanguageList = "baseteenenUSenGBenCNenTWdeDEesESesMXfrFRitIT
 // List of localized MPQs for World of Warcraft
 static LOCALIZED_MPQ_INFO LocaleMpqs_WoW[] =
 {
-    {"expansion1-locale-####", 18, 22}, 
-    {"expansion1-speech-####", 18, 22}, 
-    {"expansion2-locale-####", 18, 22}, 
-    {"expansion2-speech-####", 18, 22}, 
-    {"expansion3-locale-####", 18, 22}, 
-    {"expansion3-speech-####", 18, 22}, 
-    {"locale-####",             7, 11}, 
-    {"speech-####",             7, 11}, 
+    {"expansion1-locale-####", 18, 22},
+    {"expansion1-speech-####", 18, 22},
+    {"expansion2-locale-####", 18, 22},
+    {"expansion2-speech-####", 18, 22},
+    {"expansion3-locale-####", 18, 22},
+    {"expansion3-speech-####", 18, 22},
+    {"locale-####",             7, 11},
+    {"speech-####",             7, 11},
     {NULL, 0, 0}
 };
 
@@ -113,7 +113,7 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
 {
     LPBYTE pbDecompressedEnd = pbDecompressed + cbDecompressed;
     LPBYTE pbCompressedEnd = pbCompressed + cbCompressed;
-    BYTE RepeatCount; 
+    BYTE RepeatCount;
     BYTE OneByte;
 
     // Cut the initial DWORD from the compressed chunk
@@ -126,7 +126,7 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
     while(pbCompressed < pbCompressedEnd && pbDecompressed < pbDecompressedEnd)
     {
         OneByte = *pbCompressed++;
-        
+
         // Is it a repetition byte ?
         if(OneByte & 0x80)
         {
@@ -285,8 +285,8 @@ static int ApplyFilePatch_BSD0(
         // Now combine the patch data with the original file
         for(i = 0; i < dwCombineSize; i++)
             pbNewData[dwNewOffset + i] = pbNewData[dwNewOffset + i] + pbOldData[dwOldOffset + i];
-        
-        // Move the offsets 
+
+        // Move the offsets
         dwNewOffset += dwAddDataLength;
         dwOldOffset += dwAddDataLength;
 
@@ -399,7 +399,7 @@ static int ApplyFilePatch(
         // Verify the patched file
         if(!VerifyDataBlockHash(pbTarget, pFullPatch->dwSizeAfterPatch, pFullPatch->md5_after_patch))
             nError = ERROR_FILE_CORRUPT;
-        
+
         // Copy the MD5 of the new block
         memcpy(pPatcher->this_md5, pFullPatch->md5_after_patch, MD5_DIGEST_SIZE);
     }
@@ -491,7 +491,7 @@ static bool IsMatchingPatchFile(
         {
             // TODO: How to match it if it's not an incremental patch?
             // Example: StarCraft II\Updates\enGB\s2-update-enGB-23258.MPQ:
-            //          Mods\Core.SC2Mod\enGB.SC2Assets\StreamingBuckets.txt" 
+            //          Mods\Core.SC2Mod\enGB.SC2Assets\StreamingBuckets.txt"
             bResult = false;
         }
 
@@ -697,7 +697,7 @@ static bool ExtractPatchPrefixFromFile(const TCHAR * szHelperFile, char * szPatc
                 {
                     char * szLinePtr = szFileData + 11;
                     char * szLineEnd;
-                    
+
                     // Skip spaces or '='
                     while(szLinePtr[0] == ' ' || szLinePtr[0] == '=')
                         szLinePtr++;
@@ -867,8 +867,8 @@ static bool FindPatchPrefix_SC2(TMPQArchive * haBase, TMPQArchive * haPatch, TFi
 // Example 3:
 // Main MPQ:  %GAME%\Battle.net\Battle.net.MPQ
 // Patch MPQ: s2-update-base-26147.MPQ
-// File in main MPQ: Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml 
-// File in patch MPQ: Battle.net\Battle.net.MPQ\Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml 
+// File in main MPQ: Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml
+// File in patch MPQ: Battle.net\Battle.net.MPQ\Battle.net\i18n\deDE\String\CLIENT_ACHIEVEMENTS.xml
 // Path prefix: Battle.net\Battle.net.MPQ
 //
 // Example 4:
@@ -894,7 +894,7 @@ static bool FindPatchPrefix(TMPQArchive * haBase, TMPQArchive * haPatch, const c
         return FindPatchPrefix_WoW_13164_13623(haBase, haPatch);
 
     // Updates for Starcraft II
-    // Match: LocalizedData\GameHotkeys.txt <==> Campaigns\Liberty.SC2Campaign\enGB.SC2Data\LocalizedData\GameHotkeys.txt 
+    // Match: LocalizedData\GameHotkeys.txt <==> Campaigns\Liberty.SC2Campaign\enGB.SC2Data\LocalizedData\GameHotkeys.txt
     // All Starcraft II base archives seem to have the file "StreamingBuckets.txt" present
     pFileEntry = GetFileEntryLocale(haBase, "StreamingBuckets.txt", 0);
     if(pFileEntry != NULL)
@@ -1076,7 +1076,7 @@ void Patch_Finalize(TMPQPatcher * pPatcher)
             STORM_FREE(pPatcher->pbFileData1);
         if(pPatcher->pbFileData2 != NULL)
             STORM_FREE(pPatcher->pbFileData2);
-        
+
         memset(pPatcher, 0, sizeof(TMPQPatcher));
     }
 }

@@ -115,7 +115,7 @@ static TListFileCache * CreateListFileCache(
             pCache->szWildCard = (char *)(pCache + 1);
             memcpy(pCache->szWildCard, szWildCard, cchWildCard);
         }
-                          
+
         // Fill-in the rest of the cache pointers
         pCache->pBegin = (LPBYTE)(pCache + 1) + cchWildCard;
 
@@ -272,11 +272,11 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
 {
     LPBYTE pbLineBegin;
     LPBYTE pbLineEnd;
-    
+
     // Skip newlines. Keep spaces and tabs, as they can be a legal part of the file name
     while(pCache->pPos < pCache->pEnd && (pCache->pPos[0] == 0x0A || pCache->pPos[0] == 0x0D))
         pCache->pPos++;
-    
+
     // Set the line begin and end
     if(pCache->pPos >= pCache->pEnd)
         return NULL;
@@ -296,7 +296,7 @@ static char * ReadListFileLine(TListFileCache * pCache, size_t * PtrLength)
     return (char *)pbLineBegin;
 }
 
-static int STORMLIB_CDECL CompareFileNodes(const void * p1, const void * p2) 
+static int STORMLIB_CDECL CompareFileNodes(const void * p1, const void * p2)
 {
     char * szFileName1 = *(char **)p1;
     char * szFileName2 = *(char **)p2;
@@ -526,7 +526,7 @@ static int SFileAddArbitraryListFile(
         // Delete the cache
         FreeListFileCache(pCache);
     }
-    
+
     return (pCache != NULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
@@ -550,7 +550,7 @@ static int SFileAddInternalListFile(
 
         pFirstHash = pHash = GetFirstHashEntry(ha, LISTFILE_NAME);
         while(nError == ERROR_SUCCESS && pHash != NULL)
-        {                                
+        {
             // Set the prefered locale to that from list file
             SFileSetLocale(pHash->lcLocale);
 

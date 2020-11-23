@@ -158,7 +158,7 @@ static int CopyMpqFileSectors(
     DWORD dwCmpSize = 0;                // Compressed file size, including patch header
     int nError = ERROR_SUCCESS;
 
-    // Resolve decryption keys. Note that the file key given 
+    // Resolve decryption keys. Note that the file key given
     // in the TMPQFile structure also includes the key adjustment
     if(nError == ERROR_SUCCESS && (pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED))
     {
@@ -240,7 +240,7 @@ static int CopyMpqFileSectors(
 
             // Calculate the raw file offset of the file sector
             RawFilePos = CalculateRawSectorOffset(hf, dwRawByteOffset);
-            
+
             // Read the file sector
             if(!FileStream_Read(ha->pStream, &RawFilePos, hf->pbFileSector, dwRawDataInSector))
             {
@@ -249,7 +249,7 @@ static int CopyMpqFileSectors(
             }
 
             // If necessary, re-encrypt the sector
-            // Note: Recompression is not necessary here. Unlike encryption, 
+            // Note: Recompression is not necessary here. Unlike encryption,
             // the compression does not depend on the position of the file in MPQ.
             if((pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED) && dwFileKey1 != dwFileKey2)
             {
@@ -337,7 +337,7 @@ static int CopyMpqFileSectors(
     // Write the MD5's of the raw file data, if needed
     if(nError == ERROR_SUCCESS && ha->pHeader->dwRawChunkSize != 0)
     {
-        nError = WriteMpqDataMD5(pNewStream, 
+        nError = WriteMpqDataMD5(pNewStream,
                                  ha->MpqPos + MpqFilePos,
                                  pFileEntry->dwCmpSize,
                                  ha->pHeader->dwRawChunkSize);
@@ -349,7 +349,7 @@ static int CopyMpqFileSectors(
         // At this point, number of bytes written should be exactly
         // the same like the compressed file size. If it isn't,
         // there's something wrong (an unknown archive version, MPQ malformation, ...)
-        // 
+        //
         // Note: Diablo savegames have very weird layout, and the file "hero"
         // seems to have improper compressed size. Instead of real compressed size,
         // the "dwCmpSize" member of the block table entry contains

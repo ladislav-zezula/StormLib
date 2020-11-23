@@ -108,7 +108,7 @@ class TADPCMStream
 
     unsigned char * pbBufferEnd;
     unsigned char * pbBuffer;
-};                    
+};
 
 //----------------------------------------------------------------------------
 // Local functions
@@ -215,7 +215,7 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
 
     // Get the initial index
     ChannelIndex = ChannelCount - 1;
-    
+
     // Now keep reading the input data as long as there is something in the input buffer
     while(is.ReadWordSample(InputSample))
     {
@@ -240,7 +240,7 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
         {
             if(StepIndexes[ChannelIndex] != 0)
                 StepIndexes[ChannelIndex]--;
-            
+
             os.WriteByteSample(0x80);
         }
         else
@@ -284,7 +284,7 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
             // Write the encoded sample to the output stream
             if(!os.WriteByteSample((unsigned char)EncodedSample))
                 break;
-            
+
             // Calculates the step index to use for the next encode
             StepIndexes[ChannelIndex] = GetNextStepIndex(StepIndexes[ChannelIndex], EncodedSample);
         }
@@ -377,7 +377,7 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
 
             // Encode one sample
             PredictedSamples[ChannelIndex] = (short)DecodeSample(PredictedSamples[ChannelIndex],
-                                                                 EncodedSample, 
+                                                                 EncodedSample,
                                                                  StepSize,
                                                                  StepSize >> BitShift);
 

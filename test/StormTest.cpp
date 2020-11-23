@@ -2120,7 +2120,7 @@ static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
 
     // Get the full name of the local file
     CreateFullPathName(szFileName1, _countof(szFileName1), szMpqSubDir, szPlainName);
-    
+
     // Test opening the local file
     if(SFileOpenFileEx(NULL, szFileName1, SFILE_OPEN_LOCAL_FILE, &hFile))
     {
@@ -2513,7 +2513,7 @@ static DWORD TestArchive(
 
         // Search the archive
         dwErrCode = SearchArchive(&Logger, hMpq, dwSearchFlags, &dwFileCount, OverallMD5);
-        
+
         // Shall we check the file count and overall MD5?
         if(dwExpectedFileCount != 0)
         {

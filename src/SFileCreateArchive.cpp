@@ -186,7 +186,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     if(!FileStream_SetSize(pStream, MpqPos))
         nError = GetLastError();
 
-#ifdef _DEBUG    
+#ifdef _DEBUG
     // Debug code, used for testing StormLib
 //  dwBlockTableSize = dwHashTableSize * 2;
 #endif
@@ -267,7 +267,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         SetLastError(nError);
         ha = NULL;
     }
-    
+
     // Return the values
     *phMpq = (HANDLE)ha;
     return (nError == ERROR_SUCCESS);

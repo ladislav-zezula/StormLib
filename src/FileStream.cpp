@@ -108,14 +108,14 @@ static bool BaseFile_Create(TFileStream * pStream)
 #if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
     {
         intptr_t handle;
-        
+
         handle = open(pStream->szFileName, O_RDWR | O_CREAT | O_TRUNC | O_LARGEFILE, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if(handle == -1)
         {
             nLastError = errno;
             return false;
         }
-        
+
         pStream->Base.File.hFile = (HANDLE)handle;
     }
 #endif
@@ -244,7 +244,7 @@ static bool BaseFile_Read(
                 nLastError = errno;
                 return false;
             }
-            
+
             dwBytesRead = (DWORD)(size_t)bytes_read;
         }
     }
@@ -313,7 +313,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
             nLastError = errno;
             return false;
         }
-        
+
         dwBytesWritten = (DWORD)(size_t)bytes_written;
     }
 #endif
@@ -360,7 +360,7 @@ static bool BaseFile_Resize(TFileStream * pStream, ULONGLONG NewFileSize)
         return bResult;
     }
 #endif
-    
+
 #if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
     {
         if(ftruncate64((intptr_t)pStream->Base.File.hFile, (off64_t)NewFileSize) == -1)
@@ -368,7 +368,7 @@ static bool BaseFile_Resize(TFileStream * pStream, ULONGLONG NewFileSize)
             nLastError = errno;
             return false;
         }
-        
+
         pStream->Base.File.FileSize = NewFileSize;
         return true;
     }
@@ -412,7 +412,7 @@ static bool BaseFile_Replace(TFileStream * pStream, TFileStream * pNewStream)
         nLastError = errno;
         return false;
     }
-    
+
     return true;
 #endif
 }
@@ -472,7 +472,7 @@ static bool RetrieveFileMappingSize(HANDLE hSection, ULARGE_INTEGER & RefFileSiz
     NTQUERYSECTION PfnQuerySection;
     HMODULE hNtdll;
     SIZE_T ReturnLength = 0;
-    
+
     if((hNtdll = GetModuleHandle(_T("ntdll.dll"))) != NULL)
     {
         PfnQuerySection = (NTQUERYSECTION)GetProcAddress(hNtdll, "NtQuerySection");
@@ -817,7 +817,7 @@ static bool BaseHttp_Read(
             // Add range request to the HTTP headers
             // http://www.clevercomponents.com/articles/article015/resuming.asp
             wsprintf(szRangeRequest, _T("Range: bytes=%u-%u"), (unsigned int)dwStartOffset, (unsigned int)dwEndOffset);
-            HttpAddRequestHeaders(hRequest, szRangeRequest, 0xFFFFFFFF, HTTP_ADDREQ_FLAG_ADD_IF_NEW); 
+            HttpAddRequestHeaders(hRequest, szRangeRequest, 0xFFFFFFFF, HTTP_ADDREQ_FLAG_ADD_IF_NEW);
 
             // Send the request to the server
             if(HttpSendRequest(hRequest, NULL, 0, NULL, 0))
@@ -1070,7 +1070,7 @@ static void BlockStream_Close(TBlockStream * pStream)
 static STREAM_INIT StreamBaseInit[4] =
 {
     BaseFile_Init,
-    BaseMap_Init, 
+    BaseMap_Init,
     BaseHttp_Init,
     BaseNone_Init
 };
@@ -1109,7 +1109,7 @@ static TFileStream * AllocateFileStream(
             SetLastError(ERROR_INVALID_PARAMETER);
             return NULL;
         }
-        
+
         // Open the master file
         pMaster = FileStream_OpenFile(szNextFile + 1, STREAM_FLAG_READ_ONLY);
     }
@@ -1167,7 +1167,7 @@ static DWORD FlatStream_CheckFile(TBlockStream * pStream)
 static bool FlatStream_LoadBitmap(TBlockStream * pStream)
 {
     FILE_BITMAP_FOOTER Footer;
-    ULONGLONG ByteOffset; 
+    ULONGLONG ByteOffset;
     LPBYTE FileBitmap;
     DWORD BlockCount;
     DWORD BitmapSize;
@@ -1275,7 +1275,7 @@ static bool FlatStream_BlockCheck(
     // Sanity checks
     assert((BlockOffset & (pStream->BlockSize - 1)) == 0);
     assert(FileBitmap != NULL);
-    
+
     // Calculate the index of the block
     BlockIndex = (DWORD)(BlockOffset / pStream->BlockSize);
     BitMask = (BYTE)(1 << (BlockIndex & 0x07));
@@ -1336,7 +1336,7 @@ static void FlatStream_Close(TBlockStream * pStream)
     {
         // Write the file bitmap
         pStream->BaseWrite(pStream, &pStream->StreamSize, pStream->FileBitmap, pStream->BitmapSize);
-        
+
         // Prepare and write the file footer
         Footer.Signature   = ID_FILE_BITMAP_FOOTER;
         Footer.Version     = 3;
@@ -1431,7 +1431,7 @@ static bool FlatStream_CreateMirror(TBlockStream * pStream)
 
 static TFileStream * FlatStream_Open(const TCHAR * szFileName, DWORD dwStreamFlags)
 {
-    TBlockStream * pStream;    
+    TBlockStream * pStream;
     ULONGLONG ByteOffset = 0;
 
     // Create new empty stream
@@ -1655,7 +1655,7 @@ static bool PartStream_BlockCheck(
     // Sanity checks
     assert((BlockOffset & (pStream->BlockSize - 1)) == 0);
     assert(pStream->FileBitmap != NULL);
-    
+
     // Calculate the block map entry
     FileBitmap = (PPART_FILE_MAP_ENTRY)pStream->FileBitmap + (BlockOffset / pStream->BlockSize);
 
@@ -1751,7 +1751,7 @@ static void PartStream_Close(TBlockStream * pStream)
         PartHeader.FileSizeHi     = (DWORD)(pStream->StreamSize >> 0x20);
         PartHeader.FileSizeLo     = (DWORD)(pStream->StreamSize & 0xFFFFFFFF);
         PartHeader.BlockSize      = pStream->BlockSize;
-        
+
         // Make sure that the header is properly BSWAPed
         BSWAP_ARRAY32_UNSIGNED(&PartHeader, sizeof(PART_FILE_HEADER));
         IntToString(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
@@ -1916,7 +1916,7 @@ static const char * AuthCodeArray[] =
     "S48B6CDTN5XEQAKQDJNDLJBJ73FDFM3U",         // SC2 Heart of the Swarm-all : "expand 32-byte kQAKQ0000FM3UN5XE000073FD6CDT0000LJBJS48B0000DJND"
 
     // Diablo III: Agent.exe (1.0.0.954)
-    // Address of decryption routine: 00502b00                             
+    // Address of decryption routine: 00502b00
     // Pointer to decryptor object: ECX
     // Pointer to key: ECX+0x5C
     // Authentication code URL: http://dist.blizzard.com/mediakey/d3-authenticationcode-enGB.txt
@@ -2022,7 +2022,7 @@ static void DecryptFileChunk(
         KeyShuffled[0x04] = KeyMirror[0x0D];
         KeyShuffled[0x01] = KeyMirror[0x0E];
         KeyShuffled[0x00] = KeyMirror[0x0F];
-        
+
         // Shuffle the key - part 2
         for(DWORD i = 0; i < RoundCount; i += 2)
         {
@@ -2113,7 +2113,7 @@ static bool MpqeStream_DetectFileKey(TEncryptedStream * pStream)
             // Prepare they decryption key from game serial number
             CreateKeyFromAuthCode(pStream->Key, AuthCodeArray[i]);
 
-            // Try to decrypt with the given key 
+            // Try to decrypt with the given key
             memcpy(FileHeader, EncryptedHeader, MPQE_CHUNK_SIZE);
             DecryptFileChunk((LPDWORD)FileHeader, pStream->Key, ByteOffset, MPQE_CHUNK_SIZE);
 
@@ -2368,8 +2368,8 @@ static TFileStream * Block4Stream_Open(const TCHAR * szFileName, DWORD dwStreamF
             assert(FileSize <= BLOCK4_MAX_FSIZE);
             RemainderBlock = FileSize % (BLOCK4_BLOCK_SIZE + BLOCK4_HASH_SIZE);
             BlockCount = FileSize / (BLOCK4_BLOCK_SIZE + BLOCK4_HASH_SIZE);
-            
-            // Increment the stream size and number of blocks            
+
+            // Increment the stream size and number of blocks
             pStream->StreamSize += (BlockCount * BLOCK4_BLOCK_SIZE);
             pStream->BlockCount += (DWORD)BlockCount;
 
@@ -2586,7 +2586,7 @@ size_t FileStream_Prefix(const TCHAR * szFileName, DWORD * pdwProvider)
             dwProvider |= BASE_PROVIDER_MAP;
             nPrefixLength2 = 4;
         }
-        
+
         else if(!_tcsnicmp(szFileName+nPrefixLength1, _T("http:"), 5))
         {
             dwProvider |= BASE_PROVIDER_HTTP;
@@ -2794,7 +2794,7 @@ bool FileStream_GetSize(TFileStream * pStream, ULONGLONG * pFileSize)
  * \a NewFileSize File size to set
  */
 bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
-{                                 
+{
     if(pStream->dwFlags & STREAM_FLAG_READ_ONLY)
     {
         SetLastError(ERROR_ACCESS_DENIED);

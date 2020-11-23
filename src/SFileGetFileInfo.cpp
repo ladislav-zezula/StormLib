@@ -475,7 +475,7 @@ struct TFileHeader2Ext
     const char * szExt;                 // Supplied extension, if the condition is true
 };
 
-static TFileHeader2Ext data2ext[] = 
+static TFileHeader2Ext data2ext[] =
 {
     {0x00005A4D, 0x0000FFFF, 0x00000000, 0x00000000, "exe"},    // EXE files
     {0x00000006, 0xFFFFFFFF, 0x00000001, 0xFFFFFFFF, "dc6"},    // EXE files
@@ -506,7 +506,7 @@ static TFileHeader2Ext data2ext[] =
     {0x5733504D, 0xFFFFFFFF, 0x00000000, 0x00000000, "wpm"},    // Warcraft III pathing map files
     {0x21475457, 0xFFFFFFFF, 0x00000000, 0x00000000, "wtg"},    // Warcraft III trigger files
     {0x00000000, 0x00000000, 0x00000000, 0x00000000, "xxx"},    // Default extension
-    {0, 0, 0, 0, NULL}                                          // Terminator 
+    {0, 0, 0, 0, NULL}                                          // Terminator
 };
 
 static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * szFileName)
@@ -518,7 +518,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
     char szPseudoName[20];
 
     // Read the first 2 DWORDs bytes from the file
-    dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);   
+    dwFilePos = SFileSetFilePointer(hFile, 0, NULL, FILE_CURRENT);
     SFileReadFile(hFile, FirstBytes, sizeof(FirstBytes), &dwBytesRead, NULL);
     SFileSetFilePointer(hFile, dwFilePos, NULL, FILE_BEGIN);
 

@@ -187,7 +187,7 @@ bool WINAPI SFileOpenArchive(
     LPBYTE pbHeaderBuffer = NULL;       // Buffer for searching MPQ header
     DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
     MTYPE MapType = MapTypeNotRecognized;
-    int nError = ERROR_SUCCESS;   
+    int nError = ERROR_SUCCESS;
 
     // Verify the parameters
     if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)
@@ -255,7 +255,7 @@ bool WINAPI SFileOpenArchive(
 
         // Also remember if this MPQ is a patch
         ha->dwFlags |= (dwFlags & MPQ_OPEN_PATCH) ? MPQ_FLAG_PATCH : 0;
-       
+
         // Limit the header searching to about 130 MB of data
         if(EndOfSearch > 0x08000000)
             EndOfSearch = 0x08000000;

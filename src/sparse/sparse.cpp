@@ -14,10 +14,10 @@
 /* 19.11.03  1.01  Dan  Big endian handling                                  */
 /* 08.12.03  2.01  Dan  High-memory handling (> 0x80000000)                  */
 /*****************************************************************************/
- 
+
 #include <assert.h>
 #include <string.h>
- 
+
 #include "sparse.h"
 
 //-----------------------------------------------------------------------------
@@ -88,7 +88,7 @@ void CompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
                 // Put marker that means "0x80 of nonzeros"
                 *pbOutBuffer++ = 0xFF;
                 memcpy(pbOutBuffer, pbInBuffer, 0x80);
-                
+
                 // Adjust counter of nonzeros and both pointers
                 NumberOfNonZeros -= 0x80;
                 pbOutBuffer += 0x80;
@@ -108,7 +108,7 @@ void CompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
                 // Put marker that means "1 nonzero byte"
                 *pbOutBuffer++ = 0x80;
                 memcpy(pbOutBuffer, pbInBuffer, 1);
-                
+
                 // Adjust counter of nonzeros and both pointers
                 NumberOfNonZeros--;
                 pbOutBuffer++;
@@ -171,7 +171,7 @@ void CompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
 
             // Put marker that means "Several zeros"
             *pbOutBuffer++ = (unsigned char)(NumberOfZeros - 3);
-    
+
             // Adjust pointer
             pbInBuffer += NumberOfZeros;
         }
@@ -196,7 +196,7 @@ void CompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
                 // Terminate with a marker that means "0x80 of nonzeros"
                 *pbOutBuffer++ = 0xFF;
                 memcpy(pbOutBuffer, pbInBuffer, NumberOfNonZeros);
-                
+
                 // Adjust pointer
                 pbOutBuffer += NumberOfNonZeros;
                 break;

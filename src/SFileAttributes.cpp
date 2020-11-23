@@ -151,7 +151,7 @@ static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrF
     if((pbAttrPtr + sizeof(MPQ_ATTRIBUTES_HEADER)) <= pbAttrFileEnd)
     {
         PMPQ_ATTRIBUTES_HEADER pAttrHeader = (PMPQ_ATTRIBUTES_HEADER)pbAttrPtr;
-        
+
         // Verify the header version
         BSWAP_ARRAY32_UNSIGNED(pAttrHeader, sizeof(MPQ_ATTRIBUTES_HEADER));
         if(pAttrHeader->dwVersion != MPQ_ATTRIBUTES_V1)
@@ -378,7 +378,7 @@ int SAttrLoadAttributes(TMPQArchive * ha)
     {
         // Retrieve and check size of the (attributes) file
         cbAttrFile = SFileGetFileSize(hFile, NULL);
-        
+
         // Integer overflow check
         if((cbAttrFile + 1) > cbAttrFile)
         {
@@ -461,7 +461,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
             nError = (cbAttrFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
     }
-    
+
     return nError;
 }
 
