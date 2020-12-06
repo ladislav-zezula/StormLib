@@ -75,6 +75,7 @@
 
 typedef enum _MTYPE
 {
+    MapTypeNotChecked,                  // The map type was not checked yet
     MapTypeNotRecognized,               // The file does not seems to be a map
     MapTypeAviFile,                     // The file is actually an AVI file (Warcraft III cinematics)
     MapTypeWarcraft3,                   // The file is a Warcraft III map
@@ -310,7 +311,7 @@ int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer
 
 TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry);
 TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize);
-void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey, bool * pbTableIsCut);
+void * LoadMpqTable(TMPQArchive * ha, ULONGLONG ByteOffset, LPBYTE pbTableHash, DWORD dwCompressedSize, DWORD dwRealSize, DWORD dwKey, bool * pbTableIsCut);
 int  AllocateSectorBuffer(TMPQFile * hf);
 int  AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile);
 int  AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile);

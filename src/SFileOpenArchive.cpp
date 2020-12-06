@@ -135,12 +135,12 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     }
 
     // Check the begin of hi-block table
-    if(pHeader->HiBlockTablePos64 != 0)
-    {
-        ByteOffset = ha->MpqPos + pHeader->HiBlockTablePos64;
-        if(ByteOffset > FileSize)
-            return ERROR_BAD_FORMAT;
-    }
+    //if(pHeader->HiBlockTablePos64 != 0)
+    //{
+    //    ByteOffset = ha->MpqPos + pHeader->HiBlockTablePos64;
+    //    if(ByteOffset > FileSize)
+    //        return ERROR_BAD_FORMAT;
+    //}
 
     // All OK.
     return ERROR_SUCCESS;
@@ -186,7 +186,7 @@ bool WINAPI SFileOpenArchive(
     ULONGLONG FileSize = 0;             // Size of the file
     LPBYTE pbHeaderBuffer = NULL;       // Buffer for searching MPQ header
     DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
-    MTYPE MapType = MapTypeNotRecognized;
+    MTYPE MapType = MapTypeNotChecked;
     int nError = ERROR_SUCCESS;
 
     // Verify the parameters
@@ -234,7 +234,7 @@ bool WINAPI SFileOpenArchive(
     // Find the position of MPQ header
     if(nError == ERROR_SUCCESS)
     {
-        ULONGLONG SearchOffset = 0;
+        ULONGLONG ByteOffset = 0;
         ULONGLONG EndOfSearch = FileSize;
         DWORD dwStrmFlags = 0;
         DWORD dwHeaderSize;
@@ -261,26 +261,25 @@ bool WINAPI SFileOpenArchive(
             EndOfSearch = 0x08000000;
 
         // Find the offset of MPQ header within the file
-        while(bSearchComplete == false && SearchOffset < EndOfSearch)
+        while(bSearchComplete == false && ByteOffset < EndOfSearch)
         {
             // Always read at least 0x1000 bytes for performance.
             // This is what Storm.dll (2002) does.
             DWORD dwBytesAvailable = HEADER_SEARCH_BUFFER_SIZE;
-            DWORD dwInBufferOffset = 0;
 
             // Cut the bytes available, if needed
-            if((FileSize - SearchOffset) < HEADER_SEARCH_BUFFER_SIZE)
-                dwBytesAvailable = (DWORD)(FileSize - SearchOffset);
+            if((FileSize - ByteOffset) < HEADER_SEARCH_BUFFER_SIZE)
+                dwBytesAvailable = (DWORD)(FileSize - ByteOffset);
 
             // Read the eventual MPQ header
-            if(!FileStream_Read(ha->pStream, &SearchOffset, pbHeaderBuffer, dwBytesAvailable))
+            if(!FileStream_Read(ha->pStream, &ByteOffset, pbHeaderBuffer, dwBytesAvailable))
             {
                 nError = GetLastError();
                 break;
             }
 
             // Check whether the file is AVI file or a Warcraft III/Starcraft II map
-            if(SearchOffset == 0)
+            if(MapType == MapTypeNotChecked)
             {
                 // Do nothing if the file is an AVI file
                 if((MapType = CheckMapType(szMpqName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
@@ -291,7 +290,7 @@ bool WINAPI SFileOpenArchive(
             }
 
             // Search the header buffer
-            while(dwInBufferOffset < dwBytesAvailable)
+            for(DWORD dwInBufferOffset = 0; dwInBufferOffset < dwBytesAvailable; dwInBufferOffset += 0x200)
             {
                 // Copy the data from the potential header buffer to the MPQ header
                 memcpy(ha->HeaderData, pbHeaderBuffer + dwInBufferOffset, sizeof(ha->HeaderData));
@@ -304,16 +303,16 @@ bool WINAPI SFileOpenArchive(
                     if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                     {
                         // Verify if this looks like a valid user data
-                        pUserData = IsValidMpqUserData(SearchOffset, FileSize, ha->HeaderData);
+                        pUserData = IsValidMpqUserData(ByteOffset, FileSize, ha->HeaderData);
                         if(pUserData != NULL)
                         {
                             // Fill the user data header
-                            ha->UserDataPos = SearchOffset;
+                            ha->UserDataPos = ByteOffset;
                             ha->pUserData = &ha->UserData;
                             memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
 
                             // Continue searching from that position
-                            SearchOffset += ha->pUserData->dwHeaderOffs;
+                            ByteOffset += ha->pUserData->dwHeaderOffs;
                             break;
                         }
                     }
@@ -327,7 +326,7 @@ bool WINAPI SFileOpenArchive(
                 if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
                 {
                     // Now convert the header to version 4
-                    nError = ConvertMpqHeaderToFormat4(ha, SearchOffset, FileSize, dwFlags, MapType);
+                    nError = ConvertMpqHeaderToFormat4(ha, ByteOffset, FileSize, dwFlags, MapType);
                     if(nError != ERROR_FAKE_MPQ_HEADER)
                     {
                         bSearchComplete = true;
@@ -353,8 +352,7 @@ bool WINAPI SFileOpenArchive(
                 }
 
                 // Move the pointers
-                SearchOffset += 0x200;
-                dwInBufferOffset += 0x200;
+                ByteOffset += 0x200;
             }
         }
 
@@ -363,15 +361,15 @@ bool WINAPI SFileOpenArchive(
         {
             // Set the user data position to the MPQ header, if none
             if(ha->pUserData == NULL)
-                ha->UserDataPos = SearchOffset;
+                ha->UserDataPos = ByteOffset;
 
             // Set the position of the MPQ header
             ha->pHeader  = (TMPQHeader *)ha->HeaderData;
-            ha->MpqPos   = SearchOffset;
+            ha->MpqPos   = ByteOffset;
             ha->FileSize = FileSize;
 
             // Sector size must be nonzero.
-            if(SearchOffset >= FileSize || ha->pHeader->wSectorSize == 0)
+            if(ByteOffset >= FileSize || ha->pHeader->wSectorSize == 0)
                 nError = ERROR_BAD_FORMAT;
         }
     }

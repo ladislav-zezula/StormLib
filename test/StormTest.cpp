@@ -332,6 +332,8 @@ static bool IsMpqExtension(LPCTSTR szFileName)
             return true;
         if(!_tcsicmp(szExtension, _T(".SC2Map")))
             return true;
+        if(!_tcsicmp(szExtension, _T(".SC2Mod")))
+            return true;
         if(!_tcsicmp(szExtension, _T(".0")))        // .MPQ.0
             return true;
 //      if(!_tcsicmp(szExtension, ".link"))
@@ -3111,6 +3113,12 @@ static int ForEachFile_OpenArchive(LPCTSTR szFullPath)
             nError = SearchArchive(&Logger, hMpq, 0, &dwFileCount);
             SFileCloseArchive(hMpq);
         }
+
+        // Show warning if no files found
+        if(dwFileCount == 0)
+        {
+            Logger.PrintMessage("Warning: no files in the archive");
+        }
     }
 
     // Correct some errors
@@ -4237,10 +4245,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Tests on a local listfile
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
+    //}
 
     //
     // Open all files from the command line

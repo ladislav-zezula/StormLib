@@ -907,6 +907,7 @@ TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize)
 void * LoadMpqTable(
     TMPQArchive * ha,
     ULONGLONG ByteOffset,
+    LPBYTE pbTableHash,
     DWORD dwCompressedSize,
     DWORD dwTableSize,
     DWORD dwKey,
@@ -965,6 +966,19 @@ void * LoadMpqTable(
         // If everything succeeded, read the raw table from the MPQ
         if(FileStream_Read(ha->pStream, &ByteOffset, pbToRead, dwBytesToRead))
         {
+            // Verify the MD5 of the table, if present
+            if(!VerifyDataBlockHash(pbToRead, dwBytesToRead, pbTableHash))
+            {
+                nError = ERROR_FILE_CORRUPT;
+            }
+        }
+        else
+        {
+            nError = GetLastError();
+        }
+
+        if(nError == ERROR_SUCCESS)
+        {
             // First of all, decrypt the table
             if(dwKey != 0)
             {
@@ -985,10 +999,6 @@ void * LoadMpqTable(
 
             // Make sure that the table is properly byte-swapped
             BSWAP_ARRAY32_UNSIGNED(pbMpqTable, dwTableSize);
-        }
-        else
-        {
-            nError = GetLastError();
         }
 
         // If read failed, free the table and return
@@ -1341,7 +1351,7 @@ int AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
             RawFilePos = CalculateRawSectorOffset(hf, dwCrcOffset);
 
             // Now read the table from the MPQ
-            hf->SectorChksums = (DWORD *)LoadMpqTable(ha, RawFilePos, dwCompressedSize, dwCrcSize, 0, NULL);
+            hf->SectorChksums = (DWORD *)LoadMpqTable(ha, RawFilePos, NULL, dwCompressedSize, dwCrcSize, 0, NULL);
             if(hf->SectorChksums == NULL)
                 return ERROR_NOT_ENOUGH_MEMORY;
         }
@@ -1692,7 +1702,7 @@ bool IsValidMD5(LPBYTE pbMd5)
 {
     LPDWORD Md5 = (LPDWORD)pbMd5;
 
-    return (Md5[0] | Md5[1] | Md5[2] | Md5[3]) ? true : false;
+    return ((Md5 != NULL) && (Md5[0] | Md5[1] | Md5[2] | Md5[3])) ? true : false;
 }
 
 bool IsValidSignature(LPBYTE pbSignature)
@@ -1711,18 +1721,21 @@ bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_
 {
     hash_state md5_state;
     BYTE md5_digest[MD5_DIGEST_SIZE];
+    bool bResult = true;
 
     // Don't verify the block if the MD5 is not valid.
-    if(!IsValidMD5(expected_md5))
-        return true;
+    if(IsValidMD5(expected_md5))
+    {
+        // Calculate the MD5 of the data block
+        md5_init(&md5_state);
+        md5_process(&md5_state, (unsigned char *)pvDataBlock, cbDataBlock);
+        md5_done(&md5_state, md5_digest);
 
-    // Calculate the MD5 of the data block
-    md5_init(&md5_state);
-    md5_process(&md5_state, (unsigned char *)pvDataBlock, cbDataBlock);
-    md5_done(&md5_state, md5_digest);
+        // Does the MD5's match?
+        bResult = (memcmp(md5_digest, expected_md5, MD5_DIGEST_SIZE) == 0);
+    }
 
-    // Does the MD5's match?
-    return (memcmp(md5_digest, expected_md5, MD5_DIGEST_SIZE) == 0);
+    return bResult;
 }
 
 void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_hash)

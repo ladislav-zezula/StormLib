@@ -71,9 +71,9 @@
     <ProjectGuid>{78424708-1F6E-4D4B-920C-FB6D26847055}</ProjectGuid>
     <RootNamespace>StormLib</RootNamespace>
     <XPDeprecationWarning>false</XPDeprecationWarning>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
