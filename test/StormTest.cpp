@@ -322,6 +322,8 @@ static bool IsMpqExtension(LPCTSTR szFileName)
             return true;
         if(!_tcsicmp(szExtension, _T(".w3x")))
             return true;
+        if(!_tcsicmp(szExtension, _T(".asi")))
+            return true;
         if(!_tcsicmp(szExtension, _T(".mpqe")))
             return true;
         if(!_tcsicmp(szExtension, _T(".part")))
@@ -994,7 +996,7 @@ static int VerifyFileMpqHeader(TLogHelper * pLogger, TFileStream * pStream, ULON
     memset(&Header, 0xFE, sizeof(TMPQHeader));
     if(FileStream_Read(pStream, pByteOffset, &Header, sizeof(TMPQHeader)))
     {
-        if(Header.dwID != ID_MPQ)
+        if(Header.dwID != g_dwMpqSignature)
         {
             pLogger->PrintMessage(_T("Read error - the data is not a MPQ header"));
             nError = ERROR_FILE_CORRUPT;
@@ -4253,6 +4255,13 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Open all files from the command line
     //
+    /*
+    SFILE_MARKERS Markers = { sizeof(SFILE_MARKERS) };
+    Markers.dwSignature = 'XHSC';
+    Markers.szHashTableKey = "(cash table)";
+    Markers.szBlockTableKey = "(clock table)";
+    SFileSetArchiveMarkers(&Markers);
+    */
 
     for(int i = 1; i < argc; i++)
     {

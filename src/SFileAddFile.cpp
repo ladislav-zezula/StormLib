@@ -954,7 +954,7 @@ bool WINAPI SFileAddFileEx(
         }
 
         // Initiate adding file to the MPQ
-        if(!SFileCreateFile(hMpq, szArchivedName, FileTime, (DWORD)FileSize, lcFileLocale, dwFlags, &hMpqFile))
+        if(!SFileCreateFile(hMpq, szArchivedName, FileTime, (DWORD)FileSize, g_lcFileLocale, dwFlags, &hMpqFile))
             nError = GetLastError();
     }
 
@@ -1165,7 +1165,7 @@ bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * s
     // Open the new file. If exists, we don't allow rename operation
     if(nError == ERROR_SUCCESS)
     {
-        if(GetFileEntryLocale(ha, szNewFileName, lcFileLocale) != NULL)
+        if(GetFileEntryLocale(ha, szNewFileName, g_lcFileLocale) != NULL)
             nError = ERROR_ALREADY_EXISTS;
     }
 

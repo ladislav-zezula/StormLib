@@ -131,7 +131,7 @@ int ConvertSqpHeaderToFormat4(
     Header.wSectorSize = BSWAP_INT16_UNSIGNED(pSqpHeader->wSectorSize);
 
     // Verify the SQP header
-    if(Header.dwID == ID_MPQ && Header.dwHeaderSize == sizeof(TSQPHeader) && Header.dwArchiveSize == FileSize)
+    if(Header.dwID == g_dwMpqSignature && Header.dwHeaderSize == sizeof(TSQPHeader) && Header.dwArchiveSize == FileSize)
     {
         // Check for fixed values of version and sector size
         if(Header.wFormatVersion == MPQ_FORMAT_VERSION_1 && Header.wSectorSize == 3)
@@ -414,7 +414,7 @@ int ConvertMpkHeaderToFormat4(
     if(Header.dwID == ID_MPK && Header.dwHeaderSize == sizeof(TMPKHeader) && Header.dwArchiveSize == (DWORD)FileSize)
     {
         // The header ID must be ID_MPQ
-        Header.dwID = ID_MPQ;
+        Header.dwID = g_dwMpqSignature;
         Header.wFormatVersion = MPQ_FORMAT_VERSION_1;
         Header.wSectorSize = 3;
 

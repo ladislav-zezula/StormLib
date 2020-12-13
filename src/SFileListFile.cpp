@@ -536,7 +536,7 @@ static int SFileAddInternalListFile(
 {
     TMPQHash * pFirstHash;
     TMPQHash * pHash;
-    LCID lcSaveLocale = lcFileLocale;
+    LCID lcSaveLocale = g_lcFileLocale;
     DWORD dwMaxSize = MAX_LISTFILE_SIZE;
     int nError = ERROR_SUCCESS;
 

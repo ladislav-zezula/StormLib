@@ -220,7 +220,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
 
         // Fill the MPQ header
         memset(pHeader, 0, sizeof(ha->HeaderData));
-        pHeader->dwID             = ID_MPQ;
+        pHeader->dwID             = g_dwMpqSignature;
         pHeader->dwHeaderSize     = MpqHeaderSizes[pCreateInfo->dwMpqVersion];
         pHeader->dwArchiveSize    = pHeader->dwHeaderSize + dwHashTableSize * sizeof(TMPQHash);
         pHeader->wFormatVersion   = (USHORT)pCreateInfo->dwMpqVersion;

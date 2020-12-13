@@ -146,9 +146,37 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     return ERROR_SUCCESS;
 }
 
-/*****************************************************************************/
-/* Public functions                                                          */
-/*****************************************************************************/
+//-----------------------------------------------------------------------------
+// Support for alternate markers. Call before SFileOpenArchive
+
+#define SFILE_MARKERS_MIN_SIZE   (sizeof(DWORD) + sizeof(DWORD) + sizeof(const char *) + sizeof(const char *))
+
+bool WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers)
+{
+    // Check structure minimum size
+    if(pMarkers == NULL || pMarkers->dwSize < SFILE_MARKERS_MIN_SIZE)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    // Make sure that the MPQ cryptography is initialized at this time
+    InitializeMpqCryptography();
+
+    // Remember the marker for MPQ header
+    g_dwMpqSignature = pMarkers->dwSignature;
+
+    // Remember the encryption key for hash table
+    if(pMarkers->szHashTableKey != NULL)
+        g_dwHashTableKey = HashString(pMarkers->szHashTableKey, MPQ_HASH_FILE_KEY);
+
+    // Remember the encryption key for block table
+    if(pMarkers->szBlockTableKey != NULL)
+        g_dwBlockTableKey = HashString(pMarkers->szBlockTableKey, MPQ_HASH_FILE_KEY);
+
+    // Succeeded
+    return true;
+}
 
 //-----------------------------------------------------------------------------
 // SFileGetLocale and SFileSetLocale
@@ -156,13 +184,13 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
 
 LCID WINAPI SFileGetLocale()
 {
-    return lcFileLocale;
+    return g_lcFileLocale;
 }
 
 LCID WINAPI SFileSetLocale(LCID lcNewLocale)
 {
-    lcFileLocale = lcNewLocale;
-    return lcFileLocale;
+    g_lcFileLocale = lcNewLocale;
+    return g_lcFileLocale;
 }
 
 //-----------------------------------------------------------------------------
@@ -323,7 +351,7 @@ bool WINAPI SFileOpenArchive(
                 // Abused by Spazzler Map protector. Note that the size check is not present
                 // in Storm.dll v 1.00, so Diablo I code would load the MPQ anyway.
                 dwHeaderSize = BSWAP_INT32_UNSIGNED(ha->HeaderData[1]);
-                if(dwHeaderID == ID_MPQ && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
+                if(dwHeaderID == g_dwMpqSignature && dwHeaderSize >= MPQ_HEADER_SIZE_V1)
                 {
                     // Now convert the header to version 4
                     nError = ConvertMpqHeaderToFormat4(ha, ByteOffset, FileSize, dwFlags, MapType);

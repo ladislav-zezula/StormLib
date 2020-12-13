@@ -263,7 +263,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                 // If this MPQ has no patches, open the file from this MPQ directly
                 if(ha->haPatch == NULL || dwSearchScope == SFILE_OPEN_BASE_FILE)
                 {
-                    pFileEntry = GetFileEntryLocale2(ha, szFileName, lcFileLocale, &dwHashIndex);
+                    pFileEntry = GetFileEntryLocale2(ha, szFileName, g_lcFileLocale, &dwHashIndex);
                 }
 
                 // If this MPQ is a patched archive, open the file as patched

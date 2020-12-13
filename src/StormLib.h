@@ -924,6 +924,14 @@ typedef struct _SFILE_CREATE_MPQ
 
 } SFILE_CREATE_MPQ, *PSFILE_CREATE_MPQ;
 
+typedef struct _SFILE_MARKERS
+{
+    DWORD dwSize;                               // Size of this structure, in bytes
+    DWORD dwSignature;                          // Alternate MPQ header marker
+    const char * szHashTableKey;                // Replacement for "(hash table)"
+    const char * szBlockTableKey;               // Replacement for "(block table)"
+} SFILE_MARKERS, *PSFILE_MARKERS;
+
 //-----------------------------------------------------------------------------
 // TMPQBits support - functions
 
@@ -979,6 +987,11 @@ typedef bool  (WINAPI * SFILEREADFILE)(HANDLE, void *, DWORD, LPDWORD, LPOVERLAP
 //-----------------------------------------------------------------------------
 // Functions for manipulation with StormLib global flags
 
+// Alternate marker support. This is for MPQs masked as DLLs (*.asi), which
+// patch Storm.dll at runtime. Call before SFileOpenArchive
+bool   WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers);
+
+// Call before SFileOpenFileEx
 LCID   WINAPI SFileGetLocale();
 LCID   WINAPI SFileSetLocale(LCID lcNewLocale);
 

@@ -134,7 +134,10 @@ typedef struct _MPQ_SIGNATURE_INFO
 //-----------------------------------------------------------------------------
 // StormLib internal global variables
 
-extern LCID lcFileLocale;                       // Preferred file locale
+extern DWORD g_dwMpqSignature;                  // Marker for MPQ header
+extern DWORD g_dwHashTableKey;                  // Key for hash table
+extern DWORD g_dwBlockTableKey;                 // Key for block table
+extern LCID  g_lcFileLocale;                    // Preferred file locale
 
 //-----------------------------------------------------------------------------
 // Conversion to uppercase/lowercase (and "/" to "\")

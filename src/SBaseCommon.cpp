@@ -20,7 +20,10 @@ char StormLibCopyright[] = "StormLib v " STORMLIB_VERSION_STRING " Copyright Lad
 //-----------------------------------------------------------------------------
 // Local variables
 
-LCID    lcFileLocale = LANG_NEUTRAL;            // File locale
+DWORD g_dwMpqSignature = ID_MPQ;                // Marker for MPQ header
+DWORD g_dwHashTableKey = MPQ_KEY_HASH_TABLE;    // Key for hash table
+DWORD g_dwBlockTableKey = MPQ_KEY_BLOCK_TABLE;  // Key for block table
+LCID  g_lcFileLocale = LANG_NEUTRAL;            // File locale
 USHORT  wPlatform = 0;                          // File platform
 
 //-----------------------------------------------------------------------------
@@ -630,7 +633,7 @@ TMPQArchive * IsValidMpqHandle(HANDLE hMpq)
 {
     TMPQArchive * ha = (TMPQArchive *)hMpq;
 
-    return (ha != NULL && ha->pHeader != NULL && ha->pHeader->dwID == ID_MPQ) ? ha : NULL;
+    return (ha != NULL && ha->pHeader != NULL && ha->pHeader->dwID == g_dwMpqSignature) ? ha : NULL;
 }
 
 TMPQFile * IsValidFileHandle(HANDLE hFile)
