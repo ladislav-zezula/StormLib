@@ -147,7 +147,7 @@ static int VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
 }
 
 //-----------------------------------------------------------------------------
-// Support for alternate markers. Call before SFileOpenArchive
+// Support for alternate markers. Call before opening an archive
 
 #define SFILE_MARKERS_MIN_SIZE   (sizeof(DWORD) + sizeof(DWORD) + sizeof(const char *) + sizeof(const char *))
 

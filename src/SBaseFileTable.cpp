@@ -448,7 +448,9 @@ int ConvertMpqHeaderToFormat4(
     // Reason: Storm.dll in Warcraft III ignores format version value
     if((MapType == MapTypeWarcraft3) || (dwFlags & MPQ_OPEN_FORCE_MPQ_V1))
         wFormatVersion = MPQ_FORMAT_VERSION_1;
-    if((MapType == MapTypeStarcraft2) && (pHeader->wFormatVersion > MPQ_FORMAT_VERSION_4))
+
+    // Don't accept format 3 for Starcraft II maps
+    if((MapType == MapTypeStarcraft2) && (pHeader->wFormatVersion > MPQ_FORMAT_VERSION_2))
         wFormatVersion = MPQ_FORMAT_VERSION_4;
 
     // Format-specific fixes
