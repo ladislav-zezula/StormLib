@@ -197,10 +197,6 @@
     #define MAX_PATH 1024
   #endif
 
-  #ifndef _countof
-    #define _countof(x)  (sizeof(x) / sizeof(x[0]))
-  #endif
-
   #define WINAPI
 
   #define FILE_BEGIN    SEEK_SET
@@ -255,6 +251,10 @@
   #define ERROR_HANDLE_EOF               1002        // No such error code under Linux
   #define ERROR_CAN_NOT_COMPLETE         1003        // No such error code under Linux
   #define ERROR_FILE_CORRUPT             1004        // No such error code under Linux
+#endif
+
+#ifndef _countof
+  #define _countof(x)  (sizeof(x) / sizeof(x[0]))
 #endif
 
 //-----------------------------------------------------------------------------
