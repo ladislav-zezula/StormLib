@@ -501,6 +501,11 @@ static TFileHeader2Ext data2ext[] =
     {0x61754C1B, 0xFFFFFFFF, 0x00000000, 0x00000000, "lua"},    // Compiled LUA files
     {0x20534444, 0xFFFFFFFF, 0x00000000, 0x00000000, "dds"},    // DDS textures
     {0x43614C66, 0xFFFFFFFF, 0x00000000, 0x00000000, "flac"},   // FLAC sound files
+    {0x0000FBFF, 0x0000FFFF, 0x00000000, 0x00000000, "mp3"},    // MP3 sound files
+    {0x0000F3FF, 0x0000FFFF, 0x00000000, 0x00000000, "mp3"},    // MP3 sound files
+    {0x0000F2FF, 0x0000FFFF, 0x00000000, 0x00000000, "mp3"},    // MP3 sound files
+    {0x00334449, 0x00FFFFFF, 0x00000000, 0x00000000, "mp3"},    // MP3 sound files
+    {0x57334D48, 0xFFFFFFFF, 0x00000000, 0x00000000, "w3x"},    // Warcraft III map files, can also be w3m
     {0x6F643357, 0xFFFFFFFF, 0x00000000, 0x00000000, "doo"},    // Warcraft III doodad files
     {0x21453357, 0xFFFFFFFF, 0x00000000, 0x00000000, "w3e"},    // Warcraft III environment files
     {0x5733504D, 0xFFFFFFFF, 0x00000000, 0x00000000, "wpm"},    // Warcraft III pathing map files
