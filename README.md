@@ -16,14 +16,15 @@ $ make install
 4. Make sure you compile your project with `-lstorm -lz -lbz2`
 
 ### Windows (Visual Studio 2008)
-1. Download the latest release
+1. Download the latest release of StormLib
 2. Open the solution file `StormLib_vs08.sln` in Visual Studio 2008
 3. Choose "Build / Batch Build" and select every build of "StormLib"
 4. Choose "Rebuild"
 5. The result libraries are in `.\bin\Win32` and `.\bin\x64`
 
 ### Windows (Visual Studio 2017 or 2019)
-1. Download the latest release
+0. Make sure you have SDK 10.0.17134.0 installed
+1. Download the latest release of StormLib
 2. Open the solution file `StormLib_vs19.sln` in Visual Studio 2017/2019
 3. Choose "Build / Batch Build" and select every build of "StormLib"
 4. Choose "Rebuild"
