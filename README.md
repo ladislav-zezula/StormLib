@@ -31,7 +31,7 @@ $ make install
 
 ### Windows (Test Project)
 1. Include the main StormLib header: `#include <StormLib.h>`
-2. Set the library directory with StormLibXYZ.lib
+2. Set the correct library directory for StormLibXYZ.lib:
    * X: D = Debug, R = Release
    * Y: A = ANSI build, U = Unicode build
    * Z: S = Using static CRT library, D = Using Dynamic CRT library
