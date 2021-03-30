@@ -702,7 +702,12 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     // If the file is local file, read the data directly from the stream
     if(hf->pStream != NULL)
     {
-        nError = ReadMpqFileLocalFile(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
+        ULONGLONG pos;
+        if (!FileStream_GetPos(hf->pStream, &pos)) {
+            SetLastError(ERROR_CAN_NOT_COMPLETE);
+            return false;
+        }
+        nError = ReadMpqFileLocalFile(hf, pvBuffer, pos, dwToRead, &dwBytesRead);
     }
 
     // If the file is a patch file, we have to read it special way
@@ -730,7 +735,8 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     }
 
     // Increment the file position
-    hf->dwFilePos += dwBytesRead;
+    if(hf->pStream == NULL)
+        hf->dwFilePos += dwBytesRead;
 
     // Give the caller the number of bytes read
     if(pdwRead != NULL)
