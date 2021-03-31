@@ -51,7 +51,7 @@ typedef struct _LINE_INFO
 {
     LONG  nLinePos;
     DWORD nLineLen;
-    char * szLine;
+    const char * szLine;
 } LINE_INFO, *PLINE_INFO;
 
 //------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', '
 #endif
 
 #ifdef STORMLIB_LINUX
-#define WORK_PATH_ROOT "/media/ladik/MPQs"
+#define WORK_PATH_ROOT "/media/ladik/CascStorages/MPQs"
 static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
