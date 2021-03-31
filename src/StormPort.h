@@ -107,8 +107,7 @@
 #endif
 
 //-----------------------------------------------------------------------------
-// Defines for other platforms. Please, if you add a platform that is compatible
-// with either Linux or Mac, define STORMLIB_LINUX or STORMLIB_MAC, respectively
+// Defines for HAIKU platform
 
 #if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__HAIKU__)
 
@@ -137,7 +136,119 @@
 #endif
 
 //-----------------------------------------------------------------------------
-// Assumption: we are not on Windows nor Macintosh, so this must be linux *grin*
+// Defines for AMIGA platform
+
+#if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__AMIGA__)
+
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  #include <unistd.h>
+  #include <stdint.h>
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include <stdarg.h>
+  #include <string.h>
+  #include <ctype.h>
+  #include <assert.h>
+  #include <errno.h>
+
+  #ifndef __BIG_ENDIAN__
+    #define STORMLIB_LITTLE_ENDIAN
+  #endif
+
+  #define STORMLIB_MAC                              // Use Mac compatible code
+  #define STORMLIB_AMIGA
+  #define STORMLIB_PLATFORM_DEFINED
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Defines for Switch platform
+
+#if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__SWITCH__)
+
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  #include <unistd.h>
+  #include <stdint.h>
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include <stdarg.h>
+  #include <string.h>
+  #include <strings.h>
+  #include <ctype.h>
+  #include <assert.h>
+  #include <errno.h>
+
+  #ifndef __BIG_ENDIAN__
+    #define STORMLIB_LITTLE_ENDIAN
+  #endif
+
+  #define STORMLIB_MAC                              // Use Mac compatible code
+  #define STORMLIB_SWITCH
+  #define STORMLIB_PLATFORM_DEFINED
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Defines for 3DS platform
+
+#if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__3DS__)
+
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  #include <unistd.h>
+  #include <stdint.h>
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include <stdarg.h>
+  #include <string.h>
+  #include <strings.h>
+  #include <ctype.h>
+  #include <assert.h>
+  #include <errno.h>
+
+  #define STORMLIB_LITTLE_ENDIAN
+
+  #define STORMLIB_MAC                              // Use Mac compatible code
+  #define STORMLIB_CTR
+  #define STORMLIB_PLATFORM_DEFINED
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Defines for Vita platform
+
+#if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__vita__)
+
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  #include <unistd.h>
+  #include <stdint.h>
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include <stdarg.h>
+  #include <string.h>
+  #include <strings.h>
+  #include <ctype.h>
+  #include <assert.h>
+  #include <errno.h>
+
+  #ifndef __BIG_ENDIAN__
+    #define STORMLIB_LITTLE_ENDIAN
+  #endif
+
+  #define STORMLIB_MAC                              // Use Mac compatible code
+  #define STORMLIB_VITA
+  #define STORMLIB_PLATFORM_DEFINED
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Assumption: If the platform is not defined, this must be Linux *grin*
 
 #if !defined(STORMLIB_PLATFORM_DEFINED)
 
@@ -156,7 +267,10 @@
   #include <assert.h>
   #include <errno.h>
 
-  #define STORMLIB_LITTLE_ENDIAN
+  #ifndef __BIG_ENDIAN__
+    #define STORMLIB_LITTLE_ENDIAN
+  #endif
+
   #define STORMLIB_LINUX
   #define STORMLIB_PLATFORM_DEFINED
 
