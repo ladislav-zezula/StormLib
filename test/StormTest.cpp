@@ -679,10 +679,10 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
     HANDLE hFind;
     TCHAR szSearchMask[MAX_PATH];
 
-    // Keep compilers happy
+    // Construct the directory mask
     _stprintf(szSearchMask, _T("%s\\*"), szDirectory);
 
-    // Construct the directory mask
+    // Perform the search
     hFind = FindFirstFile(szSearchMask, &wf);
     return (hFind != INVALID_HANDLE_VALUE) ? hFind : NULL;
 
@@ -2169,9 +2169,12 @@ static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
     if(SFileOpenFileEx(NULL, szFileName1, SFILE_OPEN_LOCAL_FILE, &hFile))
     {
         // Retrieve the file name. It must match the name under which the file was open
-        SFileGetFileName(hFile, szFileName2);
-        if(strcmp(szFileName2, szFileName1))
-            Logger.PrintMessage("The retrieved name does not match the open name");
+        if(FileStream_Prefix(szPlainName, NULL) == 0)
+        {
+            SFileGetFileName(hFile, szFileName2);
+            if(strcmp(szFileName2, szFileName1))
+                Logger.PrintMessage("The retrieved name does not match the open name");
+        }
 
         // Retrieve the file size
         dwFileSizeLo = SFileGetFileSize(hFile, &dwFileSizeHi);
@@ -4286,6 +4289,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     if(dwErrCode == ERROR_SUCCESS)
     {
+        TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
         dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
     }
 

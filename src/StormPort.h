@@ -65,7 +65,7 @@
   #define STORMLIB_CDECL __cdecl
 
   #define STORMLIB_WINDOWS
-  #define STORMLIB_PLATFORM_DEFINED             // The platform is known now
+  #define STORMLIB_PLATFORM_DEFINED                 // The platform is known now
 
 #endif
 
@@ -102,7 +102,8 @@
   #endif
 
   #define STORMLIB_MAC
-  #define STORMLIB_PLATFORM_DEFINED                  // The platform is known now
+  #define STORMLIB_HAS_MMAP                         // Indicate that we have mmap support
+  #define STORMLIB_PLATFORM_DEFINED                 // The platform is known now
 
 #endif
 
@@ -272,6 +273,7 @@
   #endif
 
   #define STORMLIB_LINUX
+  #define STORMLIB_HAS_MMAP                         // Indicate that we have mmap support
   #define STORMLIB_PLATFORM_DEFINED
 
 #endif
