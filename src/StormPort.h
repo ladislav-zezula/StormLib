@@ -106,6 +106,10 @@
 
 #endif
 
+//-----------------------------------------------------------------------------
+// Defines for other platforms. Please, if you add a platform that is compatible
+// with either Linux or Mac, define STORMLIB_LINUX or STORMLIB_MAC, respectively
+
 #if !defined(STORMLIB_PLATFORM_DEFINED) && defined(__HAIKU__)
 
   #include <sys/types.h>
@@ -126,8 +130,9 @@
     #define STORMLIB_LITTLE_ENDIAN
   #endif
 
+  #define STORMLIB_MAC                              // Use Mac compatible code
   #define STORMLIB_HAIKU
-  #define STORMLIB_PLATFORM_DEFINED                  // The platform is known now
+  #define STORMLIB_PLATFORM_DEFINED                 // The platform is known now
 
 #endif
 
@@ -228,7 +233,7 @@
 #endif // !STORMLIB_WINDOWS
 
 // 64-bit calls are supplied by "normal" calls on Mac
-#if defined(STORMLIB_MAC) || defined(STORMLIB_HAIKU)
+#if defined(STORMLIB_MAC)
   #define stat64  stat
   #define fstat64 fstat
   #define lseek64 lseek
@@ -238,7 +243,7 @@
 #endif
 
 // Platform-specific error codes for UNIX-based platforms
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX)
   #define ERROR_SUCCESS                  0
   #define ERROR_FILE_NOT_FOUND           ENOENT
   #define ERROR_ACCESS_DENIED            EPERM

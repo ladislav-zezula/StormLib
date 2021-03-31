@@ -688,7 +688,7 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 
 #endif
 
-#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_MAC)
 
     // Keep compilers happy
     return (HANDLE)opendir(szDirectory);
@@ -723,7 +723,7 @@ static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry
 
 #endif
 
-#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_MAC)
 
     struct dirent * directory_entry;
 
@@ -746,7 +746,7 @@ static void FreeDirectorySearch(HANDLE hFind)
     FindClose(hFind);
 #endif
 
-#if defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#if defined(STORMLIB_LINUX) || defined(STORMLIB_MAC)
     closedir((DIR *)hFind);
 #endif
 }
