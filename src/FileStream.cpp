@@ -30,6 +30,10 @@
 #define INVALID_HANDLE_VALUE ((HANDLE)-1)
 #endif
 
+#if !(defined(STORMLIB_AMIGA) || defined(STORMLIB_SWITCH) || defined(STORMLIB_CTR) || defined(STORMLIB_VITA))
+#define STORMLIB_HAVE_MMAP
+#endif
+
 //-----------------------------------------------------------------------------
 // Local functions - platform-specific functions
 
@@ -491,6 +495,8 @@ static bool RetrieveFileMappingSize(HANDLE hSection, ULARGE_INTEGER & RefFileSiz
 }
 #endif
 
+#ifdef STORMLIB_HAVE_MMAP
+
 static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStreamFlags)
 {
 #ifdef STORMLIB_WINDOWS
@@ -645,15 +651,26 @@ static void BaseMap_Close(TFileStream * pStream)
 static void BaseMap_Init(TFileStream * pStream)
 {
     // Supply the file stream functions
+#ifdef STORMLIB_HAVE_MMAP
     pStream->BaseOpen    = BaseMap_Open;
     pStream->BaseRead    = BaseMap_Read;
+    pStream->BaseClose   = BaseMap_Close;
+#else
+    // Use BaseFile if we don't have memory-mapped IO.
+    // We still use this initialization function to set
+    // the STREAM_FLAG_READ_ONLY flag.
+    pStream->BaseOpen    = BaseFile_Open;
+    pStream->BaseRead    = BaseFile_Read;
+    pStream->BaseClose   = BaseFile_Close;
+#endif
     pStream->BaseGetSize = BaseFile_GetSize;    // Reuse BaseFile function
     pStream->BaseGetPos  = BaseFile_GetPos;     // Reuse BaseFile function
-    pStream->BaseClose   = BaseMap_Close;
 
     // Mapped files are read-only
     pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
 }
+
+#endif // STORMLIB_HAVE_MMAP
 
 //-----------------------------------------------------------------------------
 // Local functions - base HTTP file support
