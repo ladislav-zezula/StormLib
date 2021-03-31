@@ -103,9 +103,7 @@ static bool BaseFile_Create(TFileStream * pStream)
         if(pStream->Base.File.hFile == INVALID_HANDLE_VALUE)
             return false;
     }
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     {
         intptr_t handle;
 
@@ -152,9 +150,7 @@ static bool BaseFile_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
         // Query last write time
         GetFileTime(pStream->Base.File.hFile, NULL, NULL, (LPFILETIME)&pStream->Base.File.FileTime);
     }
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     {
         struct stat64 fileinfo;
         int oflag = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? O_RDONLY : O_RDWR;
@@ -221,9 +217,7 @@ static bool BaseFile_Read(
                 return false;
         }
     }
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     {
         ssize_t bytes_read;
 
@@ -292,9 +286,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
                 return false;
         }
     }
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     {
         ssize_t bytes_written;
 
@@ -359,9 +351,7 @@ static bool BaseFile_Resize(TFileStream * pStream, ULONGLONG NewFileSize)
         SetFilePointer(pStream->Base.File.hFile, FileSizeLo, &FileSizeHi, FILE_BEGIN);
         return bResult;
     }
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     {
         if(ftruncate64((intptr_t)pStream->Base.File.hFile, (off64_t)NewFileSize) == -1)
         {
@@ -403,9 +393,7 @@ static bool BaseFile_Replace(TFileStream * pStream, TFileStream * pNewStream)
 
     // Rename the new file to the old stream's file
     return (bool)MoveFile(pNewStream->szFileName, pStream->szFileName);
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     // "rename" on Linux also works if the target file exists
     if(rename(pNewStream->szFileName, pStream->szFileName) == -1)
     {
@@ -423,9 +411,7 @@ static void BaseFile_Close(TFileStream * pStream)
     {
 #ifdef STORMLIB_WINDOWS
         CloseHandle(pStream->Base.File.hFile);
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
         close((intptr_t)pStream->Base.File.hFile);
 #endif
     }
@@ -562,9 +548,7 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
     // report error
     if(bResult == false)
         return false;
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     struct stat64 fileinfo;
     intptr_t handle;
     bool bResult = false;
@@ -631,9 +615,7 @@ static void BaseMap_Close(TFileStream * pStream)
 #ifdef STORMLIB_WINDOWS
     if(pStream->Base.Map.pbFile != NULL)
         UnmapViewOfFile(pStream->Base.Map.pbFile);
-#endif
-
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX) || defined(STORMLIB_HAIKU)
+#else // !STORMLIB_WINDOWS
     if(pStream->Base.Map.pbFile != NULL)
         munmap(pStream->Base.Map.pbFile, (size_t )pStream->Base.Map.FileSize);
 #endif
@@ -779,7 +761,7 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
     pStream->BaseClose(pStream);
     return false;
 
-#else
+#else // !STORMLIB_WINDOWS
 
     // Not supported
     SetLastError(ERROR_NOT_SUPPORTED);
@@ -853,7 +835,7 @@ static bool BaseHttp_Read(
         SetLastError(ERROR_HANDLE_EOF);
     return (dwTotalBytesRead == dwBytesToRead);
 
-#else
+#else // !STORMLIB_WINDOWS
 
     // Not supported
     pStream = pStream;
@@ -876,7 +858,7 @@ static void BaseHttp_Close(TFileStream * pStream)
     if(pStream->Base.Http.hInternet != NULL)
         InternetCloseHandle(pStream->Base.Http.hInternet);
     pStream->Base.Http.hInternet = NULL;
-#else
+#else // !STORMLIB_WINDOWS
     pStream = pStream;
 #endif
 }
