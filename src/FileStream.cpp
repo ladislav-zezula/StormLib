@@ -561,13 +561,11 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
     if(hFile != INVALID_HANDLE_VALUE)
         CloseHandle(hFile);
 
-    // If the file is not there and is not available for random access,
-    // report error
-    if(bResult == false)
-        return false;
-#endif
+    // Return the result of the operation
+    return bResult;
 
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX)
+#elif defined(STORMLIB_HAS_MMAP)
+
     struct stat64 fileinfo;
     intptr_t handle;
     bool bResult = false;
@@ -596,13 +594,15 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
 
     // Did the mapping fail?
     if(bResult == false)
-    {
         nLastError = errno;
-        return false;
-    }
-#endif
+    return bResult;
 
-    return true;
+#else
+
+    // File mapping is not supported
+    return false;
+
+#endif
 }
 
 static bool BaseMap_Read(
