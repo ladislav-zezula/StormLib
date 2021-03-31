@@ -45,7 +45,14 @@ typedef struct _TEST_INFO
     DWORD   dwFlags;
     LPCSTR  szFileName1;
     LPCSTR  szFileName2;
-} TEST_INFO, PTEST_INFO;
+} TEST_INFO, *PTEST_INFO;
+
+typedef struct _LINE_INFO
+{
+    LONG  nLinePos;
+    DWORD nLineLen;
+    char * szLine;
+} LINE_INFO, *PLINE_INFO;
 
 //------------------------------------------------------------------------------
 // Local variables
@@ -2108,6 +2115,40 @@ static void TestGetFileInfo(
 
 // StormLib is able to open local files (as well as the original Storm.dll)
 // I want to keep this for occasional use
+
+static LINE_INFO Lines[] =
+{
+    {0x000, 18, "accountbilling.url"},
+    {0x013, 45, "alternate/character/goblin/male/goblinmale.m2"},
+    {0x9ab, 54, "alternate/character/goblin/male/goblinmale0186-00.anim"}
+};
+
+static DWORD TestOnLocalListFile_Read(TLogHelper & Logger, HANDLE hFile)
+{
+    for(size_t i = 0; i < _countof(Lines); i++)
+    {
+        DWORD dwBytesRead = 0;
+        char szFileLine[0x100] = {0};
+
+        SFileSetFilePointer(hFile, Lines[i].nLinePos, NULL, FILE_BEGIN);
+        SFileReadFile(hFile, szFileLine, Lines[i].nLineLen, &dwBytesRead, NULL);
+
+        if(dwBytesRead != Lines[i].nLineLen)
+        {
+            Logger.PrintMessage("Line %u length mismatch", i);
+            return false;
+        }
+
+        if(strcmp(szFileLine, Lines[i].szLine))
+        {
+            Logger.PrintMessage("Line %u content mismatch", i);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
 {
     TLogHelper Logger("LocalListFile", szPlainName);
@@ -2119,7 +2160,6 @@ static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
     TCHAR szFullPath[MAX_PATH];
     char szFileName1[MAX_PATH];
     char szFileName2[MAX_PATH];
-    char szFileLine[0x40] = {0};
     int nFileCount = 0;
 
     // Get the full name of the local file
@@ -2138,11 +2178,8 @@ static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
         if(dwFileSizeHi != 0 || dwFileSizeLo != 0x04385a4e)
             Logger.PrintMessage("Local file size mismatch");
 
-        // Read the first line
-        SFileReadFile(hFile, szFileLine, 18, NULL, NULL);
-        if(strcmp(szFileLine, "accountbilling.url"))
-            Logger.PrintMessage("Content of the listfile does not match");
-
+        // Read few lines, check their content
+        TestOnLocalListFile_Read(Logger, hFile);
         SFileCloseFile(hFile);
     }
     else
@@ -4247,10 +4284,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Tests on a local listfile
     //
 
-    //if(dwErrCode == ERROR_SUCCESS)
-    //{
-    //    dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
-    //}
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
+    }
 
     //
     // Open all files from the command line

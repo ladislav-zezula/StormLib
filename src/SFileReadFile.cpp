@@ -886,10 +886,9 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
         if(!FileStream_Read(hf->pStream, &NewPosition, NULL, 0))
             return SFILE_INVALID_POS;
     }
-    else
-    {
-        hf->dwFilePos = (DWORD)NewPosition;
-    }
+
+    // Also, store the new file position to the TMPQFile struct
+    hf->dwFilePos = (DWORD)NewPosition;
 
     // Return the new file position
     if(plFilePosHigh != NULL)
