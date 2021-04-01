@@ -631,14 +631,17 @@ static bool BaseMap_Read(
 
 static void BaseMap_Close(TFileStream * pStream)
 {
+
 #ifdef STORMLIB_WINDOWS
+
     if(pStream->Base.Map.pbFile != NULL)
         UnmapViewOfFile(pStream->Base.Map.pbFile);
-#endif
 
-#if defined(STORMLIB_MAC) || defined(STORMLIB_LINUX)
+#elif defined(STORMLIB_HAS_MMAP)
+
     if(pStream->Base.Map.pbFile != NULL)
         munmap(pStream->Base.Map.pbFile, (size_t )pStream->Base.Map.FileSize);
+
 #endif
 
     pStream->Base.Map.pbFile = NULL;
