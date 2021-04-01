@@ -1756,45 +1756,46 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
 
 #ifndef STORMLIB_LITTLE_ENDIAN
 
-//
-// Note that those functions are implemented for Mac operating system,
-// as this is the only supported platform that uses big endian.
-//
-
 // Swaps a signed 16-bit integer
-int16_t SwapInt16(uint16_t data)
+int16_t SwapInt16(uint16_t val)
 {
-	return (int16_t)CFSwapInt16(data);
+    return (val << 8) | ((val >> 8) & 0xFF);
 }
 
 // Swaps an unsigned 16-bit integer
-uint16_t SwapUInt16(uint16_t data)
+uint16_t SwapUInt16(uint16_t val)
 {
-	return CFSwapInt16(data);
+    return (val << 8) | (val >> 8 );
 }
 
-// Swaps signed 32-bit integer
-int32_t SwapInt32(uint32_t data)
+// Swaps a signed 32-bit integer
+int32_t SwapInt32(uint32_t val)
 {
-	return (int32_t)CFSwapInt32(data);
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF );
+    return (val << 16) | ((val >> 16) & 0xFFFF);
 }
 
 // Swaps an unsigned 32-bit integer
-uint32_t SwapUInt32(uint32_t data)
+uint32_t SwapUInt32(uint32_t val)
 {
-	return CFSwapInt32(data);
+    val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF );
+    return (val << 16) | (val >> 16);
 }
 
-// Swaps signed 64-bit integer
-int64_t SwapInt64(int64_t data)
+// Swaps a signed 64-bit integer
+int64_t SwapInt64(uint64_t val)
 {
-       return (int64_t)CFSwapInt64(data);
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
 }
 
 // Swaps an unsigned 64-bit integer
-uint64_t SwapUInt64(uint64_t data)
+uint64_t SwapUInt64(uint64_t val)
 {
-       return CFSwapInt64(data);
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | (val >> 32);
 }
 
 // Swaps array of unsigned 16-bit integers
