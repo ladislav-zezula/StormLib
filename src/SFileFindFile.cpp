@@ -61,10 +61,8 @@ bool SFileCheckWildCard(const char * szString, const char * szWildCard)
         {
             if(szWildCardPtr[0] == '*')
             {
-                szWildCardPtr++;
-
-                if(szWildCardPtr[0] == '*')
-                    continue;
+                while(szWildCardPtr[0] == '*')
+                    szWildCardPtr++;
 
                 if(szWildCardPtr[0] == 0)
                     return true;
