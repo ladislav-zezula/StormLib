@@ -233,9 +233,13 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &ha->UserDataPos, sizeof(ULONGLONG), pcbLengthNeeded);
 
         case SFileMpqUserDataHeader:
+            if(ha->pUserData == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             return GetInfo_ReadFromFile(pvFileInfo, cbFileInfo, ha->pStream, ha->UserDataPos, sizeof(TMPQUserData), pcbLengthNeeded);
 
         case SFileMpqUserData:
+            if(ha->pUserData == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             return GetInfo_ReadFromFile(pvFileInfo, cbFileInfo, ha->pStream, ha->UserDataPos + sizeof(TMPQUserData), ha->pUserData->dwHeaderOffs - sizeof(TMPQUserData), pcbLengthNeeded);
 
         case SFileMpqHeaderOffset:
