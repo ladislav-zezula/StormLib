@@ -34,7 +34,7 @@
 // Local functions - platform-specific functions
 
 #ifndef STORMLIB_WINDOWS
-static thread_local DWORD nLastError = ERROR_SUCCESS;
+static THREAD_LOCAL DWORD nLastError = ERROR_SUCCESS;
 
 DWORD GetLastError()
 {
