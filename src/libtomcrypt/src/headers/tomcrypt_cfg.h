@@ -30,17 +30,25 @@ LTC_EXPORT void LTC_CALL XFREE(void *p);
 
 LTC_EXPORT void LTC_CALL XQSORT(void *base, size_t nmemb, size_t size, int(LTC_CALL * compar)(const void *, const void *));
 
-
 /* change the clock function too */
 LTC_EXPORT clock_t LTC_CALL XCLOCK(void);
+#endif // LTC_NO_PROTOTYPES
 
 /* various other functions */
+#ifndef LTC_NO_PROTOTYPES_MEMCPY
 LTC_EXPORT void * LTC_CALL XMEMCPY(void *dest, const void *src, size_t n);
+#endif
+
+#ifndef LTC_NO_PROTOTYPES_MEMCMP
 LTC_EXPORT int   LTC_CALL XMEMCMP(const void *s1, const void *s2, size_t n);
+#endif
+
+#ifndef LTC_NO_PROTOTYPES_MEMSET
 LTC_EXPORT void * LTC_CALL XMEMSET(void *s, int c, size_t n);
+#endif
 
+#ifndef LTC_NO_PROTOTYPES_STRCMP
 LTC_EXPORT int   LTC_CALL XSTRCMP(const char *s1, const char *s2);
-
 #endif
 
 /* type of argument checking, 0=default, 1=fatal and 2=error+continue, 3=nothing */

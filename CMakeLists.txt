@@ -2,6 +2,9 @@ project(StormLib)
 cmake_minimum_required(VERSION 2.8.12)
 
 set(LIBRARY_NAME storm)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CMakeDependentOption)
 
@@ -330,10 +333,10 @@ else()
 endif()
 
 if (NOT STORM_SKIP_INSTALL)
-    install(TARGETS ${LIBRARY_NAME} 
-	    RUNTIME DESTINATION bin 
-	    LIBRARY DESTINATION lib 
-	    ARCHIVE DESTINATION lib 
+    install(TARGETS ${LIBRARY_NAME}
+	    RUNTIME DESTINATION bin
+	    LIBRARY DESTINATION lib
+	    ARCHIVE DESTINATION lib
 	    FRAMEWORK DESTINATION /Library/Frameworks
 	    PUBLIC_HEADER DESTINATION include
 	    INCLUDES DESTINATION include)
