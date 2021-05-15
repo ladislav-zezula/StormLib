@@ -95,7 +95,10 @@
 
   #define    PKEXPORT
   #define    __SYS_ZLIB
-  #define    __SYS_BZLIB
+
+  #ifndef __SYS_BZLIB
+    #define    __SYS_BZLIB
+  #endif
 
   #ifndef __BIG_ENDIAN__
     #define STORMLIB_LITTLE_ENDIAN
