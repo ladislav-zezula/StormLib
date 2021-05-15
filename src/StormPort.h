@@ -277,8 +277,6 @@
     #define STORMLIB_LITTLE_ENDIAN
   #endif
 
-  #define THREAD_LOCAL thread_local
-
   // Platforms with mmap support
   #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     #include <sys/mman.h>
@@ -393,10 +391,6 @@
 // Macros that can sometimes be missing
 #ifndef _countof
   #define _countof(x)  (sizeof(x) / sizeof(x[0]))
-#endif
-
-#ifndef THREAD_LOCAL
-  #define THREAD_LOCAL
 #endif
 
 //-----------------------------------------------------------------------------
