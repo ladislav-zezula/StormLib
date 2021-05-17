@@ -81,8 +81,7 @@ static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', '
 static LPCTSTR szMpqSubDir   = _T("1995 - Test MPQs");
 static LPCTSTR szMpqPatchDir = _T("1995 - Test MPQs\\patches");
 
-typedef int (*FIND_FILE_CALLBACK)(LPCTSTR szFullPath);
-typedef int (*FIND_PAIR_CALLBACK)(LPCTSTR szFullPath1, LPCTSTR szFullPath2);
+typedef DWORD (*FIND_FILE_CALLBACK)(LPCTSTR szFullPath);
 
 #define ERROR_UNDETERMINED_RESULT 0xC000FFFF
 
@@ -598,7 +597,7 @@ static void CreateFullPathName(char * szBuffer, size_t cchBuffer, LPCTSTR szSubD
 }
 #endif
 
-static int CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * szFileSha1)
+static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * szFileSha1)
 {
     TFileStream * pStream;
     unsigned char sha1_digest[SHA1_DIGEST_SIZE];
@@ -609,7 +608,7 @@ static int CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * s
     BYTE * pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     pLogger->PrintProgress(_T("Hashing file %s"), szShortPlainName);
@@ -639,7 +638,7 @@ static int CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * s
                 cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
                 if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
                 {
-                    nError = GetLastError();
+                    dwErrCode = GetLastError();
                     break;
                 }
 
@@ -663,9 +662,9 @@ static int CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * s
     }
 
     // If we calculated something, return OK
-    if(nError == ERROR_SUCCESS && szFileSha1[0] == 0)
-        nError = ERROR_CAN_NOT_COMPLETE;
-    return nError;
+    if(dwErrCode == ERROR_SUCCESS && szFileSha1[0] == 0)
+        dwErrCode = ERROR_CAN_NOT_COMPLETE;
+    return dwErrCode;
 }
 
 //-----------------------------------------------------------------------------
@@ -751,14 +750,14 @@ static void FreeDirectorySearch(HANDLE hFind)
 #endif
 }
 
-static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
+static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
 {
     TCHAR * szPlainName;
     HANDLE hFind;
     size_t nLength;
     TCHAR szDirEntry[MAX_PATH];
     bool IsDirectory = false;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     if(szDirectory != NULL)
     {
@@ -772,7 +771,7 @@ static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
             szPlainName = szDirectory + nLength;
 
             // Skip the first entry, since it's always "." or ".."
-            while(SearchDirectory(hFind, szDirEntry, _countof(szDirEntry), IsDirectory) && nError == ERROR_SUCCESS)
+            while(SearchDirectory(hFind, szDirEntry, _countof(szDirEntry), IsDirectory) && dwErrCode == ERROR_SUCCESS)
             {
                 // Copy the directory entry name to both names
                 _tcscpy(szPlainName, szDirEntry);
@@ -782,14 +781,14 @@ static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
                 {
                     if(szDirEntry[0] != '.')
                     {
-                        nError = FindFilesInternal(pfnTest, szDirectory);
+                        dwErrCode = FindFilesInternal(pfnTest, szDirectory);
                     }
                 }
                 else
                 {
                     if(pfnTest != NULL)
                     {
-                        nError = pfnTest(szDirectory);
+                        dwErrCode = pfnTest(szDirectory);
                     }
                 }
             }
@@ -799,10 +798,10 @@ static int FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
     }
 
     // Free the path buffer, if any
-    return nError;
+    return dwErrCode;
 }
 
-static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, LPCTSTR szSubDirectory)
+static DWORD FindFiles(FIND_FILE_CALLBACK pfnFindFile, LPCTSTR szSubDirectory)
 {
     TCHAR szWorkBuff[MAX_PATH];
 
@@ -810,7 +809,7 @@ static int FindFiles(FIND_FILE_CALLBACK pfnFindFile, LPCTSTR szSubDirectory)
     return FindFilesInternal(pfnFindFile, szWorkBuff);
 }
 
-static int InitializeMpqDirectory(TCHAR * argv[], int argc)
+static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
 {
     TLogHelper Logger("InitWorkDir");
     TFileStream * pStream;
@@ -995,10 +994,10 @@ static DWORD VerifyFilePosition(
     return dwErrCode;
 }
 
-static int VerifyFileMpqHeader(TLogHelper * pLogger, TFileStream * pStream, ULONGLONG * pByteOffset)
+static DWORD VerifyFileMpqHeader(TLogHelper * pLogger, TFileStream * pStream, ULONGLONG * pByteOffset)
 {
     TMPQHeader Header;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     memset(&Header, 0xFE, sizeof(TMPQHeader));
     if(FileStream_Read(pStream, pByteOffset, &Header, sizeof(TMPQHeader)))
@@ -1006,25 +1005,25 @@ static int VerifyFileMpqHeader(TLogHelper * pLogger, TFileStream * pStream, ULON
         if(Header.dwID != g_dwMpqSignature)
         {
             pLogger->PrintMessage(_T("Read error - the data is not a MPQ header"));
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
     else
     {
-        nError = pLogger->PrintError(_T("Failed to read the MPQ header"));
+        dwErrCode = pLogger->PrintError(_T("Failed to read the MPQ header"));
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int WriteMpqUserDataHeader(
+static DWORD WriteMpqUserDataHeader(
     TLogHelper * pLogger,
     TFileStream * pStream,
     ULONGLONG ByteOffset,
     DWORD dwByteCount)
 {
     TMPQUserData UserData;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     pLogger->PrintProgress("Writing user data header...");
@@ -1035,11 +1034,11 @@ static int WriteMpqUserDataHeader(
     UserData.dwHeaderOffs = (dwByteCount + sizeof(TMPQUserData));
     UserData.cbUserDataHeader = dwByteCount / 2;
     if(!FileStream_Write(pStream, &ByteOffset, &UserData, sizeof(TMPQUserData)))
-        nError = GetLastError();
-    return nError;
+        dwErrCode = GetLastError();
+    return dwErrCode;
 }
 
-static int WriteFileData(
+static DWORD WriteFileData(
     TLogHelper * pLogger,
     TFileStream * pStream,
     ULONGLONG ByteOffset,
@@ -1049,7 +1048,7 @@ static int WriteFileData(
     ULONGLONG BytesWritten = 0;
     LPBYTE pbDataBuffer;
     DWORD cbDataBuffer = 0x10000;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Write some data
     pbDataBuffer = new BYTE[cbDataBuffer];
@@ -1069,7 +1068,7 @@ static int WriteFileData(
             // Write the data
             if(!FileStream_Write(pStream, &ByteOffset, pbDataBuffer, cbToWrite))
             {
-                nError = GetLastError();
+                dwErrCode = GetLastError();
                 break;
             }
 
@@ -1080,10 +1079,10 @@ static int WriteFileData(
 
         delete [] pbDataBuffer;
     }
-    return nError;
+    return dwErrCode;
 }
 
-static int CopyFileData(
+static DWORD CopyFileData(
     TLogHelper * pLogger,
     TFileStream * pStream1,
     TFileStream * pStream2,
@@ -1095,7 +1094,7 @@ static int CopyFileData(
     LPBYTE pbCopyBuffer;
     DWORD BytesToRead;
     DWORD BlockLength = 0x100000;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Allocate copy buffer
     pbCopyBuffer = STORM_ALLOC(BYTE, BlockLength);
@@ -1107,14 +1106,14 @@ static int CopyFileData(
             BytesToRead = ((EndOffset - ByteOffset) > BlockLength) ? BlockLength : (DWORD)(EndOffset - ByteOffset);
             if(!FileStream_Read(pStream1, &ByteOffset, pbCopyBuffer, BytesToRead))
             {
-                nError = GetLastError();
+                dwErrCode = GetLastError();
                 break;
             }
 
             // Write to the destination file
             if(!FileStream_Write(pStream2, NULL, pbCopyBuffer, BytesToRead))
             {
-                nError = GetLastError();
+                dwErrCode = GetLastError();
                 break;
             }
 
@@ -1129,11 +1128,11 @@ static int CopyFileData(
         STORM_FREE(pbCopyBuffer);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // Support function for copying file
-static int CreateFileCopy(
+static DWORD CreateFileCopy(
     TLogHelper * pLogger,
     LPCTSTR szPlainName,
     LPCTSTR szFileCopy,
@@ -1148,7 +1147,7 @@ static int CreateFileCopy(
     ULONGLONG FileSize = 0;
     TCHAR szFileName1[MAX_PATH];
     TCHAR szFileName2[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     szPlainName += FileStream_Prefix(szPlainName, NULL);
@@ -1178,17 +1177,17 @@ static int CreateFileCopy(
         // If we should write some pre-MPQ data to the target file, do it
         if(PreMpqDataSize != 0)
         {
-            nError = WriteFileData(pLogger, pStream2, ByteOffset, PreMpqDataSize);
+            dwErrCode = WriteFileData(pLogger, pStream2, ByteOffset, PreMpqDataSize);
             ByteOffset += PreMpqDataSize;
         }
 
         // If we should write some MPQ user data, write the header first
         if(UserDataSize != 0)
         {
-            nError = WriteMpqUserDataHeader(pLogger, pStream2, ByteOffset, (DWORD)UserDataSize);
+            dwErrCode = WriteMpqUserDataHeader(pLogger, pStream2, ByteOffset, (DWORD)UserDataSize);
             ByteOffset += sizeof(TMPQUserData);
 
-            nError = WriteFileData(pLogger, pStream2, ByteOffset, UserDataSize);
+            dwErrCode = WriteFileData(pLogger, pStream2, ByteOffset, UserDataSize);
             ByteOffset += UserDataSize;
         }
 
@@ -1196,7 +1195,7 @@ static int CreateFileCopy(
         FileStream_GetSize(pStream1, &FileSize);
         if(FileSize != 0)
         {
-            nError = CopyFileData(pLogger, pStream1, pStream2, 0, FileSize);
+            dwErrCode = CopyFileData(pLogger, pStream1, pStream2, 0, FileSize);
             ByteOffset += FileSize;
         }
         FileStream_Close(pStream2);
@@ -1210,12 +1209,12 @@ static int CreateFileCopy(
         CreateFullPathName(szBuffer, cchBuffer, NULL, szFileCopy);
 
     // Report error, if any
-    if(nError != ERROR_SUCCESS)
+    if(dwErrCode != ERROR_SUCCESS)
         pLogger->PrintError("Failed to create copy of MPQ");
-    return nError;
+    return dwErrCode;
 }
 
-static int CreateMasterAndMirrorPaths(
+static DWORD CreateMasterAndMirrorPaths(
     TLogHelper * pLogger,
     TCHAR * szMirrorPath,
     TCHAR * szMasterPath,
@@ -1224,7 +1223,7 @@ static int CreateMasterAndMirrorPaths(
     bool bCopyMirrorFile)
 {
     TCHAR szCopyPath[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Always delete the mirror file
     CreateFullPathName(szMasterPath, MAX_PATH, szMpqSubDir, szMasterName);
@@ -1233,13 +1232,13 @@ static int CreateMasterAndMirrorPaths(
 
     // Copy the mirrored file from the source to the work directory
     if(bCopyMirrorFile)
-        nError = CreateFileCopy(pLogger, szMirrorName, szMirrorName);
+        dwErrCode = CreateFileCopy(pLogger, szMirrorName, szMirrorName);
 
     // Create the mirror*master path
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
         _stprintf(szMirrorPath, _T("%s*%s"), szCopyPath, szMasterPath);
 
-    return nError;
+    return dwErrCode;
 }
 
 static void WINAPI AddFileCallback(void * pvUserData, DWORD dwBytesWritten, DWORD dwTotalBytes, bool bFinalCall)
@@ -1376,7 +1375,7 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool 
     return pFileData;
 }
 
-static int CompareTwoLocalFilesRR(
+static DWORD CompareTwoLocalFilesRR(
     TLogHelper * pLogger,
     TFileStream * pStream1,                         // Master file
     TFileStream * pStream2,                         // Mirror file
@@ -1392,7 +1391,7 @@ static int CompareTwoLocalFilesRR(
     LPBYTE pbBuffer1;
     LPBYTE pbBuffer2;
     DWORD cbBuffer = 0x100000;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Compare file sizes
     FileStream_GetSize(pStream1, &FileSize1);
@@ -1433,7 +1432,7 @@ static int CompareTwoLocalFilesRR(
                 if(!CompareBlocks(pbBuffer1, pbBuffer2, BytesToRead, &Difference))
                 {
                     pLogger->PrintMessage("Difference at %u (Offset " I64X_a ", Length %X)", Difference, ByteOffset, BytesToRead);
-                    nError = ERROR_FILE_CORRUPT;
+                    dwErrCode = ERROR_FILE_CORRUPT;
                     break;
                 }
 
@@ -1449,10 +1448,10 @@ static int CompareTwoLocalFilesRR(
         STORM_FREE(pbBuffer2);
     if(pbBuffer1 != NULL)
         STORM_FREE(pbBuffer1);
-    return nError;
+    return dwErrCode;
 }
 
-static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, LCID lcLocale = 0, bool bIgnoreOpenErrors = false)
+static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, LCID lcLocale = 0, bool bIgnoreOpedwErrCodes = false)
 {
     TFileData * pFileData = NULL;
     HANDLE hFile;
@@ -1542,7 +1541,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     }
     else
     {
-        if(bIgnoreOpenErrors == false)
+        if(bIgnoreOpedwErrCodes == false)
         {
             dwErrCode = pLogger->PrintError("Open failed: %s", szFileName);
         }
@@ -1592,7 +1591,7 @@ static DWORD SearchArchive(
     TCHAR szListFile[MAX_PATH] = _T("");
     char szMostPatched[MAX_PATH] = "";
     DWORD dwErrCode = ERROR_SUCCESS;
-    bool bIgnoreOpenErrors = (dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) ? true : false;
+    bool bIgnoreOpedwErrCodes = (dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) ? true : false;
     bool bFound = true;
     int nMaxPatchCount = 0;
     int nPatchCount = 0;
@@ -1640,7 +1639,7 @@ static DWORD SearchArchive(
         if(dwSearchFlags & SEARCH_FLAG_LOAD_FILES)
         {
             // Load the entire file to the MPQ
-            pFileData = LoadMpqFile(pLogger, hMpq, sf.cFileName, sf.lcLocale, bIgnoreOpenErrors);
+            pFileData = LoadMpqFile(pLogger, hMpq, sf.cFileName, sf.lcLocale, bIgnoreOpedwErrCodes);
             if(pFileData != NULL)
             {
                 // Hash the file data, if needed
@@ -1675,7 +1674,7 @@ static DWORD SearchArchive(
     return dwErrCode;
 }
 
-static int CreateNewArchive(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
+static DWORD CreateNewArchive(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
 {
     HANDLE hMpq = NULL;
     TCHAR szMpqName[MAX_PATH];
@@ -1699,7 +1698,7 @@ static int CreateNewArchive(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwC
     return ERROR_SUCCESS;
 }
 
-static int CreateNewArchive_V2(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
+static DWORD CreateNewArchive_V2(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount, HANDLE * phMpq)
 {
     SFILE_CREATE_MPQ CreateInfo;
     HANDLE hMpq = NULL;
@@ -1740,7 +1739,7 @@ static int CreateNewArchive_V2(TLogHelper * pLogger, LPCTSTR szPlainName, DWORD 
 }
 
 // Creates new archive with UNICODE name. Adds prefix to the name
-static int CreateNewArchiveU(TLogHelper * pLogger, const wchar_t * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount)
+static DWORD CreateNewArchiveU(TLogHelper * pLogger, const wchar_t * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount)
 {
 #ifdef _UNICODE
     HANDLE hMpq = NULL;
@@ -1770,11 +1769,11 @@ static int CreateNewArchiveU(TLogHelper * pLogger, const wchar_t * szPlainName, 
     return ERROR_SUCCESS;
 }
 
-static int OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD dwFlags, HANDLE * phMpq)
+static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD dwFlags, HANDLE * phMpq)
 {
     HANDLE hMpq = NULL;
 //  bool bReopenResult;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Is it an encrypted MPQ ?
     if(_tcsstr(szFullPath, _T(".MPQE")) != NULL)
@@ -1790,16 +1789,16 @@ static int OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD d
     pLogger->PrintProgress(_T("Opening archive %s ..."), GetShortPlainName(szFullPath));
     if(!SFileOpenArchive(szFullPath, 0, dwFlags, &hMpq))
     {
-        switch(nError = GetLastError())
+        switch(dwErrCode = GetLastError())
         {
 //          case ERROR_BAD_FORMAT:  // If the error is ERROR_BAD_FORMAT, try to open with MPQ_OPEN_FORCE_MPQ_V1
 //              bReopenResult = SFileOpenArchive(szMpqName, 0, dwFlags | MPQ_OPEN_FORCE_MPQ_V1, &hMpq);
-//              nError = (bReopenResult == false) ? GetLastError() : ERROR_SUCCESS;
+//              dwErrCode = (bReopenResult == false) ? GetLastError() : ERROR_SUCCESS;
 //              break;
 
             case ERROR_AVI_FILE:        // Ignore the error if it's an AVI file or if the file is incomplete
             case ERROR_FILE_INCOMPLETE:
-                return nError;
+                return dwErrCode;
         }
 
         // Show the open error to the user
@@ -1811,27 +1810,27 @@ static int OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD d
         SFileCloseArchive(hMpq);
     else
         *phMpq = hMpq;
-    return nError;
+    return dwErrCode;
 }
 
-static int OpenPatchArchive(TLogHelper * pLogger, HANDLE hMpq, LPCTSTR szFullPath)
+static DWORD OpenPatchArchive(TLogHelper * pLogger, HANDLE hMpq, LPCTSTR szFullPath)
 {
     TCHAR szPatchName[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     pLogger->PrintProgress(_T("Adding patch %s ..."), GetShortPlainName(szFullPath));
     StringCopy(szPatchName, _countof(szPatchName), szFullPath);
     if(!SFileOpenPatchArchive(hMpq, szPatchName, NULL, 0))
-        nError = pLogger->PrintError(_T("Failed to add patch %s ..."), szFullPath);
+        dwErrCode = pLogger->PrintError(_T("Failed to add patch %s ..."), szFullPath);
 
-    return nError;
+    return dwErrCode;
 }
 
-static int OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName, LPCTSTR szCopyName, HANDLE * phMpq)
+static DWORD OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName, LPCTSTR szCopyName, HANDLE * phMpq)
 {
     DWORD dwFlags = 0;
     TCHAR szFullPath[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // We expect MPQ directory to be already prepared by InitializeMpqDirectory
     assert(szMpqDirectory[0] != 0);
@@ -1842,9 +1841,9 @@ static int OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName,
     // If both names entered, create a copy
     if(szFileName != NULL && szCopyName != NULL)
     {
-        nError = CreateFileCopy(pLogger, szFileName, szCopyName, szFullPath, _countof(szFullPath));
-        if(nError != ERROR_SUCCESS)
-            return nError;
+        dwErrCode = CreateFileCopy(pLogger, szFileName, szCopyName, szFullPath, _countof(szFullPath));
+        if(dwErrCode != ERROR_SUCCESS)
+            return dwErrCode;
     }
 
     // If only source name entered, open it for read-only access
@@ -1864,33 +1863,33 @@ static int OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName,
     return OpenExistingArchive(pLogger, szFullPath, dwFlags, phMpq);
 }
 
-static int OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, LPCTSTR PatchList[])
+static DWORD OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, LPCTSTR PatchList[])
 {
     HANDLE hMpq = NULL;
     TCHAR szFullPath[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // The first file is expected to be valid
     assert(PatchList[0] != NULL);
 
     // Open the primary MPQ
     CreateFullPathName(szFullPath, _countof(szFullPath), szMpqSubDir, PatchList[0]);
-    nError = OpenExistingArchive(pLogger, szFullPath, MPQ_OPEN_READ_ONLY, &hMpq);
+    dwErrCode = OpenExistingArchive(pLogger, szFullPath, MPQ_OPEN_READ_ONLY, &hMpq);
 
     // Add all patches
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 1; PatchList[i] != NULL; i++)
         {
             CreateFullPathName(szFullPath, _countof(szFullPath), szMpqPatchDir, PatchList[i]);
-            nError = OpenPatchArchive(pLogger, hMpq, szFullPath);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = OpenPatchArchive(pLogger, hMpq, szFullPath);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
         }
     }
 
     // If anything failed, close the MPQ handle
-    if(nError != ERROR_SUCCESS)
+    if(dwErrCode != ERROR_SUCCESS)
     {
         SFileCloseArchive(hMpq);
         hMpq = NULL;
@@ -1899,21 +1898,21 @@ static int OpenPatchedArchive(TLogHelper * pLogger, HANDLE * phMpq, LPCTSTR Patc
     // Give the archive handle to the caller
     if(phMpq != NULL)
         *phMpq = hMpq;
-    return nError;
+    return dwErrCode;
 }
 
-static int AddFileToMpq(
+static DWORD AddFileToMpq(
     TLogHelper * pLogger,
     HANDLE hMpq,
     LPCSTR szFileName,
     LPCSTR szFileData,
     DWORD dwFlags = 0,
     DWORD dwCompression = 0,
-    int nExpectedError = ERROR_SUCCESS)
+    DWORD dwExpectedError = ERROR_SUCCESS)
 {
     HANDLE hFile = NULL;
     DWORD dwFileSize = (DWORD)strlen(szFileData);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     pLogger->PrintProgress("Adding file %s ...", szFileName);
@@ -1929,21 +1928,21 @@ static int AddFileToMpq(
     {
         // Write the file
         if(!SFileWriteFile(hFile, szFileData, dwFileSize, dwCompression))
-            nError = pLogger->PrintError("Failed to write data to the MPQ");
+            dwErrCode = pLogger->PrintError("Failed to write data to the MPQ");
         SFileCloseFile(hFile);
     }
     else
     {
-        nError = GetLastError();
+        dwErrCode = GetLastError();
     }
 
     // Check the expected error code
-    if(nExpectedError != ERROR_UNDETERMINED_RESULT && nError != nExpectedError)
+    if(dwExpectedError != ERROR_UNDETERMINED_RESULT && dwErrCode != dwExpectedError)
         return pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
-    return nError;
+    return dwErrCode;
 }
 
-static int AddLocalFileToMpq(
+static DWORD AddLocalFileToMpq(
     TLogHelper * pLogger,
     HANDLE hMpq,
     LPCSTR szArchivedName,
@@ -1992,34 +1991,34 @@ static int AddLocalFileToMpq(
     return ERROR_SUCCESS;
 }
 
-static int RenameMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szOldFileName, LPCSTR szNewFileName, int nExpectedError)
+static DWORD RenameMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szOldFileName, LPCSTR szNewFileName, DWORD dwExpectedError)
 {
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     pLogger->PrintProgress("Renaming %s to %s ...", szOldFileName, szNewFileName);
 
     // Perform the deletion
     if(!SFileRenameFile(hMpq, szOldFileName, szNewFileName))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    if(nError != nExpectedError)
+    if(dwErrCode != dwExpectedError)
         return pLogger->PrintErrorVa("Unexpected result from SFileRenameFile(%s -> %s)", szOldFileName, szNewFileName);
     return ERROR_SUCCESS;
 }
 
-static int RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, int nExpectedError)
+static DWORD RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, DWORD dwExpectedError)
 {
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
     pLogger->PrintProgress("Removing file %s ...", szFileName);
 
     // Perform the deletion
     if(!SFileRemoveFile(hMpq, szFileName, 0))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    if(nError != nExpectedError)
+    if(dwErrCode != dwExpectedError)
         return pLogger->PrintError("Unexpected result from SFileRemoveFile(%s)", szFileName);
     return ERROR_SUCCESS;
 }
@@ -2036,34 +2035,34 @@ static ULONGLONG SFileGetFilePointer(HANDLE hFile)
 //-----------------------------------------------------------------------------
 // Tests
 
-static int TestSetFilePointer(
+static DWORD TestSetFilePointer(
     HANDLE hFile,
     LONGLONG DeltaPos,
     ULONGLONG ExpectedPos,
     DWORD dwMoveMethod,
     bool bUseFilePosHigh,
-    int nError)
+    DWORD dwErrCode)
 {
     ULONGLONG NewPos = 0;
     LONG DeltaPosHi = (LONG)(DeltaPos >> 32);
     LONG DeltaPosLo = (LONG)(DeltaPos);
 
     // If there was an error before, do nothing
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SFileSetFilePointer(hFile, DeltaPosLo, bUseFilePosHigh ? &DeltaPosHi : NULL, dwMoveMethod);
         NewPos = SFileGetFilePointer(hFile);
         if(NewPos != ExpectedPos)
-            nError = ERROR_HANDLE_EOF;
+            dwErrCode = ERROR_HANDLE_EOF;
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestSetFilePointers(HANDLE hFile, bool bUseFilePosHigh)
+static DWORD TestSetFilePointers(HANDLE hFile, bool bUseFilePosHigh)
 {
     LONGLONG FileSize;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // We expect the file to be at least 2 pages long
     FileSize = SFileGetFileSize(hFile, NULL);
@@ -2071,21 +2070,21 @@ static int TestSetFilePointers(HANDLE hFile, bool bUseFilePosHigh)
         return ERROR_NOT_SUPPORTED;
 
     // Move 0x20 bytes from the beginning. Expected new pos is 0x20
-    nError = TestSetFilePointer(hFile, 0x20, 0x20, FILE_BEGIN, bUseFilePosHigh, nError);
+    dwErrCode = TestSetFilePointer(hFile, 0x20, 0x20, FILE_BEGIN, bUseFilePosHigh, dwErrCode);
 
     // Move 0x20 bytes from the current position. Expected new pos is 0x20
-    nError = TestSetFilePointer(hFile, 0x20, 0x40, FILE_CURRENT, bUseFilePosHigh, nError);
+    dwErrCode = TestSetFilePointer(hFile, 0x20, 0x40, FILE_CURRENT, bUseFilePosHigh, dwErrCode);
 
     // Move 0x40 bytes back. Because the offset can't be moved to negative position, it will be zero
-    nError = TestSetFilePointer(hFile, -64, 0x00, FILE_CURRENT, bUseFilePosHigh, nError);
+    dwErrCode = TestSetFilePointer(hFile, -64, 0x00, FILE_CURRENT, bUseFilePosHigh, dwErrCode);
 
     // Move 0x40 bytes before the end of the file
-    nError = TestSetFilePointer(hFile, -64, FileSize-64, FILE_END, bUseFilePosHigh, nError);
+    dwErrCode = TestSetFilePointer(hFile, -64, FileSize-64, FILE_END, bUseFilePosHigh, dwErrCode);
 
     // Move 0x80 bytes forward. Should be at end of file
-    nError = TestSetFilePointer(hFile, 0x80, FileSize, FILE_CURRENT, bUseFilePosHigh, nError);
+    dwErrCode = TestSetFilePointer(hFile, 0x80, FileSize, FILE_CURRENT, bUseFilePosHigh, dwErrCode);
 
-    return nError;
+    return dwErrCode;
 }
 
 
@@ -2224,7 +2223,7 @@ static void WINAPI TestReadFile_DownloadCallback(
 }
 
 // Open a file stream with mirroring a master file
-static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName, bool bCopyMirrorFile)
+static DWORD TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName, bool bCopyMirrorFile)
 {
     TFileStream * pStream1;                     // Master file
     TFileStream * pStream2;                     // Mirror file
@@ -2233,7 +2232,7 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
     TCHAR szMasterPath[MAX_PATH];
     DWORD dwProvider = 0;
     int nIterations = 0x10000;
-    int nError;
+    DWORD dwErrCode;
 
     // Retrieve the provider
     FileStream_Prefix(szMasterName, &dwProvider);
@@ -2244,8 +2243,8 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
 #endif
 
     // Create copy of the file to serve as mirror, keep master there
-    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Open both master and mirror file
         pStream1 = FileStream_OpenFile(szMasterPath, STREAM_FLAG_READ_ONLY);
@@ -2257,7 +2256,7 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
                 nIterations = 0x80;
 
             FileStream_SetCallback(pStream2, TestReadFile_DownloadCallback, &Logger);
-            nError = CompareTwoLocalFilesRR(&Logger, pStream1, pStream2, nIterations);
+            dwErrCode = CompareTwoLocalFilesRR(&Logger, pStream1, pStream2, nIterations);
         }
 
         if(pStream2 != NULL)
@@ -2266,11 +2265,11 @@ static int TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName,
             FileStream_Close(pStream1);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // Test of the TFileStream object
-static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
+static DWORD TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
 {
     TFileStream * pStream = NULL;
     TLogHelper Logger("FileStreamTest", szPlainName);
@@ -2279,16 +2278,16 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
     TCHAR szFullPath[MAX_PATH];
     DWORD dwRequiredFlags = 0;
     BYTE Buffer[0x10];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Copy the file so we won't screw up
     if((dwStreamFlags & STREAM_PROVIDER_MASK) == STREAM_PROVIDER_BLOCK4)
         CreateFullPathName(szFullPath, _countof(szFullPath), szMpqSubDir, szPlainName);
     else
-        nError = CreateFileCopy(&Logger, szPlainName, szPlainName, szFullPath, _countof(szFullPath));
+        dwErrCode = CreateFileCopy(&Logger, szPlainName, szPlainName, szFullPath, _countof(szFullPath));
 
     // Open the file stream
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         pStream = FileStream_OpenFile(szFullPath, dwStreamFlags);
         if(pStream == NULL)
@@ -2296,13 +2295,13 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
     }
 
     // Get the size of the file stream
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(!FileStream_GetFlags(pStream, &dwStreamFlags))
-            nError = Logger.PrintError("Failed to retrieve the stream flags");
+            dwErrCode = Logger.PrintError("Failed to retrieve the stream flags");
 
         if(!FileStream_GetSize(pStream, &FileSize))
-            nError = Logger.PrintError("Failed to retrieve the file size");
+            dwErrCode = Logger.PrintError("Failed to retrieve the file size");
 
         // Any other stream except STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE should be read-only
         if((dwStreamFlags & STREAM_PROVIDERS_MASK) != (STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE))
@@ -2314,35 +2313,35 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
         if((dwStreamFlags & dwRequiredFlags) != dwRequiredFlags)
         {
             Logger.PrintMessage("The stream should be read-only but it isn't");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // After successful open, the stream position must be zero
-    if(nError == ERROR_SUCCESS)
-        nError = VerifyFilePosition(&Logger, pStream, 0);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = VerifyFilePosition(&Logger, pStream, 0);
 
     // Read the MPQ header from the current file offset.
-    if(nError == ERROR_SUCCESS)
-        nError = VerifyFileMpqHeader(&Logger, pStream, NULL);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = VerifyFileMpqHeader(&Logger, pStream, NULL);
 
     // After successful open, the stream position must sizeof(TMPQHeader)
-    if(nError == ERROR_SUCCESS)
-        nError = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
 
     // Now try to read the MPQ header from the offset 0
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         ByteOffset = 0;
-        nError = VerifyFileMpqHeader(&Logger, pStream, &ByteOffset);
+        dwErrCode = VerifyFileMpqHeader(&Logger, pStream, &ByteOffset);
     }
 
     // After successful open, the stream position must sizeof(TMPQHeader)
-    if(nError == ERROR_SUCCESS)
-        nError = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = VerifyFilePosition(&Logger, pStream, sizeof(TMPQHeader));
 
     // Try a write operation
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         bool bExpectedResult = (dwStreamFlags & STREAM_FLAG_READ_ONLY) ? false : true;
         bool bResult;
@@ -2355,57 +2354,57 @@ static int TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
         if(bResult != bExpectedResult)
         {
             Logger.PrintMessage("FileStream_Write result is different than expected");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Move the position 9 bytes from the end and try to read 10 bytes.
     // This must fail, because stream reading functions are "all or nothing"
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         ByteOffset = FileSize - 9;
         if(FileStream_Read(pStream, &ByteOffset, Buffer, 10))
         {
             Logger.PrintMessage("FileStream_Read succeeded, but it shouldn't");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Try again with 9 bytes. This must succeed, unless the file block is not available
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         ByteOffset = FileSize - 9;
         if(!FileStream_Read(pStream, &ByteOffset, Buffer, 9))
         {
             Logger.PrintMessage("FileStream_Read from the end of the file failed");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Verify file position - it must be at the end of the file
-    if(nError == ERROR_SUCCESS)
-        nError = VerifyFilePosition(&Logger, pStream, FileSize);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = VerifyFilePosition(&Logger, pStream, FileSize);
 
     // Close the stream
     if(pStream != NULL)
         FileStream_Close(pStream);
-    return nError;
+    return dwErrCode;
 }
 
-static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, bool bIgnoreOpenErrors, ...)
+static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, bool bIgnoreOpedwErrCodes, ...)
 {
     TFileData * pFileData;
     const char * szFileName;
     va_list argList;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    va_start(argList, bIgnoreOpenErrors);
+    va_start(argList, bIgnoreOpedwErrCodes);
     while((szFileName = va_arg(argList, const char *)) != NULL)
     {
         if(SFileHasFile(hMpq, szFileName))
         {
             pFileData = LoadMpqFile(pLogger, hMpq, szFileName);
-            if(pFileData == NULL && bIgnoreOpenErrors == false)
+            if(pFileData == NULL && bIgnoreOpedwErrCodes == false)
             {
                 pLogger->PrintError("Error loading the file %s", szFileName);
                 dwErrCode = ERROR_FILE_CORRUPT;
@@ -2465,7 +2464,7 @@ static DWORD TestArchive(
     TCHAR szFullName[MAX_PATH];
     BYTE ExpectedMD5[MD5_DIGEST_SIZE];
     BYTE OverallMD5[MD5_DIGEST_SIZE];
-    bool bIgnoreOpenErrors = false;
+    bool bIgnoreOpedwErrCodes = false;
 
     // If the file is a partial MPQ, don't load all files
     if(_tcsstr(szPlainName, _T(".MPQ.part")) == NULL)
@@ -2489,7 +2488,7 @@ static DWORD TestArchive(
         if(dwMpqFlags & MPQ_FLAG_MALFORMED)
         {
             dwSearchFlags |= SEARCH_FLAG_IGNORE_ERRORS;
-            bIgnoreOpenErrors = true;
+            bIgnoreOpedwErrCodes = true;
         }
 
         // If the listfile was given, add it to the MPQ
@@ -2502,7 +2501,7 @@ static DWORD TestArchive(
         }
 
         // Attempt to open the (listfile), (attributes), (signature)
-        dwErrCode = TestArchive_LoadFiles(&Logger, hMpq, bIgnoreOpenErrors, LISTFILE_NAME, ATTRIBUTES_NAME, SIGNATURE_NAME, NULL);
+        dwErrCode = TestArchive_LoadFiles(&Logger, hMpq, bIgnoreOpedwErrCodes, LISTFILE_NAME, ATTRIBUTES_NAME, SIGNATURE_NAME, NULL);
         if(dwErrCode != ERROR_SUCCESS)
             break;
 
@@ -2594,7 +2593,7 @@ static DWORD TestArchive(
 }
 
 // Open an empty archive (found in WoW cache - it's just a header)
-static int TestOpenArchive_WillFail(LPCTSTR szPlainName)
+static DWORD TestOpenArchive_WillFail(LPCTSTR szPlainName)
 {
     TLogHelper Logger("FailMpqTest", szPlainName);
     HANDLE hMpq = NULL;
@@ -2615,7 +2614,7 @@ static int TestOpenArchive_WillFail(LPCTSTR szPlainName)
     return ERROR_CAN_NOT_COMPLETE;
 }
 
-static int TestOpenArchive_Corrupt(LPCTSTR szPlainName)
+static DWORD TestOpenArchive_Corrupt(LPCTSTR szPlainName)
 {
     TLogHelper Logger("OpenCorruptMpqTest", szPlainName);
     HANDLE hMpq = NULL;
@@ -2678,7 +2677,7 @@ static DWORD TestOpenArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, 
 }
 
 // Open an archive for read-only access
-static int TestOpenArchive_ReadOnly(LPCTSTR szPlainName, bool bReadOnly)
+static DWORD TestOpenArchive_ReadOnly(LPCTSTR szPlainName, bool bReadOnly)
 {
     TLogHelper Logger("ReadOnlyTest", szPlainName);
     LPCTSTR szCopyName;
@@ -2686,32 +2685,32 @@ static int TestOpenArchive_ReadOnly(LPCTSTR szPlainName, bool bReadOnly)
     TCHAR szFullPath[MAX_PATH];
     DWORD dwFlags = bReadOnly ? MPQ_OPEN_READ_ONLY : 0;;
     int nExpectedError;
-    int nError;
+    DWORD dwErrCode;
 
     // Copy the fiel so we wont screw up something
     szCopyName = bReadOnly ? _T("StormLibTest_ReadOnly.mpq") : _T("StormLibTest_ReadWrite.mpq");
-    nError = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, _countof(szFullPath));
+    dwErrCode = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, _countof(szFullPath));
 
     // Now open the archive for read-only access
-    if(nError == ERROR_SUCCESS)
-        nError = OpenExistingArchive(&Logger, szFullPath, dwFlags, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchive(&Logger, szFullPath, dwFlags, &hMpq);
 
     // Now try to add a file. This must fail if the MPQ is read only
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
         AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, nExpectedError);
     }
 
     // Now try to rename a file in the MPQ. This must only succeed if the MPQ is not read only
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
         RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", nExpectedError);
     }
 
     // Now try to delete a file in the MPQ. This must only succeed if the MPQ is not read only
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
         RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", nExpectedError);
@@ -2720,10 +2719,10 @@ static int TestOpenArchive_ReadOnly(LPCTSTR szPlainName, bool bReadOnly)
     // Close the archive
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
-static int TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainName4)
+static DWORD TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainName4)
 {
     TLogHelper Logger("GetFileInfoTest", szPlainName1, szPlainName4);
     HANDLE hFile;
@@ -2731,13 +2730,13 @@ static int TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainName
     HANDLE hMpq1;
     DWORD cbLength;
     BYTE DataBuff[0x400];
-    int nError1;
-    int nError4;
+    DWORD dwErrCode1;
+    DWORD dwErrCode4;
 
     // Copy the archive so we won't fuck up the original one
-    nError1 = OpenExistingArchiveWithCopy(&Logger, szPlainName1, NULL, &hMpq1);
-    nError4 = OpenExistingArchiveWithCopy(&Logger, szPlainName4, NULL, &hMpq4);
-    if(nError1 == ERROR_SUCCESS && nError4 == ERROR_SUCCESS)
+    dwErrCode1 = OpenExistingArchiveWithCopy(&Logger, szPlainName1, NULL, &hMpq1);
+    dwErrCode4 = OpenExistingArchiveWithCopy(&Logger, szPlainName4, NULL, &hMpq4);
+    if(dwErrCode1 == ERROR_SUCCESS && dwErrCode4 == ERROR_SUCCESS)
     {
         // Invalid handle - expected (false, ERROR_INVALID_HANDLE)
         TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
@@ -2800,7 +2799,7 @@ static int TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainName
     return ERROR_SUCCESS;
 }
 
-static int TestOpenArchive_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName, LPCSTR szFileToExtract, bool bCopyMirrorFile)
+static DWORD TestOpenArchive_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName, LPCSTR szFileToExtract, bool bCopyMirrorFile)
 {
     TFileData * pFileData;
     TLogHelper Logger("OpenServerMirror", szMirrorName);
@@ -2809,41 +2808,41 @@ static int TestOpenArchive_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterNa
     DWORD dwVerifyResult;
     TCHAR szMirrorPath[MAX_PATH + MAX_PATH];   // Combined name
     TCHAR szMasterPath[MAX_PATH];              // Original (server) name
-    int nError;
+    DWORD dwErrCode;
 
     // Create both paths
-    nError = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
+    dwErrCode = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
 
     // Now open both archives as local-server pair
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = OpenExistingArchive(&Logger, szMirrorPath, 0, &hMpq);
+        dwErrCode = OpenExistingArchive(&Logger, szMirrorPath, 0, &hMpq);
     }
 
     // The MPQ must be read-only. Writing to mirrored MPQ is not allowed
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(SFileCreateFile(hMpq, "AddedFile.bin", 0, 0x10, 0, MPQ_FILE_COMPRESS, &hFile))
         {
             SFileCloseFile(hFile);
             Logger.PrintMessage("The archive is writable, although it should not be");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Verify the file
-    if(nError == ERROR_SUCCESS && szFileToExtract != NULL)
+    if(dwErrCode == ERROR_SUCCESS && szFileToExtract != NULL)
     {
         dwVerifyResult = SFileVerifyFile(hMpq, szFileToExtract, SFILE_VERIFY_ALL);
         if(dwVerifyResult & VERIFY_FILE_ERROR_MASK)
         {
             Logger.PrintMessage("File verification failed");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Load the file to memory
-    if(nError == ERROR_SUCCESS && szFileToExtract)
+    if(dwErrCode == ERROR_SUCCESS && szFileToExtract)
     {
         pFileData = LoadMpqFile(&Logger, hMpq, szFileToExtract);
         if(pFileData != NULL)
@@ -2852,21 +2851,21 @@ static int TestOpenArchive_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterNa
 
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
 
-static int TestOpenArchive_VerifySignature(LPCTSTR szPlainName, LPCTSTR szOriginalName)
+static DWORD TestOpenArchive_VerifySignature(LPCTSTR szPlainName, LPCTSTR szOriginalName)
 {
     TLogHelper Logger("VerifySignatureTest", szPlainName);
     HANDLE hMpq;
     DWORD dwSignatures = 0;
+    DWORD dwErrCode = ERROR_SUCCESS;
     int nVerifyError;
-    int nError = ERROR_SUCCESS;
 
     // We need original name for the signature check
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Query the signature types
         Logger.PrintProgress("Retrieving signatures ...");
@@ -2880,31 +2879,31 @@ static int TestOpenArchive_VerifySignature(LPCTSTR szPlainName, LPCTSTR szOrigin
         if((dwSignatures & SIGNATURE_TYPE_STRONG) && (nVerifyError != ERROR_STRONG_SIGNATURE_OK))
         {
             Logger.PrintMessage("Strong signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
 
         // Verify the result
         if((dwSignatures & SIGNATURE_TYPE_WEAK) && (nVerifyError != ERROR_WEAK_SIGNATURE_OK))
         {
             Logger.PrintMessage("Weak signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
 
         SFileCloseArchive(hMpq);
     }
-    return nError;
+    return dwErrCode;
 }
 
-static int TestOpenArchive_ModifySigned(LPCTSTR szPlainName, LPCTSTR szOriginalName)
+static DWORD TestOpenArchive_ModifySigned(LPCTSTR szPlainName, LPCTSTR szOriginalName)
 {
     TLogHelper Logger("ModifySignedTest", szPlainName);
     HANDLE hMpq = NULL;
     int nVerifyError;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // We need original name for the signature check
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify the weak signature
         Logger.PrintProgress("Verifying archive signature ...");
@@ -2914,20 +2913,20 @@ static int TestOpenArchive_ModifySigned(LPCTSTR szPlainName, LPCTSTR szOriginalN
         if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
         {
             Logger.PrintMessage("Weak signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Add a file and verify the signature again
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify any of the present signatures
         Logger.PrintProgress("Modifying signed archive ...");
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, ERROR_SUCCESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, ERROR_SUCCESS);
     }
 
     // Verify the signature again
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify the weak signature
         Logger.PrintProgress("Verifying archive signature ...");
@@ -2937,26 +2936,26 @@ static int TestOpenArchive_ModifySigned(LPCTSTR szPlainName, LPCTSTR szOriginalN
         if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
         {
             Logger.PrintMessage("Weak signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Close the MPQ
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
-static int TestOpenArchive_SignExisting(LPCTSTR szPlainName)
+static DWORD TestOpenArchive_SignExisting(LPCTSTR szPlainName)
 {
     TLogHelper Logger("SignExistingMpq", szPlainName);
     HANDLE hMpq = NULL;
     int nVerifyError;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // We need original name for the signature check
-    nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify the weak signature
         Logger.PrintProgress("Verifying archive signature ...");
@@ -2966,24 +2965,24 @@ static int TestOpenArchive_SignExisting(LPCTSTR szPlainName)
         if(nVerifyError != ERROR_NO_SIGNATURE)
         {
             Logger.PrintMessage("There already is a signature in the MPQ");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Add a file and verify the signature again
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify any of the present signatures
         Logger.PrintProgress("Signing the MPQ ...");
         if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
         {
             Logger.PrintMessage("Failed to create archive signature");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Verify the signature again
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify the weak signature
         Logger.PrintProgress("Verifying archive signature ...");
@@ -2993,14 +2992,14 @@ static int TestOpenArchive_SignExisting(LPCTSTR szPlainName)
         if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
         {
             Logger.PrintMessage("Weak signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Close the MPQ
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
 static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, bool bAddUserData)
@@ -3083,14 +3082,14 @@ static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyN
     return dwErrCode;
 }
 
-static int ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
+static DWORD ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
 {
     TFileData * pFileData;
     TCHAR * szExtension;
     TCHAR szShaFileName[MAX_PATH+1];
     TCHAR szSha1Text[0x40];
     char szSha1TextA[0x40];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Try to load the file with the SHA extension
     StringCopy(szShaFileName, _countof(szShaFileName), szFullPath);
@@ -3110,8 +3109,8 @@ static int ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
         TLogHelper Logger("VerifyFileHash");
 
         // Calculate SHA1 of the entire file
-        nError = CalculateFileSha1(&Logger, szFullPath, szSha1Text);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = CalculateFileSha1(&Logger, szFullPath, szSha1Text);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             // Compare with what we loaded from the file
             if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
@@ -3120,7 +3119,7 @@ static int ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
                 StringCopy(szSha1TextA, _countof(szSha1TextA), szSha1Text);
                 if(_strnicmp(szSha1TextA, (char *)pFileData->FileData, (SHA1_DIGEST_SIZE * 2)))
                 {
-                    SetLastError(nError = ERROR_FILE_CORRUPT);
+                    SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
                     Logger.PrintError(_T("File CRC check failed: %s"), szFullPath);
                 }
             }
@@ -3129,15 +3128,15 @@ static int ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
         STORM_FREE(pFileData);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // Opens a found archive
-static int ForEachFile_OpenArchive(LPCTSTR szFullPath)
+static DWORD ForEachFile_OpenArchive(LPCTSTR szFullPath)
 {
     HANDLE hMpq = NULL;
     DWORD dwFileCount = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Check if it's a MPQ file type
     if(IsMpqExtension(szFullPath))
@@ -3145,14 +3144,14 @@ static int ForEachFile_OpenArchive(LPCTSTR szFullPath)
         TLogHelper Logger("OpenEachMpqTest", GetShortPlainName(szFullPath));
 
         // Open the MPQ name
-        nError = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(nError == ERROR_AVI_FILE || nError == ERROR_FILE_CORRUPT || nError == ERROR_BAD_FORMAT)
+        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
+        if(dwErrCode == ERROR_AVI_FILE || dwErrCode == ERROR_FILE_CORRUPT || dwErrCode == ERROR_BAD_FORMAT)
             return ERROR_SUCCESS;
 
         // Search the archive and load every file
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
-            nError = SearchArchive(&Logger, hMpq, 0, &dwFileCount);
+            dwErrCode = SearchArchive(&Logger, hMpq, 0, &dwFileCount);
             SFileCloseArchive(hMpq);
         }
 
@@ -3164,36 +3163,36 @@ static int ForEachFile_OpenArchive(LPCTSTR szFullPath)
     }
 
     // Correct some errors
-    if(nError == ERROR_FILE_CORRUPT || nError == ERROR_FILE_INCOMPLETE)
+    if(dwErrCode == ERROR_FILE_CORRUPT || dwErrCode == ERROR_FILE_INCOMPLETE)
         return ERROR_SUCCESS;
-    return nError;
+    return dwErrCode;
 }
 
 // Adding a file to MPQ that had size of the file table equal
 // or greater than hash table, but has free entries
-static int TestAddFile_FullTable(LPCTSTR szFullMpqName)
+static DWORD TestAddFile_FullTable(LPCTSTR szFullMpqName)
 {
     TLogHelper Logger("FullMpqTest", szFullMpqName);
     LPCSTR szFileName = "AddedFile001.txt";
     LPCSTR szFileData = "0123456789ABCDEF";
     HANDLE hMpq = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szFullMpqName, szFullMpqName, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szFullMpqName, szFullMpqName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Attempt to add a file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_SUCCESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_SUCCESS);
         SFileCloseArchive(hMpq);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // Adding a file to MPQ that had no (listfile) and no (attributes).
 // We expect that neither of these will be present after the archive is closed
-static int TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListFile, bool bShouldHaveAttributes)
+static DWORD TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListFile, bool bShouldHaveAttributes)
 {
     TLogHelper Logger("ListFileTest", szSourceMpq);
     TFileData * pFileData = NULL;
@@ -3202,27 +3201,27 @@ static int TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListFil
     LPCSTR szFileData = "0123456789ABCDEF";
     HANDLE hMpq = NULL;
     DWORD dwFileSize = (DWORD)strlen(szFileData);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Copy the archive so we won't fuck up the original one
-    nError = OpenExistingArchiveWithCopy(&Logger, szSourceMpq, szBackupMpq, &hMpq);
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szSourceMpq, szBackupMpq, &hMpq);
 
     // Add a file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Now add a file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE);
         SFileCloseArchive(hMpq);
         hMpq = NULL;
     }
 
     // Now reopen the archive
-    if(nError == ERROR_SUCCESS)
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szBackupMpq, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szBackupMpq, &hMpq);
 
     // Now the file has been written and the MPQ has been saved.
     // We Reopen the MPQ and check if there is no (listfile) nor (attributes).
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Verify presence of (listfile) and (attributes)
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, bShouldHaveListFile);
@@ -3239,13 +3238,13 @@ static int TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListFil
                 if(memcmp(pFileData->FileData, szFileData, dwFileSize))
                 {
                     Logger.PrintError("The data of the added file does not match");
-                    nError = ERROR_FILE_CORRUPT;
+                    dwErrCode = ERROR_FILE_CORRUPT;
                 }
             }
             else
             {
                 Logger.PrintError("The size of the added file does not match");
-                nError = ERROR_FILE_CORRUPT;
+                dwErrCode = ERROR_FILE_CORRUPT;
             }
 
             // Delete the file data
@@ -3253,17 +3252,17 @@ static int TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListFil
         }
         else
         {
-            nError = Logger.PrintError("Failed to open the file previously added");
+            dwErrCode = Logger.PrintError("Failed to open the file previously added");
         }
     }
 
     // Close the MPQ archive
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 /*
-static int TestCreateArchive_Deprotect(LPCSTR szPlainName)
+static DWORD TestCreateArchive_Deprotect(LPCSTR szPlainName)
 {
     TLogHelper Logger("DeprotectTest", szPlainName);
     HANDLE hMpq1 = NULL;
@@ -3275,49 +3274,49 @@ static int TestCreateArchive_Deprotect(LPCSTR szPlainName)
     DWORD dwFileCount1 = 0;
     DWORD dwFileCount2 = 0;
     DWORD dwTestFlags = SEARCH_FLAG_LOAD_FILES | SEARCH_FLAG_HASH_FILES;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // First copy: The original (untouched) file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         AddStringBeforeExtension(szMpqName1, szPlainName, "_original");
-        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName1, &hMpq1);
-        if(nError != ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName1, &hMpq1);
+        if(dwErrCode != ERROR_SUCCESS)
             Logger.PrintMessage("Open failed: %s", szMpqName1);
     }
 
     // Second copy: Will be deprotected
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         AddStringBeforeExtension(szMpqName2, szPlainName, "_deprotected");
-        nError = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName2, &hMpq2);
-        if(nError != ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName2, &hMpq2);
+        if(dwErrCode != ERROR_SUCCESS)
             Logger.PrintMessage("Open failed: %s", szMpqName2);
     }
 
     // Deprotect the second map
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SFileSetCompactCallback(hMpq2, CompactCallback, &Logger);
         if(!SFileCompactArchive(hMpq2, NULL, false))
-            nError = Logger.PrintError("Failed to deprotect archive %s", szMpqName2);
+            dwErrCode = Logger.PrintError("Failed to deprotect archive %s", szMpqName2);
     }
 
     // Calculate number of files and compare their hash (archive 1)
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         memset(FileHash1, 0, sizeof(FileHash1));
-        nError = SearchArchive(&Logger, hMpq1, dwTestFlags, &dwFileCount1, FileHash1);
+        dwErrCode = SearchArchive(&Logger, hMpq1, dwTestFlags, &dwFileCount1, FileHash1);
     }
 
     // Calculate number of files and compare their hash (archive 2)
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         memset(FileHash1, 0, sizeof(FileHash2));
-        nError = SearchArchive(&Logger, hMpq2, dwTestFlags, &dwFileCount2, FileHash2);
+        dwErrCode = SearchArchive(&Logger, hMpq2, dwTestFlags, &dwFileCount2, FileHash2);
     }
 
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(dwFileCount1 != dwFileCount2)
             Logger.PrintMessage("Different file count (%u in %s; %u in %s)", dwFileCount1, szMpqName1, dwFileCount2, szMpqName2);
@@ -3330,30 +3329,30 @@ static int TestCreateArchive_Deprotect(LPCSTR szPlainName)
         SFileCloseArchive(hMpq2);
     if(hMpq1 != NULL)
         SFileCloseArchive(hMpq1);
-    return nError;
+    return dwErrCode;
 }
 */
 
-static int TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
+static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
 {
     TLogHelper Logger("CreateEmptyMpq", szPlainName);
     HANDLE hMpq = NULL;
     DWORD dwFileCount = 0;
-    int nError;
+    DWORD dwErrCode;
 
     // Create the full path name
-    nError = CreateNewArchive(&Logger, szPlainName, dwCreateFlags, 0, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, dwCreateFlags, 0, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SearchArchive(&Logger, hMpq);
         SFileCloseArchive(hMpq);
     }
 
     // Reopen the empty MPQ
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             SFileGetFileInfo(hMpq, SFileMpqNumberOfFiles, &dwFileCount, sizeof(dwFileCount), NULL);
 
@@ -3364,10 +3363,10 @@ static int TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_TestGaps(LPCTSTR szPlainName)
+static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
 {
     TLogHelper Logger("CreateGapsTest", szPlainName);
     ULONGLONG ByteOffset1 = 0xFFFFFFFF;
@@ -3375,25 +3374,25 @@ static int TestCreateArchive_TestGaps(LPCTSTR szPlainName)
     HANDLE hMpq = NULL;
     HANDLE hFile = NULL;
     TCHAR szFullPath[MAX_PATH];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Create new MPQ
-    nError = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_4, 4000, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_4, 4000, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Add one file and flush the archive
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
         SFileCloseArchive(hMpq);
         hMpq = NULL;
     }
 
     // Reopen the MPQ and add another file.
     // The new file must be added to the position of the (listfile)
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szPlainName);
-        nError = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             // Retrieve the position of the (listfile)
             if(SFileOpenFileEx(hMpq, LISTFILE_NAME, 0, &hFile))
@@ -3402,17 +3401,17 @@ static int TestCreateArchive_TestGaps(LPCTSTR szPlainName)
                 SFileCloseFile(hFile);
             }
             else
-                nError = GetLastError();
+                dwErrCode = GetLastError();
         }
     }
 
     // Add another file and check its position. It must be at the position of the former listfile
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         LPCSTR szAddedFile = "AddedFile02.txt";
 
         // Add another file
-        nError = AddFileToMpq(&Logger, hMpq, szAddedFile, "This is the second added file.", MPQ_FILE_COMPRESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szAddedFile, "This is the second added file.", MPQ_FILE_COMPRESS);
 
         // Retrieve the position of the (listfile)
         if(SFileOpenFileEx(hMpq, szAddedFile, 0, &hFile))
@@ -3421,34 +3420,34 @@ static int TestCreateArchive_TestGaps(LPCTSTR szPlainName)
             SFileCloseFile(hFile);
         }
         else
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Now check the positions
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(ByteOffset1 != ByteOffset2)
         {
             Logger.PrintError("The added file was not written to the position of (listfile)");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Close the archive if needed
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
+static DWORD TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
 {
     TLogHelper Logger("NonStdNamesTest", szPlainName);
     HANDLE hMpq = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Create new MPQ
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1, 4000, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1, 4000, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Add few files and close the archive
         AddFileToMpq(&Logger, hMpq, "AddedFile000.txt", "This is the file data 000.", MPQ_FILE_COMPRESS);
@@ -3479,37 +3478,37 @@ static int TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
     return ERROR_SUCCESS;
 }
 
-static int TestCreateArchive_Signed(LPCTSTR szPlainName, bool bSignAtCreate)
+static DWORD TestCreateArchive_Signed(LPCTSTR szPlainName, bool bSignAtCreate)
 {
     TLogHelper Logger("CreateSignedMpq", szPlainName);
     HANDLE hMpq = NULL;
     DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1;
     DWORD dwSignatures = 0;
     DWORD nVerifyError = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Method 1: Create the archive as signed
     if(bSignAtCreate)
         dwCreateFlags |= MPQ_CREATE_SIGNATURE;
 
     // Create new MPQ
-    nError = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, 4000, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, 4000, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Add one file and flush the archive
-        nError = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
     }
 
     // Sign the archive with weak signature
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
-            nError = ERROR_SUCCESS;
+            dwErrCode = ERROR_SUCCESS;
     }
 
     // Reopen the MPQ and add another file.
     // The new file must be added to the position of the (listfile)
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Query the signature types
         Logger.PrintProgress("Retrieving signatures ...");
@@ -3523,31 +3522,31 @@ static int TestCreateArchive_Signed(LPCTSTR szPlainName, bool bSignAtCreate)
         if((dwSignatures != SIGNATURE_TYPE_WEAK) && (nVerifyError != ERROR_WEAK_SIGNATURE_OK))
         {
             Logger.PrintMessage("Weak signature verification error");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
     // Close the archive
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
+static DWORD TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
 {
     TLogHelper Logger("CreateMpqEditor", szPlainName);
     HANDLE hMpq = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Create new MPQ
-    nError = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 4000, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 4000, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Flush the archive first
         SFileFlushArchive(hMpq);
 
         // Add one file
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, "This is the file data.", MPQ_FILE_COMPRESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, "This is the file data.", MPQ_FILE_COMPRESS);
 
         // Flush the archive again
         SFileFlushArchive(hMpq);
@@ -3555,13 +3554,13 @@ static int TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
     }
     else
     {
-        nError = GetLastError();
+        dwErrCode = GetLastError();
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlags)
+static DWORD TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlags)
 {
     TLogHelper Logger("CreateFullMpq", szPlainName);
     LPCSTR szFileData = "TestCreateArchive_FillArchive: Testing file data";
@@ -3570,7 +3569,7 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
     DWORD dwMaxFileCount = 6;
     DWORD dwCompression = MPQ_COMPRESSION_ZLIB;
     DWORD dwFlags = MPQ_FILE_ENCRYPTED | MPQ_FILE_COMPRESS;
-    int nError;
+    DWORD dwErrCode;
 
     //
     // Note that StormLib will round the maxfile count
@@ -3582,8 +3581,8 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
         dwMaxFileCount++;
 
     // Create the new MPQ archive
-    nError = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, dwMaxFileCount, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, dwMaxFileCount, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Flush the archive first
         SFileFlushArchive(hMpq);
@@ -3592,8 +3591,8 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
         for(unsigned int i = 0; i < dwMaxFileCount; i++)
         {
             sprintf(szFileName, "AddedFile%03u.txt", i);
-            nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
         }
 
@@ -3602,11 +3601,11 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
     }
 
     // Now the MPQ should be full. It must not be possible to add another file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
-        assert(nError != ERROR_SUCCESS);
-        nError = ERROR_SUCCESS;
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
+        assert(dwErrCode != ERROR_SUCCESS);
+        dwErrCode = ERROR_SUCCESS;
     }
 
     // Close the archive to enforce saving all tables
@@ -3615,48 +3614,48 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
     hMpq = NULL;
 
     // Reopen the archive again
-    if(nError == ERROR_SUCCESS)
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
 
     // The archive should still be full
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
         CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? true : false);
-        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
-        assert(nError != ERROR_SUCCESS);
-        nError = ERROR_SUCCESS;
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, MPQ_FILE_COMPRESS, MPQ_COMPRESSION_ZLIB, ERROR_DISK_FULL);
+        assert(dwErrCode != ERROR_SUCCESS);
+        dwErrCode = ERROR_SUCCESS;
     }
 
     // The (listfile) and (attributes) must be present
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
         CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? true : false);
-        nError = RemoveMpqFile(&Logger, hMpq, szFileName, ERROR_SUCCESS);
+        dwErrCode = RemoveMpqFile(&Logger, hMpq, szFileName, ERROR_SUCCESS);
     }
 
     // Now add the file again. This time, it should be possible OK
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_SUCCESS);
-        assert(nError == ERROR_SUCCESS);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_SUCCESS);
+        assert(dwErrCode == ERROR_SUCCESS);
     }
 
     // Now add the file again. This time, it should fail
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_ALREADY_EXISTS);
-        assert(nError != ERROR_SUCCESS);
-        nError = ERROR_SUCCESS;
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, dwFlags, dwCompression, ERROR_ALREADY_EXISTS);
+        assert(dwErrCode != ERROR_SUCCESS);
+        dwErrCode = ERROR_SUCCESS;
     }
 
     // Now add the file again. This time, it should fail
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, dwFlags, dwCompression, ERROR_DISK_FULL);
-        assert(nError != ERROR_SUCCESS);
-        nError = ERROR_SUCCESS;
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "ShouldNotBeHere.txt", szFileData, dwFlags, dwCompression, ERROR_DISK_FULL);
+        assert(dwErrCode != ERROR_SUCCESS);
+        dwErrCode = ERROR_SUCCESS;
     }
 
     // Close the archive and return
@@ -3665,10 +3664,10 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
     hMpq = NULL;
 
     // Reopen the archive for the third time to verify that both internal files are there
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, (dwCreateFlags & MPQ_CREATE_LISTFILE) ? true : false);
             CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwCreateFlags & MPQ_CREATE_ATTRIBUTES) ? true : false);
@@ -3676,44 +3675,44 @@ static int TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlag
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_IncMaxFileCount(LPCTSTR szPlainName)
+static DWORD TestCreateArchive_IncMaxFileCount(LPCTSTR szPlainName)
 {
     TLogHelper Logger("IncMaxFileCount", szPlainName);
     LPCSTR szFileData = "TestCreateArchive_IncMaxFileCount: Testing file data";
     char szFileName[MAX_PATH];
     HANDLE hMpq = NULL;
     DWORD dwMaxFileCount = 1;
-    int nError;
+    DWORD dwErrCode;
 
     // Create the new MPQ
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
 
     // Now add exactly one file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = AddFileToMpq(&Logger, hMpq, "AddFile_base.txt", szFileData);
+        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddFile_base.txt", szFileData);
         SFileFlushArchive(hMpq);
         SFileCloseArchive(hMpq);
     }
 
     // Now add 10 files. Each time we cannot add the file due to archive being full,
     // we increment the max file count
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         for(unsigned int i = 0; i < 10; i++)
         {
             // Open the archive again
-            nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
 
             // Add one file
             sprintf(szFileName, "AddFile_%04u.txt", i);
-            nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_UNDETERMINED_RESULT);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_UNDETERMINED_RESULT);
+            if(dwErrCode != ERROR_SUCCESS)
             {
                 // Increment the max file count by one
                 dwMaxFileCount = SFileGetMaxFileCount(hMpq) + 1;
@@ -3721,52 +3720,52 @@ static int TestCreateArchive_IncMaxFileCount(LPCTSTR szPlainName)
                 SFileSetMaxFileCount(hMpq, dwMaxFileCount);
 
                 // Attempt to create the file again
-                nError = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_SUCCESS);
+                dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, 0, 0, ERROR_SUCCESS);
             }
 
             // Compact the archive and close it
             SFileSetCompactCallback(hMpq, CompactCallback, &Logger);
             SFileCompactArchive(hMpq, NULL, false);
             SFileCloseArchive(hMpq);
-            if(nError != ERROR_SUCCESS)
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_UnicodeNames()
+static DWORD TestCreateArchive_UnicodeNames()
 {
     TLogHelper Logger("MpqUnicodeName");
     DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName1, dwCreateFlags | MPQ_CREATE_ARCHIVE_V1, 15);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName1, dwCreateFlags | MPQ_CREATE_ARCHIVE_V1, 15);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName2, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 58);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName2, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 58);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName3, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 15874);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName3, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 15874);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName4, dwCreateFlags | MPQ_CREATE_ARCHIVE_V4, 87541);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName4, dwCreateFlags | MPQ_CREATE_ARCHIVE_V4, 87541);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 87541);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 87541);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    nError = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 87541);
-    if(nError != ERROR_SUCCESS)
-        return nError;
+    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 87541);
+    if(dwErrCode != ERROR_SUCCESS)
+        return dwErrCode;
 
-    return nError;
+    return dwErrCode;
 }
 
 static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
@@ -3926,7 +3925,7 @@ static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
     return dwErrCode;
 }
 
-static int TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR szWaveFile)
+static DWORD TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR szWaveFile)
 {
     TLogHelper Logger("CompressionsTest", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive
@@ -3935,23 +3934,23 @@ static int TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR s
     DWORD dwCmprCount = sizeof(WaveCompressions) / sizeof(DWORD);
     DWORD dwAddedFiles = 0;
     DWORD dwFoundFiles = 0;
-    int nError;
+    DWORD dwErrCode;
 
     // Create paths for local file to be added
     CreateFullPathName(szFileName, _countof(szFileName), szMpqSubDir, szWaveFile);
 
     // Create new archive
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 0x40, &hMpq);
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 0x40, &hMpq);
 
     // Add the same file multiple times
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         Logger.UserTotal = dwCmprCount;
         for(unsigned int i = 0; i < dwCmprCount; i++)
         {
             sprintf(szArchivedName, "WaveFile_%02u.wav", i + 1);
-            nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName, MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_SECTOR_CRC, WaveCompressions[i]);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szFileName, MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_SECTOR_CRC, WaveCompressions[i]);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
 
             Logger.UserCount++;
@@ -3962,10 +3961,10 @@ static int TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR s
     }
 
     // Reopen the archive extract each WAVE file and try to play it
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             SearchArchive(&Logger, hMpq, SEARCH_FLAG_LOAD_FILES | SEARCH_FLAG_PLAY_WAVES, &dwFoundFiles, NULL);
             SFileCloseArchive(hMpq);
@@ -3976,14 +3975,14 @@ static int TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR s
         if(dwFoundFiles != (dwAddedFiles + 2))
         {
             Logger.PrintError("Number of found files does not match number of added files.");
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
+static DWORD TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
 {
     TFileData * pFileData;
     LPCSTR szReaddedFile = "AddedFile_##.txt";
@@ -3994,19 +3993,19 @@ static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
     DWORD dwMaxFileCount = 0x0E;
     DWORD dwFileCount = 0;
     size_t i;
-    int nError;
+    DWORD dwErrCode;
 
     // Create a new archive with the limit of 0x20 files
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
 
     // Add maximum files files
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         for(i = 0; i < dwMaxFileCount; i++)
         {
             sprintf(szArchivedName, szFileMask, i);
-            nError = AddFileToMpq(&Logger, hMpq, szArchivedName, "This is a text data.", 0, 0, ERROR_SUCCESS);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = AddFileToMpq(&Logger, hMpq, szArchivedName, "This is a text data.", 0, 0, ERROR_SUCCESS);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
 
             dwFileCount++;
@@ -4014,13 +4013,13 @@ static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
     }
 
     // Delete few middle files
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         for(i = 0; i < (dwMaxFileCount / 2); i++)
         {
             sprintf(szArchivedName, szFileMask, i);
-            nError = RemoveMpqFile(&Logger, hMpq, szArchivedName, ERROR_SUCCESS);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = RemoveMpqFile(&Logger, hMpq, szArchivedName, ERROR_SUCCESS);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
 
             dwFileCount--;
@@ -4033,11 +4032,11 @@ static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
     hMpq = NULL;
 
     // Reopen the archive to catch any asserts
-    if(nError == ERROR_SUCCESS)
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
 
     // Check that (listfile) is at the end
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         pFileData = LoadMpqFile(&Logger, hMpq, LISTFILE_NAME);
         if(pFileData != NULL)
@@ -4056,8 +4055,8 @@ static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
         }
 
         // Add new file to the archive. It should be added to the last position
-        nError = AddFileToMpq(&Logger, hMpq, szReaddedFile, "This is a re-added file.", 0, 0, ERROR_SUCCESS);
-        if(nError == ERROR_SUCCESS)
+        dwErrCode = AddFileToMpq(&Logger, hMpq, szReaddedFile, "This is a re-added file.", 0, 0, ERROR_SUCCESS);
+        if(dwErrCode == ERROR_SUCCESS)
         {
             // Force update of the tables
             SFileFlushArchive(hMpq);
@@ -4075,10 +4074,10 @@ static int TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
         SFileCloseArchive(hMpq);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int TestCreateArchive_BigArchive(LPCTSTR szPlainName)
+static DWORD TestCreateArchive_BigArchive(LPCTSTR szPlainName)
 {
     TLogHelper Logger("BigMpqTest", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive
@@ -4087,11 +4086,11 @@ static int TestCreateArchive_BigArchive(LPCTSTR szPlainName)
     DWORD dwMaxFileCount = 0x20;
     DWORD dwAddedCount = 0;
     size_t i;
-    int nError;
+    DWORD dwErrCode;
 
     // Create a new archive with the limit of 0x20 files
-    nError = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V3 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
-    if(nError == ERROR_SUCCESS)
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V3 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, dwMaxFileCount, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         LPCSTR szFileMask = "AddedFile_%02u.txt";
 
@@ -4102,8 +4101,8 @@ static int TestCreateArchive_BigArchive(LPCTSTR szPlainName)
         for(i = 0; i < dwMaxFileCount / 2; i++)
         {
             sprintf(szArchivedName, szFileMask, i + 1);
-            nError = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szLocalFileName, 0, 0, true);
-            if(nError != ERROR_SUCCESS)
+            dwErrCode = AddLocalFileToMpq(&Logger, hMpq, szArchivedName, szLocalFileName, 0, 0, true);
+            if(dwErrCode != ERROR_SUCCESS)
                 break;
 
             Logger.UserCount++;
@@ -4117,11 +4116,11 @@ static int TestCreateArchive_BigArchive(LPCTSTR szPlainName)
     hMpq = NULL;
 
     // Reopen the archive to catch any asserts
-    if(nError == ERROR_SUCCESS)
-        nError = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
 
     // Check that (listfile) is at the end
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, true);
         CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, true);
@@ -4129,7 +4128,7 @@ static int TestCreateArchive_BigArchive(LPCTSTR szPlainName)
         SFileCloseArchive(hMpq);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // "MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events"
@@ -4286,13 +4285,13 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Tests on a local listfile
     //
-
+    /*
     if(dwErrCode == ERROR_SUCCESS)
     {
         TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
         dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
     }
-
+    */
     //
     // Open all files from the command line
     //

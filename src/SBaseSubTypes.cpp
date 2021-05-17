@@ -92,7 +92,7 @@ typedef struct _TSQPBlock
 // Functions - SQP file format
 
 // This function converts SQP file header into MPQ file header
-int ConvertSqpHeaderToFormat4(
+DWORD ConvertSqpHeaderToFormat4(
     TMPQArchive * ha,
     ULONGLONG FileSize,
     DWORD dwFlags)
@@ -187,7 +187,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
     TSQPHash * pSqpHashEnd;
     TSQPHash * pSqpHash;
     TMPQHash * pMpqHash;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Load the hash table
     pSqpHashTable = (TSQPHash *)LoadSqpTable(ha, pHeader->dwHashTablePos, pHeader->dwHashTableSize * sizeof(TSQPHash), MPQ_KEY_HASH_TABLE);
@@ -203,11 +203,11 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
             {
                 // Check block index against the size of the block table
                 if(pHeader->dwBlockTableSize <= MPQ_BLOCK_INDEX(pSqpHash) && pSqpHash->dwBlockIndex < HASH_ENTRY_DELETED)
-                    nError = ERROR_FILE_CORRUPT;
+                    dwErrCode = ERROR_FILE_CORRUPT;
 
                 // We do not support nonzero locale and platform ID
                 if(pSqpHash->dwAlwaysZero != 0 && pSqpHash->dwAlwaysZero != HASH_ENTRY_FREE)
-                    nError = ERROR_FILE_CORRUPT;
+                    dwErrCode = ERROR_FILE_CORRUPT;
 
                 // Store the file name hash
                 pMpqHash->dwName1 = pSqpHash->dwName1;
@@ -222,7 +222,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
         }
 
         // If an error occured, we need to free the hash table
-        if(nError != ERROR_SUCCESS)
+        if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pSqpHashTable);
             pSqpHashTable = NULL;
@@ -242,7 +242,7 @@ TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha)
     TSQPBlock * pSqpBlock;
     TMPQBlock * pMpqBlock;
     DWORD dwFlags;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Load the hash table
     pSqpBlockTable = (TSQPBlock *)LoadSqpTable(ha, pHeader->dwBlockTablePos, pHeader->dwBlockTableSize * sizeof(TSQPBlock), MPQ_KEY_BLOCK_TABLE);
@@ -255,7 +255,7 @@ TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha)
         {
             // Check for valid flags
             if(pSqpBlock->dwFlags & ~MPQ_FILE_VALID_FLAGS)
-                nError = ERROR_FILE_CORRUPT;
+                dwErrCode = ERROR_FILE_CORRUPT;
 
             // Convert SQP block table entry to MPQ block table entry
             dwFlags = pSqpBlock->dwFlags;
@@ -265,7 +265,7 @@ TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha)
         }
 
         // If an error occured, we need to free the hash table
-        if(nError != ERROR_SUCCESS)
+        if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pSqpBlockTable);
             pSqpBlockTable = NULL;
@@ -384,7 +384,7 @@ static const unsigned char MpkDecryptionKey[512] =
 // Functions - MPK file format
 
 // This function converts MPK file header into MPQ file header
-int ConvertMpkHeaderToFormat4(
+DWORD ConvertMpkHeaderToFormat4(
     TMPQArchive * ha,
     ULONGLONG FileSize,
     DWORD dwFlags)

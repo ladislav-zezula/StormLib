@@ -40,12 +40,12 @@ static USHORT GetSectorSizeShift(DWORD dwSectorSize)
     return wSectorSizeShift;
 }
 
-static int WriteNakedMPQHeader(TMPQArchive * ha)
+static DWORD WriteNakedMPQHeader(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
     TMPQHeader Header;
     DWORD dwBytesToWrite = pHeader->dwHeaderSize;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Prepare the naked MPQ header
     memset(&Header, 0, sizeof(TMPQHeader));
@@ -61,9 +61,9 @@ static int WriteNakedMPQHeader(TMPQArchive * ha)
     BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_3);
     BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_4);
     if(!FileStream_Write(ha->pStream, &ha->MpqPos, &Header, dwBytesToWrite))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    return nError;
+    return dwErrCode;
 }
 
 //-----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     DWORD dwHashTableSize = 0;
     DWORD dwReservedFiles = 0;              // Number of reserved file entries
     DWORD dwMpqFlags = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Check the parameters, if they are valid
     if(szMpqName == NULL || *szMpqName == 0 || pCreateInfo == NULL || phMpq == NULL)
@@ -184,7 +184,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     FileStream_GetSize(pStream, &MpqPos);
     MpqPos = (MpqPos + 0x1FF) & (ULONGLONG)0xFFFFFFFFFFFFFE00ULL;
     if(!FileStream_SetSize(pStream, MpqPos))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
 #ifdef _DEBUG
     // Debug code, used for testing StormLib
@@ -192,14 +192,14 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
 #endif
 
     // Create the archive handle
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if((ha = STORM_ALLOC(TMPQArchive, 1)) == NULL)
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
     }
 
     // Fill the MPQ archive handle structure
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         memset(ha, 0, sizeof(TMPQArchive));
         ha->pfnHashString   = HashStringSlash;
@@ -236,39 +236,39 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
             pHeader->dwRawChunkSize = pCreateInfo->dwRawChunkSize;
 
         // Write the naked MPQ header
-        nError = WriteNakedMPQHeader(ha);
+        dwErrCode = WriteNakedMPQHeader(ha);
     }
 
     // Create initial HET table, if the caller required an MPQ format 3.0 or newer
-    if(nError == ERROR_SUCCESS && pCreateInfo->dwMpqVersion >= MPQ_FORMAT_VERSION_3 && pCreateInfo->dwMaxFileCount != 0)
+    if(dwErrCode == ERROR_SUCCESS && pCreateInfo->dwMpqVersion >= MPQ_FORMAT_VERSION_3 && pCreateInfo->dwMaxFileCount != 0)
     {
         ha->pHetTable = CreateHetTable(ha->dwFileTableSize, 0, 0x40, NULL);
         if(ha->pHetTable == NULL)
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
     }
 
     // Create initial hash table
-    if(nError == ERROR_SUCCESS && dwHashTableSize != 0)
+    if(dwErrCode == ERROR_SUCCESS && dwHashTableSize != 0)
     {
-        nError = CreateHashTable(ha, dwHashTableSize);
+        dwErrCode = CreateHashTable(ha, dwHashTableSize);
     }
 
     // Create initial file table
-    if(nError == ERROR_SUCCESS && ha->dwMaxFileCount != 0)
+    if(dwErrCode == ERROR_SUCCESS && ha->dwMaxFileCount != 0)
     {
-        nError = CreateFileTable(ha, ha->dwMaxFileCount);
+        dwErrCode = CreateFileTable(ha, ha->dwMaxFileCount);
     }
 
     // Cleanup : If an error, delete all buffers and return
-    if(nError != ERROR_SUCCESS)
+    if(dwErrCode != ERROR_SUCCESS)
     {
         FileStream_Close(pStream);
         FreeArchiveHandle(ha);
-        SetLastError(nError);
+        SetLastError(dwErrCode);
         ha = NULL;
     }
 
     // Return the values
     *phMpq = (HANDLE)ha;
-    return (nError == ERROR_SUCCESS);
+    return (dwErrCode == ERROR_SUCCESS);
 }

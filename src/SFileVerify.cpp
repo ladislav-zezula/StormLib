@@ -344,7 +344,7 @@ static bool CalculateMpqHashSha1(
     return true;
 }
 
-static int VerifyRawMpqData(
+static DWORD VerifyRawMpqData(
     TMPQArchive * ha,
     ULONGLONG ByteOffset,
     DWORD dwDataSize)
@@ -357,7 +357,7 @@ static int VerifyRawMpqData(
     DWORD dwChunkCount;
     DWORD dwChunkSize = ha->pHeader->dwRawChunkSize;
     DWORD dwMD5Size;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Don't verify zero-sized blocks
     if(dwDataSize == 0)
@@ -377,10 +377,10 @@ static int VerifyRawMpqData(
     pbMD5Array1 = STORM_ALLOC(BYTE, dwMD5Size);
     pbMD5Array2 = STORM_ALLOC(BYTE, dwMD5Size);
     if(pbMD5Array1 == NULL || pbMD5Array2 == NULL)
-        nError = ERROR_NOT_ENOUGH_MEMORY;
+        dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
 
     // Calculate MD5 of each data chunk
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         LPBYTE pbMD5 = pbMD5Array1;
 
@@ -392,7 +392,7 @@ static int VerifyRawMpqData(
             // Read the data chunk
             if(!FileStream_Read(ha->pStream, &DataOffset, pbDataChunk, dwBytesInChunk))
             {
-                nError = ERROR_FILE_CORRUPT;
+                dwErrCode = ERROR_FILE_CORRUPT;
                 break;
             }
 
@@ -407,19 +407,19 @@ static int VerifyRawMpqData(
     }
 
     // Read the MD5 array
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Read the array of MD5
         if(!FileStream_Read(ha->pStream, &DataOffset, pbMD5Array2, dwMD5Size))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Compare the array of MD5
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Compare the MD5
         if(memcmp(pbMD5Array1, pbMD5Array2, dwMD5Size))
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
     }
 
     // Free memory and return result
@@ -429,7 +429,7 @@ static int VerifyRawMpqData(
         STORM_FREE(pbMD5Array1);
     if(pbDataChunk != NULL)
         STORM_FREE(pbDataChunk);
-    return nError;
+    return dwErrCode;
 }
 
 static DWORD VerifyWeakSignature(
@@ -780,11 +780,11 @@ bool QueryMpqSignatureInfo(
 //-----------------------------------------------------------------------------
 // Support for weak signature
 
-int SSignFileCreate(TMPQArchive * ha)
+DWORD SSignFileCreate(TMPQArchive * ha)
 {
     TMPQFile * hf = NULL;
     BYTE EmptySignature[MPQ_SIGNATURE_FILE_SIZE];
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Only save the signature if we should do so
     if(ha->dwFileFlags3 != 0)
@@ -796,7 +796,7 @@ int SSignFileCreate(TMPQArchive * ha)
 
         // Create the (signature) file file in the MPQ
         // Note that the file must not be compressed or encrypted
-        nError = SFileAddFile_Init(ha, SIGNATURE_NAME,
+        dwErrCode = SFileAddFile_Init(ha, SIGNATURE_NAME,
                                        0,
                                        sizeof(EmptySignature),
                                        LANG_NEUTRAL,
@@ -804,11 +804,11 @@ int SSignFileCreate(TMPQArchive * ha)
                                       &hf);
 
         // Write the empty signature file to the archive
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
             // Write the empty zeroed file to the MPQ
             memset(EmptySignature, 0, sizeof(EmptySignature));
-            nError = SFileAddFile_Write(hf, EmptySignature, (DWORD)sizeof(EmptySignature), 0);
+            dwErrCode = SFileAddFile_Write(hf, EmptySignature, (DWORD)sizeof(EmptySignature), 0);
             SFileAddFile_Finish(hf);
 
             // Clear the invalid mark
@@ -817,10 +817,10 @@ int SSignFileCreate(TMPQArchive * ha)
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-int SSignFileFinish(TMPQArchive * ha)
+DWORD SSignFileFinish(TMPQArchive * ha)
 {
     MPQ_SIGNATURE_INFO si;
     unsigned long signature_len = MPQ_WEAK_SIGNATURE_SIZE;
@@ -903,7 +903,7 @@ DWORD WINAPI SFileVerifyFile(HANDLE hMpq, const char * szFileName, DWORD dwFlags
 }
 
 // Verifies raw data of the archive Only works for MPQs version 4 or newer
-int WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * szFileName)
+DWORD WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * szFileName)
 {
     TMPQArchive * ha = (TMPQArchive *)hMpq;
     TFileEntry * pFileEntry;

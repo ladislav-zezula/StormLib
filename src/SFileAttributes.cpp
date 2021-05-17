@@ -140,7 +140,7 @@ static DWORD CheckSizeOfAttributesFile(DWORD cbAttrFile, DWORD dwAttrFlags, DWOR
     return 0;
 }
 
-static int LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrFile)
+static DWORD LoadAttributesFile(TMPQArchive * ha, LPBYTE pbAttrFile, DWORD cbAttrFile)
 {
     LPBYTE pbAttrFileEnd = pbAttrFile + cbAttrFile;
     LPBYTE pbAttrPtr = pbAttrFile;
@@ -357,13 +357,13 @@ static LPBYTE CreateAttributesFile(TMPQArchive * ha, DWORD * pcbAttrFile)
 //-----------------------------------------------------------------------------
 // Public functions (internal use by StormLib)
 
-int SAttrLoadAttributes(TMPQArchive * ha)
+DWORD SAttrLoadAttributes(TMPQArchive * ha)
 {
     HANDLE hFile = NULL;
     LPBYTE pbAttrFile;
     DWORD dwBytesRead;
     DWORD cbAttrFile = 0;
-    int nError = ERROR_FILE_CORRUPT;
+    DWORD dwErrCode = ERROR_FILE_CORRUPT;
 
     // File table must be initialized
     assert(ha->pFileTable != NULL);
@@ -393,7 +393,7 @@ int SAttrLoadAttributes(TMPQArchive * ha)
                 // Load the entire file to memory
                 SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL);
                 if(dwBytesRead == cbAttrFile)
-                    nError = LoadAttributesFile(ha, pbAttrFile, cbAttrFile);
+                    dwErrCode = LoadAttributesFile(ha, pbAttrFile, cbAttrFile);
 
                 // Free the buffer
                 STORM_FREE(pbAttrFile);
@@ -404,16 +404,16 @@ int SAttrLoadAttributes(TMPQArchive * ha)
         SFileCloseFile(hFile);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 // Saves the (attributes) to the MPQ
-int SAttrFileSaveToMpq(TMPQArchive * ha)
+DWORD SAttrFileSaveToMpq(TMPQArchive * ha)
 {
     TMPQFile * hf = NULL;
     LPBYTE pbAttrFile;
     DWORD cbAttrFile = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Only save the attributes if we should do so
     if(ha->dwFileFlags2 != 0)
@@ -433,7 +433,7 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
                 ha->dwFileFlags2 = GetDefaultSpecialFileFlags(cbAttrFile, ha->pHeader->wFormatVersion);
 
             // Create the attributes file in the MPQ
-            nError = SFileAddFile_Init(ha, ATTRIBUTES_NAME,
+            dwErrCode = SFileAddFile_Init(ha, ATTRIBUTES_NAME,
                                            0,
                                            cbAttrFile,
                                            LANG_NEUTRAL,
@@ -441,10 +441,10 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
                                           &hf);
 
             // Write the attributes file raw data to it
-            if(nError == ERROR_SUCCESS)
+            if(dwErrCode == ERROR_SUCCESS)
             {
                 // Write the content of the attributes file to the MPQ
-                nError = SFileAddFile_Write(hf, pbAttrFile, cbAttrFile, MPQ_COMPRESSION_ZLIB);
+                dwErrCode = SFileAddFile_Write(hf, pbAttrFile, cbAttrFile, MPQ_COMPRESSION_ZLIB);
                 SFileAddFile_Finish(hf);
             }
 
@@ -458,11 +458,11 @@ int SAttrFileSaveToMpq(TMPQArchive * ha)
         else
         {
             // If the (attributes) file would be empty, its OK
-            nError = (cbAttrFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = (cbAttrFile == 0) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
         }
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 //-----------------------------------------------------------------------------

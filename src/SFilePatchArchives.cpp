@@ -146,7 +146,7 @@ static void Decompress_RLE(LPBYTE pbDecompressed, DWORD cbDecompressed, LPBYTE p
     }
 }
 
-static int LoadFilePatch_COPY(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
+static DWORD LoadFilePatch_COPY(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
 {
     DWORD cbBytesToRead = pFullPatch->dwSizeOfPatchData - sizeof(MPQ_PATCH_HEADER);
     DWORD cbBytesRead = 0;
@@ -156,14 +156,14 @@ static int LoadFilePatch_COPY(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
     return (cbBytesRead == cbBytesToRead) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
-static int LoadFilePatch_BSD0(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
+static DWORD LoadFilePatch_BSD0(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
 {
     LPBYTE pbDecompressed = (LPBYTE)(pFullPatch + 1);
     LPBYTE pbCompressed = NULL;
     DWORD cbDecompressed = 0;
     DWORD cbCompressed = 0;
     DWORD dwBytesRead = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Calculate the size of compressed data
     cbDecompressed = pFullPatch->dwSizeOfPatchData - sizeof(MPQ_PATCH_HEADER);
@@ -174,18 +174,18 @@ static int LoadFilePatch_BSD0(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
     {
         pbCompressed = STORM_ALLOC(BYTE, cbCompressed);
         if(pbCompressed == NULL)
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
 
         // Read the compressed patch data
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
             SFileReadFile((HANDLE)hf, pbCompressed, cbCompressed, &dwBytesRead, NULL);
             if(dwBytesRead != cbCompressed)
-                nError = ERROR_FILE_CORRUPT;
+                dwErrCode = ERROR_FILE_CORRUPT;
         }
 
         // Decompress the data
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
             Decompress_RLE(pbDecompressed, cbDecompressed, pbCompressed, cbCompressed);
 
         if(pbCompressed != NULL)
@@ -195,13 +195,13 @@ static int LoadFilePatch_BSD0(TMPQFile * hf, PMPQ_PATCH_HEADER pFullPatch)
     {
         SFileReadFile((HANDLE)hf, pbDecompressed, cbDecompressed, &dwBytesRead, NULL);
         if(dwBytesRead != cbDecompressed)
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
     }
 
-    return nError;
+    return dwErrCode;
 }
 
-static int ApplyFilePatch_COPY(
+static DWORD ApplyFilePatch_COPY(
     TMPQPatcher * pPatcher,
     PMPQ_PATCH_HEADER pFullPatch,
     LPBYTE pbTarget,
@@ -216,7 +216,7 @@ static int ApplyFilePatch_COPY(
     return ERROR_SUCCESS;
 }
 
-static int ApplyFilePatch_BSD0(
+static DWORD ApplyFilePatch_BSD0(
     TMPQPatcher * pPatcher,
     PMPQ_PATCH_HEADER pFullPatch,
     LPBYTE pbTarget,
@@ -318,7 +318,7 @@ static int ApplyFilePatch_BSD0(
 static PMPQ_PATCH_HEADER LoadFullFilePatch(TMPQFile * hf, MPQ_PATCH_HEADER & PatchHeader)
 {
     PMPQ_PATCH_HEADER pFullPatch;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // BSWAP the entire header, if needed
     BSWAP_ARRAY32_UNSIGNED(&PatchHeader, sizeof(DWORD) * 6);
@@ -336,26 +336,26 @@ static PMPQ_PATCH_HEADER LoadFullFilePatch(TMPQFile * hf, MPQ_PATCH_HEADER & Pat
         memcpy(pFullPatch, &PatchHeader, sizeof(MPQ_PATCH_HEADER));
 
         // Read the patch, depending on patch type
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
             switch(PatchHeader.dwPatchType)
             {
                 case 0x59504f43:    // 'COPY'
-                    nError = LoadFilePatch_COPY(hf, pFullPatch);
+                    dwErrCode = LoadFilePatch_COPY(hf, pFullPatch);
                     break;
 
                 case 0x30445342:    // 'BSD0'
-                    nError = LoadFilePatch_BSD0(hf, pFullPatch);
+                    dwErrCode = LoadFilePatch_BSD0(hf, pFullPatch);
                     break;
 
                 default:
-                    nError = ERROR_FILE_CORRUPT;
+                    dwErrCode = ERROR_FILE_CORRUPT;
                     break;
             }
         }
 
         // If something failed, free the patch buffer
-        if(nError != ERROR_SUCCESS)
+        if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pFullPatch);
             pFullPatch = NULL;
@@ -366,13 +366,13 @@ static PMPQ_PATCH_HEADER LoadFullFilePatch(TMPQFile * hf, MPQ_PATCH_HEADER & Pat
     return pFullPatch;
 }
 
-static int ApplyFilePatch(
+static DWORD ApplyFilePatch(
     TMPQPatcher * pPatcher,
     PMPQ_PATCH_HEADER pFullPatch)
 {
     LPBYTE pbSource = (pPatcher->nCounter & 0x1) ? pPatcher->pbFileData2 : pPatcher->pbFileData1;
     LPBYTE pbTarget = (pPatcher->nCounter & 0x1) ? pPatcher->pbFileData1 : pPatcher->pbFileData2;
-    int nError;
+    DWORD dwErrCode;
 
     // Sanity checks
     assert(pFullPatch->dwSizeAfterPatch <= pPatcher->cbMaxFileData);
@@ -381,30 +381,30 @@ static int ApplyFilePatch(
     switch(pFullPatch->dwPatchType)
     {
         case 0x59504f43:    // 'COPY'
-            nError = ApplyFilePatch_COPY(pPatcher, pFullPatch, pbTarget, pbSource);
+            dwErrCode = ApplyFilePatch_COPY(pPatcher, pFullPatch, pbTarget, pbSource);
             break;
 
         case 0x30445342:    // 'BSD0'
-            nError = ApplyFilePatch_BSD0(pPatcher, pFullPatch, pbTarget, pbSource);
+            dwErrCode = ApplyFilePatch_BSD0(pPatcher, pFullPatch, pbTarget, pbSource);
             break;
 
         default:
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
             break;
     }
 
     // Verify MD5 after patch
-    if(nError == ERROR_SUCCESS && pFullPatch->dwSizeAfterPatch != 0)
+    if(dwErrCode == ERROR_SUCCESS && pFullPatch->dwSizeAfterPatch != 0)
     {
         // Verify the patched file
         if(!VerifyDataBlockHash(pbTarget, pFullPatch->dwSizeAfterPatch, pFullPatch->md5_after_patch))
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
 
         // Copy the MD5 of the new block
         memcpy(pPatcher->this_md5, pFullPatch->md5_after_patch, MD5_DIGEST_SIZE);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 //-----------------------------------------------------------------------------
@@ -934,7 +934,7 @@ bool IsIncrementalPatchFile(const void * pvData, DWORD cbData, LPDWORD pdwPatche
     return false;
 }
 
-int Patch_InitPatcher(TMPQPatcher * pPatcher, TMPQFile * hf)
+DWORD Patch_InitPatcher(TMPQPatcher * pPatcher, TMPQFile * hf)
 {
     DWORD cbMaxFileData = 0;
 
@@ -987,14 +987,14 @@ int Patch_InitPatcher(TMPQPatcher * pPatcher, TMPQFile * hf)
 // 9 patches in a row, each requiring 70 MB memory (35 MB patch data + 35 MB work buffer)
 //
 
-int Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf)
+DWORD Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf)
 {
     PMPQ_PATCH_HEADER pFullPatch;
     MPQ_PATCH_HEADER PatchHeader1;
     MPQ_PATCH_HEADER PatchHeader2 = {0};
     TMPQFile * hfBase = hf;
     DWORD cbBytesRead = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Move to the first patch
     assert(hfBase->pbFileData == NULL);
@@ -1007,7 +1007,7 @@ int Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf)
         return ERROR_FILE_CORRUPT;
 
     // Perform the patching process
-    while(nError == ERROR_SUCCESS && hf != NULL)
+    while(dwErrCode == ERROR_SUCCESS && hf != NULL)
     {
         // Try to read the next patch header. If the md5_before_patch
         // still matches we go directly to the next one and repeat
@@ -1032,12 +1032,12 @@ int Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf)
         if(pFullPatch != NULL)
         {
             // Apply the patch
-            nError = ApplyFilePatch(pPatcher, pFullPatch);
+            dwErrCode = ApplyFilePatch(pPatcher, pFullPatch);
             STORM_FREE(pFullPatch);
         }
         else
         {
-            nError = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
 
         // Move to the next patch
@@ -1047,7 +1047,7 @@ int Patch_Process(TMPQPatcher * pPatcher, TMPQFile * hf)
     }
 
     // Put the result data to the file structure
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Swap the pointer to the file data structure
         if(pPatcher->nCounter & 0x01)
@@ -1094,16 +1094,16 @@ bool WINAPI SFileOpenPatchArchive(
     TMPQArchive * haPatch;
     TMPQArchive * ha = (TMPQArchive *)hMpq;
     HANDLE hPatchMpq = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Keep compiler happy
     dwFlags = dwFlags;
 
     // Verify input parameters
     if(!IsValidMpqHandle(hMpq))
-        nError = ERROR_INVALID_HANDLE;
+        dwErrCode = ERROR_INVALID_HANDLE;
     if(szPatchMpqName == NULL || *szPatchMpqName == 0)
-        nError = ERROR_INVALID_PARAMETER;
+        dwErrCode = ERROR_INVALID_PARAMETER;
 
     //
     // We don't allow adding patches to archives that have been open for write
@@ -1117,14 +1117,14 @@ bool WINAPI SFileOpenPatchArchive(
     // 5) Now what ?
     //
 
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(!(ha->dwFlags & MPQ_FLAG_READ_ONLY))
-            nError = ERROR_ACCESS_DENIED;
+            dwErrCode = ERROR_ACCESS_DENIED;
     }
 
     // Open the archive like it is normal archive
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(SFileOpenArchive(szPatchMpqName, 0, MPQ_OPEN_READ_ONLY | MPQ_OPEN_PATCH, &hPatchMpq))
         {
@@ -1151,15 +1151,15 @@ bool WINAPI SFileOpenPatchArchive(
 
             // Close the archive
             SFileCloseArchive(hPatchMpq);
-            nError = ERROR_CANT_FIND_PATCH_PREFIX;
+            dwErrCode = ERROR_CANT_FIND_PATCH_PREFIX;
         }
         else
         {
-            nError = GetLastError();
+            dwErrCode = GetLastError();
         }
     }
 
-    SetLastError(nError);
+    SetLastError(dwErrCode);
     return false;
 }
 

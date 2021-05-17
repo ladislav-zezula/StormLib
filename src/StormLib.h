@@ -884,7 +884,7 @@ typedef struct _TMPQFile
     unsigned char  hctx[HASH_STATE_SIZE];       // Hash state for MD5. Used when saving file to MPQ
     DWORD          dwCrc32;                     // CRC32 value, used when saving file to MPQ
 
-    int            nAddFileError;               // Result of the "Add File" operations
+    DWORD          dwAddFileError;              // Result of the "Add File" operations
 
     bool           bLoadedSectorCRCs;           // If true, we already tried to load sector CRCs
     bool           bCheckSectorCRCs;            // If true, then SFileReadFile will check sector CRCs when reading the file
@@ -1009,7 +1009,7 @@ bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 // Adds another listfile into MPQ. The currently added listfile(s) remain,
 // so you can use this API to combining more listfiles.
 // Note that this function is internally called by SFileFindFirstFile
-int    WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile);
+DWORD  WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile);
 
 // Archive compacting
 bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvUserData);
@@ -1060,7 +1060,7 @@ bool   WINAPI SFileGetFileChecksums(HANDLE hMpq, const char * szFileName, LPDWOR
 DWORD  WINAPI SFileVerifyFile(HANDLE hMpq, const char * szFileName, DWORD dwFlags);
 
 // Verifies raw data of the archive. Only works for MPQs version 4 or newer
-int    WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * szFileName);
+DWORD  WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * szFileName);
 
 // Verifies the signature, if present
 bool   WINAPI SFileSignArchive(HANDLE hMpq, DWORD dwSignatureType);
@@ -1078,7 +1078,7 @@ bool   WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileDa
 bool   WINAPI SListFileFindClose(HANDLE hFind);
 
 // Locale support
-int    WINAPI SFileEnumLocales(HANDLE hMpq, const char * szFileName, LCID * plcLocales, LPDWORD pdwMaxLocales, DWORD dwSearchScope);
+DWORD  WINAPI SFileEnumLocales(HANDLE hMpq, const char * szFileName, LCID * plcLocales, LPDWORD pdwMaxLocales, DWORD dwSearchScope);
 
 //-----------------------------------------------------------------------------
 // Support for adding files to the MPQ

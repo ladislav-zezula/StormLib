@@ -42,7 +42,7 @@ static DWORD GetMpqFileCount(TMPQArchive * ha)
     return dwFileCount;
 }
 
-static bool GetInfo_ReturnError(DWORD dwErrCode)
+static bool GetInfo_ReturdwErrCode(DWORD dwErrCode)
 {
     SetLastError(dwErrCode);
     return false;
@@ -56,11 +56,11 @@ static bool GetInfo_BufferCheck(void * pvFileInfo, DWORD cbFileInfo, DWORD cbDat
 
     // Check for sufficient buffer
     if(cbData > cbFileInfo)
-        return GetInfo_ReturnError(ERROR_INSUFFICIENT_BUFFER);
+        return GetInfo_ReturdwErrCode(ERROR_INSUFFICIENT_BUFFER);
 
     // If the buffer size is sufficient, check for valid user buffer
     if(pvFileInfo == NULL)
-        return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+        return GetInfo_ReturdwErrCode(ERROR_INVALID_PARAMETER);
 
     // Buffers and sizes are OK, we are ready to proceed file copying
     return true;
@@ -150,7 +150,7 @@ static bool GetInfo_PatchChain(TMPQFile * hf, void * pvFileInfo, DWORD cbFileInf
 
     // Patch chain is only supported on MPQ files. Local files are not supported.
     if(hf->pStream != NULL)
-        return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+        return GetInfo_ReturdwErrCode(ERROR_INVALID_PARAMETER);
 
     // Calculate the necessary length of the multi-string
     for(hfTemp = hf; hfTemp != NULL; hfTemp = hfTemp->hfPatch)
@@ -208,13 +208,13 @@ bool WINAPI SFileGetFileInfo(
     if((int)InfoClass <= (int)SFileMpqFlags)
     {
         if((ha = IsValidMpqHandle(hMpqOrFile)) == NULL)
-            return GetInfo_ReturnError(ERROR_INVALID_HANDLE);
+            return GetInfo_ReturdwErrCode(ERROR_INVALID_HANDLE);
         pHeader = ha->pHeader;
     }
     else
     {
         if((hf = IsValidFileHandle(hMpqOrFile)) == NULL)
-            return GetInfo_ReturnError(ERROR_INVALID_HANDLE);
+            return GetInfo_ReturdwErrCode(ERROR_INVALID_HANDLE);
         pFileEntry = hf->pFileEntry;
     }
 
@@ -234,12 +234,12 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqUserDataHeader:
             if(ha->pUserData == NULL)
-                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+                return GetInfo_ReturdwErrCode(ERROR_INVALID_PARAMETER);
             return GetInfo_ReadFromFile(pvFileInfo, cbFileInfo, ha->pStream, ha->UserDataPos, sizeof(TMPQUserData), pcbLengthNeeded);
 
         case SFileMpqUserData:
             if(ha->pUserData == NULL)
-                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+                return GetInfo_ReturdwErrCode(ERROR_INVALID_PARAMETER);
             return GetInfo_ReadFromFile(pvFileInfo, cbFileInfo, ha->pStream, ha->UserDataPos + sizeof(TMPQUserData), ha->pUserData->dwHeaderOffs - sizeof(TMPQUserData), pcbLengthNeeded);
 
         case SFileMpqHeaderOffset:
@@ -260,12 +260,12 @@ bool WINAPI SFileGetFileInfo(
         case SFileMpqHetHeader:
             pvSrcFileInfo = LoadExtTable(ha, pHeader->HetTablePos64, (size_t)pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
             if(pvSrcFileInfo == NULL)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo_Allocated(pvFileInfo, cbFileInfo, pvSrcFileInfo, sizeof(TMPQHetHeader), pcbLengthNeeded);
 
         case SFileMpqHetTable:
             if((pvSrcFileInfo = LoadHetTable(ha)) == NULL)
-                return GetInfo_ReturnError(ERROR_NOT_ENOUGH_MEMORY);
+                return GetInfo_ReturdwErrCode(ERROR_NOT_ENOUGH_MEMORY);
             return GetInfo_TablePointer(pvFileInfo, cbFileInfo, pvSrcFileInfo, InfoClass, pcbLengthNeeded);
 
         case SFileMpqBetTableOffset:
@@ -279,7 +279,7 @@ bool WINAPI SFileGetFileInfo(
             // Retrieve the table and its size
             pvSrcFileInfo = LoadExtTable(ha, pHeader->BetTablePos64, (size_t)pHeader->BetTableSize64, BET_TABLE_SIGNATURE, MPQ_KEY_BLOCK_TABLE);
             if(pvSrcFileInfo == NULL)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             cbSrcFileInfo = sizeof(TMPQBetHeader) + ((TMPQBetHeader *)pvSrcFileInfo)->dwFlagCount * sizeof(DWORD);
 
             // It is allowed for the caller to only require BET header
@@ -289,7 +289,7 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqBetTable:
             if((pvSrcFileInfo = LoadBetTable(ha)) == NULL)
-                return GetInfo_ReturnError(ERROR_NOT_ENOUGH_MEMORY);
+                return GetInfo_ReturdwErrCode(ERROR_NOT_ENOUGH_MEMORY);
             return GetInfo_TablePointer(pvFileInfo, cbFileInfo, pvSrcFileInfo, InfoClass, pcbLengthNeeded);
 
         case SFileMpqHashTableOffset:
@@ -318,7 +318,7 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqBlockTable:
             if(MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos) >= ha->FileSize)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             cbSrcFileInfo = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
             pvSrcFileInfo = LoadBlockTable(ha, true);
             return GetInfo_Allocated(pvFileInfo, cbFileInfo, pvSrcFileInfo, cbSrcFileInfo, pcbLengthNeeded);
@@ -330,27 +330,27 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &pHeader->HiBlockTableSize64, sizeof(ULONGLONG), pcbLengthNeeded);
 
         case SFileMpqHiBlockTable:
-            return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+            return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
 
         case SFileMpqSignatures:
             if(!QueryMpqSignatureInfo(ha, &SignatureInfo))
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo(pvFileInfo, cbFileInfo, &SignatureInfo.SignatureTypes, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileMpqStrongSignatureOffset:
             if(QueryMpqSignatureInfo(ha, &SignatureInfo) == false || (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG) == 0)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo(pvFileInfo, cbFileInfo, &SignatureInfo.EndMpqData, sizeof(ULONGLONG), pcbLengthNeeded);
 
         case SFileMpqStrongSignatureSize:
             if(QueryMpqSignatureInfo(ha, &SignatureInfo) == false || (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG) == 0)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             dwInt32Value = MPQ_STRONG_SIGNATURE_SIZE + 4;
             return GetInfo(pvFileInfo, cbFileInfo, &dwInt32Value, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileMpqStrongSignature:
             if(QueryMpqSignatureInfo(ha, &SignatureInfo) == false || (SignatureInfo.SignatureTypes & SIGNATURE_TYPE_STRONG) == 0)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo(pvFileInfo, cbFileInfo, SignatureInfo.Signature, MPQ_STRONG_SIGNATURE_SIZE + 4, pcbLengthNeeded);
 
         case SFileMpqArchiveSize64:
@@ -374,7 +374,7 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileMpqRawChunkSize:
             if(pHeader->dwRawChunkSize == 0)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo(pvFileInfo, cbFileInfo, &pHeader->dwRawChunkSize, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileMpqStreamFlags:
@@ -389,7 +389,7 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileInfoFileEntry:
             if(pFileEntry == NULL)
-                return GetInfo_ReturnError(ERROR_FILE_NOT_FOUND);
+                return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             return GetInfo_FileEntry(pvFileInfo, cbFileInfo, pFileEntry, pcbLengthNeeded);
 
         case SFileInfoHashEntry:
@@ -444,7 +444,7 @@ bool WINAPI SFileGetFileInfo(
     }
 
     // Invalid info class
-    return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+    return GetInfo_ReturdwErrCode(ERROR_INVALID_PARAMETER);
 }
 
 bool WINAPI SFileFreeFileInfo(void * pvFileInfo, SFileInfoClass InfoClass)
@@ -518,7 +518,7 @@ static TFileHeader2Ext data2ext[] =
     {0, 0, 0, 0, NULL}                                          // Terminator
 };
 
-static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * szFileName)
+static DWORD CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * szFileName)
 {
     TMPQFile * hf = (TMPQFile *)hFile;  // MPQ File handle
     DWORD FirstBytes[2] = {0, 0};       // The first 4 bytes of the file
@@ -563,7 +563,7 @@ static int CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * sz
 bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
 {
     TMPQFile * hf = (TMPQFile *)hFile;  // MPQ File handle
-    int nError = ERROR_INVALID_HANDLE;
+    DWORD dwErrCode = ERROR_INVALID_HANDLE;
 
     // Check valid parameters
     if(IsValidFileHandle(hFile))
@@ -577,13 +577,13 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
             {
                 // If the file name is not there yet, create a pseudo name
                 if(pFileEntry->szFileName == NULL)
-                    nError = CreatePseudoFileName(hFile, pFileEntry, szFileName);
+                    dwErrCode = CreatePseudoFileName(hFile, pFileEntry, szFileName);
 
                 // Copy the file name to the output buffer, if any
                 if(pFileEntry->szFileName && szFileName)
                 {
                     strcpy(szFileName, pFileEntry->szFileName);
-                    nError = ERROR_SUCCESS;
+                    dwErrCode = ERROR_SUCCESS;
                 }
             }
         }
@@ -596,12 +596,12 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
                 const TCHAR * szStreamName = FileStream_GetFileName(hf->pStream);
                 StringCopy(szFileName, MAX_PATH, szStreamName);
             }
-            nError = ERROR_SUCCESS;
+            dwErrCode = ERROR_SUCCESS;
         }
     }
 
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
-    return (nError == ERROR_SUCCESS);
+    if(dwErrCode != ERROR_SUCCESS)
+        SetLastError(dwErrCode);
+    return (dwErrCode == ERROR_SUCCESS);
 }
 

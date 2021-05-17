@@ -16,41 +16,41 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
 {
     TFileStream * pLocalFile = NULL;
     HANDLE hMpqFile = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Open the MPQ file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(!SFileOpenFileEx(hMpq, szToExtract, dwSearchScope, &hMpqFile))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Create the local file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         pLocalFile = FileStream_CreateFile(szExtracted, 0);
         if(pLocalFile == NULL)
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Copy the file's content
-    while(nError == ERROR_SUCCESS)
+    while(dwErrCode == ERROR_SUCCESS)
     {
         char  szBuffer[0x1000];
         DWORD dwTransferred = 0;
 
         // dwTransferred is only set to nonzero if something has been read.
-        // nError can be ERROR_SUCCESS or ERROR_HANDLE_EOF
+        // dwErrCode can be ERROR_SUCCESS or ERROR_HANDLE_EOF
         if(!SFileReadFile(hMpqFile, szBuffer, sizeof(szBuffer), &dwTransferred, NULL))
-            nError = GetLastError();
-        if(nError == ERROR_HANDLE_EOF)
-            nError = ERROR_SUCCESS;
+            dwErrCode = GetLastError();
+        if(dwErrCode == ERROR_HANDLE_EOF)
+            dwErrCode = ERROR_SUCCESS;
         if(dwTransferred == 0)
             break;
 
         // If something has been actually read, write it
         if(!FileStream_Write(pLocalFile, NULL, szBuffer, dwTransferred))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Close the files
@@ -58,7 +58,7 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
         SFileCloseFile(hMpqFile);
     if(pLocalFile != NULL)
         FileStream_Close(pLocalFile);
-    if(nError != ERROR_SUCCESS)
-        SetLastError(nError);
-    return (nError == ERROR_SUCCESS);
+    if(dwErrCode != ERROR_SUCCESS)
+        SetLastError(dwErrCode);
+    return (dwErrCode == ERROR_SUCCESS);
 }

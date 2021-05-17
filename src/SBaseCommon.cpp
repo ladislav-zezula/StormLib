@@ -443,6 +443,9 @@ void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
     DWORD dwValue32;
     DWORD dwKey2 = 0xEEEEEEEE;
 
+    // Check for alignment
+    //assert(((size_t)(pvDataBlock) & 0x03) == 0);
+
     // Round to DWORDs
     dwLength >>= 2;
 
@@ -921,7 +924,7 @@ void * LoadMpqTable(
     LPBYTE pbMpqTable;
     LPBYTE pbToRead;
     DWORD dwBytesToRead = dwCompressedSize;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Allocate the MPQ table
     pbMpqTable = pbToRead = STORM_ALLOC(BYTE, dwTableSize);
@@ -972,15 +975,15 @@ void * LoadMpqTable(
             // Verify the MD5 of the table, if present
             if(!VerifyDataBlockHash(pbToRead, dwBytesToRead, pbTableHash))
             {
-                nError = ERROR_FILE_CORRUPT;
+                dwErrCode = ERROR_FILE_CORRUPT;
             }
         }
         else
         {
-            nError = GetLastError();
+            dwErrCode = GetLastError();
         }
 
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
             // First of all, decrypt the table
             if(dwKey != 0)
@@ -997,7 +1000,7 @@ void * LoadMpqTable(
                 int cbInBuffer = (int)dwCompressedSize;
 
                 if(!SCompDecompress2(pbMpqTable, &cbOutBuffer, pbCompressed, cbInBuffer))
-                    nError = GetLastError();
+                    dwErrCode = GetLastError();
             }
 
             // Make sure that the table is properly byte-swapped
@@ -1005,7 +1008,7 @@ void * LoadMpqTable(
         }
 
         // If read failed, free the table and return
-        if(nError != ERROR_SUCCESS)
+        if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pbMpqTable);
             pbMpqTable = NULL;
@@ -1045,7 +1048,7 @@ unsigned char * AllocateMd5Buffer(
 }
 
 // Allocates sector buffer and sector offset table
-int AllocateSectorBuffer(TMPQFile * hf)
+DWORD AllocateSectorBuffer(TMPQFile * hf)
 {
     TMPQArchive * ha = hf->ha;
 
@@ -1064,11 +1067,11 @@ int AllocateSectorBuffer(TMPQFile * hf)
     hf->dwSectorOffs = SFILE_INVALID_POS;
 
     // Return result
-    return (hf->pbFileSector != NULL) ? (int)ERROR_SUCCESS : (int)ERROR_NOT_ENOUGH_MEMORY;
+    return (hf->pbFileSector != NULL) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
 }
 
 // Allocates sector offset table
-int AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile)
+DWORD AllocatePatchInfo(TMPQFile * hf, bool bLoadFromFile)
 {
     TMPQArchive * ha = hf->ha;
     DWORD dwLength = sizeof(TPatchInfo);
@@ -1132,7 +1135,7 @@ __AllocateAndLoadPatchInfo:
 }
 
 // Allocates sector offset table
-int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
+DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
 {
     TMPQArchive * ha = hf->ha;
     TFileEntry * pFileEntry = hf->pFileEntry;
@@ -1288,7 +1291,7 @@ int AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
     return ERROR_SUCCESS;
 }
 
-int AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
+DWORD AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
 {
     TMPQArchive * ha = hf->ha;
     TFileEntry * pFileEntry = hf->pFileEntry;
@@ -1365,7 +1368,7 @@ int AllocateSectorChecksums(TMPQFile * hf, bool bLoadFromFile)
     return ERROR_SUCCESS;
 }
 
-int WritePatchInfo(TMPQFile * hf)
+DWORD WritePatchInfo(TMPQFile * hf)
 {
     TMPQArchive * ha = hf->ha;
     TPatchInfo * pPatchInfo = hf->pPatchInfo;
@@ -1382,7 +1385,7 @@ int WritePatchInfo(TMPQFile * hf)
     return ERROR_SUCCESS;
 }
 
-int WriteSectorOffsets(TMPQFile * hf)
+DWORD WriteSectorOffsets(TMPQFile * hf)
 {
     TMPQArchive * ha = hf->ha;
     TFileEntry * pFileEntry = hf->pFileEntry;
@@ -1414,16 +1417,16 @@ int WriteSectorOffsets(TMPQFile * hf)
     return ERROR_SUCCESS;
 }
 
-int WriteSectorChecksums(TMPQFile * hf)
+DWORD WriteSectorChecksums(TMPQFile * hf)
 {
     TMPQArchive * ha = hf->ha;
     ULONGLONG RawFilePos;
     TFileEntry * pFileEntry = hf->pFileEntry;
     LPBYTE pbCompressed;
     DWORD dwCompressedSize = 0;
+    DWORD dwErrCode = ERROR_SUCCESS;
     DWORD dwCrcSize;
     int nOutSize;
-    int nError = ERROR_SUCCESS;
 
     // The caller must make sure that this function is only called
     // when the following is true.
@@ -1459,7 +1462,7 @@ int WriteSectorChecksums(TMPQFile * hf)
     if(hf->pPatchInfo != NULL)
         RawFilePos += hf->pPatchInfo->dwLength;
     if(!FileStream_Write(ha->pStream, &RawFilePos, pbCompressed, dwCompressedSize))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
     // Not necessary, as the sector checksums
     // are going to be freed when this is done.
@@ -1469,10 +1472,10 @@ int WriteSectorChecksums(TMPQFile * hf)
     hf->SectorOffsets[hf->dwSectorCount + 1] = hf->SectorOffsets[hf->dwSectorCount] + dwCompressedSize;
     pFileEntry->dwCmpSize += dwCompressedSize;
     STORM_FREE(pbCompressed);
-    return nError;
+    return dwErrCode;
 }
 
-int WriteMemDataMD5(
+DWORD WriteMemDataMD5(
     TFileStream * pStream,
     ULONGLONG RawDataOffs,
     void * pvRawData,
@@ -1485,7 +1488,7 @@ int WriteMemDataMD5(
     LPBYTE pbRawData = (LPBYTE)pvRawData;
     DWORD dwBytesRemaining = dwRawDataSize;
     DWORD dwMd5ArraySize = 0;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Allocate buffer for array of MD5
     md5_array = md5 = AllocateMd5Buffer(dwRawDataSize, dwChunkSize, &dwMd5ArraySize);
@@ -1510,7 +1513,7 @@ int WriteMemDataMD5(
     // Write the array od MD5's to the file
     RawDataOffs += dwRawDataSize;
     if(!FileStream_Write(pStream, &RawDataOffs, md5_array, dwMd5ArraySize))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
     // Give the caller the size of the MD5 array
     if(pcbTotalSize != NULL)
@@ -1518,12 +1521,12 @@ int WriteMemDataMD5(
 
     // Free buffers and exit
     STORM_FREE(md5_array);
-    return nError;
+    return dwErrCode;
 }
 
 
 // Writes the MD5 for each chunk of the raw file data
-int WriteMpqDataMD5(
+DWORD WriteMpqDataMD5(
     TFileStream * pStream,
     ULONGLONG RawDataOffs,
     DWORD dwRawDataSize,
@@ -1534,7 +1537,7 @@ int WriteMpqDataMD5(
     LPBYTE pbFileChunk;
     DWORD dwMd5ArraySize = 0;
     DWORD dwToRead = dwRawDataSize;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Allocate buffer for array of MD5
     md5_array = md5 = AllocateMd5Buffer(dwRawDataSize, dwChunkSize, &dwMd5ArraySize);
@@ -1558,7 +1561,7 @@ int WriteMpqDataMD5(
         // Read the chunk
         if(!FileStream_Read(pStream, &RawDataOffs, pbFileChunk, dwToRead))
         {
-            nError = GetLastError();
+            dwErrCode = GetLastError();
             break;
         }
 
@@ -1572,16 +1575,16 @@ int WriteMpqDataMD5(
     }
 
     // Write the array od MD5's to the file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(!FileStream_Write(pStream, NULL, md5_array, dwMd5ArraySize))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Free buffers and exit
     STORM_FREE(pbFileChunk);
     STORM_FREE(md5_array);
-    return nError;
+    return dwErrCode;
 }
 
 // Frees the structure for MPQ file
