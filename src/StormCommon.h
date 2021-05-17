@@ -67,8 +67,11 @@
 #define STORMLIB_MAX(a, b) ((a > b) ? a : b)
 #define STORMLIB_UNUSED(p) ((void)(p))
 
+// Checks for data pointers aligned to 4-byte boundary
+#define STORMLIB_DWORD_ALIGNED(ptr) (((size_t)(ptr) & 0x03) == 0)
+
 // Macro for building 64-bit file offset from two 32-bit
-#define MAKE_OFFSET64(hi, lo)      (((ULONGLONG)hi << 32) | (ULONGLONG)lo)
+#define MAKE_OFFSET64(hi, lo)       (((ULONGLONG)hi << 32) | (ULONGLONG)lo)
 
 //-----------------------------------------------------------------------------
 // MTYPE definition - specifies what kind of MPQ is the map type

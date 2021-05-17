@@ -4285,23 +4285,16 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Tests on a local listfile
     //
-    /*
+
     if(dwErrCode == ERROR_SUCCESS)
     {
         TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
         dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
     }
-    */
+
     //
     // Open all files from the command line
     //
-    /*
-    SFILE_MARKERS Markers = { sizeof(SFILE_MARKERS) };
-    Markers.dwSignature = 'XHSC';
-    Markers.szHashTableKey = "(cash table)";
-    Markers.szBlockTableKey = "(clock table)";
-    SFileSetArchiveMarkers(&Markers);
-    */
 
     for(int i = 1; i < argc; i++)
     {

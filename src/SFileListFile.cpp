@@ -90,6 +90,7 @@ static TListFileCache * CreateListFileCache(
     DWORD dwFlags)
 {
     TListFileCache * pCache = NULL;
+    size_t cchWildCardAligned = 0;
     size_t cchWildCard = 0;
     DWORD dwBytesRead = 0;
 
@@ -99,10 +100,13 @@ static TListFileCache * CreateListFileCache(
 
     // Append buffer for name mask, if any
     if(szWildCard != NULL)
+    {
         cchWildCard = strlen(szWildCard) + 1;
+        cchWildCardAligned = (cchWildCard + 3) & 0xFFFFFFFC;
+    }
 
     // Allocate cache for one file block
-    pCache = (TListFileCache *)STORM_ALLOC(BYTE, sizeof(TListFileCache) + cchWildCard + dwFileSize + 1);
+    pCache = (TListFileCache *)STORM_ALLOC(BYTE, sizeof(TListFileCache) + cchWildCardAligned + dwFileSize + 1);
     if(pCache != NULL)
     {
         // Clear the entire structure
@@ -117,7 +121,7 @@ static TListFileCache * CreateListFileCache(
         }
 
         // Fill-in the rest of the cache pointers
-        pCache->pBegin = (LPBYTE)(pCache + 1) + cchWildCard;
+        pCache->pBegin = (LPBYTE)(pCache + 1) + cchWildCardAligned;
 
         // Load the entire listfile to the cache
         PfnLoadFile(pHandle, pCache->pBegin, dwFileSize, &dwBytesRead);
