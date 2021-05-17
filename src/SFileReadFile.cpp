@@ -227,9 +227,6 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     LPBYTE pbRawData;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // The buffer needs to be aligned to 4-byte boundary
-    assert(STORMLIB_DWORD_ALIGNED(pbBuffer));
-
     // If the file buffer is not allocated yet, do it.
     if(hf->pbFileSector == NULL)
     {
@@ -363,7 +360,6 @@ static DWORD ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // We do not support patch files in MPK archives
-    assert(STORMLIB_DWORD_ALIGNED(pvBuffer));
     assert(hf->pPatchInfo == NULL);
 
     // If the file buffer is not allocated yet, do it.
@@ -461,9 +457,6 @@ static DWORD ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     DWORD dwFileSectorPos;                              // File offset of the loaded sector
     DWORD dwBytesRead;                                  // Number of bytes read (temporary variable)
     DWORD dwErrCode;
-
-    // The buffer needs to be aligned to 4-byte boundary
-    assert(STORMLIB_DWORD_ALIGNED(pbBuffer));
 
     // If the file position is at or beyond end of file, do nothing
     if(dwFilePos >= hf->dwDataSize)
@@ -582,9 +575,6 @@ static DWORD ReadMpqFilePatchFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePo
     DWORD dwBytesToRead = dwToRead;
     DWORD dwBytesRead = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Make sure that the buffer is properly aligned
-    assert(STORMLIB_DWORD_ALIGNED(pvBuffer));
 
     // Make sure that the patch file is loaded completely
     if(dwErrCode == ERROR_SUCCESS && hf->pbFileData == NULL)
