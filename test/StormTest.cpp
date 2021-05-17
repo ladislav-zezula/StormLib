@@ -4285,13 +4285,13 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Tests on a local listfile
     //
-
+    /*
     if(dwErrCode == ERROR_SUCCESS)
     {
         TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
         dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
     }
-
+    */
     //
     // Open all files from the command line
     //

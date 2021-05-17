@@ -414,7 +414,7 @@ DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
 //-----------------------------------------------------------------------------
 // Encrypting/Decrypting MPQ data block
 
-static DWORD EncryptUInt32Unaligned(PDWORD DataPointer, DWORD i, DWORD dwXorKey)
+static DWORD EncryptUInt32Unaligned(LPDWORD DataPointer, DWORD i, DWORD dwXorKey)
 {
     LPBYTE pbDataPointer = (LPBYTE)(DataPointer + i);
     LPBYTE pbXorKey = (LPBYTE)(&dwXorKey);
@@ -474,7 +474,7 @@ void EncryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
     }
 }
 
-static DWORD DecryptUInt32Unaligned(PDWORD DataPointer, DWORD i, DWORD dwXorKey)
+static DWORD DecryptUInt32Unaligned(LPDWORD DataPointer, DWORD i, DWORD dwXorKey)
 {
     LPBYTE pbDataPointer = (LPBYTE)(DataPointer + i);
     LPBYTE pbXorKey = (LPBYTE)(&dwXorKey);
@@ -494,7 +494,7 @@ static DWORD DecryptUInt32Unaligned(PDWORD DataPointer, DWORD i, DWORD dwXorKey)
 
 void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 {
-    PDWORD DataPointer = (PDWORD)pvDataBlock;
+    LPDWORD DataPointer = (LPDWORD)pvDataBlock;
     DWORD dwValue32;
     DWORD dwKey2 = 0xEEEEEEEE;
 
