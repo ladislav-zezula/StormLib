@@ -414,52 +414,121 @@ DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
 //-----------------------------------------------------------------------------
 // Encrypting/Decrypting MPQ data block
 
+static DWORD EncryptUInt32Unaligned(LPDWORD DataPointer, DWORD i, DWORD dwXorKey)
+{
+    LPBYTE pbDataPointer = (LPBYTE)(DataPointer + i);
+    LPBYTE pbXorKey = (LPBYTE)(&dwXorKey);
+    DWORD dwValue32;
+
+    // Retrieve the value
+    dwValue32 = ((DWORD)pbDataPointer[0] << 0x00) |
+                ((DWORD)pbDataPointer[1] << 0x08) |
+                ((DWORD)pbDataPointer[2] << 0x10) |
+                ((DWORD)pbDataPointer[3] << 0x18);
+
+    // Perform unaligned XOR
+    pbDataPointer[0] = (pbDataPointer[0] ^ pbXorKey[0]);
+    pbDataPointer[1] = (pbDataPointer[1] ^ pbXorKey[1]);
+    pbDataPointer[2] = (pbDataPointer[2] ^ pbXorKey[2]);
+    pbDataPointer[3] = (pbDataPointer[3] ^ pbXorKey[3]);
+    return dwValue32;
+}
+
 void EncryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 {
-    LPDWORD DataBlock = (LPDWORD)pvDataBlock;
+    LPDWORD DataPointer = (LPDWORD)pvDataBlock;
     DWORD dwValue32;
     DWORD dwKey2 = 0xEEEEEEEE;
 
     // Round to DWORDs
     dwLength >>= 2;
 
-    // Encrypt the data block at array of DWORDs
-    for(DWORD i = 0; i < dwLength; i++)
+    // We need different approach on non-aligned buffers
+    if(STORMLIB_DWORD_ALIGNED(DataPointer))
     {
-        // Modify the second key
-        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+        for(DWORD i = 0; i < dwLength; i++)
+        {
+            // Modify the second key
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
 
-        dwValue32 = DataBlock[i];
-        DataBlock[i] = DataBlock[i] ^ (dwKey1 + dwKey2);
+            // We can use 32-bit approach, when the buffer is aligned
+            DataPointer[i] = (dwValue32 = DataPointer[i]) ^ (dwKey1 + dwKey2);
 
-        dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
-        dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+        }
     }
+    else
+    {
+        for(DWORD i = 0; i < dwLength; i++)
+        {
+            // Modify the second key
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+
+            // The data are unaligned. Make sure we don't cause data misalignment error
+            dwValue32 = EncryptUInt32Unaligned(DataPointer, i, (dwKey1 + dwKey2));
+
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+        }
+    }
+}
+
+static DWORD DecryptUInt32Unaligned(LPDWORD DataPointer, DWORD i, DWORD dwXorKey)
+{
+    LPBYTE pbDataPointer = (LPBYTE)(DataPointer + i);
+    LPBYTE pbXorKey = (LPBYTE)(&dwXorKey);
+
+    // Perform unaligned XOR
+    pbDataPointer[0] = (pbDataPointer[0] ^ pbXorKey[0]);
+    pbDataPointer[1] = (pbDataPointer[1] ^ pbXorKey[1]);
+    pbDataPointer[2] = (pbDataPointer[2] ^ pbXorKey[2]);
+    pbDataPointer[3] = (pbDataPointer[3] ^ pbXorKey[3]);
+
+    // Retrieve the value
+    return ((DWORD)pbDataPointer[0] << 0x00) |
+           ((DWORD)pbDataPointer[1] << 0x08) |
+           ((DWORD)pbDataPointer[2] << 0x10) |
+           ((DWORD)pbDataPointer[3] << 0x18);
 }
 
 void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 {
-    LPDWORD DataBlock = (LPDWORD)pvDataBlock;
+    LPDWORD DataPointer = (LPDWORD)pvDataBlock;
     DWORD dwValue32;
     DWORD dwKey2 = 0xEEEEEEEE;
-
-    // Check for alignment
-    //assert(((size_t)(pvDataBlock) & 0x03) == 0);
 
     // Round to DWORDs
     dwLength >>= 2;
 
-    // Decrypt the data block at array of DWORDs
-    for(DWORD i = 0; i < dwLength; i++)
+    // We need different approach on non-aligned buffers
+    if(STORMLIB_DWORD_ALIGNED(DataPointer))
     {
-        // Modify the second key
-        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+        for(DWORD i = 0; i < dwLength; i++)
+        {
+            // Modify the second key
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
 
-        DataBlock[i] = DataBlock[i] ^ (dwKey1 + dwKey2);
-        dwValue32 = DataBlock[i];
+            // We can use 32-bit approach, when the buffer is aligned
+            DataPointer[i] = dwValue32 = DataPointer[i] ^ (dwKey1 + dwKey2);
 
-        dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
-        dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+        }
+    }
+    else
+    {
+        for(DWORD i = 0; i < dwLength; i++)
+        {
+            // Modify the second key
+            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+
+            // The data are unaligned. Make sure we don't cause data misalignment error
+            dwValue32 = DecryptUInt32Unaligned(DataPointer, i, (dwKey1 + dwKey2));
+
+            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+            dwKey2 = dwValue32 + dwKey2 + (dwKey2 << 5) + 3;
+        }
     }
 }
 

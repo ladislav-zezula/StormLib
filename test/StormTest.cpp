@@ -4295,13 +4295,6 @@ int _tmain(int argc, TCHAR * argv[])
     //
     // Open all files from the command line
     //
-    /*
-    SFILE_MARKERS Markers = { sizeof(SFILE_MARKERS) };
-    Markers.dwSignature = 'XHSC';
-    Markers.szHashTableKey = "(cash table)";
-    Markers.szBlockTableKey = "(clock table)";
-    SFileSetArchiveMarkers(&Markers);
-    */
 
     for(int i = 1; i < argc; i++)
     {
