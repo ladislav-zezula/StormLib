@@ -342,6 +342,8 @@ static bool IsMpqExtension(LPCTSTR szFileName)
             return true;
         if(!_tcsicmp(szExtension, _T(".SC2Mod")))
             return true;
+        if(!_tcsicmp(szExtension, _T(".SC2Replay")))
+            return true;
         if(!_tcsicmp(szExtension, _T(".0")))        // .MPQ.0
             return true;
 //      if(!_tcsicmp(szExtension, ".link"))
@@ -1522,6 +1524,9 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         // Load the entire file
         if(dwErrCode == ERROR_SUCCESS)
         {
+			if(!stricmp(szFileName, "replay.game.events"))
+				__debugbreak();
+
             // Read the file data
             SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
             if(dwBytesRead != dwFileSizeLo)
@@ -4218,6 +4223,9 @@ static const TEST_INFO TestList_MasterMirror[] =
 
 static const TEST_INFO Test_Mpqs[] =
 {
+
+    {_T("ProblemMpqArchive.SC2Replay"),        NULL, 0, "replay.game.events"},
+
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),    NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
     {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), NULL, 0, "waitingroombkgd.dc6"},                   // Update MPQ from Diablo II (patch 2016)
@@ -4296,6 +4304,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Open all files from the command line
     //
 
+	TestArchive(_T("ProblemMpqArchive.SC2Replay"), NULL, 0, "replay.game.events", NULL);
     for(int i = 1; i < argc; i++)
     {
         ForEachFile_OpenArchive(argv[i]);

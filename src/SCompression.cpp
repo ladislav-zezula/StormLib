@@ -168,14 +168,15 @@ int Decompress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
     z.zfree     = NULL;
 
     // Initialize the decompression structure. Storm.dll uses zlib version 1.1.3
-    if((nResult = inflateInit(&z)) == 0)
+    if((nResult = inflateInit(&z)) == Z_OK)
     {
         // Call zlib to decompress the data
         nResult = inflate(&z, Z_FINISH);
         *pcbOutBuffer = z.total_out;
         inflateEnd(&z);
     }
-    return nResult;
+    
+	return (nResult == Z_OK);
 }
 
 /******************************************************************************/
@@ -357,45 +358,27 @@ static void Compress_BZIP2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
 static int Decompress_BZIP2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     bz_stream strm;
-    int nResult = BZ_OK;
+    int nResult;
 
     // Initialize the BZIP2 decompression
-    strm.bzalloc = NULL;
-    strm.bzfree  = NULL;
-    strm.opaque  = NULL;
+    strm.next_in   = (char *)pvInBuffer;
+    strm.avail_in  = cbInBuffer;
+    strm.next_out  = (char *)pvOutBuffer;
+    strm.avail_out = *pcbOutBuffer;
+    strm.bzalloc   = NULL;
+    strm.bzfree    = NULL;
+    strm.opaque    = NULL;
 
     // Initialize decompression
-    if(BZ2_bzDecompressInit(&strm, 0, 0) == BZ_OK)
+    if((nResult = BZ2_bzDecompressInit(&strm, 0, 0)) == BZ_OK)
     {
-        strm.next_in   = (char *)pvInBuffer;
-        strm.avail_in  = cbInBuffer;
-        strm.next_out  = (char *)pvOutBuffer;
-        strm.avail_out = *pcbOutBuffer;
-
         // Perform the decompression
-        while(nResult != BZ_STREAM_END)
-        {
-            nResult = BZ2_bzDecompress(&strm);
-
-            // If any error there, break the loop
-            if(nResult < BZ_OK)
-                break;
-        }
-
-        // Put the stream into idle state
+        nResult = BZ2_bzDecompress(&strm);
+        *pcbOutBuffer = strm.total_out_lo32;
         BZ2_bzDecompressEnd(&strm);
-
-        // If all succeeded, set the number of output bytes
-        if(nResult >= BZ_OK)
-        {
-            *pcbOutBuffer = strm.total_out_lo32;
-            return 1;
-        }
     }
 
-    // Something failed, so set number of output bytes to zero
-    *pcbOutBuffer = 0;
-    return 1;
+	return (nResult >= BZ_OK);
 }
 
 /******************************************************************************/
