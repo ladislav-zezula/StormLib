@@ -4224,8 +4224,6 @@ static const TEST_INFO TestList_MasterMirror[] =
 static const TEST_INFO Test_Mpqs[] =
 {
 
-    {_T("ProblemMpqArchive.SC2Replay"),        NULL, 0, "replay.game.events"},
-
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),    NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
     {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"), NULL, 0, "waitingroombkgd.dc6"},                   // Update MPQ from Diablo II (patch 2016)
@@ -4307,7 +4305,7 @@ int _tmain(int argc, TCHAR * argv[])
 	TestArchive(_T("ProblemMpqArchive.SC2Replay"), NULL, 0, "replay.game.events", NULL);
     for(int i = 1; i < argc; i++)
     {
-        ForEachFile_OpenArchive(argv[i]);
+        TestOpenArchive_CompactArchive(argv[i], _T("TestArchiveCopy.mpq"), false);
     }
 
     //
