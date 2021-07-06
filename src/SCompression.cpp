@@ -176,7 +176,7 @@ int Decompress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
         inflateEnd(&z);
     }
     
-	return (nResult == Z_OK);
+	return (nResult >= Z_OK);
 }
 
 /******************************************************************************/

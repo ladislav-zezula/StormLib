@@ -1524,8 +1524,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         // Load the entire file
         if(dwErrCode == ERROR_SUCCESS)
         {
-			if(!stricmp(szFileName, "replay.game.events"))
-				__debugbreak();
+			//if(!stricmp(szFileName, "replay.game.events"))
+			//	__debugbreak();
 
             // Read the file data
             SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
