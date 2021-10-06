@@ -255,7 +255,7 @@ extern "C" {
 // BlockTableOffset = pHash->dwBlockIndex << 0x04
 // Malformed MPQ maps may contain block indexes like 0x40000001 or 0xF0000023
 #define BLOCK_INDEX_MASK          0x0FFFFFFF
-#define MPQ_BLOCK_INDEX(pHash) (pHash->dwBlockIndex & BLOCK_INDEX_MASK)
+#define MPQ_BLOCK_INDEX(pHash) ((pHash)->dwBlockIndex & BLOCK_INDEX_MASK)
 
 // Compression types for multiple compressions
 #define MPQ_COMPRESSION_HUFFMANN          0x01  // Huffmann compression (used on WAVE files only)
