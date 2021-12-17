@@ -36,6 +36,9 @@ class TLogHelper
     DWORD PrintErrorVa(const char * szFormat, ...);
     DWORD PrintError(const char * szFormat, const char * szFileName = NULL);
 
+    // Print final verdict
+    DWORD PrintVerdict(DWORD dwErrCode = ERROR_SUCCESS);
+
     const char * UserString;
     unsigned int UserCount;
     unsigned int UserTotal;
@@ -108,33 +111,10 @@ TLogHelper::TLogHelper(const char * szNewMainTitle, const TCHAR * szNewSubTitle1
 
 TLogHelper::~TLogHelper()
 {
-    const TCHAR * szSaveSubTitle1 = szSubTitle1;
-    const TCHAR * szSaveSubTitle2 = szSubTitle2;
-    TCHAR szSaveMainTitle[0x80];
-
-    // Set both to NULL so they won't be printed
-    StringCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
-    szSubTitle1 = NULL;
-    szSubTitle2 = NULL;
-    szMainTitle = NULL;
-
-    // Print the final information
-    if(szSaveMainTitle != NULL && bMessagePrinted == false)
+    // Print a verdict, if no verdict was printed yet
+    if(bMessagePrinted == false)
     {
-        if(bDontPrintResult == false)
-        {
-            if(szSaveSubTitle1 != NULL && szSaveSubTitle2 != NULL)
-                PrintMessage(_T("%s (%s+%s) succeeded."), szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2);
-            else if(szSaveSubTitle1 != NULL)
-                PrintMessage(_T("%s (%s) succeeded."), szSaveMainTitle, szSaveSubTitle1);
-            else
-                PrintMessage(_T("%s succeeded."), szSaveMainTitle);
-        }
-        else
-        {
-            PrintProgress(" ");
-            printf("\r");
-        }
+        PrintVerdict(ERROR_SUCCESS);
     }
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -361,18 +341,59 @@ DWORD TLogHelper::PrintError(const char * szFormat, const char * szFileName)
 }
 
 //-----------------------------------------------------------------------------
+// Print final verdict
+
+DWORD TLogHelper::PrintVerdict(DWORD dwErrCode)
+{
+    LPCTSTR szSaveSubTitle1 = szSubTitle1;
+    LPCTSTR szSaveSubTitle2 = szSubTitle2;
+    TCHAR szSaveMainTitle[0x80];
+
+    // Set both to NULL so they won't be printed
+    StringCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
+    szSubTitle1 = NULL;
+    szSubTitle2 = NULL;
+    szMainTitle = NULL;
+
+    // Print the final information
+    if(szSaveMainTitle[0] != 0)
+    {
+        if(bDontPrintResult == false)
+        {
+            LPCTSTR szVerdict = (dwErrCode == ERROR_SUCCESS) ? _T("succeeded") : _T("failed");
+
+            if(szSaveSubTitle1 != NULL && szSaveSubTitle2 != NULL)
+                PrintMessage(_T("%s (%s+%s) %s."), szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2, szVerdict);
+            else if(szSaveSubTitle1 != NULL)
+                PrintMessage(_T("%s (%s) %s."), szSaveMainTitle, szSaveSubTitle1, szVerdict);
+            else
+                PrintMessage(_T("%s %s."), szSaveMainTitle, szVerdict);
+        }
+        else
+        {
+            PrintProgress(" ");
+            printf("\r");
+        }
+    }
+
+    // Return the error code so the caller can pass it fuhrter
+    return dwErrCode;
+}
+
+//-----------------------------------------------------------------------------
 // Protected functions
 
 #ifdef _UNICODE
 TCHAR * TLogHelper::CopyFormatCharacter(TCHAR * szBuffer, const TCHAR *& szFormat)
 {
-    static const TCHAR * szStringFormat = _T("\"%s\"");
-    static const TCHAR * szUint64Format = I64u_t;
+//  static LPCTSTR szStringFormat = _T("\"%s\"");
+    static LPCTSTR szStringFormat = _T("%s");
+    static LPCTSTR szUint64Format = I64u_t;
 
     // String format
     if(szFormat[0] == '%')
     {
-        if(szFormat[1] == 's' && szFormat[2] != ')')
+        if(szFormat[1] == 's')
         {
             _tcscpy(szBuffer, szStringFormat);
             szFormat += 2;
