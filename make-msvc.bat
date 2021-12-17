@@ -43,6 +43,7 @@ call %1 %2
 if "%2" == "x86" set SLN_TRG=Win32
 if "%2" == "x86" set LIB_TRG=lib32
 if "%2" == "x64" set SLN_TRG=x64
+<<<<<<< HEAD
 if "%2" == "x64" set LIB_TRG=lib64
 devenv.com %3 /project "%LIB_NAME%" /rebuild "DebugAD|%SLN_TRG%"
 xcopy.exe /Y /D .\bin\StormLib\%SLN_TRG%\DebugAD\*.lib ..\aaa\%LIB_TRG%%4
@@ -60,6 +61,16 @@ devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseUD|%SLN_TRG%"
 xcopy.exe /Y /D .\bin\StormLib\%SLN_TRG%\ReleaseUD\*.lib ..\aaa\%LIB_TRG%%4
 devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseUS|%SLN_TRG%"
 xcopy.exe /Y /D .\bin\StormLib\%SLN_TRG%\ReleaseUS\*.lib ..\aaa\%LIB_TRG%%4
+=======
+devenv.com %3 /project "%LIB_NAME%" /build "DebugAD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugAS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugUD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugUS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseAD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseAS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseUD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseUS|%SLN_TRG%"
+>>>>>>> 1a94f94b50f6d829b1e8fba08a3002a5db4f00d5
 
 :: Restore environment variables to the old level
 set INCLUDE=%SAVE_INCLUDE%
