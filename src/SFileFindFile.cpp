@@ -221,7 +221,7 @@ static bool DoMPQSearch_FileEntry(
     if((pFileEntry->dwFlags & hs->dwFlagMask) == MPQ_FILE_EXISTS)
     {
         // Ignore fake files which are not compressed but have size higher than the archive
-        if ((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
+        if((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
             return false;
 
         // Now we have to check if this file was not enumerated before
@@ -236,8 +236,6 @@ static bool DoMPQSearch_FileEntry(
 
             // Prepare the block index
             dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
-            if(dwBlockIndex == 569)
-                szNameBuff[0] = 'F';
 
             // Get the file name. If it's not known, we will create pseudo-name
             szFileName = pFileEntry->szFileName;

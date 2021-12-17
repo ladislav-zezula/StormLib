@@ -202,20 +202,21 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     if(dwErrCode == ERROR_SUCCESS)
     {
         memset(ha, 0, sizeof(TMPQArchive));
-        ha->pfnHashString   = HashStringSlash;
-        ha->pStream         = pStream;
-        ha->dwSectorSize    = pCreateInfo->dwSectorSize;
-        ha->UserDataPos     = MpqPos;
-        ha->MpqPos          = MpqPos;
-        ha->pHeader         = pHeader = (TMPQHeader *)ha->HeaderData;
-        ha->dwMaxFileCount  = dwHashTableSize;
-        ha->dwFileTableSize = 0;
-        ha->dwReservedFiles = dwReservedFiles;
-        ha->dwFileFlags1    = pCreateInfo->dwFileFlags1;
-        ha->dwFileFlags2    = pCreateInfo->dwFileFlags2;
-        ha->dwFileFlags3    = pCreateInfo->dwFileFlags3 ? MPQ_FILE_EXISTS : 0;
-        ha->dwAttrFlags     = pCreateInfo->dwAttrFlags;
-        ha->dwFlags         = dwMpqFlags | MPQ_FLAG_CHANGED;
+        ha->pfnHashString    = HashStringSlash;
+        ha->pStream          = pStream;
+        ha->dwSectorSize     = pCreateInfo->dwSectorSize;
+        ha->UserDataPos      = MpqPos;
+        ha->MpqPos           = MpqPos;
+        ha->pHeader          = pHeader = (TMPQHeader *)ha->HeaderData;
+        ha->dwMaxFileCount   = dwHashTableSize;
+        ha->dwFileTableSize  = 0;
+        ha->dwReservedFiles  = dwReservedFiles;
+        ha->dwValidFileFlags = (pCreateInfo->dwMpqVersion > 1) ? MPQ_FILE_VALID_FLAGS : MPQ_FILE_VALID_FLAGS_W3X;
+        ha->dwFileFlags1     = pCreateInfo->dwFileFlags1;
+        ha->dwFileFlags2     = pCreateInfo->dwFileFlags2;
+        ha->dwFileFlags3     = pCreateInfo->dwFileFlags3 ? MPQ_FILE_EXISTS : 0;
+        ha->dwAttrFlags      = pCreateInfo->dwAttrFlags;
+        ha->dwFlags          = dwMpqFlags | MPQ_FLAG_CHANGED;
         pStream = NULL;
 
         // Fill the MPQ header
