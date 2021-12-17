@@ -4327,49 +4327,56 @@ int _tmain(int argc, TCHAR * argv[])
     // Open all files from the command line
     //
 
+<<<<<<< HEAD
     for(int i = 1; i < argc; i++)
     {
         TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), _T("Listfile_Blizzard.txt"), 0, NULL, NULL);
     }
+=======
+    //for(int i = 1; i < argc; i++)
+    //{
+    //    TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), _T("Listfile_Blizzard.txt"), TEST_FLAG_FILE_COUNT, NULL, NULL);
+    //}
+>>>>>>> 1a94f94 (Support for protected SCX files)
 
     //
     // Search all testing archives and verify their SHA1 hash
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+    //}
 
     //
     // Test file stream operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
-        {
-            dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
+    //    {
+    //        dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Test master-mirror reading operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
-        {
-            dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
-                                                  TestList_MasterMirror[i].szMpqName2,
-                                                  TestList_MasterMirror[i].dwFlags != 0);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
+    //    {
+    //        dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
+    //                                              TestList_MasterMirror[i].szMpqName2,
+    //                                              TestList_MasterMirror[i].dwFlags != 0);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Test opening various archives - correct, damaged, protected

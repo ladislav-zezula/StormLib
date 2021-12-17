@@ -423,7 +423,7 @@ char * TLogHelper::CopyFormatCharacter(char * szBuffer, const char *& szFormat)
     // String format
     if(szFormat[0] == '%')
     {
-        if(szFormat[1] == 's' && szFormat[2] != ')')
+        if(szFormat[1] == 's')
         {
             strcpy(szBuffer, szStringFormat);
             szFormat += 2;

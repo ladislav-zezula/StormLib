@@ -42,14 +42,14 @@ goto:eof
 call %1 %2
 if "%2" == "x86" set SLN_TRG=Win32
 if "%2" == "x64" set SLN_TRG=x64
-devenv.com %3 /project "%LIB_NAME%" /rebuild "DebugAD|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "DebugAS|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "DebugUD|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "DebugUS|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseAD|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseAS|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseUD|%SLN_TRG%"
-devenv.com %3 /project "%LIB_NAME%" /rebuild "ReleaseUS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugAD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugAS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugUD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "DebugUS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseAD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseAS|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseUD|%SLN_TRG%"
+devenv.com %3 /project "%LIB_NAME%" /build "ReleaseUS|%SLN_TRG%"
 
 :: Restore environment variables to the old level
 set INCLUDE=%SAVE_INCLUDE%

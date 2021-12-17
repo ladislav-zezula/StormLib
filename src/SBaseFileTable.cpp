@@ -893,14 +893,10 @@ static DWORD BuildFileTableFromBlockTable(
     TMPQHash * pHash;
     LPDWORD DefragmentTable = NULL;
     DWORD dwItemCount = 0;
-    DWORD dwFlagMask;
 
     // Sanity checks
     assert(ha->pFileTable != NULL);
     assert(ha->dwFileTableSize >= ha->dwMaxFileCount);
-
-    // MPQs for Warcraft III doesn't know some flags, namely MPQ_FILE_SINGLE_UNIT and MPQ_FILE_PATCH_FILE
-    dwFlagMask = (ha->dwFlags & MPQ_FLAG_WAR3_MAP) ? MPQ_FILE_VALID_FLAGS_W3X : MPQ_FILE_VALID_FLAGS;
 
     // Defragment the hash table, if needed
     if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
@@ -976,10 +972,12 @@ static DWORD BuildFileTableFromBlockTable(
             if(pFileEntry->ByteOffset == 0 && pBlock->dwFSize == 0)
                 pFileEntry->ByteOffset = ha->pHeader->dwHeaderSize;
 
+            // Clear file flags that are unknown to this type of map.
+            pFileEntry->dwFlags = pBlock->dwFlags & ha->dwValidFileFlags;
+
             // Fill the rest of the file entry
-            pFileEntry->dwFileSize  = pBlock->dwFSize;
-            pFileEntry->dwCmpSize   = pBlock->dwCSize;
-            pFileEntry->dwFlags     = pBlock->dwFlags & dwFlagMask;
+            pFileEntry->dwFileSize = pBlock->dwFSize;
+            pFileEntry->dwCmpSize  = pBlock->dwCSize;
         }
     }
 
