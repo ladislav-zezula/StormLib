@@ -2646,7 +2646,7 @@ static DWORD TestOpenArchive_Corrupt(LPCTSTR szPlainName)
 // Opens a patched MPQ archive
 static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWORD dwFlags)
 {
-    TLogHelper Logger("OpenPatchedMpqTest", PatchList[0]);
+    TLogHelper Logger("PatchedMPQ", PatchList[0]);
     HANDLE hMpq;
     HANDLE hFile;
     BYTE Buffer[0x100];
