@@ -120,7 +120,7 @@ TLogHelper::~TLogHelper()
 #if defined(_MSC_VER) && defined(_DEBUG)
     if(_CrtDumpMemoryLeaks())
     {
-        PrintMessage(_T("Memory leak(s) detected after.\n"));
+        PrintMessage(_T("Memory leak(s) detected.\n"));
     }
 #endif  // _MSC_VER
 }

@@ -18,7 +18,6 @@
 #include "StormCommon.h"
 
 #define HEADER_SEARCH_BUFFER_SIZE   0x1000
-#define MINIMUM_MPQ_SIZE            0x0C
 
 //-----------------------------------------------------------------------------
 // Local functions
