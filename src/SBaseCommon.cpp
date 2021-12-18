@@ -1334,11 +1334,12 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             // They are mostly empty on WoW release MPQs, but on MPQs from PTR,
             // they contain random non-zero data. Their meaning is unknown.
             //
-            // These extra values are, however, include in the dwCmpSize in the file
+            // These extra values are, however, included in the dwCmpSize in the file
             // table. We cannot ignore them, because compacting archive would fail
             //
 
-            if(hf->SectorOffsets[0] > dwSectorOffsLen)
+            // Clear the lower 2 bits in order to make sure that the value is aligned to 4 bytes
+            if((hf->SectorOffsets[0] & 0xFFFFFFFC) > dwSectorOffsLen)
             {
                 // MPQ protectors put some ridiculous values there. We must limit the extra bytes
                 if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400))

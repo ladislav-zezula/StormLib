@@ -120,7 +120,7 @@ TLogHelper::~TLogHelper()
 #if defined(_MSC_VER) && defined(_DEBUG)
     if(_CrtDumpMemoryLeaks())
     {
-        PrintMessage(_T("Memory leak(s) detected after %s.\n"), szSaveMainTitle);
+        PrintMessage(_T("Memory leak(s) detected.\n"));
     }
 #endif  // _MSC_VER
 }
@@ -423,7 +423,7 @@ char * TLogHelper::CopyFormatCharacter(char * szBuffer, const char *& szFormat)
     // String format
     if(szFormat[0] == '%')
     {
-        if(szFormat[1] == 's' && szFormat[2] != ')')
+        if(szFormat[1] == 's')
         {
             strcpy(szBuffer, szStringFormat);
             szFormat += 2;

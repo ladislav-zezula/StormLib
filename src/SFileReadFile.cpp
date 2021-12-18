@@ -663,7 +663,8 @@ static DWORD ReadMpqFileLocalFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePo
 
 bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD pdwRead, LPOVERLAPPED lpOverlapped)
 {
-    TMPQFile * hf = (TMPQFile *)hFile;
+    TFileEntry * pFileEntry;
+    TMPQFile * hf;
     DWORD dwBytesRead = 0;                      // Number of bytes read
     DWORD dwErrCode = ERROR_SUCCESS;
 
@@ -673,7 +674,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     lpOverlapped = lpOverlapped;
 
     // Check valid parameters
-    if(!IsValidFileHandle(hFile))
+    if((hf = IsValidFileHandle(hFile)) == NULL)
     {
         SetLastError(ERROR_INVALID_HANDLE);
         return false;
@@ -697,6 +698,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     }
 
     // Clear the last used compression
+    pFileEntry = hf->pFileEntry;
     hf->dwCompression0 = 0;
 
     // If the file is local file, read the data directly from the stream
@@ -706,7 +708,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     }
 
     // If the file is a patch file, we have to read it special way
-    else if(hf->hfPatch != NULL && (hf->pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
+    else if(hf->hfPatch != NULL && (pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE) == 0)
     {
         dwErrCode = ReadMpqFilePatchFile(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }
@@ -718,7 +720,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     }
 
     // If the file is single unit file, redirect it to read file
-    else if(hf->pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT)
+    else if(pFileEntry->dwFlags & MPQ_FILE_SINGLE_UNIT)
     {
         dwErrCode = ReadMpqFileSingleUnit(hf, pvBuffer, hf->dwFilePos, dwToRead, &dwBytesRead);
     }

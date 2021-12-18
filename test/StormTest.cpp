@@ -2646,7 +2646,7 @@ static DWORD TestOpenArchive_Corrupt(LPCTSTR szPlainName)
 // Opens a patched MPQ archive
 static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWORD dwFlags)
 {
-    TLogHelper Logger("OpenPatchedMpqTest", PatchList[0]);
+    TLogHelper Logger("PatchedMPQ", PatchList[0]);
     HANDLE hMpq;
     HANDLE hFile;
     BYTE Buffer[0x100];
@@ -4336,40 +4336,40 @@ int _tmain(int argc, TCHAR * argv[])
     // Search all testing archives and verify their SHA1 hash
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+    //}
 
     //
     // Test file stream operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
-        {
-            dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
+    //    {
+    //        dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Test master-mirror reading operations
     //
 
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
-        {
-            dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
-                                                  TestList_MasterMirror[i].szMpqName2,
-                                                  TestList_MasterMirror[i].dwFlags != 0);
-            if(dwErrCode != ERROR_SUCCESS)
-                break;
-        }
-    }
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
+    //    {
+    //        dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
+    //                                              TestList_MasterMirror[i].szMpqName2,
+    //                                              TestList_MasterMirror[i].dwFlags != 0);
+    //        if(dwErrCode != ERROR_SUCCESS)
+    //            break;
+    //    }
+    //}
 
     //
     // Test opening various archives - correct, damaged, protected

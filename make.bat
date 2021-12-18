@@ -35,10 +35,10 @@ del buildfre_wlh_amd64.log
 echo.
 
 :COPY_LIBS
-copy /Y .\objfre_wlh_amd64\amd64\%LIBRARY_NAME%.lib ..\aaa\lib64\%LIBRARY_NAME%.lib >nul
-copy /Y .\objfre_w2k_x86\i386\%LIBRARY_NAME%.lib ..\aaa\lib32\%LIBRARY_NAME%.lib >nul
-copy /Y .\src\StormPort.h ..\aaa\inc >nul
-copy /Y .\src\StormLib.h ..\aaa\inc >nul
+xcopy /Y /D .\src\StormLib.h  ..\aaa\inc >nul
+xcopy /Y /D .\src\StormPort.h ..\aaa\inc >nul
+xcopy /Y /D .\objfre_w2k_x86\i386\%LIBRARY_NAME%.lib    ..\aaa\lib32\%LIBRARY_NAME%.lib >nul
+xcopy /Y /D .\objfre_wlh_amd64\amd64\%LIBRARY_NAME%.lib ..\aaa\lib64\%LIBRARY_NAME%.lib >nul
 
 :CLEANUP
 if exist sources-cpp.cpp del sources-cpp.cpp
