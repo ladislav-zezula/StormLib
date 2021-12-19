@@ -20,11 +20,7 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Community\VC\Auxiliar
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
-:: Copy the public headers
-xcopy.exe /Y /D .\src\StormLib.h ..\aaa\inc >nul
-xcopy.exe /Y /D .\src\StormPort.h ..\aaa\inc >nul
-
-:: Build all libraries using Visual Studio 2008 and 2017
+:: Build all libraries using Visual Studio 2008 and 2019
 call :BuildLibs "%VCVARS_2008%" x86 %LIB_NAME%_vs08.sln \vs2008
 call :BuildLibs "%VCVARS_2008%" x64 %LIB_NAME%_vs08.sln \vs2008
 call :BuildLibs "%VCVARS_2019%" x86 %LIB_NAME%_vs19.sln
@@ -83,5 +79,7 @@ goto:eof
 if not exist %1 goto:eof
 devenv.com %1 /project "%LIB_NAME%" /rebuild "%4|%2"
 if not exist ..\aaa goto:eof
+xcopy.exe /Y /D .\src\StormLib.h ..\aaa\inc >nul
+xcopy.exe /Y /D .\src\StormPort.h ..\aaa\inc >nul
 xcopy.exe /Y /D .\bin\StormLib\%2\%4\*.lib ..\aaa\%3 >nul
 goto:eof
