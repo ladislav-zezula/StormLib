@@ -552,46 +552,52 @@ void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
 
 DWORD DetectFileKeyBySectorSize(LPDWORD EncryptedData, DWORD dwSectorSize, DWORD dwDecrypted0)
 {
-    DWORD dwDecrypted1Max = dwSectorSize + dwDecrypted0;
-    DWORD dwKey1PlusKey2;
-    DWORD DataBlock[2];
-
     // We must have at least 2 DWORDs there to be able to decrypt something
-    if(dwSectorSize < 0x08)
-        return 0;
-
-    // Get the value of the combined encryption key
-    dwKey1PlusKey2 = (EncryptedData[0] ^ dwDecrypted0) - 0xEEEEEEEE;
-
-    // Try all 256 combinations of dwKey1
-    for(DWORD i = 0; i < 0x100; i++)
+    if(dwSectorSize >= 0x08)
     {
-        DWORD dwSaveKey1;
-        DWORD dwKey1 = dwKey1PlusKey2 - StormBuffer[MPQ_HASH_KEY2_MIX + i];
-        DWORD dwKey2 = 0xEEEEEEEE;
-
-        // Modify the second key and decrypt the first DWORD
-        dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
-        DataBlock[0] = EncryptedData[0] ^ (dwKey1 + dwKey2);
-
-        // Did we obtain the same value like dwDecrypted0?
-        if(DataBlock[0] == dwDecrypted0)
+        // Also try subsequent three values. This is because the value of the sector offset[0]
+        // could be higher than the total size of the sector table.
+        // Example MPQ: MPQ_2021_v1_CantExtractCHK.scx
+        for(DWORD dwDecrypted4 = dwDecrypted0 + 4; dwDecrypted0 < dwDecrypted4; dwDecrypted0++)
         {
-            // Save this key value. Increment by one because
-            // we are decrypting sector offset table
-            dwSaveKey1 = dwKey1 + 1;
+            DWORD dwDecrypted1Max = dwSectorSize + dwDecrypted0;
+            DWORD dwKey1PlusKey2;
+            DWORD DataBlock[2];
 
-            // Rotate both keys
-            dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
-            dwKey2 = DataBlock[0] + dwKey2 + (dwKey2 << 5) + 3;
+            // Get the value of the combined encryption key
+            dwKey1PlusKey2 = (EncryptedData[0] ^ dwDecrypted0) - 0xEEEEEEEE;
 
-            // Modify the second key again and decrypt the second DWORD
-            dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
-            DataBlock[1] = EncryptedData[1] ^ (dwKey1 + dwKey2);
+            // Try all 256 combinations of dwKey1
+            for(DWORD i = 0; i < 0x100; i++)
+            {
+                DWORD dwSaveKey1;
+                DWORD dwKey1 = dwKey1PlusKey2 - StormBuffer[MPQ_HASH_KEY2_MIX + i];
+                DWORD dwKey2 = 0xEEEEEEEE;
 
-            // Now compare the results
-            if(DataBlock[1] <= dwDecrypted1Max)
-                return dwSaveKey1;
+                // Modify the second key and decrypt the first DWORD
+                dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+                DataBlock[0] = EncryptedData[0] ^ (dwKey1 + dwKey2);
+
+                // Did we obtain the same value like dwDecrypted0?
+                if(DataBlock[0] == dwDecrypted0)
+                {
+                    // Save this key value. Increment by one because
+                    // we are decrypting sector offset table
+                    dwSaveKey1 = dwKey1 + 1;
+
+                    // Rotate both keys
+                    dwKey1 = ((~dwKey1 << 0x15) + 0x11111111) | (dwKey1 >> 0x0B);
+                    dwKey2 = DataBlock[0] + dwKey2 + (dwKey2 << 5) + 3;
+
+                    // Modify the second key again and decrypt the second DWORD
+                    dwKey2 += StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)];
+                    DataBlock[1] = EncryptedData[1] ^ (dwKey1 + dwKey2);
+
+                    // Now compare the results
+                    if(DataBlock[1] <= dwDecrypted1Max)
+                        return dwSaveKey1;
+                }
+            }
         }
     }
 
@@ -1304,7 +1310,7 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
                 DWORD dwSectorOffset0 = hf->SectorOffsets[i];
 
                 // Every following sector offset must be bigger than the previous one
-                if(dwSectorOffset1 <= dwSectorOffset0)
+                if(dwSectorOffset1 < dwSectorOffset0)
                 {
                     bSectorOffsetTableCorrupt = true;
                     break;

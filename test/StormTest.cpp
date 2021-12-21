@@ -36,8 +36,9 @@
 // Local structures
 
 #define TFLG_COUNT_HASH     0x01000000      // There is file count in the lower 24-bits, then hash
-#define TFLG_WILL_FAIL      0x02000000      // The process is expected to fail
-#define TFLG_COUNT_MASK     0x00FFFFFF      // Mask for file count
+#define TFLG_FILE_LOCALE    0x02000000      // The process is expected to fail
+#define TFLG_WILL_FAIL      0x04000000      // The process is expected to fail
+#define TFLG_VALUE_MASK     0x00FFFFFF      // Mask for integer value
 #define TEST_DATA(hash, num)   (num | TFLG_COUNT_HASH), hash
 
 typedef struct _TEST_INFO
@@ -1668,6 +1669,9 @@ static DWORD SearchArchive(
 #endif
                 }
 
+                // Debug: Show CRC32 of each file in order to debug differences
+                pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
+                printf("%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
                 STORM_FREE(pFileData);
             }
         }
@@ -2475,6 +2479,7 @@ static DWORD TestArchive(
     DWORD dwExpectedFileCount = 0;
     DWORD dwMpqFlags = 0;
     TCHAR szFullName[MAX_PATH];
+    LCID lcLocale = 0;
     BYTE ObtainedMD5[MD5_DIGEST_SIZE] = {0};
     bool bIgnoreOpedwErrCodes = false;
 
@@ -2487,8 +2492,14 @@ static DWORD TestArchive(
     {
         if((szExpectedMD5 = szParam1) != NULL)
             dwSearchFlags |= SEARCH_FLAG_HASH_FILES;
-        dwExpectedFileCount = (dwFlags & TFLG_COUNT_MASK);
+        dwExpectedFileCount = (dwFlags & TFLG_VALUE_MASK);
         szParam1 = NULL;
+    }
+
+    // If locale entered
+    if(dwFlags & TFLG_FILE_LOCALE)
+    {
+        lcLocale = (LCID)(dwFlags & TFLG_VALUE_MASK);
     }
 
     // Put all file names into list
@@ -2535,7 +2546,7 @@ static DWORD TestArchive(
                     break;
 
                 // Load the entire file 1
-                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName);
+                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName, lcLocale);
                 if(pFileData == NULL)
                 {
                     dwErrCode = Logger.PrintError("Failed to load the file %s", szFileName);
@@ -2650,7 +2661,7 @@ static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWOR
     HANDLE hMpq;
     HANDLE hFile;
     BYTE Buffer[0x100];
-    DWORD dwExpectedPatchCount = (dwFlags & TFLG_COUNT_MASK);
+    DWORD dwExpectedPatchCount = (dwFlags & TFLG_VALUE_MASK);
     DWORD dwFileCount = 0;
     DWORD BytesRead = 0;
     DWORD dwErrCode;
@@ -4234,43 +4245,43 @@ static const TEST_INFO TestList_MasterMirror[] =
 static const TEST_INFO Test_Mpqs[] =
 {
     // Correct or damaged archives
-    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                  NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
-    {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"),               NULL, TEST_DATA("255d87a62f3c9518f72cf723a1818946", 221), "waitingroombkgd.dc6"}, // Update MPQ from Diablo II (patch 2016)
-    {_T("MPQ_2018_v1_icon_error.w3m"),                       NULL, TEST_DATA("fcefa25fb50c391e8714f2562d1e10ff", 19),  "file00000002.blp"},
-    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),               szBliz, TEST_DATA("5ef18ef9a26b5704d8d46a344d976c89", 2)},       // File whose archive's (signature) file has flags = 0x90000000
-    {_T("MPQ_2012_v2_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (found in WoW cache - it's just a header)
-    {_T("MPQ_2013_v4_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (created artificially - it's just a header)
-    {_T("MPQ_2013_v4_patch-base-16357.MPQ"),                 NULL, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 1)},       // Empty archive (found in WoW cache - it's just a header)
-    {_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ"),             NULL, TEST_DATA("be4b49ecc3942d1957249f9da0021659", 6)},       // Empty archive (with invalid HET entry count)
-    {_T("MPQ_2002_v1_BlockTableCut.MPQ"),                    NULL, TEST_DATA("a9499ab74d939303d8cda7c397c36275", 287)},     // Truncated archive
-    {_T("MPQ_2010_v2_HasUserData.s2ma"),                     NULL, TEST_DATA("feff9e2c86db716b6ff5ffc906181200", 52)},      // MPQ that actually has user data
-    {_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"),           NULL, TEST_DATA("90451b7052eb0f1d6f4bf69b2daff7f5", 116)},     // Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    {_T("MPQ_2020_v1_AHF04patch.mix"),                       NULL, TEST_DATA("d3c6aac48bc12813ef5ce4ad113e58bf", 2891)},    // MIX file
-    {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),            NULL, TEST_DATA("0c8fc921466f07421a281a05fad08b01", 53)},      // MPQ archive v 3.0 (the only one I know)
-    {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),        NULL, TEST_DATA("10e4dcdbe95b7ad731c563ec6b71bc16", 82)},      // Encrypted archive from Starcraft II installer
-    {_T("MPx_2013_v1_LongwuOnline.mpk"),                     NULL, TEST_DATA("548f7db88284097f7e94c95a08c5bc24", 469)},     // MPK archive from Longwu online
-    {_T("MPx_2013_v1_WarOfTheImmortals.sqp"),              szWotI, TEST_DATA("a048f37f7c6162a96253d8081722b6d9", 9396)},    // SQP archive from War of the Immortals
-    {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),0, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 14263)},   // Partial MPQ with compressed hash table
-    {_T("blk4-file://streaming/model.MPQ.0"),                NULL, TEST_DATA("e06b00efb2fc7e7469dd8b3b859ae15d", 39914)},   // Archive that is merged with multiple files
+    //{_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                  NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
+    //{_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"),               NULL, TEST_DATA("255d87a62f3c9518f72cf723a1818946", 221), "waitingroombkgd.dc6"}, // Update MPQ from Diablo II (patch 2016)
+    //{_T("MPQ_2018_v1_icon_error.w3m"),                       NULL, TEST_DATA("fcefa25fb50c391e8714f2562d1e10ff", 19),  "file00000002.blp"},
+    //{_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),               szBliz, TEST_DATA("5ef18ef9a26b5704d8d46a344d976c89", 2)},       // File whose archive's (signature) file has flags = 0x90000000
+    //{_T("MPQ_2012_v2_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (found in WoW cache - it's just a header)
+    //{_T("MPQ_2013_v4_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (created artificially - it's just a header)
+    //{_T("MPQ_2013_v4_patch-base-16357.MPQ"),                 NULL, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 1)},       // Empty archive (found in WoW cache - it's just a header)
+    //{_T("MPQ_2011_v4_InvalidHetEntryCount.MPQ"),             NULL, TEST_DATA("be4b49ecc3942d1957249f9da0021659", 6)},       // Empty archive (with invalid HET entry count)
+    //{_T("MPQ_2002_v1_BlockTableCut.MPQ"),                    NULL, TEST_DATA("a9499ab74d939303d8cda7c397c36275", 287)},     // Truncated archive
+    //{_T("MPQ_2010_v2_HasUserData.s2ma"),                     NULL, TEST_DATA("feff9e2c86db716b6ff5ffc906181200", 52)},      // MPQ that actually has user data
+    //{_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"),           NULL, TEST_DATA("90451b7052eb0f1d6f4bf69b2daff7f5", 116)},     // Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
+    //{_T("MPQ_2020_v1_AHF04patch.mix"),                       NULL, TEST_DATA("d3c6aac48bc12813ef5ce4ad113e58bf", 2891)},    // MIX file
+    //{_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),            NULL, TEST_DATA("0c8fc921466f07421a281a05fad08b01", 53)},      // MPQ archive v 3.0 (the only one I know)
+    //{_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),        NULL, TEST_DATA("10e4dcdbe95b7ad731c563ec6b71bc16", 82)},      // Encrypted archive from Starcraft II installer
+    //{_T("MPx_2013_v1_LongwuOnline.mpk"),                     NULL, TEST_DATA("548f7db88284097f7e94c95a08c5bc24", 469)},     // MPK archive from Longwu online
+    //{_T("MPx_2013_v1_WarOfTheImmortals.sqp"),              szWotI, TEST_DATA("a048f37f7c6162a96253d8081722b6d9", 9396)},    // SQP archive from War of the Immortals
+    //{_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),0, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 14263)},   // Partial MPQ with compressed hash table
+    //{_T("blk4-file://streaming/model.MPQ.0"),                NULL, TEST_DATA("e06b00efb2fc7e7469dd8b3b859ae15d", 39914)},   // Archive that is merged with multiple files
 
-    // Protected archives
-    {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),     NULL, TEST_DATA("b900364cc134a51ddeca21a13697c3ca", 79)},
-    {_T("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x"),    NULL, TEST_DATA("db67e894da9de618a1cdf86d02d315ff", 117)},
-    {_T("MPQ_2002_v1_ProtectedMap_Spazzler.w3x"),            NULL, TEST_DATA("72d7963aa799a7fb4117c55b7beabaf9", 470)},     // Warcraft III map locked by the Spazzler protector
-    {_T("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x"),           NULL, TEST_DATA("72d7963aa799a7fb4117c55b7beabaf9", 470)},     // Warcraft III map locked by the Spazzler protector
-    {_T("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x"),           NULL, TEST_DATA("e55aad2dd33cf68b372ca8e30dcb78a7", 130)},     // Warcraft III map locked by the Spazzler protector
-    {_T("MPQ_2002_v1_ProtectedMap_BOBA.w3m"),                NULL, TEST_DATA("7b725d87e07a2173c42fe2314b95fa6c", 17)},      // Warcraft III map locked by the BOBA protector
-    {_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"),          NULL, TEST_DATA("c7ca4d2d0b1e58db5c784f522506c897", 1578)},
-    {_T("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x"),           NULL, TEST_DATA("b411f9a51a6e9a9a509150c8d66ba359", 92)},
-    {_T("MPQ_2015_v1_ProtectedMap_Spazy.w3x"),               NULL, TEST_DATA("6e491bd055511435dcb4d9c8baed0516", 4089)},    // Warcraft III map locked by Spazy protector
-    {_T("MPQ_2015_v1_MessListFile.mpq"),                     NULL, TEST_DATA("15e25d5be124d8ad71519f967997efc2", 8)},
-    {_T("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x"),   NULL, TEST_DATA("ad81b43cbd37bbfa27e4bed4c17e6a81", 176)},
-    {_T("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x"),      NULL, TEST_DATA("d6e712c275a26dc51f16b3a02f6187df", 228)},
-    {_T("MPQ_2016_v1_ProtectedMap_Somj2.w3x"),               NULL, TEST_DATA("457cdbf97a9ca41cfe8ea130dafaa0bb", 21)},      // Something like Somj 2.0
-    {_T("MPQ_2016_v1_WME4_4.w3x"),                           NULL, TEST_DATA("e85e1c0ccb4465a30ffd07cae3260254", 382)},     // Protector from China (2016-05-27)
-    {_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"),                 NULL, TEST_DATA("b6f6d56f4f8aaef04c2c4b1f08881a8b", 16)},
-    {_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"),                 NULL, TEST_DATA("3c7908b29d3feac9ec952282390a242d", 5027)},
-    {_T("MPQ_2016_v1_KoreanFile.w3m"),                       NULL, TEST_DATA("805d1f75712472a81c6df27b2a71f946", 18)},
+    //// Protected archives
+    //{_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),     NULL, TEST_DATA("b900364cc134a51ddeca21a13697c3ca", 79)},
+    //{_T("MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x"),    NULL, TEST_DATA("db67e894da9de618a1cdf86d02d315ff", 117)},
+    //{_T("MPQ_2002_v1_ProtectedMap_Spazzler.w3x"),            NULL, TEST_DATA("72d7963aa799a7fb4117c55b7beabaf9", 470)},     // Warcraft III map locked by the Spazzler protector
+    //{_T("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x"),           NULL, TEST_DATA("72d7963aa799a7fb4117c55b7beabaf9", 470)},     // Warcraft III map locked by the Spazzler protector
+    //{_T("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x"),           NULL, TEST_DATA("e55aad2dd33cf68b372ca8e30dcb78a7", 130)},     // Warcraft III map locked by the Spazzler protector
+    //{_T("MPQ_2002_v1_ProtectedMap_BOBA.w3m"),                NULL, TEST_DATA("7b725d87e07a2173c42fe2314b95fa6c", 17)},      // Warcraft III map locked by the BOBA protector
+    //{_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"),          NULL, TEST_DATA("c7ca4d2d0b1e58db5c784f522506c897", 1578)},
+    //{_T("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x"),           NULL, TEST_DATA("b411f9a51a6e9a9a509150c8d66ba359", 92)},
+    //{_T("MPQ_2015_v1_ProtectedMap_Spazy.w3x"),               NULL, TEST_DATA("6e491bd055511435dcb4d9c8baed0516", 4089)},    // Warcraft III map locked by Spazy protector
+    //{_T("MPQ_2015_v1_MessListFile.mpq"),                     NULL, TEST_DATA("15e25d5be124d8ad71519f967997efc2", 8)},
+    //{_T("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x"),   NULL, TEST_DATA("ad81b43cbd37bbfa27e4bed4c17e6a81", 176)},
+    //{_T("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x"),      NULL, TEST_DATA("d6e712c275a26dc51f16b3a02f6187df", 228)},
+    //{_T("MPQ_2016_v1_ProtectedMap_Somj2.w3x"),               NULL, TEST_DATA("457cdbf97a9ca41cfe8ea130dafaa0bb", 21)},      // Something like Somj 2.0
+    //{_T("MPQ_2016_v1_WME4_4.w3x"),                           NULL, TEST_DATA("e85e1c0ccb4465a30ffd07cae3260254", 382)},     // Protector from China (2016-05-27)
+    //{_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"),                 NULL, TEST_DATA("b6f6d56f4f8aaef04c2c4b1f08881a8b", 16)},
+    //{_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"),                 NULL, TEST_DATA("3c7908b29d3feac9ec952282390a242d", 5027)},
+    //{_T("MPQ_2016_v1_KoreanFile.w3m"),                       NULL, TEST_DATA("805d1f75712472a81c6df27b2a71f946", 18)},
     {_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"),                 NULL, TEST_DATA("7a7f0749b47b5f05a8b63ecba2488a3e", 16300)},   // Protected by PG1.11.973
     {_T("MPQ_2017_v1_BigDummyFiles.w3x"),                    NULL, TEST_DATA("f4d2ee9d85d2c4107e0b2d00ff302dd7", 9086)},
     {_T("MPQ_2017_v1_TildeInFileName.mpq"),                  NULL, TEST_DATA("f203e3979247a4dbf7f3828695ac810c", 5)},
@@ -4314,23 +4325,23 @@ int _tmain(int argc, TCHAR * argv[])
     dwErrCode = InitializeMpqDirectory(argv, argc);
 
     //
-    // Tests on a local listfile
-    //
-
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
-        dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
-    }
-
-    //
     // Open all files from the command line
     //
 
-    for(int i = 1; i < argc; i++)
-    {
-        TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), _T("Listfile_Blizzard.txt"), 0, NULL, NULL);
-    }
+    //for(int i = 1; i < argc; i++)
+    //{
+    //    TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), NULL, TFLG_FILE_LOCALE | 0x0409, "File00000014.xxx", NULL);
+    //}
+
+    //
+    // Tests on a local listfile
+    //
+
+    //if(dwErrCode == ERROR_SUCCESS)
+    //{
+    //    TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
+    //    dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
+    //}
 
     //
     // Search all testing archives and verify their SHA1 hash
@@ -4433,14 +4444,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Check the SFileGetFileInfo function
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
-
-    // Downloadable MPQ archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
-
-    // Downloadable MPQ archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
 
     // Check archive signature
     if(dwErrCode == ERROR_SUCCESS)

@@ -159,34 +159,41 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
             // by comparing uncompressed and compressed size !!!
             if(dwRawBytesInThisSector < dwBytesInThisSector)
             {
-                int cbOutSector = dwBytesInThisSector;
-                int cbInSector = dwRawBytesInThisSector;
-                int nResult = 0;
-
-                // Is the file compressed by Blizzard's multiple compression ?
-                if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
+                if(dwRawBytesInThisSector != 0)
                 {
-                    // Remember the last used compression
-                    hf->dwCompression0 = pbInSector[0];
+                    int cbOutSector = dwBytesInThisSector;
+                    int cbInSector = dwRawBytesInThisSector;
+                    int nResult = 0;
 
-                    // Decompress the data
-                    if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
-                        nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                    else
-                        nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                    // Is the file compressed by Blizzard's multiple compression ?
+                    if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS)
+                    {
+                        // Remember the last used compression
+                        hf->dwCompression0 = pbInSector[0];
+
+                        // Decompress the data
+                        if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
+                            nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                        else
+                            nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                    }
+
+                    // Is the file compressed by PKWARE Data Compression Library ?
+                    else if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+                    {
+                        nResult = SCompExplode(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                    }
+
+                    // Did the decompression fail ?
+                    if(nResult == 0)
+                    {
+                        dwErrCode = ERROR_FILE_CORRUPT;
+                        break;
+                    }
                 }
-
-                // Is the file compressed by PKWARE Data Compression Library ?
-                else if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+                else
                 {
-                    nResult = SCompExplode(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                }
-
-                // Did the decompression fail ?
-                if(nResult == 0)
-                {
-                    dwErrCode = ERROR_FILE_CORRUPT;
-                    break;
+                    memset(pbOutSector, 0, dwBytesInThisSector);
                 }
             }
             else
