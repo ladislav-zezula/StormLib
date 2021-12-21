@@ -1532,8 +1532,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         // Load the entire file
         if(dwErrCode == ERROR_SUCCESS)
         {
-            if(!_stricmp(szFileName, "File00000687.xxx"))
-                __debugbreak();
+            //if(!_stricmp(szFileName, "File00000687.xxx"))
+            //    __debugbreak();
 
             // Read the file data
             SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
@@ -1666,8 +1666,8 @@ static DWORD SearchArchive(
                 }
 
                 // Debug: Show CRC32 of each file in order to debug differences
-                pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
-                printf("%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
+                //pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
+                //printf("%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
 
                 // Free the loaded file data
                 STORM_FREE(pFileData);
