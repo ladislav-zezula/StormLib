@@ -36,8 +36,9 @@
 // Local structures
 
 #define TFLG_COUNT_HASH     0x01000000      // There is file count in the lower 24-bits, then hash
-#define TFLG_WILL_FAIL      0x02000000      // The process is expected to fail
-#define TFLG_COUNT_MASK     0x00FFFFFF      // Mask for file count
+#define TFLG_FILE_LOCALE    0x02000000      // The process is expected to fail
+#define TFLG_WILL_FAIL      0x04000000      // The process is expected to fail
+#define TFLG_VALUE_MASK     0x00FFFFFF      // Mask for integer value
 #define TEST_DATA(hash, num)   (num | TFLG_COUNT_HASH), hash
 
 typedef struct _TEST_INFO
@@ -1475,7 +1476,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     pLogger->PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-//  if(!_stricmp(szFileName, "File00000733.wav"))
+//  if(!_stricmp(szFileName, "File00000687.xxx"))
 //      __debugbreak();
 #endif
 
@@ -1497,10 +1498,9 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         }
 
         // Spazzler protector: Creates fake files with size of 0x7FFFE7CA
-        if(dwErrCode == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS && dwFileSizeLo > 0x1FFFFFFF)
         {
-            if(dwFileSizeLo > 0x1FFFFFFF)
-                dwErrCode = ERROR_FILE_CORRUPT;
+            dwErrCode = ERROR_FILE_CORRUPT;
         }
 
         // Allocate buffer for the file content
@@ -1532,8 +1532,8 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
         // Load the entire file
         if(dwErrCode == ERROR_SUCCESS)
         {
-			//if(!stricmp(szFileName, "replay.game.events"))
-			//	__debugbreak();
+            //if(!_stricmp(szFileName, "File00000687.xxx"))
+            //    __debugbreak();
 
             // Read the file data
             SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
@@ -1632,9 +1632,6 @@ static DWORD SearchArchive(
         // Increment number of files
         dwFileCount++;
 
-//      if(!_stricmp(sf.cFileName, "war3map.j"))
-//          DebugBreak();
-
         if(dwSearchFlags & SEARCH_FLAG_MOST_PATCHED)
         {
             // Load the patch count
@@ -1668,6 +1665,11 @@ static DWORD SearchArchive(
 #endif
                 }
 
+                // Debug: Show CRC32 of each file in order to debug differences
+                //pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
+                //printf("%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
+
+                // Free the loaded file data
                 STORM_FREE(pFileData);
             }
         }
@@ -2475,6 +2477,7 @@ static DWORD TestArchive(
     DWORD dwExpectedFileCount = 0;
     DWORD dwMpqFlags = 0;
     TCHAR szFullName[MAX_PATH];
+    LCID lcLocale = 0;
     BYTE ObtainedMD5[MD5_DIGEST_SIZE] = {0};
     bool bIgnoreOpedwErrCodes = false;
 
@@ -2487,8 +2490,14 @@ static DWORD TestArchive(
     {
         if((szExpectedMD5 = szParam1) != NULL)
             dwSearchFlags |= SEARCH_FLAG_HASH_FILES;
-        dwExpectedFileCount = (dwFlags & TFLG_COUNT_MASK);
+        dwExpectedFileCount = (dwFlags & TFLG_VALUE_MASK);
         szParam1 = NULL;
+    }
+
+    // If locale entered
+    if(dwFlags & TFLG_FILE_LOCALE)
+    {
+        lcLocale = (LCID)(dwFlags & TFLG_VALUE_MASK);
     }
 
     // Put all file names into list
@@ -2535,7 +2544,7 @@ static DWORD TestArchive(
                     break;
 
                 // Load the entire file 1
-                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName);
+                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName, lcLocale);
                 if(pFileData == NULL)
                 {
                     dwErrCode = Logger.PrintError("Failed to load the file %s", szFileName);
@@ -2650,7 +2659,7 @@ static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWOR
     HANDLE hMpq;
     HANDLE hFile;
     BYTE Buffer[0x100];
-    DWORD dwExpectedPatchCount = (dwFlags & TFLG_COUNT_MASK);
+    DWORD dwExpectedPatchCount = (dwFlags & TFLG_VALUE_MASK);
     DWORD dwFileCount = 0;
     DWORD BytesRead = 0;
     DWORD dwErrCode;
@@ -4271,7 +4280,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"),                 NULL, TEST_DATA("b6f6d56f4f8aaef04c2c4b1f08881a8b", 16)},
     {_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"),                 NULL, TEST_DATA("3c7908b29d3feac9ec952282390a242d", 5027)},
     {_T("MPQ_2016_v1_KoreanFile.w3m"),                       NULL, TEST_DATA("805d1f75712472a81c6df27b2a71f946", 18)},
-    {_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"),                 NULL, TEST_DATA("7a7f0749b47b5f05a8b63ecba2488a3e", 16300)},   // Protected by PG1.11.973
+    {_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"),                 NULL, TEST_DATA("21c3dc3a66b76c57c84cc8c7e2dd846b", 16300)},   // Protected by PG1.11.973
     {_T("MPQ_2017_v1_BigDummyFiles.w3x"),                    NULL, TEST_DATA("f4d2ee9d85d2c4107e0b2d00ff302dd7", 9086)},
     {_T("MPQ_2017_v1_TildeInFileName.mpq"),                  NULL, TEST_DATA("f203e3979247a4dbf7f3828695ac810c", 5)},
     {_T("MPQ_2018_v1_EWIX_v8_7.w3x"),                        NULL, TEST_DATA("12c0f4e15c7361b7c13acd37a181d83b", 857), "BlueCrystal.mdx"},
@@ -4280,7 +4289,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2020_v4_NP_Protect_2.s2ma"),                    NULL, TEST_DATA("7d1a379da8bd966da1f4fa6e4646049b", 55)},      // SC2 map that is protected by the NP_Protect
     {_T("MPQ_2015_v1_flem1.w3x"),                            NULL, TEST_DATA("1c4c13e627658c473e84d94371e31f37", 20)},
     {_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, TEST_DATA("5250975ed917375fc6540d7be436d4de", 114)},
-    {_T("MPQ_2021_v1_CantExtractCHK.scx"),                   NULL, TEST_DATA("c9a7ded9f93d883b9419a52bec6087f7", 28)},
+    {_T("MPQ_2021_v1_CantExtractCHK.scx"),                   NULL, TEST_DATA("055fd548a789c910d9dd37472ecc1e66", 28)},
 };
 
 static const TEST_INFO Patched_Mpqs[] =
@@ -4314,6 +4323,15 @@ int _tmain(int argc, TCHAR * argv[])
     dwErrCode = InitializeMpqDirectory(argv, argc);
 
     //
+    // Open all files from the command line
+    //
+
+    //for(int i = 1; i < argc; i++)
+    //{
+    //    TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), NULL, TFLG_FILE_LOCALE | 0x0409, "File00000014.xxx", NULL);
+    //}
+
+    //
     // Tests on a local listfile
     //
 
@@ -4324,52 +4342,43 @@ int _tmain(int argc, TCHAR * argv[])
     }
 
     //
-    // Open all files from the command line
-    //
-
-    for(int i = 1; i < argc; i++)
-    {
-        TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), _T("Listfile_Blizzard.txt"), 0, NULL, NULL);
-    }
-
-    //
     // Search all testing archives and verify their SHA1 hash
     //
 
-    //if(dwErrCode == ERROR_SUCCESS)
-    //{
-    //    dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-    //}
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
+    }
 
     //
     // Test file stream operations
     //
 
-    //if(dwErrCode == ERROR_SUCCESS)
-    //{
-    //    for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
-    //    {
-    //        dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
-    //        if(dwErrCode != ERROR_SUCCESS)
-    //            break;
-    //    }
-    //}
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
+        {
+            dwErrCode = TestFileStreamOperations(TestList_StreamOps[i].szMpqName1, TestList_StreamOps[i].dwFlags);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
 
     //
     // Test master-mirror reading operations
     //
 
-    //if(dwErrCode == ERROR_SUCCESS)
-    //{
-    //    for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
-    //    {
-    //        dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
-    //                                              TestList_MasterMirror[i].szMpqName2,
-    //                                              TestList_MasterMirror[i].dwFlags != 0);
-    //        if(dwErrCode != ERROR_SUCCESS)
-    //            break;
-    //    }
-    //}
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
+        {
+            dwErrCode = TestReadFile_MasterMirror(TestList_MasterMirror[i].szMpqName1,
+                                                  TestList_MasterMirror[i].szMpqName2,
+                                                  TestList_MasterMirror[i].dwFlags != 0);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
 
     //
     // Test opening various archives - correct, damaged, protected
@@ -4433,14 +4442,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Check the SFileGetFileInfo function
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
-
-    // Downloadable MPQ archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_MasterMirror(_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"), _T("MPQ_2009_v1_patch-original.MPQ"), "world\\Azeroth\\DEADMINES\\PASSIVEDOODADS\\GOBLINMELTINGPOT\\DUST2.BLP", false);
-
-    // Downloadable MPQ archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_MasterMirror(_T("MPQ_2013_v4_alternate-downloaded.MPQ"), _T("MPQ_2013_v4_alternate-original.MPQ"), "alternate\\DUNGEONS\\TEXTURES\\ICECROWN\\GATE\\jlo_IceC_Floor_Thrown.blp", false);
 
     // Check archive signature
     if(dwErrCode == ERROR_SUCCESS)
