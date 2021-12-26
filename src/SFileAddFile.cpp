@@ -80,7 +80,7 @@ static bool IsWaveFile_16BitsPerAdpcmSample(
     return false;
 }
 
-static int FillWritableHandle(
+static DWORD FillWritableHandle(
     TMPQArchive * ha,
     TMPQFile * hf,
     ULONGLONG FileTime,
@@ -99,14 +99,13 @@ static int FillWritableHandle(
     pFileEntry->dwCmpSize = 0;
     pFileEntry->dwFlags  = dwFlags | MPQ_FILE_EXISTS;
 
-    // Initialize the file time, CRC32 and MD5
-    assert(sizeof(hf->hctx) >= sizeof(hash_state));
-    memset(pFileEntry->md5, 0, MD5_DIGEST_SIZE);
-    md5_init((hash_state *)hf->hctx);
-    pFileEntry->dwCrc32 = crc32(0, Z_NULL, 0);
+    // Initialize hashing of the file
+    if((hf->hctx = STORM_ALLOC(hash_state, 1)) != NULL)
+        md5_init((hash_state *)hf->hctx);
 
-    // If the caller gave us a file time, use it.
+    // Fill-in file time and CRC
     pFileEntry->FileTime = FileTime;
+    pFileEntry->dwCrc32 = crc32(0, Z_NULL, 0);
 
     // Mark the archive as modified
     ha->dwFlags |= MPQ_FLAG_CHANGED;
@@ -175,8 +174,9 @@ static DWORD WriteDataToMpqFile(
                 // Set the position in the file
                 ByteOffset = hf->RawFilePos + pFileEntry->dwCmpSize;
 
-                // Update CRC32 and MD5 of the file
-                md5_process((hash_state *)hf->hctx, hf->pbFileSector, dwBytesInSector);
+                // Update MD5 and CRC32 of the file
+                if(hf->hctx != NULL)
+                    md5_process((hash_state *)hf->hctx, hf->pbFileSector, dwBytesInSector);
                 hf->dwCrc32 = crc32(hf->dwCrc32, hf->pbFileSector, dwBytesInSector);
 
                 // Compress the file sector, if needed
@@ -662,7 +662,8 @@ DWORD SFileAddFile_Write(TMPQFile * hf, const void * pvData, DWORD dwSize, DWORD
             pFileEntry->dwCrc32 = hf->dwCrc32;
 
             // Finish calculating MD5
-            md5_done((hash_state *)hf->hctx, pFileEntry->md5);
+            if(hf->hctx != NULL)
+                md5_done((hash_state *)hf->hctx, pFileEntry->md5);
 
             // If we also have sector checksums, write them to the file
             if(hf->SectorChksums != NULL)

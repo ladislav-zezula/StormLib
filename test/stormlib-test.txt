@@ -1,4 +1,4 @@
-Microsoft Windows [Version 10.0.19043.1415]
+Microsoft Windows [Version 10.0.19044.1415]
 (c) Microsoft Corporation. All rights reserved.
 
 E:\Ladik\Appdir\StormLib>StormLib_test.exe

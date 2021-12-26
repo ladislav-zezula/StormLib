@@ -171,8 +171,6 @@ extern "C" {
 #define HET_ENTRY_DELETED                 0x80  // NameHash1 value for a deleted entry
 #define HET_ENTRY_FREE                    0x00  // NameHash1 value for free entry
 
-#define HASH_STATE_SIZE                   0x60  // Size of LibTomCrypt's hash_state structure
-
 // Values for SFileOpenArchive
 #define SFILE_OPEN_HARD_DISK_FILE            2  // Open the archive on HDD
 #define SFILE_OPEN_CDROM_FILE                3  // Open the archive only if it is on CDROM
@@ -888,7 +886,7 @@ typedef struct _TMPQFile
     DWORD          dwSectorOffs;                // File position of currently loaded file sector
     DWORD          dwSectorSize;                // Size of the file sector. For single unit files, this is equal to the file size
 
-    unsigned char  hctx[HASH_STATE_SIZE];       // Hash state for MD5. Used when saving file to MPQ
+    void         * hctx;                        // Hash state for MD5. Used when saving file to MPQ
     DWORD          dwCrc32;                     // CRC32 value, used when saving file to MPQ
 
     DWORD          dwAddFileError;              // Result of the "Add File" operations

@@ -1681,6 +1681,8 @@ void FreeFileHandle(TMPQFile *& hf)
             STORM_FREE(hf->SectorOffsets);
         if(hf->SectorChksums != NULL)
             STORM_FREE(hf->SectorChksums);
+        if(hf->hctx != NULL)
+            STORM_FREE(hf->hctx);
         if(hf->pbFileSector != NULL)
             STORM_FREE(hf->pbFileSector);
         if(hf->pStream != NULL)
