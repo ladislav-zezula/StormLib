@@ -1,5 +1,5 @@
 project(StormLib)
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
 
 set(LIBRARY_NAME storm)
 set(CMAKE_CXX_STANDARD 11)
@@ -256,8 +256,7 @@ set(TOMMATH_FILES
            src/libtommath/bn_s_mp_sub.c
 )
 
-# Needed for Windows
-set(ZLIB_BZIP2_FILES
+set(BZIP2_FILES
            src/bzip2/blocksort.c
            src/bzip2/bzlib.c
            src/bzip2/compress.c
@@ -265,6 +264,9 @@ set(ZLIB_BZIP2_FILES
            src/bzip2/decompress.c
            src/bzip2/huffman.c
            src/bzip2/randtable.c
+)
+
+set(ZLIB_FILES
            src/zlib/adler32.c
            src/zlib/compress.c
            src/zlib/crc32.c
@@ -281,19 +283,28 @@ set(TEST_SRC_FILES
 )
 
 add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)
+set(LINK_LIBS)
+
+find_package(ZLIB)
+if (ZLIB_FOUND)
+	set(LINK_LIBS ${LINK_LIBS} ZLIB::ZLIB)
+    add_definitions(-D__SYS_ZLIB)
+else()
+	set(SRC_FILES ${SRC_FILES} ${ZLIB_FILES})
+endif()
+
+find_package(BZip2)
+if (BZIP2_FOUND)
+	set(LINK_LIBS ${LINK_LIBS} BZip2::BZip2)
+    add_definitions(-D__SYS_BZLIB)
+else()
+	set(SRC_FILES ${SRC_FILES} ${BZIP2_FILES})
+endif()
 
 if(WIN32)
-    set(SRC_ADDITIONAL_FILES ${ZLIB_BZIP2_FILES} ${TOMCRYPT_FILES} ${TOMMATH_FILES})
-    set(LINK_LIBS wininet)
+    set(SRC_ADDITIONAL_FILES ${TOMCRYPT_FILES} ${TOMMATH_FILES})
+	set(LINK_LIBS ${LINK_LIBS} wininet)
 else()
-    find_package(ZLIB REQUIRED)
-    find_package(BZip2 REQUIRED)
-
-    include_directories(${ZLIB_INCLUDE_DIR} ${BZIP2_INCLUDE_DIR})
-    set(LINK_LIBS ${ZLIB_LIBRARY} ${BZIP2_LIBRARIES})
-
-    add_definitions(-D__SYS_ZLIB -D__SYS_BZLIB)
-
     option(WITH_LIBTOMCRYPT "Use system LibTomCrypt library" OFF)
     if(WITH_LIBTOMCRYPT)
         include(FindPkgConfig)
