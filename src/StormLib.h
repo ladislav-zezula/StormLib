@@ -483,8 +483,8 @@ typedef void (WINAPI * SFILE_DOWNLOAD_CALLBACK)(void * pvUserData, ULONGLONG Byt
 typedef void (WINAPI * SFILE_ADDFILE_CALLBACK)(void * pvUserData, DWORD dwBytesWritten, DWORD dwTotalBytes, bool bFinalCall);
 typedef void (WINAPI * SFILE_COMPACT_CALLBACK)(void * pvUserData, DWORD dwWorkType, ULONGLONG BytesProcessed, ULONGLONG TotalBytes);
 
-struct TFileStream;
-struct TMPQBits;
+typedef struct TFileStream TFileStream;
+typedef struct TMPQBits TMPQBits;
 
 //-----------------------------------------------------------------------------
 // Structures related to MPQ format
@@ -1092,7 +1092,7 @@ bool   WINAPI SFileCreateFile(HANDLE hMpq, const char * szArchivedName, ULONGLON
 bool   WINAPI SFileWriteFile(HANDLE hFile, const void * pvData, DWORD dwSize, DWORD dwCompression);
 bool   WINAPI SFileFinishFile(HANDLE hFile);
 
-bool   WINAPI SFileAddFileEx(HANDLE hMpq, const TCHAR * szFileName, const char * szArchivedName, DWORD dwFlags, DWORD dwCompression, DWORD dwCompressionNext = MPQ_COMPRESSION_NEXT_SAME);
+bool   WINAPI SFileAddFileEx(HANDLE hMpq, const TCHAR * szFileName, const char * szArchivedName, DWORD dwFlags, DWORD dwCompression, DWORD dwCompressionNext);
 bool   WINAPI SFileAddFile(HANDLE hMpq, const TCHAR * szFileName, const char * szArchivedName, DWORD dwFlags);
 bool   WINAPI SFileAddWave(HANDLE hMpq, const TCHAR * szFileName, const char * szArchivedName, DWORD dwFlags, DWORD dwQuality);
 bool   WINAPI SFileRemoveFile(HANDLE hMpq, const char * szFileName, DWORD dwSearchScope);
