@@ -199,6 +199,7 @@ bool WINAPI SFileGetFileInfo(
     TFileEntry * pFileEntry = NULL;
     TMPQHeader * pHeader = NULL;
     ULONGLONG Int64Value = 0;
+    ULONGLONG ByteOffset;
     TMPQFile * hf = NULL;
     void * pvSrcFileInfo = NULL;
     DWORD cbSrcFileInfo = 0;
@@ -317,7 +318,8 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &pHeader->dwBlockTableSize, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileMpqBlockTable:
-            if(MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos) >= ha->FileSize)
+            ByteOffset = FileOffsetFromMpqOffset(ha, MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos));
+            if(ByteOffset >= ha->FileSize)
                 return GetInfo_ReturdwErrCode(ERROR_FILE_NOT_FOUND);
             cbSrcFileInfo = pHeader->dwBlockTableSize * sizeof(TMPQBlock);
             pvSrcFileInfo = LoadBlockTable(ha, true);
