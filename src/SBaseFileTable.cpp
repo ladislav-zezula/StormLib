@@ -769,6 +769,7 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
 {
     TMPQHash * pFirstHash = GetFirstHashEntry(ha, szFileName);
     TMPQHash * pBestEntry = NULL;
+    TMPQHash * p1stEntry = NULL;
     TMPQHash * pHash = pFirstHash;
 
     // Parse the found hashes
@@ -776,26 +777,38 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
     {
         // Storm_2016.dll: 150209CB
         // If the hash entry matches both locale and platform, return it immediately
-        // Note: We only succeed this check if the locale is non-neutral, because
-        // some Warcraft III maps have several items with neutral locale&platform, which leads
-        // to wrong item being returned
+        // Only do that for non-0 locale&platform, because for loc&plat=0, there's different
+        // processing in Warcraft III vs. Starcraft, which is abused by some protectors.
         if((lcLocale || Platform) && pHash->lcLocale == lcLocale && pHash->Platform == Platform)
             return pHash;
 
         // Storm_2016.dll: 150209D9
-        // If (locale matches or is neutral) OR (platform matches or is neutral)
-        // remember this as the best entry
+        // If (locale matches or is neutral) OR (platform matches or is neutral), remember this as the best entry
+        // Also remember the first matching entry for Starcraft maps
         if(pHash->lcLocale == 0 || pHash->lcLocale == lcLocale)
         {
             if(pHash->Platform == 0 || pHash->Platform == Platform)
+            {
+                p1stEntry = (p1stEntry != NULL) ? p1stEntry : pHash;
                 pBestEntry = pHash;
+            }
         }
 
         // Get the next hash entry for that file
         pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
-    // At the end, return neutral hash (if found), otherwise NULL
+    //
+    // Different processing (Starcraft vs. Warcraft III), abused by some protectors
+    // 
+    // * Starcraft I:  for an entry with locale&platform = 0, then the first entry is returned
+    //   Map: MPQ_2022_v1_Sniper.scx
+    // * Warcraft III: for an entry with locale&platform = 0, then the last entry is returned
+    //   Map: MPQ_2015_v1_ProtectedMap_Spazy.w3x
+    // 
+
+    if(ha->dwValidFileFlags == MPQ_FILE_VALID_FLAGS_SCX)
+        return p1stEntry;
     return pBestEntry;
 }
 

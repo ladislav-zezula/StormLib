@@ -4214,8 +4214,8 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
 //-----------------------------------------------------------------------------
 // Tables
 
-static LPCTSTR szBliz = _T("ListFile_Blizzard.txt");
-static LPCTSTR szWotI = _T("ListFile_WarOfTheImmortals.txt");
+static LPCTSTR Bliz = _T("ListFile_Blizzard.txt");
+static LPCTSTR WotI = _T("ListFile_WarOfTheImmortals.txt");
 
 static const TEST_INFO TestList_StreamOps[] =
 {
@@ -4246,7 +4246,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                  NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
     {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"),               NULL, TEST_DATA("255d87a62f3c9518f72cf723a1818946", 221), "waitingroombkgd.dc6"}, // Update MPQ from Diablo II (patch 2016)
     {_T("MPQ_2018_v1_icon_error.w3m"),                       NULL, TEST_DATA("fcefa25fb50c391e8714f2562d1e10ff", 19),  "file00000002.blp"},
-    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),               szBliz, TEST_DATA("5ef18ef9a26b5704d8d46a344d976c89", 2)},       // File whose archive's (signature) file has flags = 0x90000000
+    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),                 Bliz, TEST_DATA("5ef18ef9a26b5704d8d46a344d976c89", 2)},       // File whose archive's (signature) file has flags = 0x90000000
     {_T("MPQ_2012_v2_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (found in WoW cache - it's just a header)
     {_T("MPQ_2013_v4_EmptyMpq.MPQ"),                         NULL, TEST_DATA("00000000000000000000000000000000", 0)},       // Empty archive (created artificially - it's just a header)
     {_T("MPQ_2013_v4_patch-base-16357.MPQ"),                 NULL, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 1)},       // Empty archive (found in WoW cache - it's just a header)
@@ -4258,7 +4258,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),            NULL, TEST_DATA("0c8fc921466f07421a281a05fad08b01", 53)},      // MPQ archive v 3.0 (the only one I know)
     {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),        NULL, TEST_DATA("10e4dcdbe95b7ad731c563ec6b71bc16", 82)},      // Encrypted archive from Starcraft II installer
     {_T("MPx_2013_v1_LongwuOnline.mpk"),                     NULL, TEST_DATA("548f7db88284097f7e94c95a08c5bc24", 469)},     // MPK archive from Longwu online
-    {_T("MPx_2013_v1_WarOfTheImmortals.sqp"),              szWotI, TEST_DATA("a048f37f7c6162a96253d8081722b6d9", 9396)},    // SQP archive from War of the Immortals
+    {_T("MPx_2013_v1_WarOfTheImmortals.sqp"),                WotI, TEST_DATA("a048f37f7c6162a96253d8081722b6d9", 9396)},    // SQP archive from War of the Immortals
     {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),0, TEST_DATA("d41d8cd98f00b204e9800998ecf8427e", 14263)},   // Partial MPQ with compressed hash table
     {_T("blk4-file://streaming/model.MPQ.0"),                NULL, TEST_DATA("e06b00efb2fc7e7469dd8b3b859ae15d", 39914)},   // Archive that is merged with multiple files
 
@@ -4290,6 +4290,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2015_v1_flem1.w3x"),                            NULL, TEST_DATA("1c4c13e627658c473e84d94371e31f37", 20)},
     {_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, TEST_DATA("5250975ed917375fc6540d7be436d4de", 114)},
     {_T("MPQ_2021_v1_CantExtractCHK.scx"),                   NULL, TEST_DATA("055fd548a789c910d9dd37472ecc1e66", 28)},
+    {_T("MPQ_2022_v1_Sniper.scx"),                           NULL, TEST_DATA("2e955271b70b79344ad85b698f6ce9d8", 63)},      // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
 };
 
 static const TEST_INFO Patched_Mpqs[] =
@@ -4323,13 +4324,14 @@ int _tmain(int argc, TCHAR * argv[])
     dwErrCode = InitializeMpqDirectory(argv, argc);
 
     //
-    // Open all files from the command line
+    // Test-open MPQs from the command line. They must be plain name
+    // and must be plade in the Test-MPQs folder
     //
 
-    //for(int i = 1; i < argc; i++)
-    //{
-    //    TestArchive(_T("MPQ_2021_v1_CantExtractCHK.scx"), NULL, TFLG_FILE_LOCALE | 0x0409, "File00000014.xxx", NULL);
-    //}
+    for(int i = 2; i < argc; i++)
+    {
+        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0409, "File00000014.xxx", NULL);
+    }
 
     //
     // Tests on a local listfile
