@@ -885,28 +885,6 @@ static TMPQHash * DefragmentHashTable(
 }
 */
 
-static void DeleteInvalidHashTableEntries(TMPQArchive * ha, TMPQHash * pHashTable, TMPQBlock * pBlockTable)
-{
-    TMPQHeader * pHeader = ha->pHeader;
-    TMPQHash * pHashTableEnd = pHashTable + pHeader->dwHashTableSize;
-    TMPQHash * pHash = pHashTable;
-
-    // Sanity checks
-    assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
-    assert(pHeader->HiBlockTablePos64 == 0);
-
-    // Parse the hash table and move the entries to the begin of it
-    for(pHash = pHashTable; pHash < pHashTableEnd; pHash++)
-    {
-        // Check whether this is a valid hash table entry
-        if(!IsValidHashEntry1(ha, pHash, pBlockTable))
-        {
-            memset(pHash, 0xFF, sizeof(TMPQHash));
-            pHash->dwBlockIndex = HASH_ENTRY_DELETED;
-        }
-    }
-}
-
 static DWORD BuildFileTableFromBlockTable(
     TMPQArchive * ha,
     TMPQBlock * pBlockTable)
@@ -936,12 +914,11 @@ static DWORD BuildFileTableFromBlockTable(
     // Example MPQ: MPQ_2022_v1_Sniper.scx
     //
 
-    if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
-    {
-        //ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
-        //ha->dwMaxFileCount = pHeader->dwHashTableSize;
-        DeleteInvalidHashTableEntries(ha, ha->pHashTable, pBlockTable);
-    }
+    //if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
+    //{
+    //    ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
+    //    ha->dwMaxFileCount = pHeader->dwHashTableSize;
+    //}
 
     // If the hash table or block table is cut,
     // we will defragment the block table

@@ -4290,7 +4290,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2015_v1_flem1.w3x"),                            NULL, TEST_DATA("1c4c13e627658c473e84d94371e31f37", 20)},
     {_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, TEST_DATA("5250975ed917375fc6540d7be436d4de", 114)},
     {_T("MPQ_2021_v1_CantExtractCHK.scx"),                   NULL, TEST_DATA("055fd548a789c910d9dd37472ecc1e66", 28)},
-    {_T("MPQ_2022_v1_Sniper.scx"),                           NULL, TEST_DATA("2e955271b70b79344ad85b698f6ce9d8", 63)},      // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
+    {_T("MPQ_2022_v1_Sniper.scx"),                           NULL, TEST_DATA("2e955271b70b79344ad85b698f6ce9d8", 64)},      // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
     {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                     NULL, TEST_DATA("25cad16a2fb4e883767a1f512fc1dce7", 16)},
 };
 
