@@ -4330,7 +4330,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     for(int i = 2; i < argc; i++)
     {
-        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0409, "File00000014.xxx", NULL);
+        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0000, "staredit\\scenario.chk", NULL);
     }
 
     //

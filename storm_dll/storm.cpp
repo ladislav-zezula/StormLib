@@ -12,7 +12,7 @@
 
 #define BUILDING_STORM_CPP
 #define STORM_ALTERNATE_NAMES
-#include "storm_dll.h"
+#include "storm.h"
 
 BOOL WINAPI SFILE(OpenArchive)(LPCSTR lpFileName, DWORD dwPriority, DWORD dwFlags, HANDLE *hMPQ)
 {
