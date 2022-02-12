@@ -4269,18 +4269,18 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2014_v1_ProtectedMap_Spazzler2.w3x"),           NULL, TEST_DATA("72d7963aa799a7fb4117c55b7beabaf9", 470)},     // Warcraft III map locked by the Spazzler protector
     {_T("MPQ_2014_v1_ProtectedMap_Spazzler3.w3x"),           NULL, TEST_DATA("e55aad2dd33cf68b372ca8e30dcb78a7", 130)},     // Warcraft III map locked by the Spazzler protector
     {_T("MPQ_2002_v1_ProtectedMap_BOBA.w3m"),                NULL, TEST_DATA("7b725d87e07a2173c42fe2314b95fa6c", 17)},      // Warcraft III map locked by the BOBA protector
-    {_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"),          NULL, TEST_DATA("c7ca4d2d0b1e58db5c784f522506c897", 1578)},
+    {_T("MPQ_2015_v1_ProtectedMap_KangTooJee.w3x"),          NULL, TEST_DATA("44111a3edf7645bc44bb1afd3a813576", 1715)},
     {_T("MPQ_2015_v1_ProtectedMap_Somj2hM16.w3x"),           NULL, TEST_DATA("b411f9a51a6e9a9a509150c8d66ba359", 92)},
     {_T("MPQ_2015_v1_ProtectedMap_Spazy.w3x"),               NULL, TEST_DATA("6e491bd055511435dcb4d9c8baed0516", 4089)},    // Warcraft III map locked by Spazy protector
     {_T("MPQ_2015_v1_MessListFile.mpq"),                     NULL, TEST_DATA("15e25d5be124d8ad71519f967997efc2", 8)},
     {_T("MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x"),   NULL, TEST_DATA("ad81b43cbd37bbfa27e4bed4c17e6a81", 176)},
     {_T("MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x"),      NULL, TEST_DATA("d6e712c275a26dc51f16b3a02f6187df", 228)},
     {_T("MPQ_2016_v1_ProtectedMap_Somj2.w3x"),               NULL, TEST_DATA("457cdbf97a9ca41cfe8ea130dafaa0bb", 21)},      // Something like Somj 2.0
-    {_T("MPQ_2016_v1_WME4_4.w3x"),                           NULL, TEST_DATA("e85e1c0ccb4465a30ffd07cae3260254", 382)},     // Protector from China (2016-05-27)
+    {_T("MPQ_2016_v1_WME4_4.w3x"),                           NULL, TEST_DATA("7ec2f4d0f3982d8b12d88bc08ef0c1fb", 640)},     // Protector from China (2016-05-27)
     {_T("MPQ_2016_v1_SP_(4)Adrenaline.w3x"),                 NULL, TEST_DATA("b6f6d56f4f8aaef04c2c4b1f08881a8b", 16)},
     {_T("MPQ_2016_v1_ProtectedMap_1.4.w3x"),                 NULL, TEST_DATA("3c7908b29d3feac9ec952282390a242d", 5027)},
     {_T("MPQ_2016_v1_KoreanFile.w3m"),                       NULL, TEST_DATA("805d1f75712472a81c6df27b2a71f946", 18)},
-    {_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"),                 NULL, TEST_DATA("21c3dc3a66b76c57c84cc8c7e2dd846b", 16300)},   // Protected by PG1.11.973
+    {_T("MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x"),                 NULL, TEST_DATA("cbe1fd7ed5ed2fc005fba9beafcefe40", 16334)},   // Protected by PG1.11.973
     {_T("MPQ_2017_v1_BigDummyFiles.w3x"),                    NULL, TEST_DATA("f4d2ee9d85d2c4107e0b2d00ff302dd7", 9086)},
     {_T("MPQ_2017_v1_TildeInFileName.mpq"),                  NULL, TEST_DATA("f203e3979247a4dbf7f3828695ac810c", 5)},
     {_T("MPQ_2018_v1_EWIX_v8_7.w3x"),                        NULL, TEST_DATA("12c0f4e15c7361b7c13acd37a181d83b", 857), "BlueCrystal.mdx"},
@@ -4291,6 +4291,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x"), NULL, TEST_DATA("5250975ed917375fc6540d7be436d4de", 114)},
     {_T("MPQ_2021_v1_CantExtractCHK.scx"),                   NULL, TEST_DATA("055fd548a789c910d9dd37472ecc1e66", 28)},
     {_T("MPQ_2022_v1_Sniper.scx"),                           NULL, TEST_DATA("2e955271b70b79344ad85b698f6ce9d8", 63)},      // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
+    {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                     NULL, TEST_DATA("25cad16a2fb4e883767a1f512fc1dce7", 16)},
 };
 
 static const TEST_INFO Patched_Mpqs[] =
@@ -4330,7 +4331,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     for(int i = 2; i < argc; i++)
     {
-        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0000, "staredit\\scenario.chk", NULL);
+        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0409, "staredit\\scenario.chk", NULL);
     }
 
     //

@@ -769,7 +769,6 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
 {
     TMPQHash * pFirstHash = GetFirstHashEntry(ha, szFileName);
     TMPQHash * pBestEntry = NULL;
-    TMPQHash * p1stEntry = NULL;
     TMPQHash * pHash = pFirstHash;
 
     // Parse the found hashes
@@ -789,7 +788,6 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
         {
             if(pHash->Platform == 0 || pHash->Platform == Platform)
             {
-                p1stEntry = (p1stEntry != NULL) ? p1stEntry : pHash;
                 pBestEntry = pHash;
             }
         }
@@ -798,17 +796,7 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
         pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
-    //
-    // Different processing (Starcraft vs. Warcraft III), abused by some protectors
-    // 
-    // * Starcraft I:  for an entry with locale&platform = 0, then the first entry is returned
-    //   Map: MPQ_2022_v1_Sniper.scx
-    // * Warcraft III: for an entry with locale&platform = 0, then the last entry is returned
-    //   Map: MPQ_2015_v1_ProtectedMap_Spazy.w3x
-    // 
-
-    if(ha->dwValidFileFlags == MPQ_FILE_VALID_FLAGS_SCX)
-        return p1stEntry;
+    // Return the best entry that we found
     return pBestEntry;
 }
 
@@ -840,6 +828,7 @@ static TMPQHash * GetHashEntryExact(TMPQArchive * ha, const char * szFileName, L
 // are not HASH_ENTRY_FREE, the startup search index does not matter.
 // Hash table is circular, so as long as there is no terminator,
 // all entries will be found.
+/*
 static TMPQHash * DefragmentHashTable(
     TMPQArchive * ha,
     TMPQHash  * pHashTable,
@@ -894,6 +883,29 @@ static TMPQHash * DefragmentHashTable(
 
     return pHashTable;
 }
+*/
+
+static void DeleteInvalidHashTableEntries(TMPQArchive * ha, TMPQHash * pHashTable, TMPQBlock * pBlockTable)
+{
+    TMPQHeader * pHeader = ha->pHeader;
+    TMPQHash * pHashTableEnd = pHashTable + pHeader->dwHashTableSize;
+    TMPQHash * pHash = pHashTable;
+
+    // Sanity checks
+    assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
+    assert(pHeader->HiBlockTablePos64 == 0);
+
+    // Parse the hash table and move the entries to the begin of it
+    for(pHash = pHashTable; pHash < pHashTableEnd; pHash++)
+    {
+        // Check whether this is a valid hash table entry
+        if(!IsValidHashEntry1(ha, pHash, pBlockTable))
+        {
+            memset(pHash, 0xFF, sizeof(TMPQHash));
+            pHash->dwBlockIndex = HASH_ENTRY_DELETED;
+        }
+    }
+}
 
 static DWORD BuildFileTableFromBlockTable(
     TMPQArchive * ha,
@@ -911,11 +923,24 @@ static DWORD BuildFileTableFromBlockTable(
     assert(ha->pFileTable != NULL);
     assert(ha->dwFileTableSize >= ha->dwMaxFileCount);
 
-    // Defragment the hash table, if needed
+    //
+    // Defragmentation of the hash table was removed. The reason is a MPQ protector,
+    // two hash entries with the same name, where only the second one is valid.
+    // The index of the first entry (HashString(szFileName, 0)) points to the second one:
+    //
+    //      NameA     NameB     BlkIdx    Name
+    //      B701656E  FCFB1EED  0000001C  staredit\scenario.chk (correct one)
+    // -->  B701656E  FCFB1EED  0000001D  staredit\scenario.chk (corrupt one)
+    //
+    // Defragmenting the hash table corrupts the order and "staredit\scenario.chk" can't be read
+    // Example MPQ: MPQ_2022_v1_Sniper.scx
+    //
+
     if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
     {
-        ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
-        ha->dwMaxFileCount = pHeader->dwHashTableSize;
+        //ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
+        //ha->dwMaxFileCount = pHeader->dwHashTableSize;
+        DeleteInvalidHashTableEntries(ha, ha->pHashTable, pBlockTable);
     }
 
     // If the hash table or block table is cut,
