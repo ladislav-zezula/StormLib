@@ -409,8 +409,10 @@ static LPBYTE CreateListFile(TMPQArchive * ha, DWORD * pcbListFile)
 static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFileName)
 {
     TFileEntry * pFileEntry;
-    TMPQHash * pFirstHash;
+    TMPQHash * pHashEnd;
     TMPQHash * pHash;
+    DWORD dwName1;
+    DWORD dwName2;
 
     // If we have HET table, use that one
     if(ha->pHetTable != NULL)
@@ -428,16 +430,38 @@ static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szF
     // If we have hash table, we use it
     if(ha->pHashTable != NULL)
     {
-        // Go while we found something
-        pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
-        while(pHash != NULL)
-        {
-            // Allocate file name for the file entry
-            AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
+        // Get the end of the hash table and both names
+        pHashEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
+        dwName1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
+        dwName2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
 
-            // Now find the next language version of the file
-            pHash = GetNextHashEntry(ha, pFirstHash, pHash);
+        // Some protectors set very high hash table size (0x00400000 items or more)
+        // in order to make this process very slow. We will ignore items
+        // in the hash table that would be beyond the end of the file.
+        // Example MPQ: MPQ_2022_v1_Sniper.scx
+        if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
+            pHashEnd = ha->pHashTable + (ha->dwRealHashTableSize / sizeof(TMPQHash));
+
+        // Go through the hash table and put the name in each item that has the same name pair
+        for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
+        {
+            if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
+            {
+                // Allocate file name for the file entry
+                AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
+            }
         }
+
+        // Go while we found something
+        //pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
+        //while(pHash != NULL)
+        //{
+        //    // Allocate file name for the file entry
+        //    AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
+
+        //    // Now find the next language version of the file
+        //    pHash = GetNextHashEntry(ha, pFirstHash, pHash);
+        //}
 
         return ERROR_SUCCESS;
     }

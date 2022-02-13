@@ -4331,7 +4331,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     for(int i = 2; i < argc; i++)
     {
-        TestArchive(argv[i], NULL, TFLG_FILE_LOCALE | 0x0409, "staredit\\scenario.chk", NULL);
+        TestArchive(argv[i], Bliz, TFLG_FILE_LOCALE | 0x0409, "staredit\\scenario.chk", NULL);
     }
 
     //
@@ -4342,15 +4342,6 @@ int _tmain(int argc, TCHAR * argv[])
     {
         TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
         dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
-    }
-
-    //
-    // Search all testing archives and verify their SHA1 hash
-    //
-
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
     }
 
     //
@@ -4422,13 +4413,17 @@ int _tmain(int argc, TCHAR * argv[])
         }
     }
 
-    // Open the multi-file archive with wrong prefix to see how StormLib deals with it
+    // Veryfy SHA1 of each MPQ that we have in the list
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
+        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 
     // Open every MPQ that we have in the storage
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = FindFiles(ForEachFile_OpenArchive, NULL);
+
+    // Open the multi-file archive with wrong prefix to see how StormLib deals with it
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
 
     // Test on an archive that has been invalidated by extending an old valid MPQ
     if(dwErrCode == ERROR_SUCCESS)

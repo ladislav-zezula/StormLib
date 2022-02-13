@@ -992,7 +992,7 @@ void * LoadMpqTable(
     DWORD dwCompressedSize,
     DWORD dwTableSize,
     DWORD dwKey,
-    bool * pbTableIsCut)
+    DWORD * PtrRealTableSize)
 {
     ULONGLONG FileSize = 0;
     LPBYTE pbCompressed = NULL;
@@ -1037,11 +1037,13 @@ void * LoadMpqTable(
                 // Fill the extra data with zeros
                 dwBytesToRead = (DWORD)(FileSize - ByteOffset);
                 memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
-
-                // Give the caller information that the table was cut
-                if(pbTableIsCut != NULL)
-                    pbTableIsCut[0] = true;
             }
+        }
+
+        // Give the caller information that the table was cut
+        if(PtrRealTableSize != NULL)
+        {
+            PtrRealTableSize[0] = dwBytesToRead;
         }
 
         // If everything succeeded, read the raw table from the MPQ
