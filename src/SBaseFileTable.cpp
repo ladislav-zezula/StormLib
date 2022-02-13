@@ -769,7 +769,6 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
 {
     TMPQHash * pFirstHash = GetFirstHashEntry(ha, szFileName);
     TMPQHash * pBestEntry = NULL;
-    TMPQHash * p1stEntry = NULL;
     TMPQHash * pHash = pFirstHash;
 
     // Parse the found hashes
@@ -789,7 +788,6 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
         {
             if(pHash->Platform == 0 || pHash->Platform == Platform)
             {
-                p1stEntry = (p1stEntry != NULL) ? p1stEntry : pHash;
                 pBestEntry = pHash;
             }
         }
@@ -798,17 +796,7 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
         pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
-    //
-    // Different processing (Starcraft vs. Warcraft III), abused by some protectors
-    // 
-    // * Starcraft I:  for an entry with locale&platform = 0, then the first entry is returned
-    //   Map: MPQ_2022_v1_Sniper.scx
-    // * Warcraft III: for an entry with locale&platform = 0, then the last entry is returned
-    //   Map: MPQ_2015_v1_ProtectedMap_Spazy.w3x
-    // 
-
-    if(ha->dwValidFileFlags == MPQ_FILE_VALID_FLAGS_SCX)
-        return p1stEntry;
+    // Return the best entry that we found
     return pBestEntry;
 }
 
@@ -840,6 +828,7 @@ static TMPQHash * GetHashEntryExact(TMPQArchive * ha, const char * szFileName, L
 // are not HASH_ENTRY_FREE, the startup search index does not matter.
 // Hash table is circular, so as long as there is no terminator,
 // all entries will be found.
+/*
 static TMPQHash * DefragmentHashTable(
     TMPQArchive * ha,
     TMPQHash  * pHashTable,
@@ -894,6 +883,7 @@ static TMPQHash * DefragmentHashTable(
 
     return pHashTable;
 }
+*/
 
 static DWORD BuildFileTableFromBlockTable(
     TMPQArchive * ha,
@@ -911,12 +901,24 @@ static DWORD BuildFileTableFromBlockTable(
     assert(ha->pFileTable != NULL);
     assert(ha->dwFileTableSize >= ha->dwMaxFileCount);
 
-    // Defragment the hash table, if needed
-    if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
-    {
-        ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
-        ha->dwMaxFileCount = pHeader->dwHashTableSize;
-    }
+    //
+    // Defragmentation of the hash table was removed. The reason is a MPQ protector,
+    // two hash entries with the same name, where only the second one is valid.
+    // The index of the first entry (HashString(szFileName, 0)) points to the second one:
+    //
+    //      NameA     NameB     BlkIdx    Name
+    //      B701656E  FCFB1EED  0000001C  staredit\scenario.chk (correct one)
+    // -->  B701656E  FCFB1EED  0000001D  staredit\scenario.chk (corrupt one)
+    //
+    // Defragmenting the hash table corrupts the order and "staredit\scenario.chk" can't be read
+    // Example MPQ: MPQ_2022_v1_Sniper.scx
+    //
+
+    //if(ha->dwFlags & MPQ_FLAG_HASH_TABLE_CUT)
+    //{
+    //    ha->pHashTable = DefragmentHashTable(ha, ha->pHashTable, pBlockTable);
+    //    ha->dwMaxFileCount = pHeader->dwHashTableSize;
+    //}
 
     // If the hash table or block table is cut,
     // we will defragment the block table
@@ -2327,7 +2329,7 @@ static TMPQHash * LoadHashTable(TMPQArchive * ha)
     TMPQHash * pHashTable = NULL;
     DWORD dwTableSize;
     DWORD dwCmpSize;
-    bool bHashTableIsCut = false;
+    DWORD dwRealTableSize = 0;
 
     // Note: It is allowed to load hash table if it is at offset 0.
     // Example: MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x
@@ -2349,12 +2351,15 @@ static TMPQHash * LoadHashTable(TMPQArchive * ha)
             dwCmpSize = (DWORD)pHeader->HashTableSize64;
 
             // Read, decrypt and uncompress the hash table
-            pHashTable = (TMPQHash *)LoadMpqTable(ha, ByteOffset, pHeader->MD5_HashTable, dwCmpSize, dwTableSize, g_dwHashTableKey, &bHashTableIsCut);
+            pHashTable = (TMPQHash *)LoadMpqTable(ha, ByteOffset, pHeader->MD5_HashTable, dwCmpSize, dwTableSize, g_dwHashTableKey, &dwRealTableSize);
 //          DumpHashTable(pHashTable, pHeader->dwHashTableSize);
 
             // If the hash table was cut, we can/have to defragment it
-            if(pHashTable != NULL && bHashTableIsCut)
+            if(pHashTable != NULL && dwRealTableSize != 0 && dwRealTableSize < dwTableSize)
+            {
+                ha->dwRealHashTableSize = dwRealTableSize;
                 ha->dwFlags |= (MPQ_FLAG_MALFORMED | MPQ_FLAG_HASH_TABLE_CUT);
+            }
             break;
 
         case MPQ_SUBTYPE_SQP:
@@ -2388,7 +2393,7 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool /* bDontFixEntries */)
     ULONGLONG ByteOffset;
     DWORD dwTableSize;
     DWORD dwCmpSize;
-    bool bBlockTableIsCut = false;
+    DWORD dwRealTableSize;
 
     // Note: It is possible that the block table starts at offset 0
     // Example: MPQ_2016_v1_ProtectedMap_HashOffsIsZero.w3x
@@ -2410,10 +2415,10 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool /* bDontFixEntries */)
             dwCmpSize = (DWORD)pHeader->BlockTableSize64;
 
             // Read, decrypt and uncompress the block table
-            pBlockTable = (TMPQBlock * )LoadMpqTable(ha, ByteOffset, NULL, dwCmpSize, dwTableSize, g_dwBlockTableKey, &bBlockTableIsCut);
+            pBlockTable = (TMPQBlock * )LoadMpqTable(ha, ByteOffset, NULL, dwCmpSize, dwTableSize, g_dwBlockTableKey, &dwRealTableSize);
 
             // If the block table was cut, we need to remember it
-            if(pBlockTable != NULL && bBlockTableIsCut)
+            if(pBlockTable != NULL && dwRealTableSize && dwRealTableSize < dwTableSize)
                 ha->dwFlags |= (MPQ_FLAG_MALFORMED | MPQ_FLAG_BLOCK_TABLE_CUT);
             break;
 
