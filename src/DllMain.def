@@ -4,8 +4,6 @@
 ; ladik@zezula.net
 ;
 
-LIBRARY StormLib.dll
-
 EXPORTS
 
     SFileSetLocale
