@@ -325,7 +325,7 @@ endif()
 
 add_library(${LIBRARY_NAME} ${LIB_TYPE} ${SRC_FILES} ${SRC_ADDITIONAL_FILES} ${STORM_DEF_FILES})
 if(WIN32)
-set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME "StormLib")
+    set_target_properties(${LIBRARY_NAME} PROPERTIES OUTPUT_NAME "StormLib")
 endif()
 
 target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
