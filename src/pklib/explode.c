@@ -510,11 +510,11 @@ unsigned int PKEXPORT explode(
     }
 
     memcpy(pWork->LenBits, LenBits, sizeof(pWork->LenBits));
-    GenDecodeTabs(pWork->LengthCodes, LenCode, pWork->LenBits, sizeof(pWork->LenBits));
+    GenDecodeTabs(pWork->LengthCodes, LenCode, LenBits, sizeof(LenBits));
     memcpy(pWork->ExLenBits, ExLenBits, sizeof(pWork->ExLenBits));
     memcpy(pWork->LenBase, LenBase, sizeof(pWork->LenBase));
     memcpy(pWork->DistBits, DistBits, sizeof(pWork->DistBits));
-    GenDecodeTabs(pWork->DistPosCodes, DistCode, pWork->DistBits, sizeof(pWork->DistBits));
+    GenDecodeTabs(pWork->DistPosCodes, DistCode, DistBits, sizeof(DistBits));
     if(Expand(pWork) != 0x306)
         return CMP_NO_ERROR;
 
