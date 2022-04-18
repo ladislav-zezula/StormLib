@@ -4326,12 +4326,12 @@ int _tmain(int argc, TCHAR * argv[])
 
     //
     // Test-open MPQs from the command line. They must be plain name
-    // and must be plade in the Test-MPQs folder
+    // and must be placed in the Test-MPQs folder
     //
 
     for(int i = 2; i < argc; i++)
     {
-        TestArchive(argv[i], Bliz, TFLG_FILE_LOCALE | 0x0409, "staredit\\scenario.chk", NULL);
+        TestArchive(argv[i], Bliz, 0, "staredit\\scenario.chk", NULL);
     }
 
     //
