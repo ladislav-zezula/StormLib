@@ -12,6 +12,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <limits.h>
 
 #include "pklib.h"
 
@@ -292,7 +293,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
     //          The last repetition is the best one.
     //
 
-    pWork->offs09BC[0] = 0xFFFF;
+    pWork->offs09BC[0] = USHRT_MAX;
     pWork->offs09BC[1] = 0x0000;
     di_val = 0;
 
@@ -303,7 +304,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
         if(input_data[offs_in_rep] != input_data[di_val])
         {
             di_val = pWork->offs09BC[di_val];
-            if(di_val != 0xFFFF)
+            if(di_val != USHRT_MAX)
                 continue;
         }
         pWork->offs09BC[++offs_in_rep] = ++di_val;
@@ -322,7 +323,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
     for(;;)
     {
         rep_length2 = pWork->offs09BC[rep_length2];
-        if(rep_length2 == 0xFFFF)
+        if(rep_length2 == USHRT_MAX)
             rep_length2 = 0;
 
         // Get the pointer to the previous repetition
@@ -395,7 +396,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
                 if(input_data[offs_in_rep] != input_data[di_val])
                 {
                     di_val = pWork->offs09BC[di_val];
-                    if(di_val != 0xFFFF)
+                    if(di_val != USHRT_MAX)
                         continue;
                 }
                 pWork->offs09BC[++offs_in_rep] = ++di_val;
