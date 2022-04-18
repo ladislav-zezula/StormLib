@@ -599,7 +599,6 @@ unsigned int PKEXPORT implode(
     unsigned int *dsize)
 {
     TCmpStruct * pWork = (TCmpStruct *)work_buf;
-    unsigned int nChCode;
     unsigned int nCount;
     unsigned int i;
     int nCount2;
@@ -638,11 +637,10 @@ unsigned int PKEXPORT implode(
     switch(*type)
     {
         case CMP_BINARY: // We will compress data with binary compression type
-            for(nChCode = 0, nCount = 0; nCount < 0x100; nCount++)
+            for(nCount = 0; nCount < 0x100; nCount++)
             {
                 pWork->nChBits[nCount]  = 9;
-                pWork->nChCodes[nCount] = (unsigned short)nChCode;
-                nChCode = (nChCode & 0x0000FFFF) + 2;
+                pWork->nChCodes[nCount] = nCount * 2;
             }
             break;
 
