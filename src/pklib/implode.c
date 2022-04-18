@@ -604,7 +604,6 @@ unsigned int PKEXPORT implode(
     int nCount2;
 
     // Fill the work buffer information
-    // Note: The caller must zero the "work_buff" before passing it to implode
     pWork->read_buf    = read_buf;
     pWork->write_buf   = write_buf;
     pWork->dsize_bytes = *dsize;

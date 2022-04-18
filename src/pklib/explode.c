@@ -479,7 +479,6 @@ unsigned int PKEXPORT explode(
     TDcmpStruct * pWork = (TDcmpStruct *)work_buf;
 
     // Initialize work struct and load compressed data
-    // Note: The caller must zero the "work_buff" before passing it to explode
     pWork->read_buf   = read_buf;
     pWork->write_buf  = write_buf;
     pWork->param      = param;
