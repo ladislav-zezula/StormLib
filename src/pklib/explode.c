@@ -150,7 +150,7 @@ static void GenDecodeTabs(
 
 static void GenAscTabs(TDcmpStruct * pWork)
 {
-    unsigned short * pChCodeAsc = &ChCodeAsc[0xFF];
+    const unsigned short * pChCodeAsc = &ChCodeAsc[0xFF];
     unsigned int  acc, add;
     unsigned short count;
 
