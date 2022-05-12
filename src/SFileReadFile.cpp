@@ -173,9 +173,16 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
 
                         // Decompress the data
                         if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
+                        {
                             nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                        }
                         else
-                            nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                        {
+                            if(ha->dwFlags & MPQ_FLAG_STARCRAFT_BETA)
+                                nResult = SCompDecompress_SC1B(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                            else
+                                nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
+                        }
                     }
 
                     // Is the file compressed by PKWARE Data Compression Library ?

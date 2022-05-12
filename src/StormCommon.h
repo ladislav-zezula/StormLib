@@ -80,6 +80,7 @@ typedef enum _MTYPE
 {
     MapTypeNotChecked,                  // The map type was not checked yet
     MapTypeNotRecognized,               // The file does not seems to be a map
+    MapTypeStarcraftBeta,               // The file is StarDat.mpq from Starcraft I BETA
     MapTypeAviFile,                     // The file is actually an AVI file (Warcraft III cinematics)
     MapTypeStarcraft,                   // The file is a Starcraft map
     MapTypeWarcraft3,                   // The file is a Warcraft III map

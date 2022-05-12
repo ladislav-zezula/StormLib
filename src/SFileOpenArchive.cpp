@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------------
 // Local functions
 
-static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHeaderBuffer)
+static MTYPE CheckMapType(ULONGLONG FileSize, LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHeaderBuffer)
 {
     LPDWORD HeaderInt32 = (LPDWORD)pbHeaderBuffer;
     LPCTSTR szExtension;
@@ -34,6 +34,15 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
         DWORD DwordValue1 = BSWAP_INT32_UNSIGNED(HeaderInt32[1]);
         DWORD DwordValue2 = BSWAP_INT32_UNSIGNED(HeaderInt32[2]);
         DWORD DwordValue3 = BSWAP_INT32_UNSIGNED(HeaderInt32[3]);
+
+        // Check possible MPQs from Starcraft I BETA. We recognize them by checking the file size.
+        //     167 859: patch_rt.mpq (doesn't contain any WAVE files)
+        //  55 674 173: StarDat.mpq
+        // 183 519 584: Install.exe
+        if(FileSize == 55674173  && DwordValue1 == MPQ_HEADER_SIZE_V1 && DwordValue3 == 0x00030000)
+            return MapTypeStarcraftBeta;
+        if(FileSize == 183519584 && DwordValue0 == 0x00905a4D && DwordValue1 == 3 && DwordValue2 == 4)
+            return MapTypeStarcraftBeta;
 
         // Check maps by extension (Starcraft, Starcraft II). We must do this before
         // checking actual data, because the "NP_Protect" protector places
@@ -321,7 +330,7 @@ bool WINAPI SFileOpenArchive(
             if(MapType == MapTypeNotChecked)
             {
                 // Do nothing if the file is an AVI file
-                if((MapType = CheckMapType(szMpqName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
+                if((MapType = CheckMapType(FileSize, szMpqName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
                 {
                     dwErrCode = ERROR_AVI_FILE;
                     break;
@@ -445,6 +454,12 @@ bool WINAPI SFileOpenArchive(
         // Check if the caller wants to force adding listfile
         if(dwFlags & MPQ_OPEN_FORCE_LISTFILE)
             ha->dwFlags |= MPQ_FLAG_LISTFILE_FORCE;
+
+        // StarDat.mpq from Starcraft I BETA: Enable special compression types
+        if(MapType == MapTypeStarcraftBeta)
+        {
+            ha->dwFlags |= MPQ_FLAG_STARCRAFT_BETA;
+        }
 
         // Remember whether whis is a map for Warcraft III
         if(MapType == MapTypeWarcraft3)

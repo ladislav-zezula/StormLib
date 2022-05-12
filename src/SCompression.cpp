@@ -647,6 +647,24 @@ static int Decompress_ADPCM_stereo(void * pvOutBuffer, int * pcbOutBuffer, void 
     return 1;
 }
 
+/******************************************************************************/
+/*                                                                            */
+/*  Support for ADPCM mono & stereo (Starcraft I BETA - like)                 */
+/*                                                                            */
+/******************************************************************************/
+
+static int Decompress_ADPCM1_sc1b(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    *pcbOutBuffer = DecompressADPCM_SC1B(pvOutBuffer, *pcbOutBuffer, pvInBuffer, cbInBuffer, 1);
+    return 1;
+}
+
+static int Decompress_ADPCM2_sc1b(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    *pcbOutBuffer = DecompressADPCM_SC1B(pvOutBuffer, *pcbOutBuffer, pvInBuffer, cbInBuffer, 2);
+    return 1;
+}
+
 /*****************************************************************************/
 /*                                                                           */
 /*   SCompImplode                                                            */
@@ -784,7 +802,7 @@ int WINAPI SCompCompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuff
     else
     {
         // Fill the compressions array
-        for(size_t i = 0; i < (sizeof(cmp_table) / sizeof(TCompressTable)); i++)
+        for(size_t i = 0; i < _countof(cmp_table); i++)
         {
             // If the mask agrees, insert the compression function to the array
             if(uCompressionMask & cmp_table[i].uMask)
@@ -891,7 +909,17 @@ static TDecompressTable dcmp_table[] =
     {MPQ_COMPRESSION_SPARSE,       Decompress_SPARSE}        // Sparse decompression
 };
 
-int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+// Decompression table specific for Starcraft I BETA
+// WAVE files are compressed by different ADPCM compression
+static TDecompressTable dcmp_table_sc1b[] =
+{
+    {MPQ_COMPRESSION_PKWARE,       Decompress_PKLIB},        // Decompression with Pkware Data Compression Library
+    {MPQ_COMPRESSION_HUFFMANN,     Decompress_huff},         // Huffmann decompression
+    {0x10,                         Decompress_ADPCM1_sc1b},  // IMA ADPCM mono decompression
+    {0x20,                         Decompress_ADPCM2_sc1b},  // IMA ADPCM stereo decompression
+};
+
+static int SCompDecompressInternal(TDecompressTable * table, size_t table_length, void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     unsigned char * pbWorkBuffer = NULL;
     unsigned char * pbOutBuffer = (unsigned char *)pvOutBuffer;
@@ -920,7 +948,7 @@ int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     }
 
     // Get applied compression types and decrement data length
-    uCompressionMask = uCompressionCopy = (unsigned char)*pbInBuffer++;
+    uCompressionMask = uCompressionCopy = (unsigned char)(*pbInBuffer++);
     cbInBuffer--;
 
     // Get current compressed data and length of it
@@ -931,12 +959,12 @@ int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     assert(uCompressionMask != MPQ_COMPRESSION_LZMA);
 
     // Parse the compression mask
-    for(size_t i = 0; i < (sizeof(dcmp_table) / sizeof(TDecompressTable)); i++)
+    for(size_t i = 0; i < table_length; i++)
     {
         // If the mask agrees, insert the compression function to the array
-        if(uCompressionMask & dcmp_table[i].uMask)
+        if(uCompressionMask & table[i].uMask)
         {
-            uCompressionCopy &= ~dcmp_table[i].uMask;
+            uCompressionCopy &= ~table[i].uMask;
             nCompressCount++;
         }
     }
@@ -963,10 +991,10 @@ int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     nCompressIndex = nCompressCount - 1;
 
     // Apply all decompressions
-    for(size_t i = 0; i < (sizeof(dcmp_table) / sizeof(TDecompressTable)); i++)
+    for(size_t i = 0; i < table_length; i++)
     {
         // Perform the (next) decompression
-        if(uCompressionMask & dcmp_table[i].uMask)
+        if(uCompressionMask & table[i].uMask)
         {
             // Get the correct output buffer
             pbOutput = (nCompressIndex & 1) ? pbWorkBuffer : pbOutBuffer;
@@ -974,7 +1002,7 @@ int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
 
             // Perform the decompression
             cbOutBuffer = *pcbOutBuffer;
-            nResult = dcmp_table[i].Decompress(pbOutput, &cbOutBuffer, pbInput, cbInLength);
+            nResult = table[i].Decompress(pbOutput, &cbOutBuffer, pbInput, cbInLength);
             if(nResult == 0 || cbOutBuffer == 0)
             {
                 SetLastError(ERROR_FILE_CORRUPT);
@@ -995,6 +1023,16 @@ int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     if(pbWorkBuffer != NULL)
         STORM_FREE(pbWorkBuffer);
     return nResult;
+}
+
+int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    return SCompDecompressInternal(dcmp_table, _countof(dcmp_table), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
+}
+
+int WINAPI SCompDecompress_SC1B(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    return SCompDecompressInternal(dcmp_table_sc1b, _countof(dcmp_table_sc1b), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
 }
 
 int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)

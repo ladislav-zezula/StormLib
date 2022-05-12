@@ -2559,6 +2559,17 @@ static DWORD TestArchive(
                     if(dwCrc32 != pFileData->dwCrc32)
                         Logger.PrintError("Warning: CRC32 error on %s", szFileName);
                 }
+
+#ifdef _DEBUG
+/*
+                FILE * fp = fopen("e:\\out_file.wav", "wb");
+                if(fp)
+                {
+                    fwrite(pFileData->FileData, 1, pFileData->dwFileSize, fp);
+                    fclose(fp);
+                }
+*/
+#endif
             }
         }
 
@@ -4331,7 +4342,8 @@ int _tmain(int argc, TCHAR * argv[])
 
     for(int i = 2; i < argc; i++)
     {
-        TestArchive(argv[i], Bliz, 0, "staredit\\scenario.chk", NULL);
+//      TestArchive(argv[i], Bliz, 0, "sound\\zerg\\advisor\\zaderr05.wav", NULL);
+        TestArchive(argv[i], Bliz, 0, "music\\trdyroom.wav", NULL);
     }
 
     //
