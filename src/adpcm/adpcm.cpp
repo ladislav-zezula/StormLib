@@ -387,7 +387,7 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
 
 typedef struct _ADPCM_DATA
 {
-    unsigned int * pValues;
+    const unsigned int * pValues;
     int BitCount;
     int field_8;
     int field_C;
@@ -404,7 +404,7 @@ static const unsigned int adpcm_values_6[] =
     0x46, 0x53, 0x60, 0x6D, 0x7A, 0x86, 0x93, 0xA0, 0xAD, 0xBA, 0xC6, 0xD3, 0xE0, 0xED, 0xFA, 0x106
 };
 
-static unsigned int * InitAdpcmData(PADPCM_DATA pData, unsigned char BitCount)
+static const unsigned int * InitAdpcmData(PADPCM_DATA pData, unsigned char BitCount)
 {
     switch(BitCount)
     {

@@ -4255,6 +4255,9 @@ static const TEST_INFO Test_Mpqs[] =
 {
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                  NULL, 0, "music\\dintro.wav", "File00000023.xxx"},
+    {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                    NULL, TEST_DATA("43fe7d362955be68a708486e399576a7", 10)},      // From Starcraft 1 BETA
+    {_T("MPQ_1997_v1_StarDat_SC1B.mpq"),                     NULL, TEST_DATA("0094b23f28cfff7386071ef3bd19a577", 2468)},    // From Starcraft 1 BETA
+    {_T("MPQ_1997_v1_INSTALL_SC1B.EXE_"),                    NULL, TEST_DATA("3248460c89bb6f8e3b8fc3e08de7ffbb", 79)},      // From Starcraft 1 BETA
     {_T("MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq"),               NULL, TEST_DATA("255d87a62f3c9518f72cf723a1818946", 221), "waitingroombkgd.dc6"}, // Update MPQ from Diablo II (patch 2016)
     {_T("MPQ_2018_v1_icon_error.w3m"),                       NULL, TEST_DATA("fcefa25fb50c391e8714f2562d1e10ff", 19),  "file00000002.blp"},
     {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),                 Bliz, TEST_DATA("5ef18ef9a26b5704d8d46a344d976c89", 2)},       // File whose archive's (signature) file has flags = 0x90000000
@@ -4343,7 +4346,7 @@ int _tmain(int argc, TCHAR * argv[])
     for(int i = 2; i < argc; i++)
     {
 //      TestArchive(argv[i], Bliz, 0, "sound\\zerg\\advisor\\zaderr05.wav", NULL);
-        TestArchive(argv[i], Bliz, 0, "music\\trdyroom.wav", NULL);
+//      TestArchive(argv[i], Bliz, 0, "music\\trdyroom.wav", NULL);
     }
 
     //
