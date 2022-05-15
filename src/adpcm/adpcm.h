@@ -20,7 +20,8 @@
 //-----------------------------------------------------------------------------
 // Public functions
 
-int  CompressADPCM  (void * pvOutBuffer, int dwOutLength, void * pvInBuffer, int dwInLength, int nCmpType, int ChannelCount);
-int  DecompressADPCM(void * pvOutBuffer, int dwOutLength, void * pvInBuffer, int dwInLength, int ChannelCount);
+int CompressADPCM       (void * pvOutBuffer, int dwOutLength, void * pvInBuffer, int dwInLength, int nCmpType, int ChannelCount);
+int DecompressADPCM     (void * pvOutBuffer, int dwOutLength, void * pvInBuffer, int dwInLength, int ChannelCount);
+int DecompressADPCM_SC1B(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cbInBuffer, int ChannelCount);
 
 #endif // __ADPCM_H__

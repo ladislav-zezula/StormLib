@@ -13,6 +13,7 @@
 /* 10.01.13  3.00  Lad  Refactored, beautified, documented :-)               */
 /*****************************************************************************/
 
+#include <assert.h>
 #include <stddef.h>
 
 #include "adpcm.h"
@@ -20,7 +21,7 @@
 //-----------------------------------------------------------------------------
 // Tables necessary dor decompression
 
-static int NextStepTable[] =
+static const int NextStepTable[] =
 {
     -1, 0, -1, 4, -1, 2, -1, 6,
     -1, 1, -1, 5, -1, 3, -1, 7,
@@ -28,7 +29,7 @@ static int NextStepTable[] =
     -1, 2, -1, 4, -1, 6, -1, 8
 };
 
-static int StepSizeTable[] =
+static const int StepSizeTable[] =
 {
         7,     8,     9,    10,     11,    12,    13,    14,
        16,    17,    19,    21,     23,    25,    28,    31,
@@ -127,10 +128,10 @@ static inline short GetNextStepIndex(int StepIndex, unsigned int EncodedSample)
     return (short)StepIndex;
 }
 
-static inline int UpdatePredictedSample(int PredictedSample, int EncodedSample, int Difference)
+static inline int UpdatePredictedSample(int PredictedSample, int EncodedSample, int Difference, int BitMask = 0x40)
 {
     // Is the sign bit set?
-    if(EncodedSample & 0x40)
+    if(EncodedSample & BitMask)
     {
         PredictedSample -= Difference;
         if(PredictedSample <= -32768)
@@ -186,8 +187,6 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
     int Difference;
     int MaxBitMask;
     int StepSize;
-
-//  _tprintf(_T("== CMPR Started ==============\n"));
 
     // First byte in the output stream contains zero. The second one contains the compression level
     os.WriteByteSample(0);
@@ -290,7 +289,6 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
         }
     }
 
-//  _tprintf(_T("== CMPR Ended ================\n"));
     return os.LengthProcessed(pvOutBuffer);
 }
 
@@ -311,12 +309,9 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
     PredictedSamples[0] = PredictedSamples[1] = 0;
     StepIndexes[0] = StepIndexes[1] = INITIAL_ADPCM_STEP_INDEX;
 
-//  _tprintf(_T("== DCMP Started ==============\n"));
-
     // The first byte is always zero, the second one contains bit shift (compression level - 1)
     is.ReadByteSample(BitShift);
     is.ReadByteSample(BitShift);
-//  _tprintf(_T("DCMP: BitShift = %u\n"), (unsigned int)(unsigned char)BitShift);
 
     // Next, InitialSample value for each channel follows
     for(int i = 0; i < ChannelCount; i++)
@@ -327,8 +322,6 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
         // Attempt to read the initial sample
         if(!is.ReadWordSample(InitialSample))
             return os.LengthProcessed(pvOutBuffer);
-
-//      _tprintf(_T("DCMP: Loaded InitialSample[%u]: %04X\n"), i, (unsigned int)(unsigned short)InitialSample);
 
         // Store the initial sample to our sample array
         PredictedSamples[i] = InitialSample;
@@ -344,8 +337,6 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
     // Keep reading as long as there is something in the input buffer
     while(is.ReadByteSample(EncodedSample))
     {
-//      _tprintf(_T("DCMP: Loaded Encoded Sample: %02X\n"), (unsigned int)(unsigned char)EncodedSample);
-
         // If we have two channels, we need to flip the channel index
         ChannelIndex = (ChannelIndex + 1) % ChannelCount;
 
@@ -354,7 +345,6 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
             if(StepIndexes[ChannelIndex] != 0)
                 StepIndexes[ChannelIndex]--;
 
-//          _tprintf(_T("DCMP: Writing Decoded Sample: %04lX\n"), (unsigned int)(unsigned short)PredictedSamples[ChannelIndex]);
             if(!os.WriteWordSample(PredictedSamples[ChannelIndex]))
                 return os.LengthProcessed(pvOutBuffer);
         }
@@ -364,8 +354,6 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
             StepIndexes[ChannelIndex] += 8;
             if(StepIndexes[ChannelIndex] > 0x58)
                 StepIndexes[ChannelIndex] = 0x58;
-
-//          _tprintf(_T("DCMP: New value of StepIndex: %04lX\n"), (unsigned int)(unsigned short)StepIndexes[ChannelIndex]);
 
             // Next pass, keep going on the same channel
             ChannelIndex = (ChannelIndex + 1) % ChannelCount;
@@ -381,21 +369,171 @@ int DecompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int 
                                                                  StepSize,
                                                                  StepSize >> BitShift);
 
-//          _tprintf(_T("DCMP: Writing decoded sample: %04X\n"), (unsigned int)(unsigned short)PredictedSamples[ChannelIndex]);
-
             // Write the decoded sample to the output stream
             if(!os.WriteWordSample(PredictedSamples[ChannelIndex]))
                 break;
 
             // Calculates the step index to use for the next encode
             StepIndexes[ChannelIndex] = GetNextStepIndex(StepIndex, EncodedSample);
-//          _tprintf(_T("DCMP: New step index: %04X\n"), (unsigned int)(unsigned short)StepIndexes[ChannelIndex]);
         }
     }
-
-//  _tprintf(_T("DCMP: Total length written: %u\n"), (unsigned int)os.LengthProcessed(pvOutBuffer));
-//  _tprintf(_T("== DCMP Ended ================\n"));
 
     // Return total bytes written since beginning of the output buffer
     return os.LengthProcessed(pvOutBuffer);
 }
+
+//-----------------------------------------------------------------------------
+// ADPCM decompression present in Starcraft I BETA
+
+typedef struct _ADPCM_DATA
+{
+    const unsigned int * pValues;
+    int BitCount;
+    int field_8;
+    int field_C;
+    int field_10;
+
+} ADPCM_DATA, *PADPCM_DATA;
+
+static const unsigned int adpcm_values_2[] = {0x33, 0x66};
+static const unsigned int adpcm_values_3[] = {0x3A, 0x3A, 0x50, 0x70};
+static const unsigned int adpcm_values_4[] = {0x3A, 0x3A, 0x3A, 0x3A, 0x4D, 0x66, 0x80, 0x9A};
+static const unsigned int adpcm_values_6[] =
+{
+    0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A, 0x3A,
+    0x46, 0x53, 0x60, 0x6D, 0x7A, 0x86, 0x93, 0xA0, 0xAD, 0xBA, 0xC6, 0xD3, 0xE0, 0xED, 0xFA, 0x106
+};
+
+static const unsigned int * InitAdpcmData(PADPCM_DATA pData, unsigned char BitCount)
+{
+    switch(BitCount)
+    {
+        case 2:
+            pData->pValues = adpcm_values_2;
+            break;
+
+        case 3:
+            pData->pValues = adpcm_values_3;
+            break;
+
+        case 4:
+            pData->pValues = adpcm_values_4;
+            break;
+
+        default:
+            pData->pValues = NULL;
+            break;
+
+        case 6:
+            pData->pValues = adpcm_values_6;
+            break;
+    }
+
+    pData->BitCount = BitCount;
+    pData->field_C = 0x20000;
+    pData->field_8 = 1 << BitCount;
+    pData->field_10 = (1 << BitCount) / 2;
+    return pData->pValues;
+}
+
+int DecompressADPCM_SC1B(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cbInBuffer, int ChannelCount)
+{
+    TADPCMStream os(pvOutBuffer, cbOutBuffer);          // Output stream
+    TADPCMStream is(pvInBuffer, cbInBuffer);            // Input stream
+    ADPCM_DATA AdpcmData;
+    int LowBitValues[MAX_ADPCM_CHANNEL_COUNT];
+    int UpperBits[MAX_ADPCM_CHANNEL_COUNT];
+    int BitMasks[MAX_ADPCM_CHANNEL_COUNT];
+    int PredictedSamples[MAX_ADPCM_CHANNEL_COUNT];
+    int ChannelIndex;
+    int ChannelIndexMax;
+    int OutputSample;
+    unsigned char BitCount;
+    unsigned char EncodedSample;
+    short InputValue16;
+    int reg_eax;
+    int Difference;
+
+    // The first byte contains number of bits
+    if(!is.ReadByteSample(BitCount))
+        return os.LengthProcessed(pvOutBuffer);
+    if(!InitAdpcmData(&AdpcmData, BitCount))
+        return os.LengthProcessed(pvOutBuffer);
+    assert(AdpcmData.pValues != NULL);
+
+    // Init bit values
+    for(int i = 0; i < ChannelCount; i++)
+    {
+        unsigned char OneByte;
+
+        if(!is.ReadByteSample(OneByte))
+            return os.LengthProcessed(pvOutBuffer);
+        LowBitValues[i] = OneByte & 0x01;
+        UpperBits[i] = OneByte >> 1;
+    }
+
+    //
+    for(int i = 0; i < ChannelCount; i++)
+    {
+        if(!is.ReadWordSample(InputValue16))
+            return os.LengthProcessed(pvOutBuffer);
+        BitMasks[i] = InputValue16 << AdpcmData.BitCount;
+    }
+
+    // Next, InitialSample value for each channel follows
+    for(int i = 0; i < ChannelCount; i++)
+    {
+        if(!is.ReadWordSample(InputValue16))
+            return os.LengthProcessed(pvOutBuffer);
+        
+        PredictedSamples[i] = InputValue16;
+        os.WriteWordSample(InputValue16);
+    }
+
+    // Get the initial index
+    ChannelIndexMax = ChannelCount - 1;
+    ChannelIndex = 0;
+
+    // Keep reading as long as there is something in the input buffer
+    while(is.ReadByteSample(EncodedSample))
+    {
+        reg_eax = ((PredictedSamples[ChannelIndex] * 3) << 3) - PredictedSamples[ChannelIndex];
+        PredictedSamples[ChannelIndex] = ((reg_eax * 10) + 0x80) >> 8;
+
+        Difference = (((EncodedSample >> 1) + 1) * BitMasks[ChannelIndex] + AdpcmData.field_10) >> AdpcmData.BitCount;
+        
+        PredictedSamples[ChannelIndex] = UpdatePredictedSample(PredictedSamples[ChannelIndex], EncodedSample, Difference, 0x01);
+
+        BitMasks[ChannelIndex] = (AdpcmData.pValues[EncodedSample >> 1] * BitMasks[ChannelIndex] + 0x80) >> 6;
+        if(BitMasks[ChannelIndex] < AdpcmData.field_8)
+            BitMasks[ChannelIndex] = AdpcmData.field_8;
+
+        if(BitMasks[ChannelIndex] > AdpcmData.field_C)
+            BitMasks[ChannelIndex] = AdpcmData.field_C;
+
+        reg_eax = (cbInBuffer - is.LengthProcessed(pvInBuffer)) >> ChannelIndexMax;
+        OutputSample = PredictedSamples[ChannelIndex];
+        if(reg_eax < UpperBits[ChannelIndex])
+        {
+            if(LowBitValues[ChannelIndex])
+            {
+                OutputSample += (UpperBits[ChannelIndex] - reg_eax);
+                if(OutputSample > 32767)
+                    OutputSample = 32767;
+            }
+            else
+            {
+                OutputSample += (reg_eax - UpperBits[ChannelIndex]);
+                if(OutputSample < -32768)
+                    OutputSample = -32768;
+            }
+        }
+
+        // Write the word sample and swap channel
+        os.WriteWordSample((short)(OutputSample));
+        ChannelIndex = (ChannelIndex + 1) % ChannelCount;
+    }
+
+    return os.LengthProcessed(pvOutBuffer);
+}
+

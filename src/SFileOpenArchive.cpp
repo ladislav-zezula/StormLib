@@ -75,6 +75,20 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
     return MapTypeNotRecognized;
 }
 
+static bool IsStarcraftBetaArchive(TMPQHeader * pHeader)
+{
+    // The archive must be version 1, with a standard header size
+    if(pHeader->dwID == ID_MPQ && pHeader->dwHeaderSize == MPQ_HEADER_SIZE_V1)
+    {
+        // Check for known archive sizes
+        return (pHeader->dwArchiveSize == 0x00028FB3 ||     // patch_rt.mpq
+                pHeader->dwArchiveSize == 0x0351853D ||     // StarDat.mpq
+                pHeader->dwArchiveSize == 0x0AEC8960);      // INSTALL.exe
+
+    }
+    return false;
+}
+
 static TMPQUserData * IsValidMpqUserData(ULONGLONG ByteOffset, ULONGLONG FileSize, void * pvUserData)
 {
     TMPQUserData * pUserData;
@@ -445,6 +459,10 @@ bool WINAPI SFileOpenArchive(
         // Check if the caller wants to force adding listfile
         if(dwFlags & MPQ_OPEN_FORCE_LISTFILE)
             ha->dwFlags |= MPQ_FLAG_LISTFILE_FORCE;
+
+        // StarDat.mpq from Starcraft I BETA: Enable special compression types
+        if(IsStarcraftBetaArchive(ha->pHeader))
+            ha->dwFlags |= MPQ_FLAG_STARCRAFT_BETA;
 
         // Remember whether whis is a map for Warcraft III
         if(MapType == MapTypeWarcraft3)
