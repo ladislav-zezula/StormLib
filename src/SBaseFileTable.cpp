@@ -1480,31 +1480,32 @@ static TMPQHetTable * TranslateHetTable(TMPQHetHeader * pHetHeader)
         if(pHetHeader->ExtHdr.dwDataSize >= pHetHeader->dwTableSize)
         {
             // The size of the HET table must be sum of header, hash and index table size
-            assert((sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader) + pHetHeader->dwTotalCount + pHetHeader->dwIndexTableSize) == pHetHeader->dwTableSize);
-
-            // So far, all MPQs with HET Table have had total number of entries equal to 4/3 of file count
-            // Exception: "2010 - Starcraft II\!maps\Tya's Zerg Defense (unprotected).SC2Map"
-//          assert(((pHetHeader->dwEntryCount * 4) / 3) == pHetHeader->dwTotalCount);
-
-            // The size of one index is predictable as well
-            assert(GetNecessaryBitCount(pHetHeader->dwEntryCount) == pHetHeader->dwIndexSizeTotal);
-
-            // The size of index table (in entries) is expected
-            // to be the same like the hash table size (in bytes)
-            assert(((pHetHeader->dwTotalCount * pHetHeader->dwIndexSizeTotal) + 7) / 8 == pHetHeader->dwIndexTableSize);
-
-            // Create translated table
-            pHetTable = CreateHetTable(pHetHeader->dwEntryCount, pHetHeader->dwTotalCount, pHetHeader->dwNameHashBitSize, pbSrcData);
-            if(pHetTable != NULL)
+            if((sizeof(TMPQHetHeader) - sizeof(TMPQExtHeader) + pHetHeader->dwTotalCount + pHetHeader->dwIndexTableSize) == pHetHeader->dwTableSize)
             {
-                // Now the sizes in the hash table should be already set
-                assert(pHetTable->dwEntryCount     == pHetHeader->dwEntryCount);
-                assert(pHetTable->dwTotalCount     == pHetHeader->dwTotalCount);
-                assert(pHetTable->dwIndexSizeTotal == pHetHeader->dwIndexSizeTotal);
+                // So far, all MPQs with HET Table have had total number of entries equal to 4/3 of file count
+                // Exception: "2010 - Starcraft II\!maps\Tya's Zerg Defense (unprotected).SC2Map"
+//              assert(((pHetHeader->dwEntryCount * 4) / 3) == pHetHeader->dwTotalCount);
 
-                // Copy the missing variables
-                pHetTable->dwIndexSizeExtra = pHetHeader->dwIndexSizeExtra;
-                pHetTable->dwIndexSize      = pHetHeader->dwIndexSize;
+                // The size of one index is predictable as well
+                assert(GetNecessaryBitCount(pHetHeader->dwEntryCount) == pHetHeader->dwIndexSizeTotal);
+
+                // The size of index table (in entries) is expected
+                // to be the same like the hash table size (in bytes)
+                assert(((pHetHeader->dwTotalCount * pHetHeader->dwIndexSizeTotal) + 7) / 8 == pHetHeader->dwIndexTableSize);
+
+                // Create translated table
+                pHetTable = CreateHetTable(pHetHeader->dwEntryCount, pHetHeader->dwTotalCount, pHetHeader->dwNameHashBitSize, pbSrcData);
+                if(pHetTable != NULL)
+                {
+                    // Now the sizes in the hash table should be already set
+                    assert(pHetTable->dwEntryCount     == pHetHeader->dwEntryCount);
+                    assert(pHetTable->dwTotalCount     == pHetHeader->dwTotalCount);
+                    assert(pHetTable->dwIndexSizeTotal == pHetHeader->dwIndexSizeTotal);
+
+                    // Copy the missing variables
+                    pHetTable->dwIndexSizeExtra = pHetHeader->dwIndexSizeExtra;
+                    pHetTable->dwIndexSize      = pHetHeader->dwIndexSize;
+                }
             }
         }
     }
@@ -2449,7 +2450,7 @@ TMPQHetTable * LoadHetTable(TMPQArchive * ha)
         pExtTable = LoadExtTable(ha, pHeader->HetTablePos64, (size_t)pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
         if(pExtTable != NULL)
         {
-            // If loading HET table fails, we ignore the result.
+            // Translate the loaded table into HET table.
             pHetTable = TranslateHetTable((TMPQHetHeader *)pExtTable);
             STORM_FREE(pExtTable);
         }

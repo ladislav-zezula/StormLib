@@ -4345,8 +4345,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     for(int i = 2; i < argc; i++)
     {
-//      TestArchive(argv[i], Bliz, 0, "sound\\zerg\\advisor\\zaderr05.wav", NULL);
-//      TestArchive(argv[i], Bliz, 0, "music\\trdyroom.wav", NULL);
+        TestArchive(argv[i], Bliz, 0, "sound\\zerg\\advisor\\zaderr05.wav", NULL);
     }
 
     //
