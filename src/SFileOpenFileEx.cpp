@@ -263,7 +263,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                 // If this MPQ has no patches, open the file from this MPQ directly
                 if(ha->haPatch == NULL || dwSearchScope == SFILE_OPEN_BASE_FILE)
                 {
-                    pFileEntry = GetFileEntryLocale2(ha, szFileName, g_lcFileLocale, &dwHashIndex);
+                    pFileEntry = GetFileEntryLocale(ha, szFileName, g_lcFileLocale, &dwHashIndex);
                 }
 
                 // If this MPQ is a patched archive, open the file as patched
@@ -278,7 +278,7 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
                 // This open option is reserved for opening MPQ internal listfile.
                 // No argument validation. Tries to open file with neutral locale first,
                 // then any other available.
-                pFileEntry = GetFileEntryLocale2(ha, szFileName, 0, &dwHashIndex);
+                pFileEntry = GetFileEntryLocale(ha, szFileName, 0, &dwHashIndex);
                 break;
 
             case SFILE_OPEN_LOCAL_FILE:

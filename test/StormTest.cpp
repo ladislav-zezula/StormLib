@@ -1386,80 +1386,20 @@ static TFileData * LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool 
     return pFileData;
 }
 
-static DWORD CompareTwoLocalFilesRR(
-    TLogHelper * pLogger,
-    TFileStream * pStream1,                         // Master file
-    TFileStream * pStream2,                         // Mirror file
-    int nIterations)                                // Number of iterations
+static DWORD LoadLocalFileMD5(TLogHelper * pLogger, LPCTSTR szLocalFileName, LPBYTE md5_file_local)
 {
-    ULONGLONG RandomNumber = 0x12345678;            // We need pseudo-random number that will repeat each run of the program
-    ULONGLONG RandomSeed;
-    ULONGLONG ByteOffset;
-    ULONGLONG FileSize1 = 1;
-    ULONGLONG FileSize2 = 2;
-    DWORD BytesToRead;
-    DWORD Difference;
-    LPBYTE pbBuffer1;
-    LPBYTE pbBuffer2;
-    DWORD cbBuffer = 0x100000;
-    DWORD dwErrCode = ERROR_SUCCESS;
+    TFileData * pFileData;
 
-    // Compare file sizes
-    FileStream_GetSize(pStream1, &FileSize1);
-    FileStream_GetSize(pStream2, &FileSize2);
-    if(FileSize1 != FileSize2)
+    // Load the local file to memory
+    if((pFileData = LoadLocalFile(pLogger, szLocalFileName, true)) == NULL)
     {
-        pLogger->PrintMessage("The files have different size");
-        return ERROR_CAN_NOT_COMPLETE;
+        return pLogger->PrintError(_T("The file \"%s\" could not be loaded"), szLocalFileName);
     }
 
-    // Allocate both buffers
-    pbBuffer1 = STORM_ALLOC(BYTE, cbBuffer);
-    pbBuffer2 = STORM_ALLOC(BYTE, cbBuffer);
-    if(pbBuffer1 && pbBuffer2)
-    {
-        // Perform many random reads
-        for(int i = 0; i < nIterations; i++)
-        {
-            // Generate psudo-random offsrt and data size
-            ByteOffset = (RandomNumber % FileSize1);
-            BytesToRead = (DWORD)(RandomNumber % cbBuffer);
-
-            // Show the progress message
-            pLogger->PrintProgress("Comparing file: Offset: " I64u_a ", Length: %u", ByteOffset, BytesToRead);
-
-            // Only perform read if the byte offset is below
-            if(ByteOffset < FileSize1)
-            {
-                if((ByteOffset + BytesToRead) > FileSize1)
-                    BytesToRead = (DWORD)(FileSize1 - ByteOffset);
-
-                memset(pbBuffer1, 0xEE, cbBuffer);
-                memset(pbBuffer2, 0xAA, cbBuffer);
-
-                FileStream_Read(pStream1, &ByteOffset, pbBuffer1, BytesToRead);
-                FileStream_Read(pStream2, &ByteOffset, pbBuffer2, BytesToRead);
-
-                if(!CompareBlocks(pbBuffer1, pbBuffer2, BytesToRead, &Difference))
-                {
-                    pLogger->PrintMessage("Difference at %u (Offset " I64X_a ", Length %X)", Difference, ByteOffset, BytesToRead);
-                    dwErrCode = ERROR_FILE_CORRUPT;
-                    break;
-                }
-
-                // Shuffle the random number
-                memcpy(&RandomSeed, pbBuffer1, sizeof(RandomSeed));
-                RandomNumber = ((RandomNumber >> 0x11) | (RandomNumber << 0x29)) ^ (RandomNumber + RandomSeed);
-            }
-        }
-    }
-
-    // Free both buffers
-    if(pbBuffer2 != NULL)
-        STORM_FREE(pbBuffer2);
-    if(pbBuffer1 != NULL)
-        STORM_FREE(pbBuffer1);
-    return dwErrCode;
+    // Calculate the hash
+    CalculateDataBlockHash(pFileData->FileData, pFileData->dwFileSize, md5_file_local);
+    STORM_FREE(pFileData);
+    return ERROR_SUCCESS;
 }
 
 static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, LCID lcLocale = 0, bool bIgnoreOpedwErrCodes = false)
@@ -1562,6 +1502,96 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
 
     // Return what we got
     return pFileData;
+}
+
+static DWORD LoadMpqFileMD5(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szArchivedName, LPBYTE md5_file_in_mpq1)
+{
+    TFileData * pFileData;
+
+    // Load the MPQ to memory
+    if((pFileData = LoadMpqFile(pLogger, hMpq, szArchivedName)) == NULL)
+        return pLogger->PrintError("The file \"%s\" is not in the archive", szArchivedName);
+
+    // Calculate hash
+    CalculateDataBlockHash(pFileData->FileData, pFileData->dwFileSize, md5_file_in_mpq1);
+    STORM_FREE(pFileData);
+    return ERROR_SUCCESS;
+}
+
+static DWORD CompareTwoLocalFilesRR(
+    TLogHelper * pLogger,
+    TFileStream * pStream1,                         // Master file
+    TFileStream * pStream2,                         // Mirror file
+    int nIterations)                                // Number of iterations
+{
+    ULONGLONG RandomNumber = 0x12345678;            // We need pseudo-random number that will repeat each run of the program
+    ULONGLONG RandomSeed;
+    ULONGLONG ByteOffset;
+    ULONGLONG FileSize1 = 1;
+    ULONGLONG FileSize2 = 2;
+    DWORD BytesToRead;
+    DWORD Difference;
+    LPBYTE pbBuffer1;
+    LPBYTE pbBuffer2;
+    DWORD cbBuffer = 0x100000;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Compare file sizes
+    FileStream_GetSize(pStream1, &FileSize1);
+    FileStream_GetSize(pStream2, &FileSize2);
+    if(FileSize1 != FileSize2)
+    {
+        pLogger->PrintMessage("The files have different size");
+        return ERROR_CAN_NOT_COMPLETE;
+    }
+
+    // Allocate both buffers
+    pbBuffer1 = STORM_ALLOC(BYTE, cbBuffer);
+    pbBuffer2 = STORM_ALLOC(BYTE, cbBuffer);
+    if(pbBuffer1 && pbBuffer2)
+    {
+        // Perform many random reads
+        for(int i = 0; i < nIterations; i++)
+        {
+            // Generate psudo-random offsrt and data size
+            ByteOffset = (RandomNumber % FileSize1);
+            BytesToRead = (DWORD)(RandomNumber % cbBuffer);
+
+            // Show the progress message
+            pLogger->PrintProgress("Comparing file: Offset: " I64u_a ", Length: %u", ByteOffset, BytesToRead);
+
+            // Only perform read if the byte offset is below
+            if(ByteOffset < FileSize1)
+            {
+                if((ByteOffset + BytesToRead) > FileSize1)
+                    BytesToRead = (DWORD)(FileSize1 - ByteOffset);
+
+                memset(pbBuffer1, 0xEE, cbBuffer);
+                memset(pbBuffer2, 0xAA, cbBuffer);
+
+                FileStream_Read(pStream1, &ByteOffset, pbBuffer1, BytesToRead);
+                FileStream_Read(pStream2, &ByteOffset, pbBuffer2, BytesToRead);
+
+                if(!CompareBlocks(pbBuffer1, pbBuffer2, BytesToRead, &Difference))
+                {
+                    pLogger->PrintMessage("Difference at %u (Offset " I64X_a ", Length %X)", Difference, ByteOffset, BytesToRead);
+                    dwErrCode = ERROR_FILE_CORRUPT;
+                    break;
+                }
+
+                // Shuffle the random number
+                memcpy(&RandomSeed, pbBuffer1, sizeof(RandomSeed));
+                RandomNumber = ((RandomNumber >> 0x11) | (RandomNumber << 0x29)) ^ (RandomNumber + RandomSeed);
+            }
+        }
+    }
+
+    // Free both buffers
+    if(pbBuffer2 != NULL)
+        STORM_FREE(pbBuffer2);
+    if(pbBuffer1 != NULL)
+        STORM_FREE(pbBuffer1);
+    return dwErrCode;
 }
 
 static bool CompareTwoFiles(TLogHelper * pLogger, TFileData * pFileData1, TFileData * pFileData2)
@@ -4172,21 +4202,35 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
     char szArchivedName[MAX_PATH];
     size_t nOffset = 0;
     DWORD dwErrCode;
+    BYTE md5_file_in_mpq1[MD5_DIGEST_SIZE];
+    BYTE md5_file_in_mpq2[MD5_DIGEST_SIZE];
+    BYTE md5_file_in_mpq3[MD5_DIGEST_SIZE];
+    BYTE md5_file_local[MD5_DIGEST_SIZE];
+
+    // Get the name of archived file
+    if(!_tcsnicmp(szFileName, _T("AddFile-"), 8))
+        nOffset = 8;
+    StringCopy(szArchivedName, _countof(szArchivedName), szFileName + nOffset);
+    CreateFullPathName(szLocalFileName, _countof(szLocalFileName), szMpqSubDir, szFileName);
 
     // Open an existing archive
     dwErrCode = OpenExistingArchiveWithCopy(&Logger, szMpqPlainName, szMpqPlainName, &hMpq);
 
+    // Open the file, load to memory, calculate hash
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = LoadMpqFileMD5(&Logger, hMpq, szArchivedName, md5_file_in_mpq1);
+    }
+
+    // Open the local file, calculate hash
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        dwErrCode = LoadLocalFileMD5(&Logger, szLocalFileName, md5_file_local);
+    }
+
     // Add the given file
     if(dwErrCode == ERROR_SUCCESS)
     {
-        // Get the name of archived file
-        if(!_tcsnicmp(szFileName, _T("AddFile-"), 8))
-            nOffset = 8;
-        StringCopy(szArchivedName, _countof(szArchivedName), szFileName + nOffset);
-
-        // Create the local file name
-        CreateFullPathName(szLocalFileName, _countof(szLocalFileName), szMpqSubDir, szFileName);
-
         // Add the file to MPQ
         dwErrCode = AddLocalFileToMpq(&Logger, hMpq,
                                                szArchivedName,
@@ -4196,7 +4240,30 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
                                                true);
     }
 
-    // Reopen the MPQ and compact it
+    // Load the file from the MPQ again and compare both MD5's
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Load the file from the MPQ again
+        dwErrCode = LoadMpqFileMD5(&Logger, hMpq, szArchivedName, md5_file_in_mpq2);
+        if(dwErrCode == ERROR_SUCCESS)
+        {
+            // New MPQ file must be different from the old one
+            if(!memcmp(md5_file_in_mpq2, md5_file_in_mpq1, MD5_DIGEST_SIZE))
+            {
+                Logger.PrintError("Data mismatch after adding the file \"%s\"", szArchivedName);
+                dwErrCode = ERROR_CHECKSUM_ERROR;
+            }
+
+            // New MPQ file must be identical to the local one
+            if(memcmp(md5_file_in_mpq2, md5_file_local, MD5_DIGEST_SIZE))
+            {
+                Logger.PrintError("Data mismatch after adding the file \"%s\"", szArchivedName);
+                dwErrCode = ERROR_CHECKSUM_ERROR;
+            }
+        }
+    }
+
+    // Compact the MPQ
     if(dwErrCode == ERROR_SUCCESS)
     {
         // Compact the archive
@@ -4210,13 +4277,26 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
         SFileCloseArchive(hMpq);
     }
 
-    // Try to open the archive again
+    // Try to open the archive again. Ignore the previous errors
     if(dwErrCode == ERROR_SUCCESS)
     {
-        CreateFullPathName(szLocalFileName, _countof(szLocalFileName), NULL, szMpqPlainName);
         dwErrCode = OpenExistingArchive(&Logger, szLocalFileName, 0, &hMpq);
         if(dwErrCode == ERROR_SUCCESS)
+        {
+            // Load the file from the MPQ again
+            dwErrCode = LoadMpqFileMD5(&Logger, hMpq, szArchivedName, md5_file_in_mpq3);
+            if(dwErrCode == ERROR_SUCCESS)
+            {
+                // New MPQ file must be the same like the local one
+                if(!memcmp(md5_file_in_mpq3, md5_file_local, MD5_DIGEST_SIZE))
+                {
+                    Logger.PrintError("Data mismatch after adding the file \"%s\"", szArchivedName);
+                    dwErrCode = ERROR_CHECKSUM_ERROR;
+                }
+            }
+
             SFileCloseArchive(hMpq);
+        }
     }
 
     return dwErrCode;
@@ -4585,6 +4665,9 @@ int _tmain(int argc, TCHAR * argv[])
     // Test replacing a file with zero size file
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
+
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestModifyArchive_ReplaceFile(_T("MPQ_2022_v1_v4.329.w3x"), _T("AddFile-war3map.j"));
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
