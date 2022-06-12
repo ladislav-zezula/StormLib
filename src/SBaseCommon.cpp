@@ -1833,7 +1833,6 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
     md5_done(&md5_state, md5_hash);
 }
 
-
 //-----------------------------------------------------------------------------
 // Swapping functions
 

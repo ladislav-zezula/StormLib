@@ -423,7 +423,7 @@ DWORD SFileAddFile_Init(
     if(!(dwFlags & MPQ_FILE_COMPRESS_MASK))
         dwFlags &= ~MPQ_FILE_SECTOR_CRC;
 
-    // Fix Key is not allowed if the file is not enrypted
+    // Fix Key is not allowed if the file is not encrypted
     if(!(dwFlags & MPQ_FILE_ENCRYPTED))
         dwFlags &= ~MPQ_FILE_FIX_KEY;
 
@@ -441,7 +441,7 @@ DWORD SFileAddFile_Init(
     if(dwErrCode == ERROR_SUCCESS)
     {
         // Check if the file already exists in the archive
-        pFileEntry = GetFileEntryExact(ha, szFileName, lcLocale, &dwHashIndex);
+        pFileEntry = GetFileEntryLocale(ha, szFileName, lcLocale, &dwHashIndex);
         if(pFileEntry != NULL)
         {
             if(dwFlags & MPQ_FILE_REPLACEEXISTING)
@@ -1285,7 +1285,7 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
     }
 
     // We have to check if the file+locale is not already there
-    pFileEntry = GetFileEntryExact(ha, hf->pFileEntry->szFileName, lcNewLocale, NULL);
+    pFileEntry = GetFileEntryLocale(ha, hf->pFileEntry->szFileName, lcNewLocale, NULL);
     if(pFileEntry != NULL)
     {
         SetLastError(ERROR_ALREADY_EXISTS);
