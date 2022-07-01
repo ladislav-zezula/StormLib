@@ -782,7 +782,7 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
             return pHash;
 
         // Storm_2016.dll: 150209D9
-        // If (locale matches or is neutral) OR (platform matches or is neutral), remember this as the best entry
+        // If (locale matches or is neutral) AND (platform matches or is neutral), remember this as the best entry
         // Also remember the first matching entry for Starcraft maps
         if(pHash->lcLocale == 0 || pHash->lcLocale == lcLocale)
         {
