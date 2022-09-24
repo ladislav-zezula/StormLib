@@ -6,6 +6,7 @@ set(LIBRARY_NAME storm)
 include(CMakeDependentOption)
 
 option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
+option(STORM_USE_BUNDLED_LIBRARIES "Use bundled dependencies instead of system libraries." OFF)
 option(STORM_SKIP_INSTALL "Skip installing files" OFF)
 option(STORM_BUILD_TESTS
     "Compile StormLib test application" OFF
@@ -279,9 +280,11 @@ set(TEST_SRC_FILES
 
 add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)
 
-if(WIN32)
+if(WIN32 OR STORM_USE_BUNDLED_LIBRARIES)
     set(SRC_ADDITIONAL_FILES ${ZLIB_BZIP2_FILES} ${TOMCRYPT_FILES} ${TOMMATH_FILES})
-    set(LINK_LIBS wininet)
+    if(WIN32)
+        set(LINK_LIBS wininet)
+    endif()
 else()
     find_package(ZLIB REQUIRED)
     find_package(BZip2 REQUIRED)
