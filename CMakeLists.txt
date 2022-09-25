@@ -10,6 +10,10 @@ include(CMakeDependentOption)
 
 option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
 option(STORM_SKIP_INSTALL "Skip installing files" OFF)
+option(STORM_USE_BUNDLED_LIBRARIES
+    "Force use of bundled dependencies instead of system libraries."
+    OFF
+)
 option(STORM_BUILD_TESTS
     "Compile StormLib test application" OFF
 #   "BUILD_TESTING" OFF # Stay coherent with CTest variables
@@ -286,7 +290,7 @@ add_definitions(-D_7ZIP_ST -DBZ_STRICT_ANSI)
 set(LINK_LIBS)
 
 find_package(ZLIB)
-if (ZLIB_FOUND)
+if (ZLIB_FOUND AND NOT STORM_USE_BUNDLED_LIBRARIES)
 	set(LINK_LIBS ${LINK_LIBS} ZLIB::ZLIB)
     add_definitions(-D__SYS_ZLIB)
 else()
@@ -294,7 +298,7 @@ else()
 endif()
 
 find_package(BZip2)
-if (BZIP2_FOUND)
+if (BZIP2_FOUND AND NOT STORM_USE_BUNDLED_LIBRARIES)
 	set(LINK_LIBS ${LINK_LIBS} BZip2::BZip2)
     add_definitions(-D__SYS_BZLIB)
 else()
