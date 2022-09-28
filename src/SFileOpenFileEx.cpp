@@ -170,13 +170,13 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, HANDLE * PtrFile)
 //-----------------------------------------------------------------------------
 // SFileEnumLocales enums all locale versions within MPQ.
 // Functions fills all available language identifiers on a file into the buffer
-// pointed by plcLocales. There must be enough entries to copy the localed,
+// pointed by PtrFileLocales. There must be enough entries to copy the localed,
 // otherwise the function returns ERROR_INSUFFICIENT_BUFFER.
 
 DWORD WINAPI SFileEnumLocales(
     HANDLE hMpq,
     const char * szFileName,
-    LCID * PtrLocales,
+    LCID * PtrFileLocales,
     LPDWORD PtrMaxLocales,
     DWORD dwSearchScope)
 {
@@ -208,8 +208,8 @@ DWORD WINAPI SFileEnumLocales(
     while(pHash != NULL)
     {
         // Put the locales to the buffer
-        if(PtrLocales != NULL && dwLocales < dwMaxLocales)
-            *PtrLocales++ = pHash->lcLocale;
+        if(PtrFileLocales != NULL && dwLocales < dwMaxLocales)
+            *PtrFileLocales++ = SFILE_MAKE_LCID(pHash->Locale, pHash->Platform);
         dwLocales++;
 
         // Get the next locale

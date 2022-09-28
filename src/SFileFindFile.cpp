@@ -263,7 +263,7 @@ static bool DoMPQSearch_FileEntry(
                     lpFindFileData->dwFileSize   = pPatchEntry->dwFileSize;
                     lpFindFileData->dwFileFlags  = pPatchEntry->dwFlags;
                     lpFindFileData->dwCompSize   = pPatchEntry->dwCmpSize;
-                    lpFindFileData->lcLocale     = 0;   // pPatchEntry->lcLocale;
+                    lpFindFileData->lcLocale     = 0;   // pPatchEntry->lcFileLocale;
 
                     // Fill the filetime
                     lpFindFileData->dwFileTimeHi = (DWORD)(pPatchEntry->FileTime >> 32);
@@ -273,7 +273,7 @@ static bool DoMPQSearch_FileEntry(
                     if(pHashEntry != NULL)
                     {
                         lpFindFileData->dwHashIndex = (DWORD)(pHashEntry - ha->pHashTable);
-                        lpFindFileData->lcLocale = pHashEntry->lcLocale;
+                        lpFindFileData->lcLocale = SFILE_MAKE_LCID(pHashEntry->Locale, pHashEntry->Platform);
                     }
 
                     // Fill the file name and plain file name

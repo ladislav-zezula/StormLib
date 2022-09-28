@@ -627,7 +627,7 @@ typedef struct _TMPQHash
 
     // The language of the file. This is a Windows LANGID data type, and uses the same values.
     // 0 indicates the default language (American English), or that the file is language-neutral.
-    USHORT lcLocale;
+    USHORT Locale;
 
     // The platform the file is used for. 0 indicates the default platform.
     // No other values have been observed.
@@ -638,7 +638,7 @@ typedef struct _TMPQHash
 
     BYTE   Reserved;
     BYTE   Platform;
-    USHORT lcLocale;
+    USHORT Locale;
 
 #endif
 
@@ -910,7 +910,7 @@ typedef struct _SFILE_FIND_DATA
     DWORD  dwCompSize;                          // Compressed file size
     DWORD  dwFileTimeLo;                        // Low 32-bits of the file time (0 if not present)
     DWORD  dwFileTimeHi;                        // High 32-bits of the file time (0 if not present)
-    LCID   lcLocale;                            // Locale version
+    LCID   lcLocale;                            // Compound of file locale (16 bits) and platform (8 bits)
 
 } SFILE_FIND_DATA, *PSFILE_FIND_DATA;
 
@@ -994,13 +994,18 @@ typedef bool  (WINAPI * SFILEREADFILE)(HANDLE, void *, DWORD, LPDWORD, LPOVERLAP
 //-----------------------------------------------------------------------------
 // Functions for manipulation with StormLib global flags
 
+// Macros for making LCID from Locale and Platform
+#define SFILE_MAKE_LCID(locale, platform)   ((LCID)(USHORT)locale | (LCID)(BYTE)platform << 0x10)
+#define SFILE_LOCALE(lcFileLocale)          (USHORT)(lcFileLocale & 0xFFFF)
+#define SFILE_PLATFORM(lcFileLocale)        (BYTE)(lcFileLocale >> 0x10)
+
 // Alternate marker support. This is for MPQs masked as DLLs (*.asi), which
 // patch Storm.dll at runtime. Call before SFileOpenArchive
 bool   WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers);
 
 // Call before SFileOpenFileEx
 LCID   WINAPI SFileGetLocale();
-LCID   WINAPI SFileSetLocale(LCID lcNewLocale);
+LCID   WINAPI SFileSetLocale(LCID lcFileLocale);
 
 //-----------------------------------------------------------------------------
 // Functions for archive manipulation
@@ -1085,12 +1090,12 @@ bool   WINAPI SListFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileDa
 bool   WINAPI SListFileFindClose(HANDLE hFind);
 
 // Locale support
-DWORD  WINAPI SFileEnumLocales(HANDLE hMpq, const char * szFileName, LCID * plcLocales, LPDWORD pdwMaxLocales, DWORD dwSearchScope);
+DWORD  WINAPI SFileEnumLocales(HANDLE hMpq, const char * szFileName, LCID * PtrFileLocales, LPDWORD PtrMaxLocales, DWORD dwSearchScope);
 
 //-----------------------------------------------------------------------------
 // Support for adding files to the MPQ
 
-bool   WINAPI SFileCreateFile(HANDLE hMpq, const char * szArchivedName, ULONGLONG FileTime, DWORD dwFileSize, LCID lcLocale, DWORD dwFlags, HANDLE * phFile);
+bool   WINAPI SFileCreateFile(HANDLE hMpq, const char * szArchivedName, ULONGLONG FileTime, DWORD dwFileSize, LCID lcFileLocale, DWORD dwFlags, HANDLE * phFile);
 bool   WINAPI SFileWriteFile(HANDLE hFile, const void * pvData, DWORD dwSize, DWORD dwCompression);
 bool   WINAPI SFileFinishFile(HANDLE hFile);
 

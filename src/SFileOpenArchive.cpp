@@ -209,10 +209,9 @@ LCID WINAPI SFileGetLocale()
     return g_lcFileLocale;
 }
 
-LCID WINAPI SFileSetLocale(LCID lcNewLocale)
+LCID WINAPI SFileSetLocale(LCID lcFileLocale)
 {
-    g_lcFileLocale = lcNewLocale;
-    return g_lcFileLocale;
+    return (g_lcFileLocale = lcFileLocale);
 }
 
 //-----------------------------------------------------------------------------

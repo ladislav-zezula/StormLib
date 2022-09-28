@@ -1402,7 +1402,7 @@ static DWORD LoadLocalFileMD5(TLogHelper * pLogger, LPCTSTR szLocalFileName, LPB
     return ERROR_SUCCESS;
 }
 
-static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, LCID lcLocale = 0, bool bIgnoreOpedwErrCodes = false)
+static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, LCID lcFileLocale = 0, bool bIgnoreOpedwErrCodes = false)
 {
     TFileData * pFileData = NULL;
     HANDLE hFile;
@@ -1421,7 +1421,7 @@ static TFileData * LoadMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
 #endif
 
     // Make sure that we open the proper locale file
-    SFileSetLocale(lcLocale);
+    SFileSetLocale(lcFileLocale);
 
     // Open the file from MPQ
     if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
@@ -2507,7 +2507,7 @@ static DWORD TestArchive(
     DWORD dwExpectedFileCount = 0;
     DWORD dwMpqFlags = 0;
     TCHAR szFullName[MAX_PATH];
-    LCID lcLocale = 0;
+    LCID lcFileLocale = 0;
     BYTE ObtainedMD5[MD5_DIGEST_SIZE] = {0};
     bool bIgnoreOpedwErrCodes = false;
 
@@ -2527,7 +2527,7 @@ static DWORD TestArchive(
     // If locale entered
     if(dwFlags & TFLG_FILE_LOCALE)
     {
-        lcLocale = (LCID)(dwFlags & TFLG_VALUE_MASK);
+        lcFileLocale = (LCID)(dwFlags & TFLG_VALUE_MASK);
     }
 
     // Put all file names into list
@@ -2574,7 +2574,7 @@ static DWORD TestArchive(
                     break;
 
                 // Load the entire file 1
-                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName, lcLocale);
+                FileDataList[i] = pFileData = LoadMpqFile(&Logger, hMpq, szFileName, lcFileLocale);
                 if(pFileData == NULL)
                 {
                     dwErrCode = Logger.PrintError("Failed to load the file %s", szFileName);

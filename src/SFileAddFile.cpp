@@ -400,7 +400,7 @@ DWORD SFileAddFile_Init(
     const char * szFileName,
     ULONGLONG FileTime,
     DWORD dwFileSize,
-    LCID lcLocale,
+    LCID lcFileLocale,
     DWORD dwFlags,
     TMPQFile ** phf)
 {
@@ -430,7 +430,7 @@ DWORD SFileAddFile_Init(
     // If the MPQ is of version 3.0 or higher, we ignore file locale.
     // This is because HET and BET tables have no known support for it
     if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_3)
-        lcLocale = 0;
+        lcFileLocale = 0;
 
     // Allocate the TMPQFile entry for newly added file
     hf = CreateWritableHandle(ha, dwFileSize);
@@ -441,7 +441,7 @@ DWORD SFileAddFile_Init(
     if(dwErrCode == ERROR_SUCCESS)
     {
         // Check if the file already exists in the archive
-        pFileEntry = GetFileEntryLocale(ha, szFileName, lcLocale, &dwHashIndex);
+        pFileEntry = GetFileEntryLocale(ha, szFileName, lcFileLocale, &dwHashIndex);
         if(pFileEntry != NULL)
         {
             if(dwFlags & MPQ_FILE_REPLACEEXISTING)
@@ -452,7 +452,7 @@ DWORD SFileAddFile_Init(
         else
         {
             // Attempt to allocate new file entry
-            pFileEntry = AllocateFileEntry(ha, szFileName, lcLocale, &dwHashIndex);
+            pFileEntry = AllocateFileEntry(ha, szFileName, lcFileLocale, &dwHashIndex);
             if(pFileEntry != NULL)
                 InvalidateInternalFiles(ha);
             else
@@ -467,7 +467,9 @@ DWORD SFileAddFile_Init(
     if(dwErrCode == ERROR_SUCCESS && ha->pHashTable != NULL && dwHashIndex < ha->pHeader->dwHashTableSize)
     {
         hf->pHashEntry = ha->pHashTable + dwHashIndex;
-        hf->pHashEntry->lcLocale = (USHORT)lcLocale;
+        hf->pHashEntry->Locale = SFILE_LOCALE(lcFileLocale);
+        hf->pHashEntry->Platform = SFILE_PLATFORM(lcFileLocale);
+        hf->pHashEntry->Reserved = 0;
     }
 
     // Prepare the file key
@@ -762,7 +764,7 @@ bool WINAPI SFileCreateFile(
     const char * szArchivedName,
     ULONGLONG FileTime,
     DWORD dwFileSize,
-    LCID lcLocale,
+    LCID lcFileLocale,
     DWORD dwFlags,
     HANDLE * phFile)
 {
@@ -805,7 +807,7 @@ bool WINAPI SFileCreateFile(
 
     // Initiate the add file operation
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = SFileAddFile_Init(ha, szArchivedName, FileTime, dwFileSize, lcLocale, dwFlags, (TMPQFile **)phFile);
+        dwErrCode = SFileAddFile_Init(ha, szArchivedName, FileTime, dwFileSize, lcFileLocale, dwFlags, (TMPQFile **)phFile);
 
     // Deal with the errors
     if(dwErrCode != ERROR_SUCCESS)
@@ -1293,7 +1295,9 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
     }
 
     // Update the locale in the hash table entry
-    hf->pHashEntry->lcLocale = (USHORT)lcNewLocale;
+    hf->pHashEntry->Locale = SFILE_LOCALE(lcNewLocale);
+    hf->pHashEntry->Platform = SFILE_PLATFORM(lcNewLocale);
+    hf->pHashEntry->Reserved = 0;
     ha->dwFlags |= MPQ_FLAG_CHANGED;
     return true;
 }

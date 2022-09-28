@@ -580,7 +580,7 @@ static DWORD SFileAddInternalListFile(
         while(dwErrCode == ERROR_SUCCESS && pHash != NULL)
         {
             // Set the prefered locale to that from list file
-            SFileSetLocale(pHash->lcLocale);
+            SFileSetLocale(SFILE_MAKE_LCID(pHash->Locale, pHash->Platform));
 
             // Add that listfile
             dwErrCode = SFileAddArbitraryListFile(ha, hMpq, NULL, dwMaxSize);

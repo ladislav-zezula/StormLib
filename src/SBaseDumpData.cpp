@@ -54,7 +54,7 @@ void DumpHashTable(TMPQHash * pHashTable, DWORD dwHashTableSize)
         printf("[%08x] %08X %08X %04X %02X %08X\n", i,
                                                     pHashTable[i].dwName1,
                                                     pHashTable[i].dwName2,
-                                                    pHashTable[i].lcLocale,
+                                                    pHashTable[i].Locale,
                                                     pHashTable[i].Platform,
                                                     pHashTable[i].dwBlockIndex);
     }
