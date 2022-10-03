@@ -53,7 +53,7 @@ typedef struct _TSQPHeader
 
 typedef struct _TSQPHash
 {
-    // Most likely the lcLocale+wPlatform.
+    // Most likely the Locale + Platform
     DWORD dwAlwaysZero;
 
     // If the hash table entry is valid, this is the index into the block table of the file.
@@ -216,8 +216,8 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
                 pMpqHash->dwName1  = TempEntry.dwName1;
                 pMpqHash->dwName2  = TempEntry.dwName2;
                 pMpqHash->dwBlockIndex = MPQ_BLOCK_INDEX(&TempEntry);
+                pMpqHash->Locale = 0;
                 pMpqHash->Platform = 0;
-                pMpqHash->lcLocale = 0;
                 pMpqHash->Reserved = 0;
             }
         }
@@ -547,8 +547,9 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
 
                 // Copy the MPK hash entry to the hash table
                 pHash->dwBlockIndex = pMpkHash[i].dwBlockIndex;
+                pHash->Locale = 0;
                 pHash->Platform = 0;
-                pHash->lcLocale = 0;
+                pHash->Reserved = 0;
                 pHash->dwName1 = pMpkHash[i].dwName2;
                 pHash->dwName2 = pMpkHash[i].dwName3;
             }

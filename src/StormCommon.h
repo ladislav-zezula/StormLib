@@ -141,7 +141,7 @@ typedef struct _MPQ_SIGNATURE_INFO
 extern DWORD g_dwMpqSignature;                  // Marker for MPQ header
 extern DWORD g_dwHashTableKey;                  // Key for hash table
 extern DWORD g_dwBlockTableKey;                 // Key for block table
-extern LCID  g_lcFileLocale;                    // Preferred file locale
+extern LCID  g_lcFileLocale;                    // Preferred file locale and platform
 
 //-----------------------------------------------------------------------------
 // Conversion to uppercase/lowercase (and "/" to "\")
@@ -250,10 +250,10 @@ DWORD ConvertMpqHeaderToFormat4(TMPQArchive * ha, ULONGLONG MpqOffset, ULONGLONG
 
 bool IsValidHashEntry(TMPQArchive * ha, TMPQHash * pHash);
 
-TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcLocale);
+TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcFileLocale);
 TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName);
 TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * pPrevHash);
-TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry, LCID lcLocale);
+TMPQHash * AllocateHashEntry(TMPQArchive * ha, TFileEntry * pFileEntry, LCID lcFileLocale);
 
 TMPQExtHeader * LoadExtTable(TMPQArchive * ha, ULONGLONG ByteOffset, size_t Size, DWORD dwSignature, DWORD dwKey);
 TMPQHetTable * LoadHetTable(TMPQArchive * ha);
@@ -282,14 +282,14 @@ TMPQBetTable * CreateBetTable(DWORD dwMaxFileCount);
 void FreeBetTable(TMPQBetTable * pBetTable);
 
 // Functions for finding files in the file table
-TFileEntry * GetFileEntryLocale(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex = NULL);
-TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex);
+TFileEntry * GetFileEntryLocale(TMPQArchive * ha, const char * szFileName, LCID lcFileLocale, LPDWORD PtrHashIndex = NULL);
+TFileEntry * GetFileEntryExact(TMPQArchive * ha, const char * szFileName, LCID lcFileLocale, LPDWORD PtrHashIndex);
 
 // Allocates file name in the file entry
 void AllocateFileName(TMPQArchive * ha, TFileEntry * pFileEntry, const char * szFileName);
 
 // Allocates new file entry in the MPQ tables. Reuses existing, if possible
-TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID lcLocale, LPDWORD PtrHashIndex);
+TFileEntry * AllocateFileEntry(TMPQArchive * ha, const char * szFileName, LCID lcFileLocale, LPDWORD PtrHashIndex);
 DWORD RenameFileEntry(TMPQArchive * ha, TMPQFile * hf, const char * szNewFileName);
 DWORD DeleteFileEntry(TMPQArchive * ha, TMPQFile * hf);
 
@@ -378,7 +378,7 @@ DWORD SFileAddFile_Init(
     const char * szArchivedName,
     ULONGLONG ft,
     DWORD dwFileSize,
-    LCID lcLocale,
+    LCID lcFileLocale,
     DWORD dwFlags,
     TMPQFile ** phf
     );

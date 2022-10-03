@@ -410,7 +410,7 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &pFileEntry->FileNameHash, sizeof(ULONGLONG), pcbLengthNeeded);
 
         case SFileInfoLocale:
-            dwInt32Value = hf->pHashEntry->lcLocale;
+            dwInt32Value = SFILE_MAKE_LCID(hf->pHashEntry->Locale, hf->pHashEntry->Platform);
             return GetInfo(pvFileInfo, cbFileInfo, &dwInt32Value, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoFileIndex:

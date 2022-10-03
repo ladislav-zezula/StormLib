@@ -1,8 +1,8 @@
-Microsoft Windows [Version 10.0.19044.1706]
+Microsoft Windows [Version 10.0.19044.2006]
 (c) Microsoft Corporation. All rights reserved.
 
 E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
-==== Test Suite for StormLib version 9.23 ====
+==== Test Suite for StormLib version 9.24 ====
 InitWorkDir: Work directory \Multimedia\MPQs (default)
 LocalListFile (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
 LocalListFile (ListFile_Blizzard.txt) succeeded.
@@ -68,6 +68,9 @@ TestMpq (MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x) succeeded.
 TestMpq (MPQ_2021_v1_CantExtractCHK.scx) succeeded.
 TestMpq (MPQ_2022_v1_Sniper.scx) succeeded.
 TestMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.
+TestMpq (MPQ_2020_v1_HS0.1.asi) succeeded.
+TestMpq (MPQ_2022_v1_hs0.8.asi) succeeded.
+TestMpq (MPQ_2022_v1_MoeMoeMod.asi) succeeded.
 PatchedMPQ (MPQ_1998_v1_StarCraft.mpq) succeeded.
 PatchedMPQ (MPQ_2012_v4_OldWorld.MPQ) succeeded.
 PatchedMPQ (MPQ_2013_v4_world.MPQ) succeeded.
@@ -79,6 +82,8 @@ PatchedMPQ (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.
 PatchedMPQ (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
+VerifyFileHash succeeded.
+VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
@@ -236,7 +241,7 @@ OpenEachMpqTest (MPQ_2017_v1_Eden_RPG_S2_2.5J.w3x) succeeded.
 OpenEachMpqTest (MPQ_2017_v1_TildeInFileName.mpq) succeeded.
 OpenEachMpqTest (MPQ_2018_v1_EWIX_v8_7.w3x) succeeded.
 OpenEachMpqTest (MPQ_2018_v1_icon_error.w3m) succeeded.
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\1995 - Test MPQs\MPQ_2020_v1_HS0.1.asi (error code: 11)
+OpenEachMpqTest (MPQ_2020_v1_HS0.1.asi) succeeded.
 OpenEachMpqTest (MPQ_2020_v4_FakeMpqHeaders.SC2Mod) succeeded.
 OpenEachMpqTest (MPQ_2020_v4_NP_Protect_1.s2ma) succeeded.
 OpenEachMpqTest (MPQ_2020_v4_NP_Protect_2.s2ma) succeeded.
@@ -245,7 +250,9 @@ OpenEachMpqTest (MPQ_2020_v4_NP_Protect_4.s2ma) succeeded.
 OpenEachMpqTest (MPQ_2020_v4_ThreeFakeHeaders.s2ma) succeeded.
 OpenEachMpqTest (MPQ_2021_v1_CrossLinkedFiles.w3x) succeeded.
 OpenEachMpqTest (MPQ_2021_v4_BzipError.SC2Replay) succeeded.
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\1995 - Test MPQs\MPQ_2022_v1_MoeMoeMod.asi (error code: 11)
+OpenEachMpqTest (MPQ_2022_v1_hs0.8.asi) succeeded.
+OpenEachMpqTest (MPQ_2022_v1_MoeMoeMod.asi) succeeded.
+OpenEachMpqTest (MPQ_2022_v1_v4.329.w3x) succeeded.
 OpenEachMpqTest (hs-0-3604-Win-final.MPQ) succeeded.
 OpenEachMpqTest (hs-0-5314-Win-final.MPQ) succeeded.
 OpenEachMpqTest (hs-5314-5435-Win-final.MPQ) succeeded.
@@ -343,10 +350,10 @@ OpenEachMpqTest ((4)aaaa.w3x) succeeded.
 OpenEachMpqTest (a_tvse_x_1_2_f.w3x) succeeded.
 OpenEachMpqTest (Shopping_Maul_ USA 9.10.7.w3x) succeeded.
 OpenEachMpqTest (siverrpg_1.9_ver.w3x) succeeded.
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\2002 - Warcraft III\MIX-files\Markers-CSHX\ACGExternal0.2.asi (error code: 11)
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\2002 - Warcraft III\MIX-files\Markers-CSHX\grandparty.asi (error code: 11)
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\2002 - Warcraft III\MIX-files\Markers-CSHX\HS0.1.asi (error code: 11)
-OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\2002 - Warcraft III\MIX-files\Markers-CSHX\HS0.5.asi (error code: 11)
+OpenEachMpqTest (ACGExternal0.2.asi) succeeded.
+OpenEachMpqTest (grandparty.asi) succeeded.
+OpenEachMpqTest (HS0.1.asi) succeeded.
+OpenEachMpqTest (HS0.5.asi) succeeded.
 OpenEachMpqTest (Patch_War3x.mpq) succeeded.
 OpenEachMpqTest (Patch_War3_Low.mpq) succeeded.
 OpenEachMpqTest (Patch_War3_Med.mpq) succeeded.
@@ -2277,6 +2284,7 @@ OpenEachMpqTest (MPQ_2013_v4_alternate-incomplete.MPQ) succeeded.
 OpenEachMpqTest (MPQ_2013_v4_alternate-original.MPQ) succeeded.
 OpenEachMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
 OpenEachMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
+OpenEachMpqTest (MPQ_2022_v1_v4.329.w3x) succeeded.
 OpenEachMpqTest (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_AddWaveMonoTest.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_AddWaveStereoTest.mpq) succeeded.
@@ -2338,5 +2346,6 @@ CompressionsTest (StormLibTest_AddWaveStereoTest.mpq) succeeded.
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 BigMpqTest (StormLibTest_BigArchive_v4.mpq) succeeded.
 ModifyTest (MPQ_2014_v4_Base.StormReplay) succeeded.
+ModifyTest (MPQ_2022_v1_v4.329.w3x) succeeded.
 
 E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>
