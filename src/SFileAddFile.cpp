@@ -441,7 +441,7 @@ DWORD SFileAddFile_Init(
     if(dwErrCode == ERROR_SUCCESS)
     {
         // Check if the file already exists in the archive
-        pFileEntry = GetFileEntryLocale(ha, szFileName, lcFileLocale, &dwHashIndex);
+        pFileEntry = GetFileEntryExact(ha, szFileName, lcFileLocale, &dwHashIndex);
         if(pFileEntry != NULL)
         {
             if(dwFlags & MPQ_FILE_REPLACEEXISTING)

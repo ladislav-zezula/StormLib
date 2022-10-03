@@ -803,27 +803,31 @@ static TMPQHash * GetHashEntryLocale(TMPQArchive * ha, const char * szFileName, 
 }
 
 // Returns a hash table entry in the following order:
-// 1) A hash table entry with the preferred locale
+// 1) A hash table entry with the preferred locale&platform
 // 2) NULL
+// In case there are multiple items with the same locale&platform,
+// we need to return the last one. This is because it must correspond to SFileOpenFileEx
 static TMPQHash * GetHashEntryExact(TMPQArchive * ha, const char * szFileName, LCID lcFileLocale)
 {
     TMPQHash * pFirstHash = GetFirstHashEntry(ha, szFileName);
+    TMPQHash * pBestHash = NULL;
     TMPQHash * pHash = pFirstHash;
     USHORT Locale = SFILE_LOCALE(lcFileLocale);
+    BYTE Platform = SFILE_PLATFORM(lcFileLocale);
 
     // Parse the found hashes
     while(pHash != NULL)
     {
-        // If the locales match, return it
-        if(pHash->Locale == Locale)
-            return pHash;
+        // If the locales match, we remember this one as the best one
+        if(pHash->Locale == Locale && pHash->Platform == Platform)
+            pBestHash = pHash;
 
         // Get the next hash entry for that file
         pHash = GetNextHashEntry(ha, pFirstHash, pHash);
     }
 
-    // Not found
-    return NULL;
+    // Return the best hash or NULL
+    return pBestHash;
 }
 
 // Defragment the file table so it does not contain any gaps
@@ -928,7 +932,6 @@ static DWORD BuildFileTableFromBlockTable(
     if(ha->dwFlags & (MPQ_FLAG_HASH_TABLE_CUT | MPQ_FLAG_BLOCK_TABLE_CUT))
     {
         // Sanity checks
-        assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1);
         assert(pHeader->HiBlockTablePos64 == 0);
 
         // Allocate the translation table
