@@ -10,6 +10,7 @@
 
 #define _CRT_NON_CONFORMING_SWPRINTFS
 #define _CRT_SECURE_NO_DEPRECATE
+#include <tchar.h>
 #include <stdio.h>
 #include <windows.h>
 
@@ -20,12 +21,14 @@
 #define STORM_ALTERNATE_NAMES               // Use Storm* prefix for functions
 #include "storm.h"                          // Header file for Storm.dll
 
+#pragma comment(lib, "storm.lib")
+
 //-----------------------------------------------------------------------------
 // List of files
 
 const char * IntToHexChar = "0123456789ABCDEF";
 
-LPCSTR ListFile[] = 
+LPCSTR DefFilesToOpen[] = 
 {
     "music\\tdefeat.wav",
     "setupdat\\inst.vis",
@@ -45,68 +48,6 @@ LPCSTR ListFile[] =
     "setupdat\\scr_main.vis",
     "music\\pvict.wav",
     "music\\zdefeat.wav",
-    "files\\font\\font16x.fnt",
-    "setupdat\\nt\\comctl32.dll",
-    "setupdat\\debug.ins",
-    "setupdat\\inst.ins",
-    "music\\pdefeat.wav",
-    "files\\smackw32.dll",
-    "music\\tvict.wav",
-    "setupdat\\optvox.vis",
-    "setupdat\\gen\\maps.lst",
-    "files\\font\\font8.fnt",
-    "files\\mvoice.vxp",
-    "files\\font\\font14.fnt",
-    "files\\battle.snp",
-    "files\\storm.dll",
-    "maps\\128x128_ash4.scm",
-    "files\\font\\font32.fnt",
-    "setupdat\\normal.ins",
-    "files\\font\\font16.fnt",
-    "setupdat\\mainplay.vis",
-    "setupdat\\gendefs.ins",
-    "setupdat\\audio\\installermusic.wav",
-    "setupdat\\templates.ins",
-    "music\\terran1.wav",
-    "maps\\96x96_ash4.scm",
-    "setupdat\\defaults.vis",
-    "music\\prdyroom.wav",
-    "setupdat\\scr_blizzard.vis",
-    "setupdat\\scr_isp.vis",
-    "setupdat\\95\\comctl32.dll",
-    "files\\font\\font10.fnt",
-    "files\\local.dll",
-    "music\\terran3.wav",
-    "music\\terran2.wav",
-    "setupdat\\audio\\battlenetclick.wav",
-    "music\\zrdyroom.wav",
-    "setupdat\\starunin.exe",
-    "files\\vct32150.dll",
-    "maps\\96x96_wasteland4.scm",
-    "setupdat\\inst_sys.ins",
-    "music\\zerg3.wav",
-    "setupdat\\license.txt",
-    "music\\protoss2.wav",
-    "files\\starcraft.exe",
-    "music\\trdyroom.wav",
-    "maps\\96x96_space4.scm",
-    "files\\vfonts.vxp",
-    "setupdat\\installed.ins",
-    "music\\protoss1.wav",
-    "files\\stardat.mpq",
-    "setupdat\\font\\font16.fnt",
-    "smk\\starintr.smk",
-    "files\\vadagc.vxp",
-    "setupdat\\strings.ins",
-    "music\\title.wav",
-    "setupdat\\font\\font32.fnt",
-    "setupdat\\inst_files.ins",
-    "setupdat\\images\\install.pcx",
-    "files\\report bugs.url",
-    "setupdat\\single.ins",
-    "maps\\128x128_space4.scm",
-    "setupdat\\audio\\mousedown.wav",
-    NULL
 };
 
 //-----------------------------------------------------------------------------
@@ -155,11 +96,9 @@ DWORD BinaryToString(XCHAR * szBuffer, size_t cchBuffer, LPCVOID pvBinary, size_
     return ERROR_SUCCESS;
 }
 
-
 int main(int argc, char * argv[])
 {
     LPCSTR szArchiveName;
-    LPCSTR szFileName;
     LPCSTR szFormat;
     HANDLE hMpq = NULL;
     HANDLE hFile = NULL;
@@ -171,16 +110,15 @@ int main(int argc, char * argv[])
     char md5_string[0x40];
 
     // Check parameters
-    if(argc != 3)
+    if(argc == 1)
     {
-        printf("Error: Missing MPQ or file name\n");
+        printf("Error: Missing MPQ name\nUsage: storm_test.exe MpqName [FileName [FileName]]\n");
         return 3;
     }
 
     // Get both arguments
     SetLastError(ERROR_SUCCESS);
     szArchiveName = argv[1];
-    szFileName = argv[2];
 
     // Break for kernel debugger
     //__debugbreak();
@@ -189,10 +127,21 @@ int main(int argc, char * argv[])
     //printf("[*] Opening archive '%s' ...\n", szArchiveName);
     if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
-        for(size_t i = 0; ListFile[i] != NULL; i++)
+        LPCSTR * FilesToOpen = DefFilesToOpen;
+        size_t nFilesToOpen = _countof(DefFilesToOpen);
+
+        // Set the list of files
+        if(argc > 2)
         {
-            //printf("[*] Opening file '%s' ...\n", ListFile[i]);
-            if(StormOpenFileEx(hMpq, ListFile[i], 0, &hFile))
+            FilesToOpen = (LPCSTR *)(&argv[2]);
+            nFilesToOpen = argc - 2;
+        }
+
+        // Attempt to open all files
+        for(size_t i = 0; i < nFilesToOpen; i++)
+        {
+            //printf("[*] Opening file '%s' ...\n", FilesToOpen[i]);
+            if(StormOpenFileEx(hMpq, FilesToOpen[i], 0, &hFile))
             {
                 //printf("[*] Retrieving file size ... ");
                 dwFileSize = StormGetFileSize(hFile, NULL);
@@ -214,7 +163,7 @@ int main(int argc, char * argv[])
                     //printf("[*] Calculating MD5 ... ");
                     CalculateMD5(md5_digest, pbBuffer, dwFileSize);
                     BinaryToString(md5_string, _countof(md5_string), md5_digest, sizeof(md5_digest));
-                    printf("%s *%s\n", md5_string, ListFile[i]);
+                    printf("%s *%s\n", md5_string, FilesToOpen[i]);
 
                     delete[] pbBuffer;
                 }
