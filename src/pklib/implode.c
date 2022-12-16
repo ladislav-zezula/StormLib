@@ -595,7 +595,7 @@ unsigned int PKEXPORT implode(
     void         (*write_buf)(char *buf, unsigned int *size, void *param),
     char         *work_buf,
     void         *param,
-    unsigned int *type,
+    enum CompressionType *type,
     unsigned int *dsize)
 {
     TCmpStruct * pWork = (TCmpStruct *)work_buf;

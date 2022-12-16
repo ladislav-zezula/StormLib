@@ -14,8 +14,10 @@
 //-----------------------------------------------------------------------------
 // Defines
 
-#define CMP_BINARY             0            // Binary compression
-#define CMP_ASCII              1            // Ascii compression
+enum CompressionType{
+	CMP_BINARY = 0,            // Binary compression
+	CMP_ASCII = 1,            // Ascii compression
+};
 
 #define CMP_NO_ERROR           0
 #define CMP_INVALID_DICTSIZE   1
@@ -49,7 +51,7 @@ typedef struct
     unsigned int   out_bits;                // 0008: # of bits available in the last out byte
     unsigned int   dsize_bits;              // 000C: Number of bits needed for dictionary size. 4 = 0x400, 5 = 0x800, 6 = 0x1000
     unsigned int   dsize_mask;              // 0010: Bit mask for dictionary. 0x0F = 0x400, 0x1F = 0x800, 0x3F = 0x1000
-    unsigned int   ctype;                   // 0014: Compression type (CMP_ASCII or CMP_BINARY)
+    enum CompressionType ctype;             // 0014: Compression type (CMP_ASCII or CMP_BINARY)
     unsigned int   dsize_bytes;             // 0018: Dictionary size in bytes
     unsigned char  dist_bits[0x40];         // 001C: Distance bits
     unsigned char  dist_codes[0x40];        // 005C: Distance codes
@@ -80,7 +82,7 @@ typedef struct
 typedef struct
 {
     unsigned long offs0000;                 // 0000
-    unsigned long ctype;                    // 0004: Compression type (CMP_BINARY or CMP_ASCII)
+    enum CompressionType ctype;             // 0004: Compression type (CMP_BINARY or CMP_ASCII)
     unsigned long outputPos;                // 0008: Position in output buffer
     unsigned long dsize_bits;               // 000C: Dict size (4, 5, 6 for 0x400, 0x800, 0x1000)
     unsigned long dsize_mask;               // 0010: Dict size bitmask (0x0F, 0x1F, 0x3F for 0x400, 0x800, 0x1000)
@@ -137,7 +139,7 @@ unsigned int PKEXPORT implode(
    void         (*write_buf)(char *buf, unsigned int *size, void *param),
    char         *work_buf,
    void         *param,
-   unsigned int *type,
+   enum CompressionType *type,
    unsigned int *dsize);
 
 
