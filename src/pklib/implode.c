@@ -588,6 +588,41 @@ __Exit:
 }
 
 //-----------------------------------------------------------------------------
+// Export LUTs sizes
+struct LUTSizeConstants getLUTSizeConstants(){
+    struct LUTSizeConstants res;
+    res.own_size = sizeof(struct LUTSizeConstants);
+    res.DIST_SIZES = DIST_SIZES;
+    res.CH_BITS_ASC_SIZE = CH_BITS_ASC_SIZE;
+	res.LENS_SIZES = LENS_SIZES;
+    return res;
+}
+
+//-----------------------------------------------------------------------------
+// Export common struct sizes
+struct CommonSizeConstants getCommonSizeConstants(){
+    struct CommonSizeConstants res;
+    res.own_size = sizeof(struct CommonSizeConstants);
+    res.OUT_BUFF_SIZE = OUT_BUFF_SIZE;
+    return res;
+}
+
+//-----------------------------------------------------------------------------
+// Export imploding struct sizes
+struct ImplodeSizeConstants getImplodeSizeConstants(){
+    struct ImplodeSizeConstants res;
+    res.own_size = sizeof(struct ImplodeSizeConstants);
+    res.common = getCommonSizeConstants();
+    res.internal_struct_size = CMP_BUFFER_SIZE;
+    res.OFFSS_SIZE2 = OFFSS_SIZE2;
+    res.LITERALS_COUNT = LITERALS_COUNT;
+    res.HASHTABLE_SIZE = HASHTABLE_SIZE;
+    res.BUFF_SIZE = BUFF_SIZE;
+    return res;
+}
+
+
+//-----------------------------------------------------------------------------
 // Main imploding function
 
 unsigned int PKEXPORT implode(
