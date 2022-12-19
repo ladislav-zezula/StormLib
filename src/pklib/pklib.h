@@ -8,6 +8,7 @@
 /* 31.03.03  1.00  Lad  The first version of pkware.h                        */
 /*****************************************************************************/
 
+#pragma once
 #ifndef __PKLIB_H__
 #define __PKLIB_H__
 
