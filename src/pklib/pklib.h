@@ -173,7 +173,7 @@ unsigned int PKEXPORT explode(
    char         *work_buf,
    void         *param);
 
-// The original name "crc32" was changed to "crc32pk" due
+// The original name "crc32" was changed to "crc32_pklib" due
 // to compatibility with zlib
 unsigned long PKEXPORT crc32_pklib(char *buffer, unsigned int *size, unsigned long *old_crc);
 
