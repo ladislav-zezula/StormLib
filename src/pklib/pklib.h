@@ -25,9 +25,11 @@
 #define CMP_BAD_DATA           3
 #define CMP_ABORT              4
 
-#define CMP_IMPLODE_DICT_SIZE1   1024       // Dictionary size of 1024
-#define CMP_IMPLODE_DICT_SIZE2   2048       // Dictionary size of 2048
-#define CMP_IMPLODE_DICT_SIZE3   4096       // Dictionary size of 4096
+enum ImplodeDictSizes {
+	CMP_IMPLODE_DICT_SIZE1 = 1024,       // Dictionary size of 1024
+	CMP_IMPLODE_DICT_SIZE2 = 2048,       // Dictionary size of 2048
+	CMP_IMPLODE_DICT_SIZE3 = 4096,       // Dictionary size of 4096
+};
 
 enum CommonSizes {
     OUT_BUFF_SIZE = 0x802
