@@ -414,6 +414,7 @@
     <ClCompile Include="src\lzma\C\LzmaDec.c" />
     <ClCompile Include="src\lzma\C\LzmaEnc.c" />
     <ClCompile Include="src\lzma\C\Threads.c" />
+    <ClCompile Include="src\pklib\PKWareLUTs.c" />
     <ClCompile Include="src\pklib\explode.c" />
     <ClCompile Include="src\pklib\implode.c" />
     <ClCompile Include="src\SBaseCommon.cpp">

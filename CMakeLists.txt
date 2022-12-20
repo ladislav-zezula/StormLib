@@ -26,6 +26,7 @@ set(SRC_FILES
            src/lzma/C/LzFind.c
            src/lzma/C/LzmaDec.c
            src/lzma/C/LzmaEnc.c
+           src/pklib/PKWareLUTs.c
            src/pklib/explode.c
            src/pklib/implode.c
            src/sparse/sparse.cpp

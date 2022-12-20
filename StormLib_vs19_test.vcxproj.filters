@@ -796,6 +796,9 @@
     <ClCompile Include="src\lzma\C\Threads.c">
       <Filter>Source Files\lzma</Filter>
     </ClCompile>
+    <ClCompile Include="src\pklib\PKWareLUTs.c">
+      <Filter>Source Files\pklib</Filter>
+    </ClCompile>
     <ClCompile Include="src\pklib\explode.c">
       <Filter>Source Files\pklib</Filter>
     </ClCompile>

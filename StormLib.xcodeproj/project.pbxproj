@@ -30,6 +30,7 @@
 		225530E01056BC7900FA646A /* StormLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 32ED00B60D03542A00AB0B4E /* StormLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		225530E11056BC7900FA646A /* StormPort.h in Headers */ = {isa = PBXBuildFile; fileRef = 32ED00B70D03542A00AB0B4E /* StormPort.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		225530E31056BC8700FA646A /* huff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32ED009C0D03542A00AB0B4E /* huff.cpp */; };
+		225530E61056BC8700FA646A /* PKWareLUTs.c in Sources */ = {isa = PBXBuildFile; fileRef = 385624466A4F6EF8E42EAA86 /* PKWareLUTs.c */; };
 		225530E61056BC8700FA646A /* explode.c in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A60D03542A00AB0B4E /* explode.c */; };
 		225530E71056BC8700FA646A /* implode.c in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A70D03542A00AB0B4E /* implode.c */; };
 		225530E81056BC8700FA646A /* SFileAttributes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A90D03542A00AB0B4E /* SFileAttributes.cpp */; };
@@ -55,6 +56,7 @@
 		225FACA10E53BAA100DA2CAE /* StormLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 32ED00B60D03542A00AB0B4E /* StormLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		225FACA20E53BAA100DA2CAE /* StormPort.h in Headers */ = {isa = PBXBuildFile; fileRef = 32ED00B70D03542A00AB0B4E /* StormPort.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		225FACA50E53BAB400DA2CAE /* huff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32ED009C0D03542A00AB0B4E /* huff.cpp */; };
+		4B24E07EA28A537054986EBE /* PKWareLUTs.c in Sources */ = {isa = PBXBuildFile; fileRef = 385624466A4F6EF8E42EAA86 /* PKWareLUTs.c */; };
 		225FACA90E53BAB400DA2CAE /* explode.c in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A60D03542A00AB0B4E /* explode.c */; };
 		225FACAA0E53BAB400DA2CAE /* implode.c in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A70D03542A00AB0B4E /* implode.c */; };
 		225FACAB0E53BAB400DA2CAE /* SFileAttributes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32ED00A90D03542A00AB0B4E /* SFileAttributes.cpp */; };
@@ -762,6 +764,7 @@
 		32D20A8B0CF3902D00230E7A /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = /usr/lib/libz.dylib; sourceTree = "<absolute>"; };
 		32ED009C0D03542A00AB0B4E /* huff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = huff.cpp; sourceTree = "<group>"; };
 		32ED009D0D03542A00AB0B4E /* huff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = huff.h; sourceTree = "<group>"; };
+		385624466A4F6EF8E42EAA86 /* PKWareLUTs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = PKWareLUTs.c; sourceTree = "<group>"; };
 		32ED00A60D03542A00AB0B4E /* explode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = explode.c; sourceTree = "<group>"; };
 		32ED00A70D03542A00AB0B4E /* implode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = implode.c; sourceTree = "<group>"; };
 		32ED00A80D03542A00AB0B4E /* pklib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pklib.h; sourceTree = "<group>"; };
@@ -1278,6 +1281,7 @@
 		32ED00A40D03542A00AB0B4E /* pklib */ = {
 			isa = PBXGroup;
 			children = (
+				385624466A4F6EF8E42EAA86 /* PKWareLUTs.c */,
 				32ED00A60D03542A00AB0B4E /* explode.c */,
 				32ED00A70D03542A00AB0B4E /* implode.c */,
 				32ED00A80D03542A00AB0B4E /* pklib.h */,
@@ -1461,6 +1465,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				225530E31056BC8700FA646A /* huff.cpp in Sources */,
+				225530E61056BC8700FA646A /* PKWareLUTs.c in Sources */,
 				225530E61056BC8700FA646A /* explode.c in Sources */,
 				226C7CA71857DE9400AB689C /* SBaseDumpData.cpp in Sources */,
 				225530E71056BC8700FA646A /* implode.c in Sources */,
@@ -1692,6 +1697,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				225FACA50E53BAB400DA2CAE /* huff.cpp in Sources */,
+				4B24E07EA28A537054986EBE /* PKWareLUTs.c in Sources */,
 				225FACA90E53BAB400DA2CAE /* explode.c in Sources */,
 				226C7CA81857DE9400AB689C /* SBaseDumpData.cpp in Sources */,
 				225FACAA0E53BAB400DA2CAE /* implode.c in Sources */,

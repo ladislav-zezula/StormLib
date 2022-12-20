@@ -2010,6 +2010,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\src\pklib\PKWareLUTs.c"
+					>
+				</File>
+				<File
 					RelativePath=".\src\pklib\pklib.h"
 					>
 				</File>
