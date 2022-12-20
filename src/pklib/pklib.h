@@ -19,11 +19,13 @@
 #define CMP_BINARY             0            // Binary compression
 #define CMP_ASCII              1            // Ascii compression
 
-#define CMP_NO_ERROR           0
-#define CMP_INVALID_DICTSIZE   1
-#define CMP_INVALID_MODE       2
-#define CMP_BAD_DATA           3
-#define CMP_ABORT              4
+enum PklibErrorCode{
+	CMP_NO_ERROR = 0,
+	CMP_INVALID_DICTSIZE = 1,
+	CMP_INVALID_MODE = 2,
+	CMP_BAD_DATA = 3,
+	CMP_ABORT = 4,
+};
 
 enum ImplodeDictSizes {
 	CMP_IMPLODE_DICT_SIZE1 = 1024,       // Dictionary size of 1024
