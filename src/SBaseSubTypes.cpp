@@ -285,10 +285,13 @@ TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha)
 /*                                                                           */
 /*****************************************************************************/
 
+#define MPK_BLOCK_TABLE_LONGWU  0x86364E6D      // MPK table ID for Longwu Online
+#define MPK_BLOCK_TABLE_WOTGV   0x6d4e3686      // MPK table ID for Warriors of the Ghost Valley
+
 #define MPK_FILE_UNKNOWN_0001   0x00000001      // Seems to be always present
 #define MPK_FILE_UNKNOWN_0010   0x00000010      // Seems to be always present
 #define MPK_FILE_COMPRESSED     0x00000100      // Indicates a compressed file
-#define MPK_FILE_UNKNOWN_2000   0x00002000      // Seems to be always present
+#define MPK_FILE_ENCRYPTED      0x00002000      // Indicates an encrypted file
 #define MPK_FILE_EXISTS         0x01000000      // Seems to be always present
 
 typedef struct _TMPKHeader
@@ -335,14 +338,26 @@ typedef struct _TMPKHash
 
 } TMPKHash;
 
-typedef struct _TMPKBlock
+// MPK block for Longwu Online
+struct TMPKBlock1
 {
     DWORD  dwFlags;         // 0x1121 - Compressed , 0x1120 - Not compressed
     DWORD  dwFilePos;       // Offset of the beginning of the file, relative to the beginning of the archive.
     DWORD  dwFSize;         // Uncompressed file size
     DWORD  dwCSize;         // Compressed file size
-    DWORD  dwUnknown;       // 0x86364E6D
-} TMPKBlock;
+    DWORD  dwMagic;         // 0x86364E6D for Longwu Online
+};
+
+// MPK block for Warriors of the Ghost Valley
+struct TMPKBlock2
+{
+    DWORD  dwFlags;         // 0x1121 - Compressed , 0x1120 - Not compressed
+    DWORD  dwFilePos;       // Offset of the beginning of the file, relative to the beginning of the archive.
+    DWORD  dwFSize;         // Uncompressed file size
+    DWORD  dwCSize;         // Compressed file size
+    DWORD  dwMagic;         // 0x6d4e3686
+    DWORD  dwFlags1;        // Unknown
+};
 
 //-----------------------------------------------------------------------------
 // Local variables - MPK file format
@@ -398,6 +413,8 @@ DWORD ConvertMpkHeaderToFormat4(
     // Can't open the archive with certain flags
     if(dwFlags & MPQ_OPEN_FORCE_MPQ_V1)
         return ERROR_FILE_CORRUPT;
+    if(pMpkHeader->dwVersion != ID_MPK_VERSION_2000)
+        return ERROR_FILE_CORRUPT;
 
     // Translate the MPK header into a MPQ header
     // Note: Hash table size and block table size are in bytes, not in entries
@@ -408,7 +425,7 @@ DWORD ConvertMpkHeaderToFormat4(
     Header.dwHashTablePos = BSWAP_INT32_UNSIGNED(pMpkHeader->dwHashTablePos);
     Header.dwHashTableSize = BSWAP_INT32_UNSIGNED(pMpkHeader->dwHashTableSize) / sizeof(TMPKHash);
     Header.dwBlockTablePos = BSWAP_INT32_UNSIGNED(pMpkHeader->dwBlockTablePos);
-    Header.dwBlockTableSize = BSWAP_INT32_UNSIGNED(pMpkHeader->dwBlockTableSize) / sizeof(TMPKBlock);
+    Header.dwBlockTableSize = BSWAP_INT32_UNSIGNED(pMpkHeader->dwBlockTableSize);
 //  Header.dwUnknownPos = BSWAP_INT32_UNSIGNED(pMpkHeader->dwUnknownPos);
 //  Header.dwUnknownSize = BSWAP_INT32_UNSIGNED(pMpkHeader->dwUnknownSize);
     assert(Header.dwHeaderSize == sizeof(TMPKHeader));
@@ -562,6 +579,12 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
     return pHashTable;
 }
 
+static DWORD GetMpkBlockID(void * pMpkBlockTable)
+{
+    DWORD * TableItems = (DWORD *)(pMpkBlockTable);
+    return TableItems[4];
+}
+
 static DWORD ConvertMpkFlagsToMpqFlags(DWORD dwMpkFlags)
 {
     DWORD dwMpqFlags = MPQ_FILE_EXISTS;
@@ -569,49 +592,72 @@ static DWORD ConvertMpkFlagsToMpqFlags(DWORD dwMpkFlags)
     // Check for flags that are always present
     assert((dwMpkFlags & MPK_FILE_UNKNOWN_0001) != 0);
     assert((dwMpkFlags & MPK_FILE_UNKNOWN_0010) != 0);
-    assert((dwMpkFlags & MPK_FILE_UNKNOWN_2000) != 0);
     assert((dwMpkFlags & MPK_FILE_EXISTS) != 0);
 
     // Append the compressed flag
     dwMpqFlags |= (dwMpkFlags & MPK_FILE_COMPRESSED) ? MPQ_FILE_COMPRESS : 0;
+    dwMpqFlags |= (dwMpkFlags & MPK_FILE_ENCRYPTED) ? MPQ_FILE_ENCRYPTED : 0;
 
     // All files in the MPQ seem to be single unit files
-    dwMpqFlags |= MPQ_FILE_ENCRYPTED | MPQ_FILE_SINGLE_UNIT;
+    dwMpqFlags |= MPQ_FILE_SINGLE_UNIT;
 
     return dwMpqFlags;
+}
+
+static TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha, void * pMpkBlockTable, DWORD nItemSize)
+{
+    TMPQHeader * pHeader = ha->pHeader;
+    TMPQBlock * pBlockTable;
+    TMPQBlock * pMpqBlock;
+    LPBYTE pbMpkBlockPtr = (LPBYTE)(pMpkBlockTable);
+    LPBYTE pbMpkBlockEnd = pbMpkBlockPtr + pHeader->dwBlockTableSize;
+
+    // Fixup the number of items in the MPK block table
+    pHeader->dwBlockTableSize = pHeader->dwBlockTableSize / nItemSize;
+
+    // Allocate buffer for MPQ-like block table
+    pBlockTable = pMpqBlock = STORM_ALLOC(TMPQBlock, pHeader->dwBlockTableSize);
+    if(pBlockTable != NULL)
+    {
+        while(pbMpkBlockPtr < pbMpkBlockEnd)
+        {
+            TMPKBlock2 * pMpkBlock = (TMPKBlock2 *)(pbMpkBlockPtr);
+
+            // Translate the MPK block table entry to MPQ block table entry
+            pMpqBlock->dwFilePos = pMpkBlock->dwFilePos;
+            pMpqBlock->dwCSize = pMpkBlock->dwCSize;
+            pMpqBlock->dwFSize = pMpkBlock->dwFSize;
+            pMpqBlock->dwFlags = ConvertMpkFlagsToMpqFlags(pMpkBlock->dwFlags);
+
+            // Move both
+            pbMpkBlockPtr += nItemSize;
+            pMpqBlock++;
+        }
+    }
+
+    return pBlockTable;
 }
 
 TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha)
 {
     TMPQHeader * pHeader = ha->pHeader;
-    TMPKBlock * pMpkBlockTable;
-    TMPKBlock * pMpkBlockEnd;
     TMPQBlock * pBlockTable = NULL;
-    TMPKBlock * pMpkBlock;
-    TMPQBlock * pMpqBlock;
+    void * pMpkBlockTable;
 
-    // Load and decrypt the MPK block table
-    pMpkBlockTable = pMpkBlock = (TMPKBlock *)LoadMpkTable(ha, pHeader->dwBlockTablePos, pHeader->dwBlockTableSize * sizeof(TMPKBlock));
+    // Load the MPK block table. At this moment, we don't know the version of the blobk table
+    pMpkBlockTable = LoadMpkTable(ha, pHeader->dwBlockTablePos, pHeader->dwBlockTableSize);
     if(pMpkBlockTable != NULL)
     {
-        // Allocate buffer for MPQ-like block table
-        pBlockTable = pMpqBlock = STORM_ALLOC(TMPQBlock, pHeader->dwBlockTableSize);
-        if(pBlockTable != NULL)
+        switch(GetMpkBlockID(pMpkBlockTable))
         {
-            // Convert the MPK block table to MPQ block table
-            pMpkBlockEnd = pMpkBlockTable + pHeader->dwBlockTableSize;
-            while(pMpkBlock < pMpkBlockEnd)
-            {
-                // Translate the MPK block table entry to MPQ block table entry
-                pMpqBlock->dwFilePos = pMpkBlock->dwFilePos;
-                pMpqBlock->dwCSize = pMpkBlock->dwCSize;
-                pMpqBlock->dwFSize = pMpkBlock->dwFSize;
-                pMpqBlock->dwFlags = ConvertMpkFlagsToMpqFlags(pMpkBlock->dwFlags);
+            case MPK_BLOCK_TABLE_WOTGV:
+                pBlockTable = LoadMpkBlockTable(ha, pMpkBlockTable, sizeof(TMPKBlock2));
+                break;
 
-                // Move both
-                pMpkBlock++;
-                pMpqBlock++;
-            }
+            case MPK_BLOCK_TABLE_LONGWU:
+            default:
+                pBlockTable = LoadMpkBlockTable(ha, pMpkBlockTable, sizeof(TMPKBlock1));
+                break;
         }
 
         // Free the MPK block table
