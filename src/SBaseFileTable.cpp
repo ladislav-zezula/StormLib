@@ -2425,12 +2425,10 @@ TMPQBlock * LoadBlockTable(TMPQArchive * ha, bool /* bDontFixEntries */)
             break;
 
         case MPQ_SUBTYPE_SQP:
-
             pBlockTable = LoadSqpBlockTable(ha);
             break;
 
         case MPQ_SUBTYPE_MPK:
-
             pBlockTable = LoadMpkBlockTable(ha);
             break;
     }

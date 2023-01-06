@@ -150,6 +150,8 @@ extern "C" {
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
 #define ID_MPK                      0x1A4B504D  // MPK archive header ID ('MPK\x1A')
 
+#define ID_MPK_VERSION_2000         0x30303032  // MPK version ("2000")
+
 #define ERROR_AVI_FILE                   10000  // Not a MPQ file, but an AVI file.
 #define ERROR_UNKNOWN_FILE_KEY           10001  // Returned by SFileReadFile when can't find file key
 #define ERROR_CHECKSUM_ERROR             10002  // Returned by SFileReadFile when sector CRC doesn't match
