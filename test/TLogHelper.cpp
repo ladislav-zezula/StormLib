@@ -223,11 +223,11 @@ class TLogHelper
         if(szNewMainTitle != NULL)
         {
             if(szSubTitle1 != NULL && szSubTitle2 != NULL)
-                nPrevPrinted = _tprintf(_T("Running %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
+                nPrevPrinted = _tprintf(_T("\rRunning %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
             else if(szSubTitle1 != NULL)
-                nPrevPrinted = _tprintf(_T("Running %s (%s) ..."), szMainTitleT, szSubTitle1);
+                nPrevPrinted = _tprintf(_T("\rRunning %s (%s) ..."), szMainTitleT, szSubTitle1);
             else
-                nPrevPrinted = _tprintf(_T("Running %s ..."), szMainTitleT);
+                nPrevPrinted = _tprintf(_T("\rRunning %s ..."), szMainTitleT);
         }
     }
 
@@ -238,9 +238,6 @@ class TLogHelper
         {
             PrintVerdict(ERROR_SUCCESS);
         }
-
-
-        printf("\n");
     }
 
     //

@@ -1,7 +1,7 @@
 Microsoft Windows [Version 10.0.19045.2486]
 (c) Microsoft Corporation. All rights reserved.
 
-E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
+E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
 ==== Test Suite for StormLib version 9.24 ====
 InitWorkDir: Work directory \Multimedia\MPQs (default)
 LocalListFile (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
@@ -2333,7 +2333,7 @@ ListFileTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateGapsTest (StormLibTest_GapsTest.mpq) succeeded.
-NonStdNamesTest: Adding file "           \              \                \              .txt" ...                                                                                                                                                         NonStdNamesTest: Adding file "Dir1       \Dir2   \File.txt               ." ...                                                                                                                                                                           NonStdNamesTest: Adding file "Dir1       \Dir2   \       .       ." ...                                                                                                                                                                                   NonStdNamesTest (StormLibTest_NonStdNames.mpq) succeeded.
+NonStdNamesTest (StormLibTest_NonStdNames.mpq) succeeded.
 SignExistingMpq (MPQ_1998_v1_StarDat.mpq) succeeded.
 ModifySignedTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
 CreateSignedMpq (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
@@ -2354,4 +2354,4 @@ BigMpqTest (StormLibTest_BigArchive_v4.mpq) succeeded.
 ModifyTest (MPQ_2014_v4_Base.StormReplay) succeeded.
 ModifyTest (MPQ_2022_v1_v4.329.w3x) succeeded.
 
-E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>
+E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>

@@ -1333,14 +1333,14 @@ static bool CheckIfFileIsPresent(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFil
     if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
     {
         if(bShouldExist == false)
-            pLogger->PrintMessage("The file %s is present, but it should not be", szFileName);
+            pLogger->PrintMessage("The file \"%s\" is present, but it should not be", szFileName);
         SFileCloseFile(hFile);
         return true;
     }
     else
     {
         if(bShouldExist)
-            pLogger->PrintMessage("The file %s is not present, but it should be", szFileName);
+            pLogger->PrintMessage("The file \"%s\" is not present, but it should be", szFileName);
         return false;
     }
 }
