@@ -1,4 +1,4 @@
-Microsoft Windows [Version 10.0.19044.2006]
+Microsoft Windows [Version 10.0.19045.2486]
 (c) Microsoft Corporation. All rights reserved.
 
 E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
@@ -35,8 +35,6 @@ TestMpq (MPQ_2014_v1_AttributesOneEntryLess.w3x) succeeded.
 TestMpq (MPQ_2020_v1_AHF04patch.mix) succeeded.
 TestMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
 TestMpq (mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE) succeeded.
-TestMpq (MPx_2013_v1_LongwuOnline.mpk) succeeded.
-TestMpq (MPx_2013_v1_WarOfTheImmortals.sqp) succeeded.
 TestMpq (part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part) succeeded.
 TestMpq (blk4-file://streaming/model.MPQ.0) succeeded.
 TestMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
@@ -71,6 +69,11 @@ TestMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.
 TestMpq (MPQ_2020_v1_HS0.1.asi) succeeded.
 TestMpq (MPQ_2022_v1_hs0.8.asi) succeeded.
 TestMpq (MPQ_2022_v1_MoeMoeMod.asi) succeeded.
+TestMpq (MPx_2013_v1_LongwuOnline.mpk) succeeded.
+TestMpq (MPx_2013_v1_WarOfTheImmortals.sqp) succeeded.
+TestMpq (MPx_2022_v1_Music.mpk) succeeded.
+TestMpq (MPx_2022_v1_Scp.mpk) succeeded.
+TestMpq (MPx_2022_v1_UI.mpk) succeeded.
 PatchedMPQ (MPQ_1998_v1_StarCraft.mpq) succeeded.
 PatchedMPQ (MPQ_2012_v4_OldWorld.MPQ) succeeded.
 PatchedMPQ (MPQ_2013_v4_world.MPQ) succeeded.
@@ -82,6 +85,9 @@ PatchedMPQ (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.
 PatchedMPQ (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
+VerifyFileHash succeeded.
+VerifyFileHash succeeded.
+VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.

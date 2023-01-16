@@ -411,7 +411,7 @@ static DWORD ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
             DecryptMpkTable(pbRawData, pFileEntry->dwCmpSize);
         }
 
-        // If the file is compressed, we have to decompress it now
+        // If the file is compressed, we have to decompress it now                                      on 
         if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
             int cbOutBuffer = (int)hf->dwDataSize;

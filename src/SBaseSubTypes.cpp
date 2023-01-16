@@ -490,6 +490,37 @@ TMPQHash * FindFreeHashEntry(TMPQHash * pHashTable, DWORD dwHashTableSize, DWORD
     return NULL;
 }
 
+DWORD GetMpkBlockTableItemLength(void * pvMpkBlockTable, size_t cbMpkBlockTable)
+{
+    TMPKBlock1 * pBlockItem1 = (TMPKBlock1 *)(pvMpkBlockTable);
+    TMPKBlock2 * pBlockItem2 = (TMPKBlock2 *)(pvMpkBlockTable);
+
+    //
+    // We have no information as to what's the type of the table item
+    // So we just compare the magic numbers of all supported item sizes
+    //
+
+    if(cbMpkBlockTable >= sizeof(TMPKBlock1) * 2)
+    {
+        if(pBlockItem1[0].dwMagic == pBlockItem1[1].dwMagic)
+        {
+            return sizeof(TMPKBlock1);
+        }
+    }
+
+    if(cbMpkBlockTable >= sizeof(TMPKBlock2) * 2)
+    {
+        if(pBlockItem2[0].dwMagic == pBlockItem2[1].dwMagic)
+        {
+            return sizeof(TMPKBlock2);
+        }
+    }
+
+    // Unknown item size
+    assert(false);
+    return 0;
+}
+
 void DecryptMpkTable(void * pvMpkTable, size_t cbSize)
 {
     LPBYTE pbMpkTable = (LPBYTE)pvMpkTable;
@@ -579,12 +610,6 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
     return pHashTable;
 }
 
-static DWORD GetMpkBlockID(void * pMpkBlockTable)
-{
-    DWORD * TableItems = (DWORD *)(pMpkBlockTable);
-    return TableItems[4];
-}
-
 static DWORD ConvertMpkFlagsToMpqFlags(DWORD dwMpkFlags)
 {
     DWORD dwMpqFlags = MPQ_FILE_EXISTS;
@@ -621,7 +646,7 @@ static TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha, void * pMpkBlockTable, DW
     {
         while(pbMpkBlockPtr < pbMpkBlockEnd)
         {
-            TMPKBlock2 * pMpkBlock = (TMPKBlock2 *)(pbMpkBlockPtr);
+            TMPKBlock1 * pMpkBlock = (TMPKBlock1 *)(pbMpkBlockPtr);
 
             // Translate the MPK block table entry to MPQ block table entry
             pMpqBlock->dwFilePos = pMpkBlock->dwFilePos;
@@ -643,21 +668,16 @@ TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha)
     TMPQHeader * pHeader = ha->pHeader;
     TMPQBlock * pBlockTable = NULL;
     void * pMpkBlockTable;
+    DWORD nItemLength;
 
     // Load the MPK block table. At this moment, we don't know the version of the blobk table
     pMpkBlockTable = LoadMpkTable(ha, pHeader->dwBlockTablePos, pHeader->dwBlockTableSize);
     if(pMpkBlockTable != NULL)
     {
-        switch(GetMpkBlockID(pMpkBlockTable))
+        // Based on the item length, load the table and convert it to the MPQ table
+        if((nItemLength = GetMpkBlockTableItemLength(pMpkBlockTable, pHeader->dwBlockTableSize)) != 0)
         {
-            case MPK_BLOCK_TABLE_WOTGV:
-                pBlockTable = LoadMpkBlockTable(ha, pMpkBlockTable, sizeof(TMPKBlock2));
-                break;
-
-            case MPK_BLOCK_TABLE_LONGWU:
-            default:
-                pBlockTable = LoadMpkBlockTable(ha, pMpkBlockTable, sizeof(TMPKBlock1));
-                break;
+            pBlockTable = LoadMpkBlockTable(ha, pMpkBlockTable, nItemLength);
         }
 
         // Free the MPK block table
