@@ -28,10 +28,12 @@
 #define fmt_I64X_a "%llX"
 #endif
 
-#ifdef __STORMLIB_SELF__
-#define TEST_MIN STORMLIB_MIN
-#else
+#ifdef __CASCLIB_SELF__
 #define TEST_MIN CASCLIB_MIN
+#define TEST_PRINT_PREFIX   false
+#else
+#define TEST_MIN STORMLIB_MIN
+#define TEST_PRINT_PREFIX   true
 #endif
 
 //-----------------------------------------------------------------------------
@@ -44,7 +46,6 @@ inline DWORD TestInterlockedIncrement(DWORD * PtrValue)
 #elif defined(__GNUC__)
     return __sync_add_and_fetch(PtrValue, 1);
 #else
-#define INTERLOCKED_NOT_SUPPORTED
     return ++(*PtrValue);
 #endif
 }
@@ -87,6 +88,22 @@ void TestStrCopy(char * szTarget, size_t cchTarget, const wchar_t * szSource, si
         cchToCopy = TEST_MIN((cchTarget - 1), cchSource);
 
         wcstombs(szTarget, szSource, cchToCopy);
+        szTarget[cchToCopy] = 0;
+    }
+}
+
+void TestStrCopy(wchar_t * szTarget, size_t cchTarget, const char * szSource, size_t cchSource = -1)
+{
+    size_t cchToCopy;
+
+    if(cchTarget > 0)
+    {
+        // Make sure we know the length
+        if(cchSource == -1)
+            cchSource = strlen(szSource);
+        cchToCopy = TEST_MIN((cchTarget - 1), cchSource);
+
+        mbstowcs(szTarget, szSource, cchToCopy);
         szTarget[cchToCopy] = 0;
     }
 }
@@ -202,42 +219,73 @@ class TLogHelper
 
     TLogHelper(const char * szNewMainTitle = NULL, const TCHAR * szNewSubTitle1 = NULL, const TCHAR * szNewSubTitle2 = NULL)
     {
-        TCHAR szMainTitleT[0x80];
-
         // Fill the variables
         memset(this, 0, sizeof(TLogHelper));
-
         UserString = "";
+        TotalFiles = 1;
         UserCount = 1;
         UserTotal = 1;
 
-        // Fill the test line structure
+#ifdef TEST_PLATFORM_WINDOWS
+        InitializeCriticalSection(&Locker);
+        TickCount = GetTickCount();
+#endif
+
+        // Remember the startup time
+        SetStartTime();
+
+        // Save all three titles
         szMainTitle = szNewMainTitle;
         szSubTitle1 = szNewSubTitle1;
         szSubTitle2 = szNewSubTitle2;
 
-        // Copy the UNICODE main title
-        StringCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
-
         // Print the initial information
         if(szNewMainTitle != NULL)
         {
+#ifdef __CASCLIB_SELF__
+            char szMainTitleT[0x100] = {0};
+            size_t nLength;
+
+            nLength = TestStrPrintf(szMainTitleT, _countof(szMainTitleT), "-- \"%s\" --", szNewMainTitle);
+            while(nLength < 90)
+                szMainTitleT[nLength++] = '-';
+            if(nLength < sizeof(szMainTitleT))
+                szMainTitleT[nLength++] = 0;
+
+            printf("%s\n", szMainTitleT);
+#endif
+
+#ifdef __STORMLIB_SELF__
+            TCHAR szMainTitleT[0x100] = {0};
+
+            // Copy the UNICODE main title
+            TestStrCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
+
             if(szSubTitle1 != NULL && szSubTitle2 != NULL)
                 nPrevPrinted = _tprintf(_T("\rRunning %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
             else if(szSubTitle1 != NULL)
                 nPrevPrinted = _tprintf(_T("\rRunning %s (%s) ..."), szMainTitleT, szSubTitle1);
             else
                 nPrevPrinted = _tprintf(_T("\rRunning %s ..."), szMainTitleT);
+#endif
         }
     }
 
-    TLogHelper::~TLogHelper()
+    ~TLogHelper()
     {
         // Print a verdict, if no verdict was printed yet
         if(bMessagePrinted == false)
         {
             PrintVerdict(ERROR_SUCCESS);
         }
+
+#ifdef TEST_PLATFORM_WINDOWS
+        DeleteCriticalSection(&Locker);
+#endif
+
+#ifdef __CASCLIB_SELF__
+        printf("\n");
+#endif
     }
 
     //
@@ -267,7 +315,7 @@ class TLogHelper
     //
 
     template <typename XCHAR>
-    DWORD PrintWithClreol(const XCHAR * szFormat, va_list argList, bool bPrintPrefix, bool bPrintLastError, bool bPrintEndOfLine)
+    DWORD PrintWithClreol(const XCHAR * szFormat, va_list argList, bool bPrintLastError, bool bPrintEndOfLine)
     {
         char * szBufferPtr;
         char * szBufferEnd;
@@ -276,6 +324,7 @@ class TLogHelper
         DWORD dwErrCode = Test_GetLastError();
         XCHAR szMessage[0x200];
         char szBuffer[0x200];
+        bool bPrintPrefix = TEST_PRINT_PREFIX;
 
         // Always start the buffer with '\r'
         szBufferEnd = szBuffer + _countof(szBuffer);
@@ -353,7 +402,7 @@ class TLogHelper
         if(ProgressReady())
         {
             va_start(argList, szFormat);
-            PrintWithClreol(szFormat, argList, true, false, false);
+            PrintWithClreol(szFormat, argList, false, false);
             va_end(argList);
         }
     }
@@ -364,7 +413,7 @@ class TLogHelper
         va_list argList;
 
         va_start(argList, szFormat);
-        PrintWithClreol(szFormat, argList, true, false, true);
+        PrintWithClreol(szFormat, argList, false, true);
         va_end(argList);
     }
 
@@ -384,7 +433,7 @@ class TLogHelper
         int nResult;
 
         va_start(argList, szFormat);
-        nResult = PrintWithClreol(szFormat, argList, true, true, true);
+        nResult = PrintWithClreol(szFormat, argList, true, true);
         va_end(argList);
 
         return nResult;
@@ -404,17 +453,17 @@ class TLogHelper
         TCHAR szSaveMainTitle[0x80];
 
         // Set both to NULL so they won't be printed
-        StringCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
+        TestStrCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
+        szMainTitle = NULL;
         szSubTitle1 = NULL;
         szSubTitle2 = NULL;
-        szMainTitle = NULL;
 
         // Print the final information
         if(szSaveMainTitle[0] != 0)
         {
             if(DontPrintResult == false)
             {
-                LPCTSTR szVerdict = (dwErrCode == ERROR_SUCCESS) ? _T("succeeded") : _T("failed");
+                const TCHAR * szVerdict = (dwErrCode == ERROR_SUCCESS) ? _T("succeeded") : _T("failed");
 
                 if(szSaveSubTitle1 != NULL && szSaveSubTitle2 != NULL)
                     PrintMessage(_T("%s (%s+%s) %s."), szSaveMainTitle, szSaveSubTitle1, szSaveSubTitle2, szVerdict);
@@ -432,6 +481,24 @@ class TLogHelper
 
         // Return the error code so the caller can pass it fuhrter
         return dwErrCode;
+    }
+
+    //
+    // Locking functions (Windows only)
+    //
+
+    void Lock()
+    {
+#ifdef TEST_PLATFORM_WINDOWS
+        EnterCriticalSection(&Locker);
+#endif
+    }
+
+    void Unlock()
+    {
+#ifdef TEST_PLATFORM_WINDOWS
+        LeaveCriticalSection(&Locker);
+#endif
     }
 
     //
@@ -483,15 +550,55 @@ class TLogHelper
         return (DWORD)(EndTime - StartTime);
     }
 
+    void IncrementTotalBytes(ULONGLONG IncrementValue)
+    {
+        // For some weird reason, this is measurably faster then InterlockedAdd64
+        Lock();
+        TotalBytes = TotalBytes + IncrementValue;
+        Unlock();
+    }
+
+    void FormatTotalBytes(char * szBuffer, size_t ccBuffer)
+    {
+        ULONGLONG Bytes = TotalBytes;
+        ULONGLONG Divider = 1000000000;
+        char * szBufferEnd = szBuffer + ccBuffer;
+        bool bDividingOn = false;
+
+        while((szBuffer + 4) < szBufferEnd && Divider > 0)
+        {
+            // Are we already dividing?
+            if(bDividingOn)
+            {
+                szBuffer += TestStrPrintf(szBuffer, ccBuffer, " %03u", (DWORD)(Bytes / Divider));
+                Bytes = Bytes % Divider;
+            }
+            else if(Bytes > Divider)
+            {
+                szBuffer += TestStrPrintf(szBuffer, ccBuffer, "%u", (DWORD)(Bytes / Divider));
+                Bytes = Bytes % Divider;
+                bDividingOn = true;
+            }
+            Divider /= 1000;
+        }
+    }
+
+#ifdef TEST_PLATFORM_WINDOWS
+    CRITICAL_SECTION Locker;
+#endif
+
+    ULONGLONG TotalBytes;                           // For user's convenience: Total number of bytes
+    ULONGLONG ByteCount;                            // For user's convenience: Current number of bytes
     ULONGLONG StartTime;                            // Start time of an operation, in milliseconds
     ULONGLONG EndTime;                              // End time of an operation, in milliseconds
     const char * UserString;
-    unsigned int UserCount;
-    unsigned int UserTotal;
+    DWORD UserCount;
+    DWORD UserTotal;
     DWORD TickCount;
     DWORD TimeTrigger;                              // For triggering elapsed timers
+    DWORD TotalFiles;                               // For user's convenience: Total number of files
+    DWORD FileCount;                                // For user's convenience: Curernt number of files
     DWORD DontPrintResult:1;                        // If true, supress printing result from the destructor
-
 
     protected:
 

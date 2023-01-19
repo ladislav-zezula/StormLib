@@ -25,6 +25,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4505)              // 'XXX' : unreferenced local function has been removed
+#include <crtdbg.h>
 #pragma comment(lib, "winmm.lib")
 #endif
 
@@ -386,30 +387,6 @@ xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
     return szSaveBuffer;
 }
 
-static void AddStringBeforeExtension(char * szBuffer, LPCSTR szFileName, LPCSTR szExtraString)
-{
-    LPCSTR szExtension;
-    size_t nLength;
-
-    // Get the extension
-    szExtension = strrchr(szFileName, '.');
-    if(szExtension == NULL)
-        szExtension = szFileName + strlen(szFileName);
-    nLength = (size_t)(szExtension - szFileName);
-
-    // Copy the part before extension
-    memcpy(szBuffer, szFileName, nLength);
-    szFileName += nLength;
-    szBuffer += nLength;
-
-    // Append the extra data
-    if(szExtraString != NULL)
-        strcpy(szBuffer, szExtraString);
-
-    // Append the rest of the file name
-    strcat(szBuffer, szFileName);
-}
-
 static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWORD * pdwDifference)
 {
     for(DWORD i = 0; i < dwLength; i++)
@@ -422,20 +399,6 @@ static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWOR
     }
 
     return true;
-}
-
-static int GetPathSeparatorCount(LPCSTR szPath)
-{
-    int nSeparatorCount = 0;
-
-    while(szPath[0] != 0)
-    {
-        if(szPath[0] == '\\' || szPath[0] == '/')
-            nSeparatorCount++;
-        szPath++;
-    }
-
-    return nSeparatorCount;
 }
 
 template <typename XCHAR>
@@ -480,18 +443,6 @@ static const XCHAR * GetShortPlainName(const XCHAR * szFileName)
         szPlainName = szPlainEnd - 50;
 
     return szPlainName;
-}
-
-static void CopyPathPart(char * szBuffer, LPCSTR szPath)
-{
-    while(szPath[0] != 0)
-    {
-        szBuffer[0] = (szPath[0] == '\\' || szPath[0] == '/') ? '/' : szPath[0];
-        szBuffer++;
-        szPath++;
-    }
-
-    *szBuffer = 0;
 }
 
 static bool CopyStringAndVerifyConversion(
@@ -2870,62 +2821,6 @@ static DWORD TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainNa
     return ERROR_SUCCESS;
 }
 
-static DWORD TestOpenArchive_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterName, LPCSTR szFileToExtract, bool bCopyMirrorFile)
-{
-    TFileData * pFileData;
-    TLogHelper Logger("OpenServerMirror", szMirrorName);
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
-    DWORD dwVerifyResult;
-    TCHAR szMirrorPath[MAX_PATH + MAX_PATH];   // Combined name
-    TCHAR szMasterPath[MAX_PATH];              // Original (server) name
-    DWORD dwErrCode;
-
-    // Create both paths
-    dwErrCode = CreateMasterAndMirrorPaths(&Logger, szMirrorPath, szMasterPath, szMirrorName, szMasterName, bCopyMirrorFile);
-
-    // Now open both archives as local-server pair
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        dwErrCode = OpenExistingArchive(&Logger, szMirrorPath, 0, &hMpq);
-    }
-
-    // The MPQ must be read-only. Writing to mirrored MPQ is not allowed
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        if(SFileCreateFile(hMpq, "AddedFile.bin", 0, 0x10, 0, MPQ_FILE_COMPRESS, &hFile))
-        {
-            SFileCloseFile(hFile);
-            Logger.PrintMessage("The archive is writable, although it should not be");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-    }
-
-    // Verify the file
-    if(dwErrCode == ERROR_SUCCESS && szFileToExtract != NULL)
-    {
-        dwVerifyResult = SFileVerifyFile(hMpq, szFileToExtract, SFILE_VERIFY_ALL);
-        if(dwVerifyResult & VERIFY_FILE_ERROR_MASK)
-        {
-            Logger.PrintMessage("File verification failed");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-    }
-
-    // Load the file to memory
-    if(dwErrCode == ERROR_SUCCESS && szFileToExtract)
-    {
-        pFileData = LoadMpqFile(&Logger, hMpq, szFileToExtract);
-        if(pFileData != NULL)
-            STORM_FREE(pFileData);
-    }
-
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
-    return dwErrCode;
-}
-
-
 static DWORD TestOpenArchive_VerifySignature(LPCTSTR szPlainName, LPCTSTR szOriginalName)
 {
     TLogHelper Logger("VerifySignatureTest", szPlainName);
@@ -3332,77 +3227,6 @@ static DWORD TestAddFile_ListFileTest(LPCTSTR szSourceMpq, bool bShouldHaveListF
         SFileCloseArchive(hMpq);
     return dwErrCode;
 }
-/*
-static DWORD TestCreateArchive_Deprotect(LPCSTR szPlainName)
-{
-    TLogHelper Logger("DeprotectTest", szPlainName);
-    HANDLE hMpq1 = NULL;
-    HANDLE hMpq2 = NULL;
-    char szMpqName1[MAX_PATH];
-    char szMpqName2[MAX_PATH];
-    BYTE FileHash1[MD5_DIGEST_SIZE];
-    BYTE FileHash2[MD5_DIGEST_SIZE];
-    DWORD dwFileCount1 = 0;
-    DWORD dwFileCount2 = 0;
-    DWORD dwTestFlags = SEARCH_FLAG_LOAD_FILES | SEARCH_FLAG_HASH_FILES;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // First copy: The original (untouched) file
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        AddStringBeforeExtension(szMpqName1, szPlainName, "_original");
-        dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName1, &hMpq1);
-        if(dwErrCode != ERROR_SUCCESS)
-            Logger.PrintMessage("Open failed: %s", szMpqName1);
-    }
-
-    // Second copy: Will be deprotected
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        AddStringBeforeExtension(szMpqName2, szPlainName, "_deprotected");
-        dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szMpqName2, &hMpq2);
-        if(dwErrCode != ERROR_SUCCESS)
-            Logger.PrintMessage("Open failed: %s", szMpqName2);
-    }
-
-    // Deprotect the second map
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        SFileSetCompactCallback(hMpq2, CompactCallback, &Logger);
-        if(!SFileCompactArchive(hMpq2, NULL, false))
-            dwErrCode = Logger.PrintError("Failed to deprotect archive %s", szMpqName2);
-    }
-
-    // Calculate number of files and compare their hash (archive 1)
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        memset(FileHash1, 0, sizeof(FileHash1));
-        dwErrCode = SearchArchive(&Logger, hMpq1, dwTestFlags, &dwFileCount1, FileHash1);
-    }
-
-    // Calculate number of files and compare their hash (archive 2)
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        memset(FileHash1, 0, sizeof(FileHash2));
-        dwErrCode = SearchArchive(&Logger, hMpq2, dwTestFlags, &dwFileCount2, FileHash2);
-    }
-
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        if(dwFileCount1 != dwFileCount2)
-            Logger.PrintMessage("Different file count (%u in %s; %u in %s)", dwFileCount1, szMpqName1, dwFileCount2, szMpqName2);
-        if(memcmp(FileHash1, FileHash2, MD5_DIGEST_SIZE))
-            Logger.PrintMessage("Different file hash (%s vs %s)", szMpqName1, szMpqName2);
-    }
-
-    // Close both MPQs
-    if(hMpq2 != NULL)
-        SFileCloseArchive(hMpq2);
-    if(hMpq1 != NULL)
-        SFileCloseArchive(hMpq1);
-    return dwErrCode;
-}
-*/
 
 static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
 {
