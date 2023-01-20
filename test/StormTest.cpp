@@ -93,6 +93,15 @@ static LPCSTR  IntToHexChar = "0123456789abcdef";
 //-----------------------------------------------------------------------------
 // Testing data
 
+// Flags for TestOpenArchive_SignatureTest()
+#define SFLAG_VERIFY_BEFORE     0x00000001              // Verify signature before modification
+#define SFLAG_CREATE_ARCHIVE    0x00000002              // Create new archive
+#define SFLAG_MODIFY_ARCHIVE    0x00000004              // Modify the archive before signing
+#define SFLAG_SIGN_AT_CREATE    0x00000008              // Sign the archive at the creation
+#define SFLAG_SIGN_ARCHIVE      0x00000010              // Sign the archive
+#define SFLAG_VERIFY_AFTER      0x00000020              // Verify the signature after modification
+
+
 static DWORD AddFlags[] =
 {
 //  Compression          Encryption             Fixed key           Single Unit            Sector CRC
@@ -2821,154 +2830,107 @@ static DWORD TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainNa
     return ERROR_SUCCESS;
 }
 
-static DWORD TestOpenArchive_VerifySignature(LPCTSTR szPlainName, LPCTSTR szOriginalName)
+static DWORD TestOpenArchive_SignatureTest_Verify(TLogHelper & Logger, HANDLE hMpq)
 {
-    TLogHelper Logger("VerifySignatureTest", szPlainName);
-    HANDLE hMpq;
     DWORD dwSignatures = 0;
-    DWORD dwErrCode = ERROR_SUCCESS;
-    int nVerifyError;
+    DWORD dwVerifyError;
 
-    // We need original name for the signature check
-    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
+    // Query the signature types
+    Logger.PrintProgress("Retrieving signatures ...");
+    TestGetFileInfo(&Logger, hMpq, SFileMpqSignatures, &dwSignatures, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
+
+    // Are there some signatures at all?
+    if(dwSignatures == 0)
     {
-        // Query the signature types
-        Logger.PrintProgress("Retrieving signatures ...");
-        TestGetFileInfo(&Logger, hMpq, SFileMpqSignatures, &dwSignatures, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
-
-        // Verify any of the present signatures
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Verify the result
-        if((dwSignatures & SIGNATURE_TYPE_STRONG) && (nVerifyError != ERROR_STRONG_SIGNATURE_OK))
-        {
-            Logger.PrintMessage("Strong signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-
-        // Verify the result
-        if((dwSignatures & SIGNATURE_TYPE_WEAK) && (nVerifyError != ERROR_WEAK_SIGNATURE_OK))
-        {
-            Logger.PrintMessage("Weak signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-
-        SFileCloseArchive(hMpq);
+        Logger.PrintMessage("No signatures present in the file");
+        return ERROR_FILE_CORRUPT;
     }
-    return dwErrCode;
+
+    // Verify any of the present signatures
+    Logger.PrintProgress("Verifying archive signature ...");
+    dwVerifyError = SFileVerifyArchive(hMpq);
+
+    // Verify the result
+    if((dwSignatures & SIGNATURE_TYPE_STRONG) && (dwVerifyError != ERROR_STRONG_SIGNATURE_OK))
+    {
+        Logger.PrintMessage("Strong signature verification error");
+        return ERROR_FILE_CORRUPT;
+    }
+
+    // Verify the result
+    if((dwSignatures & SIGNATURE_TYPE_WEAK) && (dwVerifyError != ERROR_WEAK_SIGNATURE_OK))
+    {
+        Logger.PrintMessage("Weak signature verification error");
+        return ERROR_FILE_CORRUPT;
+    }
+    return ERROR_SUCCESS;
 }
 
-static DWORD TestOpenArchive_ModifySigned(LPCTSTR szPlainName, LPCTSTR szOriginalName)
+static DWORD TestOpenArchive_SignatureTest_Sign(TLogHelper & Logger, HANDLE hMpq)
 {
-    TLogHelper Logger("ModifySignedTest", szPlainName);
-    HANDLE hMpq = NULL;
-    int nVerifyError;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // We need original name for the signature check
-    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
+    // Sign the MPQ archive
+    Logger.PrintProgress("Signing the MPQ ...");
+    if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
     {
-        // Verify the weak signature
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Check the result signature
-        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
-        {
-            Logger.PrintMessage("Weak signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
+        Logger.PrintMessage("Failed to create archive signature");
+        return ERROR_FILE_CORRUPT;
     }
-
-    // Add a file and verify the signature again
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Verify any of the present signatures
-        Logger.PrintProgress("Modifying signed archive ...");
-        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", 0, 0, ERROR_SUCCESS);
-    }
-
-    // Verify the signature again
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Verify the weak signature
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Check the result signature
-        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
-        {
-            Logger.PrintMessage("Weak signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-    }
-
-    // Close the MPQ
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
-    return dwErrCode;
+    return ERROR_SUCCESS;
 }
 
-static DWORD TestOpenArchive_SignExisting(LPCTSTR szPlainName)
+static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOriginalName, DWORD dwFlags)
 {
-    TLogHelper Logger("SignExistingMpq", szPlainName);
-    HANDLE hMpq = NULL;
-    int nVerifyError;
+    TLogHelper Logger("SignatureTest", szPlainName);
+    HANDLE hMpq;
+    DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // We need original name for the signature check
-    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
+    // Create a new archive or copy existing
+    if(dwFlags & SFLAG_CREATE_ARCHIVE)
     {
-        // Verify the weak signature
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Check the result signature
-        if(nVerifyError != ERROR_NO_SIGNATURE)
-        {
-            Logger.PrintMessage("There already is a signature in the MPQ");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
+        dwCreateFlags |= (dwFlags & SFLAG_SIGN_AT_CREATE) ? MPQ_CREATE_SIGNATURE : 0;
+        dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, 4000, &hMpq);
+    }
+    else
+    {
+        szOriginalName = (szOriginalName) ? szOriginalName : szPlainName;
+        dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szOriginalName, &hMpq);
     }
 
-    // Add a file and verify the signature again
+    // Continue with archive signature tests
     if(dwErrCode == ERROR_SUCCESS)
     {
-        // Verify any of the present signatures
-        Logger.PrintProgress("Signing the MPQ ...");
-        if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
+        // Shall we check the signatures before modifications?
+        if((dwErrCode == ERROR_SUCCESS) && (dwFlags & SFLAG_VERIFY_BEFORE))
         {
-            Logger.PrintMessage("Failed to create archive signature");
-            dwErrCode = ERROR_FILE_CORRUPT;
+            dwErrCode = TestOpenArchive_SignatureTest_Verify(Logger, hMpq);
         }
-    }
 
-    // Verify the signature again
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Verify the weak signature
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Check the result signature
-        if(nVerifyError != ERROR_WEAK_SIGNATURE_OK)
+        // Shall we modify the archive?
+        if((dwErrCode == ERROR_SUCCESS) && (dwFlags & SFLAG_MODIFY_ARCHIVE))
         {
-            Logger.PrintMessage("Weak signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
+            Logger.PrintProgress("Modifying archive ...");
+            dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", MPQ_FILE_COMPRESS, 0, ERROR_SUCCESS);
         }
-    }
 
-    // Close the MPQ
-    if(hMpq != NULL)
+        // Shall we sign the archive?
+        if((dwErrCode == ERROR_SUCCESS) && (dwFlags & SFLAG_SIGN_ARCHIVE))
+        {
+            dwErrCode = TestOpenArchive_SignatureTest_Sign(Logger, hMpq);
+        }
+
+        // Shall we check the signatures after modifications?
+        if((dwErrCode == ERROR_SUCCESS) && (dwFlags & SFLAG_VERIFY_AFTER))
+        {
+            dwErrCode = TestOpenArchive_SignatureTest_Verify(Logger, hMpq);
+        }
+
         SFileCloseArchive(hMpq);
+    }
     return dwErrCode;
 }
 
-static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, bool bAddUserData)
+static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, BOOL bAddUserData)
 {
     TLogHelper Logger("CompactMpqTest", szPlainName);
 	ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
@@ -3371,60 +3333,6 @@ static DWORD TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
     }
 
     return ERROR_SUCCESS;
-}
-
-static DWORD TestCreateArchive_Signed(LPCTSTR szPlainName, bool bSignAtCreate)
-{
-    TLogHelper Logger("CreateSignedMpq", szPlainName);
-    HANDLE hMpq = NULL;
-    DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1;
-    DWORD dwSignatures = 0;
-    DWORD nVerifyError = 0;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Method 1: Create the archive as signed
-    if(bSignAtCreate)
-        dwCreateFlags |= MPQ_CREATE_SIGNATURE;
-
-    // Create new MPQ
-    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, dwCreateFlags, 4000, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Add one file and flush the archive
-        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is the file data.", MPQ_FILE_COMPRESS);
-    }
-
-    // Sign the archive with weak signature
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        if(!SFileSignArchive(hMpq, SIGNATURE_TYPE_WEAK))
-            dwErrCode = ERROR_SUCCESS;
-    }
-
-    // Reopen the MPQ and add another file.
-    // The new file must be added to the position of the (listfile)
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Query the signature types
-        Logger.PrintProgress("Retrieving signatures ...");
-        TestGetFileInfo(&Logger, hMpq, SFileMpqSignatures, &dwSignatures, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
-
-        // Verify any of the present signatures
-        Logger.PrintProgress("Verifying archive signature ...");
-        nVerifyError = SFileVerifyArchive(hMpq);
-
-        // Verify the result
-        if((dwSignatures != SIGNATURE_TYPE_WEAK) && (nVerifyError != ERROR_WEAK_SIGNATURE_OK))
-        {
-            Logger.PrintMessage("Weak signature verification error");
-            dwErrCode = ERROR_FILE_CORRUPT;
-        }
-    }
-
-    // Close the archive
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
-    return dwErrCode;
 }
 
 static DWORD TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
@@ -4236,7 +4144,7 @@ static const TEST_INFO Test_Mpqs[] =
     {_T("MPx_2022_v1_UI.mpk"),                               NULL, TEST_DATA("677a36b458d528a3158ced3dfb711e49", 3086)},    // MPK archive from Warriors of the Ghost Valley
 };
 
-static const TEST_INFO Patched_Mpqs[] =
+static const TEST_INFO Test_Patched_Mpqs[] =
 {
     {NULL, NULL,  0,              PatchList_StarCraft,         "music\\terran1.wav"},
     {NULL, NULL,  2,              PatchList_WoW_OldWorld13286, "OldWorld\\World\\Model.blob"},
@@ -4251,6 +4159,27 @@ static const TEST_INFO Patched_Mpqs[] =
     {NULL, NULL, 10,              PatchList_HS_6898_enGB,      "Hearthstone_Data\\Managed\\Assembly-Csharp.dll"}
 };
 
+static const TEST_INFO Test_Signature[] =
+{
+    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),        _T("STANDARD.SNP"),                     SFLAG_VERIFY_BEFORE},
+    {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),        _T("STANDARD.SNP"),                     SFLAG_VERIFY_BEFORE},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),           _T("War2Patch_202.exe"),                SFLAG_VERIFY_BEFORE},
+    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),      _T("WoW-1.2.3.4211-enUS-patch.exe"),    SFLAG_VERIFY_BEFORE},
+    {_T("MPQ_2002_v1_StrongSignature.w3m"),         _T("(10)DustwallowKeys.w3m"),           SFLAG_VERIFY_BEFORE},
+    {_T("MPQ_1998_v1_StarDat.mpq"),                 NULL,                                   SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),           _T("War2Patch_202.exe"),                SFLAG_VERIFY_BEFORE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+    {_T("MPQ_1999_v1_WeakSigned1.mpq"),             NULL,                                   SFLAG_CREATE_ARCHIVE | SFLAG_SIGN_AT_CREATE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+    {_T("MPQ_1999_v1_WeakSigned1.mpq"),             NULL,                                   SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+};
+
+static const TEST_INFO Test_CompactArchive[] =
+{
+    {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),   _T("StormLibTest_CraftedMpq1_v3.mpq"),  TRUE},
+    {_T("MPQ_2016_v1_00000.pak"),                   _T("MPQ_2016_v1_00000.pak"),            FALSE},
+    {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),         _T("StormLibTest_CraftedMpq2_v4.mpq"),  TRUE},
+    {_T("MPQ_2013_v4_expansion1.MPQ"),              _T("StormLibTest_CraftedMpq3_v4.mpq"),  TRUE}
+};
+
 //-----------------------------------------------------------------------------
 // Main
 
@@ -4260,6 +4189,8 @@ static const TEST_INFO Patched_Mpqs[] =
 #define TEST_MASTER_MIRROR
 #define TEST_SINGLE_MPQS
 #define TEST_PATCHED_MPQS
+#define TEST_VERIFY_SIGNATURE
+#define TEST_COMPACT_ARCHIVES
 
 int _tmain(int argc, TCHAR * argv[])
 {
@@ -4282,8 +4213,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_COMMAND_LINE
 
-#ifdef TEST_LOCAL_LISTFILE
-    // Tests on a local listfile
+#ifdef TEST_LOCAL_LISTFILE      // Tests on a local listfile
     if(dwErrCode == ERROR_SUCCESS)
     {
         TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
@@ -4291,8 +4221,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_LOCAL_LISTFILE
 
-#ifdef TEST_STREAM_OPERATIONS
-    // Test file stream operations
+#ifdef TEST_STREAM_OPERATIONS   // Test file stream operations
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
@@ -4304,8 +4233,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  TEST_STREAM_OPERATIONS
 
-#ifdef TEST_MASTER_MIRROR
-    // Test master-mirror reading operations
+#ifdef TEST_MASTER_MIRROR       // Test master-mirror reading operations
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
@@ -4319,8 +4247,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_MASTER_MIRROR
 
-#ifdef TEST_SINGLE_MPQS
-    // Test opening various archives - correct, damaged, protected
+#ifdef TEST_SINGLE_MPQS         // Test opening various archives - correct, damaged, protected
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(Test_Mpqs); i++)
@@ -4336,25 +4263,52 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_LOCAL_MPQs
 
-#ifdef TEST_PATCHED_MPQS
-    // Test opening patched archives - correct, damaged, protected
+#ifdef TEST_PATCHED_MPQS        // Test opening patched archives - correct, damaged, protected
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Patched_Mpqs); i++)
+        for(size_t i = 0; i < _countof(Test_Patched_Mpqs); i++)
         {
-            LPCTSTR * PatchList = (LPCTSTR *)Patched_Mpqs[i].param1;
-            LPCSTR szFileName = (LPCSTR)Patched_Mpqs[i].param2;
+            LPCTSTR * PatchList = (LPCTSTR *)Test_Patched_Mpqs[i].param1;
+            LPCSTR szFileName = (LPCSTR)Test_Patched_Mpqs[i].param2;
 
             // Ignore the error code here; we want to see results of all opens
             dwErrCode = TestArchive_Patched(PatchList,              // List of patches
                                             szFileName,             // Name of a file
-                                            Patched_Mpqs[i].dwFlags);
+                                            Test_Patched_Mpqs[i].dwFlags);
             dwErrCode = ERROR_SUCCESS;
         }
     }
 #endif  // TEST_PATCHED_MPQS
 
-    // Veryfy SHA1 of each MPQ that we have in the list
+#ifdef TEST_VERIFY_SIGNATURE    // Verify digital signatures of the archives
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(Test_Signature); i++)
+        {
+            // Ignore the error code here; we want to see results of all opens
+            dwErrCode = TestOpenArchive_SignatureTest(Test_Signature[i].szMpqName1,
+                                                      Test_Signature[i].szMpqName2,
+                                                      Test_Signature[i].dwFlags);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
+#endif
+
+#ifdef TEST_COMPACT_ARCHIVES    // Compact archives and verify them after
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(Test_CompactArchive); i++)
+        {
+            // Ignore the error code here; we want to see results of all opens
+            TestOpenArchive_CompactArchive(Test_CompactArchive[i].szMpqName1,
+                                           Test_CompactArchive[i].szMpqName2,
+                                           Test_CompactArchive[i].dwFlags);
+        }
+    }
+#endif
+
+    // Verify SHA1 of each MPQ that we have in the list
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
 
@@ -4382,36 +4336,7 @@ int _tmain(int argc, TCHAR * argv[])
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
 
-    // Check archive signature
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"), _T("STANDARD.SNP"));
-
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
-
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_2003_v1_WeakSignatureEmpty.exe"), _T("WoW-1.2.3.4211-enUS-patch.exe"));
-
-    // Check archive signature
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_VerifySignature(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("(10)DustwallowKeys.w3m"));
-
     // Compact the archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"), _T("StormLibTest_CraftedMpq1_v3.mpq"), true);
-
-    // Compact the archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2016_v1_00000.pak"), _T("MPQ_2016_v1_00000.pak"), false);
-
-    // Open a MPQ (add custom user data to it)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"), _T("StormLibTest_CraftedMpq2_v4.mpq"), true);
-
-    // Open a MPQ (add custom user data to it)
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_CompactArchive(_T("MPQ_2013_v4_expansion1.MPQ"), _T("StormLibTest_CraftedMpq3_v4.mpq"), true);
-
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestAddFile_FullTable(_T("MPQ_2014_v1_out1.w3x"));
 
@@ -4441,21 +4366,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Test creating of an archive with non standard file names
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_NonStdNames(_T("StormLibTest_NonStdNames.mpq"));
-
-    // Sign an existing non-signed archive
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_SignExisting(_T("MPQ_1998_v1_StarDat.mpq"));
-
-    // Open a signed archive, add a file and verify the signature
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_ModifySigned(_T("MPQ_1999_v1_WeakSignature.exe"), _T("War2Patch_202.exe"));
-
-    // Create new archive and sign it
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned1.mpq"), true);
-
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_Signed(_T("MPQ_1999_v1_WeakSigned2.mpq"), false);
 
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)

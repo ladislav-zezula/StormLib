@@ -1,7 +1,7 @@
 Microsoft Windows [Version 10.0.19045.2486]
 (c) Microsoft Corporation. All rights reserved.
 
-E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
+E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
 ==== Test Suite for StormLib version 9.24 ====
 InitWorkDir: Work directory \Multimedia\MPQs (default)
 LocalListFile (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
@@ -85,6 +85,20 @@ PatchedMPQ (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.
 PatchedMPQ (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
 PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
+SignatureTest (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
+SignatureTest (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
+SignatureTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
+SignatureTest (MPQ_2003_v1_WeakSignatureEmpty.exe) succeeded.
+SignatureTest (MPQ_2002_v1_StrongSignature.w3m) succeeded.
+SignatureTest (MPQ_1998_v1_StarDat.mpq) succeeded.
+SignatureTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
+SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+CompactMpqTest (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
+CompactMpqTest: The file "(attributes)" is not present, but it should be
+CompactMpqTest: The file "(attributes)" is not present, but it should be
+CompactMpqTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
+CompactMpqTest (MPQ_2013_v4_expansion1.MPQ) succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
@@ -2317,15 +2331,6 @@ OpenCorruptMpqTest (MPQ_2013_vX_Battle.net.MPQ) succeeded.
 ReadOnlyTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 ReadOnlyTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 GetFileInfoTest (MPQ_2002_v1_StrongSignature.w3m+MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
-VerifySignatureTest (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
-VerifySignatureTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
-VerifySignatureTest (MPQ_2003_v1_WeakSignatureEmpty.exe) succeeded.
-VerifySignatureTest (MPQ_2002_v1_StrongSignature.w3m) succeeded.
-CompactMpqTest (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
-CompactMpqTest: The file "(attributes)" is not present, but it should be
-CompactMpqTest: The file "(attributes)" is not present, but it should be
-CompactMpqTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
-CompactMpqTest (MPQ_2013_v4_expansion1.MPQ) succeeded.
 FullMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
 FullMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
 ListFileTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
@@ -2334,10 +2339,6 @@ CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateGapsTest (StormLibTest_GapsTest.mpq) succeeded.
 NonStdNamesTest (StormLibTest_NonStdNames.mpq) succeeded.
-SignExistingMpq (MPQ_1998_v1_StarDat.mpq) succeeded.
-ModifySignedTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
-CreateSignedMpq (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
-CreateSignedMpq (MPQ_1999_v1_WeakSigned2.mpq) succeeded.
 CreateMpqEditor (StormLibTest_MpqEditorTest.mpq) succeeded.
 CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
 CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
@@ -2354,4 +2355,4 @@ BigMpqTest (StormLibTest_BigArchive_v4.mpq) succeeded.
 ModifyTest (MPQ_2014_v4_Base.StormReplay) succeeded.
 ModifyTest (MPQ_2022_v1_v4.329.w3x) succeeded.
 
-E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>
+E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>

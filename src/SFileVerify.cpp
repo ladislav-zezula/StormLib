@@ -731,6 +731,10 @@ bool QueryMpqSignatureInfo(
     // Make sure it's all zeroed
     memset(pSI, 0, sizeof(MPQ_SIGNATURE_INFO));
 
+    // Flush the archive, if it was modified
+    if(ha->dwFlags & MPQ_FLAG_CHANGED)
+        SFileFlushArchive((HANDLE)(ha));
+
     // Calculate the range of the MPQ
     CalculateArchiveRange(ha, pSI);
 
@@ -822,7 +826,7 @@ DWORD SSignFileCreate(TMPQArchive * ha)
 
 DWORD SSignFileFinish(TMPQArchive * ha)
 {
-    MPQ_SIGNATURE_INFO si;
+    MPQ_SIGNATURE_INFO si = {0};
     unsigned long signature_len = MPQ_WEAK_SIGNATURE_SIZE;
     BYTE WeakSignature[MPQ_SIGNATURE_FILE_SIZE];
     BYTE Md5Digest[MD5_DIGEST_SIZE];
@@ -834,7 +838,6 @@ DWORD SSignFileFinish(TMPQArchive * ha)
     assert(ha->dwFileFlags3 == MPQ_FILE_EXISTS);
 
     // Query the weak signature info
-    memset(&si, 0, sizeof(MPQ_SIGNATURE_INFO));
     if(!QueryMpqSignatureInfo(ha, &si))
         return ERROR_FILE_CORRUPT;
 
@@ -978,19 +981,14 @@ DWORD WINAPI SFileVerifyRawData(HANDLE hMpq, DWORD dwWhatToVerify, const char * 
 // Verifies the archive against the signature
 DWORD WINAPI SFileVerifyArchive(HANDLE hMpq)
 {
-    MPQ_SIGNATURE_INFO si;
+    MPQ_SIGNATURE_INFO si = {0};
     TMPQArchive * ha = (TMPQArchive *)hMpq;
 
     // Verify input parameters
     if(!IsValidMpqHandle(hMpq))
         return ERROR_VERIFY_FAILED;
 
-    // If the archive was modified, we need to flush it
-    if(ha->dwFlags & MPQ_FLAG_CHANGED)
-        SFileFlushArchive(hMpq);
-
     // Get the MPQ signature and signature type
-    memset(&si, 0, sizeof(MPQ_SIGNATURE_INFO));
     if(!QueryMpqSignatureInfo(ha, &si))
         return ERROR_VERIFY_FAILED;
 
