@@ -93,6 +93,9 @@ static LPCSTR  IntToHexChar = "0123456789abcdef";
 //-----------------------------------------------------------------------------
 // Testing data
 
+// Artificial flag for not reporting open failure
+#define MPQ_OPEN_DONT_REPORT_FAILURE    0x80000000
+
 // Flags for TestOpenArchive_SignatureTest()
 #define SFLAG_VERIFY_BEFORE     0x00000001              // Verify signature before modification
 #define SFLAG_CREATE_ARCHIVE    0x00000002              // Create new archive
@@ -101,6 +104,11 @@ static LPCSTR  IntToHexChar = "0123456789abcdef";
 #define SFLAG_SIGN_ARCHIVE      0x00000010              // Sign the archive
 #define SFLAG_VERIFY_AFTER      0x00000020              // Verify the signature after modification
 
+// Flags for TestOpenArchive_MiscTest()
+#define MFLAG_WILL_FAIL         0x00000001              // The file will fail to open
+#define MFLAG_OPEN_READ_ONLY    0x00000002              // Open the file as read only
+#define MFLAG_OPEN_READ_WRITE   0x00000004              // Open the file as read-write
+#define MFLAG_GET_FILE_INFO     0x00000008              // Get the file info
 
 static DWORD AddFlags[] =
 {
@@ -1785,15 +1793,18 @@ static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD
     size_t nMarkerIndex;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // Is it an encrypted MPQ ?
-    if(_tcsstr(szFullPath, _T(".MPQE")) != NULL)
-        dwFlags |= STREAM_PROVIDER_MPQE;
-    if(_tcsstr(szFullPath, _T(".MPQ.part")) != NULL)
-        dwFlags |= STREAM_PROVIDER_PARTIAL;
-    if(_tcsstr(szFullPath, _T(".mpq.part")) != NULL)
-        dwFlags |= STREAM_PROVIDER_PARTIAL;
-    if(_tcsstr(szFullPath, _T(".MPQ.0")) != NULL)
-        dwFlags |= STREAM_PROVIDER_BLOCK4;
+    // Get the stream provider from the MPQ prefix or MPQ name
+    if(_tcsnicmp(szFullPath, _T("flat-file://"), 11))
+    {
+        if(_tcsstr(szFullPath, _T(".MPQE")) != NULL)
+            dwFlags |= STREAM_PROVIDER_MPQE;
+        if(_tcsstr(szFullPath, _T(".MPQ.part")) != NULL)
+            dwFlags |= STREAM_PROVIDER_PARTIAL;
+        if(_tcsstr(szFullPath, _T(".mpq.part")) != NULL)
+            dwFlags |= STREAM_PROVIDER_PARTIAL;
+        if(_tcsstr(szFullPath, _T(".MPQ.0")) != NULL)
+            dwFlags |= STREAM_PROVIDER_BLOCK4;
+    }
 
     // Handle ASI files properly
     nMarkerIndex = (_tcsstr(szFullPath, _T(".asi")) != NULL) ? 1 : 0;
@@ -1816,7 +1827,9 @@ static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD
         }
 
         // Show the open error to the user
-        return pLogger->PrintError(_T("Failed to open archive %s"), szFullPath);
+        if((dwFlags & MPQ_OPEN_DONT_REPORT_FAILURE) == 0)
+            dwErrCode = pLogger->PrintError(_T("Failed to open archive %s"), szFullPath);
+        return dwErrCode;
     }
 
     // Store the archive handle or close the archive
@@ -1840,11 +1853,10 @@ static DWORD OpenPatchArchive(TLogHelper * pLogger, HANDLE hMpq, LPCTSTR szFullP
     return dwErrCode;
 }
 
-static DWORD OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName, LPCTSTR szCopyName, HANDLE * phMpq)
+static DWORD OpenExistingArchiveWithCopy(TLogHelper * pLogger, LPCTSTR szFileName, LPCTSTR szCopyName, HANDLE * phMpq, DWORD dwFlags = 0)
 {
-    DWORD dwFlags = 0;
-    TCHAR szFullPath[MAX_PATH];
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szFullPath[MAX_PATH];
 
     // We expect MPQ directory to be already prepared by InitializeMpqDirectory
     assert(szMpqDirectory[0] != 0);
@@ -1952,7 +1964,10 @@ static DWORD AddFileToMpq(
 
     // Check the expected error code
     if(dwExpectedError != ERROR_UNDETERMINED_RESULT && dwErrCode != dwExpectedError)
-        return pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
+    {
+        pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
+        dwErrCode = ERROR_CAN_NOT_COMPLETE;
+    }
     return dwErrCode;
 }
 
@@ -2120,6 +2135,7 @@ static void TestGetFileInfo(
     if(!bResult)
         dwErrCode = GetLastError();
 
+    // Check the expected results
     if(bResult != bExpectedResult)
         pLogger->PrintMessage("Different result of SFileGetFileInfo.");
     if(dwErrCode != dwExpectedErrCode)
@@ -2621,47 +2637,6 @@ static DWORD TestArchive(
     return Logger.PrintVerdict(dwErrCode);
 }
 
-// Open an empty archive (found in WoW cache - it's just a header)
-static DWORD TestOpenArchive_WillFail(LPCTSTR szPlainName)
-{
-    TLogHelper Logger("FailMpqTest", szPlainName);
-    HANDLE hMpq = NULL;
-    TCHAR szMpqName[MAX_PATH];
-    char szFullPath[MAX_PATH];
-
-    // Create the full path name for the archive
-    CreateFullPathName(szFullPath, _countof(szFullPath), szMpqSubDir, szPlainName);
-    StringCopy(szMpqName, _countof(szFullPath), szFullPath);
-
-    // Try to open the archive. It is expected to fail
-    Logger.PrintProgress("Opening archive %s", szPlainName);
-    if(!SFileOpenArchive(szMpqName, 0, MPQ_OPEN_READ_ONLY, &hMpq))
-        return ERROR_SUCCESS;
-
-    Logger.PrintError(_T("Archive %s succeeded to open, even if it should not."), szPlainName);
-    SFileCloseArchive(hMpq);
-    return ERROR_CAN_NOT_COMPLETE;
-}
-
-static DWORD TestOpenArchive_Corrupt(LPCTSTR szPlainName)
-{
-    TLogHelper Logger("OpenCorruptMpqTest", szPlainName);
-    HANDLE hMpq = NULL;
-    TCHAR szFullPath[MAX_PATH];
-
-    // Copy the archive so we won't fuck up the original one
-    CreateFullPathName(szFullPath, _countof(szFullPath), szMpqSubDir, szPlainName);
-    if(SFileOpenArchive(szFullPath, 0, STREAM_FLAG_READ_ONLY, &hMpq))
-    {
-        SFileCloseArchive(hMpq);
-        Logger.PrintMessage(_T("Opening archive %s succeeded, but it shouldn't"), szFullPath);
-        return ERROR_CAN_NOT_COMPLETE;
-    }
-
-    return ERROR_SUCCESS;
-}
-
-
 // Opens a patched MPQ archive
 static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWORD dwFlags)
 {
@@ -2708,126 +2683,113 @@ static DWORD TestArchive_Patched(LPCTSTR PatchList[], LPCSTR szPatchedFile, DWOR
 }
 
 // Open an archive for read-only access
-static DWORD TestOpenArchive_ReadOnly(LPCTSTR szPlainName, bool bReadOnly)
+static DWORD TestOpenArchive_MiscTests(LPCTSTR szPlainName, LPCTSTR szCopyName, DWORD dwFlags)
 {
-    TLogHelper Logger("ReadOnlyTest", szPlainName);
-    LPCTSTR szCopyName;
+    TLogHelper Logger("MiscTest", szPlainName);
+    HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
-    TCHAR szFullPath[MAX_PATH];
-    DWORD dwFlags = bReadOnly ? MPQ_OPEN_READ_ONLY : 0;;
-    int nExpectedError;
+    DWORD dwOpenFlags = 0;
     DWORD dwErrCode;
 
-    // Copy the fiel so we wont screw up something
-    szCopyName = bReadOnly ? _T("StormLibTest_ReadOnly.mpq") : _T("StormLibTest_ReadWrite.mpq");
-    dwErrCode = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, _countof(szFullPath));
+    // Configure the open flags
+    dwOpenFlags |= (dwFlags & MFLAG_OPEN_READ_ONLY) ? MPQ_OPEN_READ_ONLY : 0;
+    dwOpenFlags |= (dwFlags & MFLAG_WILL_FAIL)      ? MPQ_OPEN_DONT_REPORT_FAILURE: 0;
 
-    // Now open the archive for read-only access
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = OpenExistingArchive(&Logger, szFullPath, dwFlags, &hMpq);
+    // Open the file
+    szCopyName = (szCopyName != NULL) ? szCopyName : szPlainName;
+    Logger.PrintProgress(_T("Opening archive %s"), szPlainName);
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szCopyName, &hMpq, dwOpenFlags);
 
-    // Now try to add a file. This must fail if the MPQ is read only
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        AddFileToMpq(&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, nExpectedError);
-    }
-
-    // Now try to rename a file in the MPQ. This must only succeed if the MPQ is not read only
+    // Did it succeed?
     if(dwErrCode == ERROR_SUCCESS)
     {
-        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", nExpectedError);
-    }
-
-    // Now try to delete a file in the MPQ. This must only succeed if the MPQ is not read only
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        nExpectedError = (bReadOnly) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
-        RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", nExpectedError);
-    }
-
-    // Close the archive
-    if(hMpq != NULL)
-        SFileCloseArchive(hMpq);
-    return dwErrCode;
-}
-
-static DWORD TestOpenArchive_GetFileInfo(LPCTSTR szPlainName1, LPCTSTR szPlainName4)
-{
-    TLogHelper Logger("GetFileInfoTest", szPlainName1, szPlainName4);
-    HANDLE hFile;
-    HANDLE hMpq4;
-    HANDLE hMpq1;
-    DWORD cbLength;
-    BYTE DataBuff[0x400];
-    DWORD dwErrCode1;
-    DWORD dwErrCode4;
-
-    // Copy the archive so we won't fuck up the original one
-    dwErrCode1 = OpenExistingArchiveWithCopy(&Logger, szPlainName1, NULL, &hMpq1);
-    dwErrCode4 = OpenExistingArchiveWithCopy(&Logger, szPlainName4, NULL, &hMpq4);
-    if(dwErrCode1 == ERROR_SUCCESS && dwErrCode4 == ERROR_SUCCESS)
-    {
-        // Invalid handle - expected (false, ERROR_INVALID_HANDLE)
-        TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
-
-        // Valid handle but invalid value of file info class (false, ERROR_INVALID_PARAMETER)
-        TestGetFileInfo(&Logger, NULL, (SFileInfoClass)0xFFF, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
-
-        // Invalid archive handle and file info class is for file (false, ERROR_INVALID_HANDLE)
-        TestGetFileInfo(&Logger, NULL, SFileInfoNameHash1, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
-
-        // Valid handle and all parameters NULL
-        // Returns (true, ERROR_SUCCESS), if BET table is present, otherwise (false, ERROR_FILE_NOT_FOUND)
-        TestGetFileInfo(&Logger, hMpq1, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_FILE_NOT_FOUND);
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INSUFFICIENT_BUFFER);
-
-        // Now try to retrieve the required size of the BET table header
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, NULL, 0, &cbLength, false, ERROR_INSUFFICIENT_BUFFER);
-
-        // When we call SFileInfo with buffer = NULL and nonzero buffer size, it is ignored
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, NULL, 3, &cbLength, false, ERROR_INSUFFICIENT_BUFFER);
-
-        // When we call SFileInfo with buffer != NULL and nonzero buffer size, it should return error
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, DataBuff, 3, &cbLength, false, ERROR_INSUFFICIENT_BUFFER);
-
-        // Request for bet table header should also succeed if we want header only
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, DataBuff, sizeof(TMPQBetHeader), &cbLength, true, ERROR_SUCCESS);
-
-        // Request for bet table header should also succeed if we want header+flag table only
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqBetHeader, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
-
-        // Try to retrieve strong signature from the MPQ
-        TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, NULL, 0, NULL, false, ERROR_INSUFFICIENT_BUFFER);
-        TestGetFileInfo(&Logger, hMpq4, SFileMpqStrongSignature, NULL, 0, NULL, false, ERROR_FILE_NOT_FOUND);
-
-        // Strong signature is returned including the signature ID
-        TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, NULL, 0, &cbLength, false, ERROR_INSUFFICIENT_BUFFER);
-        assert(cbLength == MPQ_STRONG_SIGNATURE_SIZE + 4);
-
-        // Retrieve the signature
-        TestGetFileInfo(&Logger, hMpq1, SFileMpqStrongSignature, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
-        assert(memcmp(DataBuff, "NGIS", 4) == 0);
-
-        // Check SFileGetFileInfo on
-        if(SFileOpenFileEx(hMpq4, LISTFILE_NAME, 0, &hFile))
+        if((dwFlags & MFLAG_WILL_FAIL) == 0)
         {
-            // Valid parameters but the handle should be file handle
-            TestGetFileInfo(&Logger, hMpq4, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, false, ERROR_INVALID_HANDLE);
+            // Test the GetFileInfo operations
+            if(dwFlags & MFLAG_GET_FILE_INFO)
+            {
+                TMPQHeader Header = {0};
+                DWORD dwExpectedError;
+                DWORD cbLength;
+                BYTE DataBuff[0x400];
 
-            // Valid parameters
-            TestGetFileInfo(&Logger, hFile, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
+                // Retrieve the version of the MPQ
+                Logger.PrintProgress("Checking SFileGetFileInfo");
+                SFileGetFileInfo(hMpq, SFileMpqHeader, &Header, sizeof(TMPQHeader), NULL);
 
-            SFileCloseFile(hFile);
+                // Test on invalid archive/file handle
+                TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+                TestGetFileInfo(&Logger, NULL, (SFileInfoClass)0xFFF, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+                TestGetFileInfo(&Logger, NULL, SFileInfoNameHash1, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+
+                // Valid handle but all parameters NULL
+                dwExpectedError = (Header.wFormatVersion == MPQ_FORMAT_VERSION_4) ? ERROR_INSUFFICIENT_BUFFER : ERROR_FILE_NOT_FOUND;
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, NULL,     0, NULL,      false, dwExpectedError);
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, NULL,     0, &cbLength, false, dwExpectedError);
+
+                // When we call SFileInfo with buffer = NULL and nonzero buffer size, it is ignored
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, NULL,     3, &cbLength, false, dwExpectedError);
+
+                // When we call SFileInfo with buffer != NULL and nonzero buffer size, it should return error
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, DataBuff, 3, &cbLength, false, dwExpectedError);
+
+                // Request for bet table header should also succeed if we want header only
+                dwExpectedError = (Header.wFormatVersion == MPQ_FORMAT_VERSION_4) ? ERROR_SUCCESS : ERROR_FILE_NOT_FOUND;
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, DataBuff, sizeof(TMPQBetHeader), &cbLength, (dwExpectedError == ERROR_SUCCESS), dwExpectedError);
+                TestGetFileInfo(&Logger, hMpq, SFileMpqBetHeader, DataBuff, sizeof(DataBuff),      &cbLength, (dwExpectedError == ERROR_SUCCESS), dwExpectedError);
+
+                // Try to retrieve strong signature from the MPQ
+                dwExpectedError = (Header.wFormatVersion == MPQ_FORMAT_VERSION_4) ? ERROR_FILE_NOT_FOUND : ERROR_INSUFFICIENT_BUFFER;
+                TestGetFileInfo(&Logger, hMpq, SFileMpqStrongSignature, NULL, 0, NULL,      false, dwExpectedError);
+                TestGetFileInfo(&Logger, hMpq, SFileMpqStrongSignature, NULL, 0, &cbLength, false, dwExpectedError);
+                if(Header.wFormatVersion == MPQ_FORMAT_VERSION_1)
+                    assert(cbLength == MPQ_STRONG_SIGNATURE_SIZE + 4);
+
+                // Retrieve the signature
+                dwExpectedError = (Header.wFormatVersion == MPQ_FORMAT_VERSION_4) ? ERROR_FILE_NOT_FOUND : ERROR_SUCCESS;
+                TestGetFileInfo(&Logger, hMpq, SFileMpqStrongSignature, DataBuff, sizeof(DataBuff), &cbLength, (dwExpectedError == ERROR_SUCCESS), dwExpectedError);
+                if(Header.wFormatVersion == MPQ_FORMAT_VERSION_1)
+                    assert(memcmp(DataBuff, "NGIS", 4) == 0);
+
+                // Check SFileGetFileInfo on a listfile
+                if(SFileOpenFileEx(hMpq, LISTFILE_NAME, 0, &hFile))
+                {
+                    TestGetFileInfo(&Logger, hMpq,  SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, false, ERROR_INVALID_HANDLE);
+                    TestGetFileInfo(&Logger, hFile, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, true,  ERROR_SUCCESS);
+                    SFileCloseFile(hFile);
+                }
+            }
+
+            // Test read-only vs read-write operations
+            if(dwFlags & (MFLAG_OPEN_READ_ONLY | MFLAG_OPEN_READ_WRITE))
+            {
+                DWORD dwExpectedError = (dwFlags & MFLAG_OPEN_READ_ONLY) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+
+                AddFileToMpq (&Logger, hMpq, "AddedFile.txt", "This is an added file.", MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED, 0, dwExpectedError);
+                RenameMpqFile(&Logger, hMpq, "spawn.mpq", "spawn-renamed.mpq", dwExpectedError);
+                RemoveMpqFile(&Logger, hMpq, "spawn-renamed.mpq", dwExpectedError);
+            }
+        }
+        else
+        {
+            Logger.PrintError(_T("Archive %s succeeded to open, but it should fail."), szPlainName);
+            dwErrCode = ERROR_CAN_NOT_COMPLETE;
+        }
+
+        SFileCloseArchive(hMpq);
+    }
+    else
+    {
+        if((dwFlags & MFLAG_WILL_FAIL) == 0)
+        {
+            Logger.PrintError(_T("Archive %s failed to open, but it should succeed."), szPlainName);
+        }
+        else
+        {
+            dwErrCode = ERROR_SUCCESS;
         }
     }
-
-    if(hMpq4 != NULL)
-        SFileCloseArchive(hMpq4);
-    if(hMpq1 != NULL)
-        SFileCloseArchive(hMpq1);
-    return ERROR_SUCCESS;
+    return dwErrCode;
 }
 
 static DWORD TestOpenArchive_SignatureTest_Verify(TLogHelper & Logger, HANDLE hMpq)
@@ -4172,6 +4134,23 @@ static const TEST_INFO Test_Signature[] =
     {_T("MPQ_1999_v1_WeakSigned1.mpq"),             NULL,                                   SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
 };
 
+static const TEST_INFO Test_MiscTests[] = 
+{
+    // Multi-file archive with wrong prefix to see how StormLib deals with it
+    {_T("flat-file://streaming/model.MPQ.0"),       _T("flat-file://model.MPQ.0"),          MFLAG_WILL_FAIL},
+    
+    // An archive that has been invalidated by extending an old valid MPQ
+    {_T("MPQ_2013_vX_Battle.net.MPQ"),              NULL,                                   MFLAG_WILL_FAIL},
+
+    // Check for a read-only archive
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),         NULL,                                   MFLAG_OPEN_READ_ONLY},
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),         NULL,                                   0},
+
+    // Check the GetFileInfo operations
+    {_T("MPQ_2002_v1_StrongSignature.w3m"),         NULL,                                   MFLAG_GET_FILE_INFO},
+    {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),         NULL,                                   MFLAG_GET_FILE_INFO}
+};
+
 static const TEST_INFO Test_CompactArchive[] =
 {
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),   _T("StormLibTest_CraftedMpq1_v3.mpq"),  TRUE},
@@ -4183,13 +4162,14 @@ static const TEST_INFO Test_CompactArchive[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
+//#define TEST_COMMAND_LINE
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR
 #define TEST_SINGLE_MPQS
 #define TEST_PATCHED_MPQS
 #define TEST_VERIFY_SIGNATURE
+#define TEST_MISC_TESTS
 #define TEST_COMPACT_ARCHIVES
 
 int _tmain(int argc, TCHAR * argv[])
@@ -4295,6 +4275,21 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
+#ifdef TEST_MISC_TESTS          // Miscelanneous tests
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(Test_MiscTests); i++)
+        {
+            // Ignore the error code here; we want to see results of all opens
+            dwErrCode = TestOpenArchive_MiscTests(Test_MiscTests[i].szMpqName1,
+                                                  Test_MiscTests[i].szMpqName2,
+                                                  Test_MiscTests[i].dwFlags);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
+#endif
+
 #ifdef TEST_COMPACT_ARCHIVES    // Compact archives and verify them after
     if(dwErrCode == ERROR_SUCCESS)
     {
@@ -4315,26 +4310,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Open every MPQ that we have in the storage
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = FindFiles(ForEachFile_OpenArchive, NULL);
-
-    // Open the multi-file archive with wrong prefix to see how StormLib deals with it
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_WillFail(_T("flat-file://streaming/model.MPQ.0"));
-
-    // Test on an archive that has been invalidated by extending an old valid MPQ
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_Corrupt(_T("MPQ_2013_vX_Battle.net.MPQ"));
-
-    // Check the opening archive for read-only
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), true);
-
-    // Check the opening archive for read-only
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_ReadOnly(_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"), false);
-
-    // Check the SFileGetFileInfo function
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_GetFileInfo(_T("MPQ_2002_v1_StrongSignature.w3m"), _T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"));
 
     // Compact the archive
     if(dwErrCode == ERROR_SUCCESS)

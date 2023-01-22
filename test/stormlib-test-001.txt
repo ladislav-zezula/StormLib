@@ -94,6 +94,12 @@ SignatureTest (MPQ_1998_v1_StarDat.mpq) succeeded.
 SignatureTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
 SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
 SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+MiscTest (flat-file://streaming/model.MPQ.0) succeeded.
+MiscTest (MPQ_2013_vX_Battle.net.MPQ) succeeded.
+MiscTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+MiscTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+MiscTest (MPQ_2002_v1_StrongSignature.w3m) succeeded.
+MiscTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 CompactMpqTest (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
 CompactMpqTest: The file "(attributes)" is not present, but it should be
 CompactMpqTest: The file "(attributes)" is not present, but it should be
@@ -2290,9 +2296,12 @@ OpenEachMpqTest (hs-6141-6187-Win-final.MPQ) succeeded.
 OpenEachMpqTest (hs-6187-6284-Win-final.MPQ) succeeded.
 OpenEachMpqTest (hs-6284-6485-Win-final.MPQ) succeeded.
 OpenEachMpqTest (hs-6485-6898-Win-final.MPQ) succeeded.
+OpenEachMpqTest: Failed to open archive \Multimedia\MPQs\model.MPQ.0 (error code: 11)
+OpenEachMpqTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 OpenEachMpqTest (MPQ_1998_v1_StarDat.mpq) succeeded.
 OpenEachMpqTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
 OpenEachMpqTest (MPQ_1999_v1_WeakSigned2.mpq) succeeded.
+OpenEachMpqTest (MPQ_2002_v1_StrongSignature.w3m) succeeded.
 OpenEachMpqTest (MPQ_2009_v1_patch-complete.MPQ.part) succeeded.
 OpenEachMpqTest (MPQ_2009_v1_patch-created.MPQ.part) succeeded.
 OpenEachMpqTest (MPQ_2009_v1_patch-partial.MPQ.part) succeeded.
@@ -2302,6 +2311,8 @@ OpenEachMpqTest (MPQ_2013_v4_alternate-complete.MPQ) succeeded.
 OpenEachMpqTest (MPQ_2013_v4_alternate-created.MPQ) succeeded.
 OpenEachMpqTest (MPQ_2013_v4_alternate-incomplete.MPQ) succeeded.
 OpenEachMpqTest (MPQ_2013_v4_alternate-original.MPQ) succeeded.
+OpenEachMpqTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
+OpenEachMpqTest: Warning: no files in the archive
 OpenEachMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
 OpenEachMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
 OpenEachMpqTest (MPQ_2022_v1_v4.329.w3x) succeeded.
@@ -2326,11 +2337,6 @@ OpenEachMpqTest (StormLibTest_NonStdNames.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_ReadOnly.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_ReadWrite.mpq) succeeded.
 OpenEachMpqTest (File00000003.mpq) succeeded.
-FailMpqTest (flat-file://streaming/model.MPQ.0) succeeded.
-OpenCorruptMpqTest (MPQ_2013_vX_Battle.net.MPQ) succeeded.
-ReadOnlyTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
-ReadOnlyTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
-GetFileInfoTest (MPQ_2002_v1_StrongSignature.w3m+MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 FullMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
 FullMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
 ListFileTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
