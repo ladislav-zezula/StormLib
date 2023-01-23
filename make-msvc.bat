@@ -27,8 +27,8 @@ if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Enterprise\VC\Auxilia
 :: Build all libraries using Visual Studio 2008 and 2019
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x86 %LIB_NAME%_vs08.sln \vs2008
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x64 %LIB_NAME%_vs08.sln \vs2008
-if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x86 %LIB_NAME%_vs19.sln
-if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x64 %LIB_NAME%_vs19.sln
+if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x86 %LIB_NAME%_vs22.sln
+if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x64 %LIB_NAME%_vs22.sln
 goto:eof
 
 ::-----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ goto:eof
 ::
 ::   %1     Full path to the VCVARS.BAT file
 ::   %2     Target build platform (x86 or x64)
-::   %3     Plain name of the .sln solution file ("StormLib_vs19.sln")
+::   %3     Plain name of the .sln solution file ("StormLib_vs##.sln")
 ::   %4     Subdirectory for the target folder of the library ("\vs2008" or "")
 ::
 
@@ -73,7 +73,7 @@ goto:eof
 ::
 :: Parameters:
 ::
-::   %1     Plain name of the .sln solution file ("StormLib_vs19.sln")
+::   %1     Plain name of the .sln solution file ("StormLib_vs##.sln")
 ::   %2     Target build platform ("Win32" or "x64")
 ::   %3     Target directory for the library ("lib32", "lib32\vs2008", "lib64" or "lib64\vs2008")
 ::   %4     Subvariant of the library ("DebugAD", "ReleaseUS", ...)
