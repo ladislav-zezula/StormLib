@@ -73,6 +73,11 @@
 // Macro for building 64-bit file offset from two 32-bit
 #define MAKE_OFFSET64(hi, lo)       (((ULONGLONG)hi << 32) | (ULONGLONG)lo)
 
+// Macro for checking a valid, non-empty ASCIIZ string
+#ifndef IS_VALID_STRING
+#define IS_VALID_STRING(str)    (str && str[0])
+#endif
+
 //-----------------------------------------------------------------------------
 // MTYPE definition - specifies what kind of MPQ is the map type
 

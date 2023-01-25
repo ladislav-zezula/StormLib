@@ -22,6 +22,8 @@ TestMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 TestMpq (MPQ_1997_v1_patch_rt_SC1B.mpq) succeeded.
 TestMpq (MPQ_1997_v1_StarDat_SC1B.mpq) succeeded.
 TestMpq (MPQ_1997_v1_INSTALL_SC1B.EXE_) succeeded.
+TestMpq: Warning: CRC32 error on (signature)
+TestMpq: Warning: CRC32 error on (signature)
 TestMpq (MPQ_2016_v1_D2XP_IX86_1xx_114a.mpq) succeeded.
 TestMpq (MPQ_2018_v1_icon_error.w3m) succeeded.
 TestMpq (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
@@ -31,6 +33,9 @@ TestMpq (MPQ_2013_v4_patch-base-16357.MPQ) succeeded.
 TestMpq (MPQ_2011_v4_InvalidHetEntryCount.MPQ) succeeded.
 TestMpq (MPQ_2002_v1_BlockTableCut.MPQ) succeeded.
 TestMpq (MPQ_2010_v2_HasUserData.s2ma) succeeded.
+TestMpq: Warning: CRC32 error on (listfile)
+TestMpq: Warning: CRC32 error on (listfile)
+TestMpq: Warning: CRC32 error on File00000003.xxx
 TestMpq (MPQ_2014_v1_AttributesOneEntryLess.w3x) succeeded.
 TestMpq (MPQ_2020_v1_AHF04patch.mix) succeeded.
 TestMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
@@ -74,17 +79,17 @@ TestMpq (MPx_2013_v1_WarOfTheImmortals.sqp) succeeded.
 TestMpq (MPx_2022_v1_Music.mpk) succeeded.
 TestMpq (MPx_2022_v1_Scp.mpk) succeeded.
 TestMpq (MPx_2022_v1_UI.mpk) succeeded.
-PatchedMPQ (MPQ_1998_v1_StarCraft.mpq) succeeded.
-PatchedMPQ (MPQ_2012_v4_OldWorld.MPQ) succeeded.
-PatchedMPQ (MPQ_2013_v4_world.MPQ) succeeded.
-PatchedMPQ (MPQ_2013_v4_locale-enGB.MPQ) succeeded.
-PatchedMPQ (MPQ_2013_v4_Base1.SC2Data) succeeded.
-PatchedMPQ (MPQ_2013_v4_Base1.SC2Data) succeeded.
-PatchedMPQ (MPQ_2013_v4_Base3.SC2Maps) succeeded.
-PatchedMPQ (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.
-PatchedMPQ (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
-PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
-PatchedMPQ (MPQ_2014_v4_base-Win.MPQ) succeeded.
+TestMpq (MPQ_1998_v1_StarCraft.mpq) succeeded.
+TestMpq (MPQ_2012_v4_OldWorld.MPQ) succeeded.
+TestMpq (MPQ_2013_v4_world.MPQ) succeeded.
+TestMpq (MPQ_2013_v4_locale-enGB.MPQ) succeeded.
+TestMpq (MPQ_2013_v4_Base1.SC2Data) succeeded.
+TestMpq (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.
+TestMpq (MPQ_2013_v4_Base1.SC2Data) succeeded.
+TestMpq (MPQ_2013_v4_Base3.SC2Maps) succeeded.
+TestMpq (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
+TestMpq (MPQ_2014_v4_base-Win.MPQ) succeeded.
+TestMpq (MPQ_2014_v4_base-Win.MPQ) succeeded.
 SignatureTest (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
 SignatureTest (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
 SignatureTest (MPQ_1999_v1_WeakSignature.exe) succeeded.
@@ -105,6 +110,10 @@ CompactMpqTest: The file "(attributes)" is not present, but it should be
 CompactMpqTest: The file "(attributes)" is not present, but it should be
 CompactMpqTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 CompactMpqTest (MPQ_2013_v4_expansion1.MPQ) succeeded.
+AddFileToMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
+AddFileToMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
+AddFileToMpqTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+AddFileToMpqTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
 VerifyFileHash succeeded.
@@ -2336,11 +2345,8 @@ OpenEachMpqTest (StormLibTest_NoListFile.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_NonStdNames.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_ReadOnly.mpq) succeeded.
 OpenEachMpqTest (StormLibTest_ReadWrite.mpq) succeeded.
+OpenEachMpqTest (StormLibTest_Reopened.mpq) succeeded.
 OpenEachMpqTest (File00000003.mpq) succeeded.
-FullMpqTest (MPQ_2014_v1_out1.w3x) succeeded.
-FullMpqTest (MPQ_2014_v1_out2.w3x) succeeded.
-ListFileTest (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
-ListFileTest (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
 CreateGapsTest (StormLibTest_GapsTest.mpq) succeeded.
@@ -2353,9 +2359,11 @@ CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
 IncMaxFileCount (StormLibTest_IncMaxFileCount.mpq) succeeded.
 MpqUnicodeName succeeded.
 FileFlagTest (StormLibTest_FileFlagTest.mpq) succeeded.
-CompressionsTest (StormLibTest_AddWaveMonoTest.mpq) succeeded.
+CompressionsTest: Warning: CRC32 error on WaveFile_01.wav
+CompressionsTest: Warning: CRC32 error on WaveFile_02.wav
 CompressionsTest (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.
-CompressionsTest (StormLibTest_AddWaveStereoTest.mpq) succeeded.
+CompressionsTest: Warning: CRC32 error on WaveFile_01.wav
+CompressionsTest: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 BigMpqTest (StormLibTest_BigArchive_v4.mpq) succeeded.
 ModifyTest (MPQ_2014_v4_Base.StormReplay) succeeded.
