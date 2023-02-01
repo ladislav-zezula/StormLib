@@ -213,7 +213,7 @@ static bool DoMPQSearch_FileEntry(
     TFileEntry * pPatchEntry;
     HANDLE hFile = NULL;
     const char * szFileName;
-    size_t nPrefixLength = (ha->pPatchPrefix != NULL) ? ha->pPatchPrefix->nLength : 0;
+    size_t nGlobalPrefixLength = (ha->pPatchPrefix != NULL) ? ha->pPatchPrefix->nLength : 0;
     DWORD dwBlockIndex;
     char szNameBuff[MAX_PATH];
 
@@ -227,6 +227,8 @@ static bool DoMPQSearch_FileEntry(
         // Now we have to check if this file was not enumerated before
         if(!FileWasFoundBefore(ha, hs, pFileEntry))
         {
+            size_t nPrefixLength = nGlobalPrefixLength;
+
 //          if(pFileEntry != NULL && !_stricmp(pFileEntry->szFileName, "TriggerLibs\\NativeLib.galaxy"))
 //              DebugBreak();
 
@@ -246,8 +248,9 @@ static bool DoMPQSearch_FileEntry(
                 if(SFileOpenFileEx((HANDLE)hs->ha, szNameBuff, SFILE_OPEN_BASE_FILE, &hFile))
                 {
                     SFileGetFileName(hFile, szNameBuff);
-                    szFileName = szNameBuff;
                     SFileCloseFile(hFile);
+                    szFileName = szNameBuff;
+                    nPrefixLength = 0;
                 }
             }
 

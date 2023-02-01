@@ -801,11 +801,11 @@ DWORD SSignFileCreate(TMPQArchive * ha)
         // Create the (signature) file file in the MPQ
         // Note that the file must not be compressed or encrypted
         dwErrCode = SFileAddFile_Init(ha, SIGNATURE_NAME,
-                                       0,
-                                       sizeof(EmptySignature),
-                                       LANG_NEUTRAL,
-                                       ha->dwFileFlags3 | MPQ_FILE_REPLACEEXISTING,
-                                      &hf);
+                                      0,
+                                      sizeof(EmptySignature),
+                                      LANG_NEUTRAL,
+                                      ha->dwFileFlags3 | MPQ_FILE_REPLACEEXISTING,
+                                     &hf);
 
         // Write the empty signature file to the archive
         if(dwErrCode == ERROR_SUCCESS)
@@ -813,6 +813,13 @@ DWORD SSignFileCreate(TMPQArchive * ha)
             // Write the empty zeroed file to the MPQ
             memset(EmptySignature, 0, sizeof(EmptySignature));
             dwErrCode = SFileAddFile_Write(hf, EmptySignature, (DWORD)sizeof(EmptySignature), 0);
+        }
+
+        // Finalize the signature
+        if(dwErrCode == ERROR_SUCCESS)
+        {
+            // Clear the CRC as it will not be valid
+            hf->pFileEntry->dwCrc32 = hf->dwCrc32 = 0;
             SFileAddFile_Finish(hf);
 
             // Clear the invalid mark

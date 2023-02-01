@@ -573,7 +573,7 @@ static DWORD SFileAddInternalListFile(
     if(ha->pHashTable != NULL)
     {
         // If the archive is a malformed map, ignore too large listfiles
-        if(ha->dwFlags & MPQ_FLAG_MALFORMED)
+        if(STORMLIB_TEST_FLAGS(ha->dwFlags, MPQ_FLAG_MALFORMED | MPQ_FLAG_PATCH, MPQ_FLAG_MALFORMED))
             dwMaxSize = 0x40000;
 
         pFirstHash = pHash = GetFirstHashEntry(ha, LISTFILE_NAME);
