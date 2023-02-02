@@ -108,6 +108,7 @@ void TestStrCopy(wchar_t * szTarget, size_t cchTarget, const char * szSource, si
     }
 }
 
+#ifdef STORMLIB_WINDOWS
 wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
 {
     static const wchar_t * szStringFormat = _T("%s");
@@ -136,6 +137,7 @@ wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
     *szBuffer++ = *szFormat++;
     return szBuffer;
 }
+#endif  // STORMLIB_WINDOWS
 
 char * CopyFormatCharacter(char * szBuffer, const char *& szFormat)
 {
