@@ -36,6 +36,8 @@
 //------------------------------------------------------------------------------
 // Local structures
 
+#define ID_XHSC 0x58485343      // 'XHSC'
+
 // Artificial error code for situations where we don't know the result
 #define ERROR_UNDETERMINED_RESULT 0xC000FFFF
 
@@ -230,8 +232,8 @@ static const wchar_t szUnicodeName6[] = {   // Arabic
 
 static SFILE_MARKERS MpqMarkers[] =
 {
-    {sizeof(SFILE_MARKERS), ID_MPQ, "(hash table)", "(block table)"},
-    {sizeof(SFILE_MARKERS), 'XHSC', "(cash table)", "(clock table)"}
+    {sizeof(SFILE_MARKERS), ID_MPQ,  "(hash table)", "(block table)"},
+    {sizeof(SFILE_MARKERS), ID_XHSC, "(cash table)", "(clock table)"}
 };
 
 //-----------------------------------------------------------------------------
