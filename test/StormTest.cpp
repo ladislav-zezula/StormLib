@@ -4209,7 +4209,7 @@ int _tmain(int argc, TCHAR * argv[])
                 break;
         }
     }
-#endif  TEST_STREAM_OPERATIONS
+#endif  // TEST_STREAM_OPERATIONS
 
 #ifdef TEST_MASTER_MIRROR       // Test master-mirror reading operations
     if(dwErrCode == ERROR_SUCCESS)
