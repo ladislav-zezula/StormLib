@@ -121,4 +121,3 @@
 #include "src\libtommath\bn_s_mp_sqr.c"
 #include "src\libtommath\bn_s_mp_sub.c"
 #include "src\libtommath\bncore.c"
-
