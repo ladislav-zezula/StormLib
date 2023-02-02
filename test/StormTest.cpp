@@ -2242,7 +2242,7 @@ static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, DWORD bIgn
         if(SFileHasFile(hMpq, szFileName))
         {
             dwErrCode = LoadMpqFile(*pLogger, hMpq, szFileName, 0, dwSearchFlags, &pFileData);
-            if(dwErrCode != ERROR_SUCCESS && bIgnoreOpenErrors == FALSE)
+            if(dwErrCode != ERROR_SUCCESS && bIgnoreOpenErrors == 0)
             {
                 pLogger->PrintError("Error loading the file %s", szFileName);
                 break;
@@ -2760,7 +2760,7 @@ static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOrigin
     return dwErrCode;
 }
 
-static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, BOOL bAddUserData)
+static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, DWORD bAddUserData)
 {
     TLogHelper Logger("CompactMpqTest", szPlainName);
     ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
