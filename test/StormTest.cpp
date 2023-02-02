@@ -36,6 +36,8 @@
 //------------------------------------------------------------------------------
 // Local structures
 
+#define ID_XHSC 0x58485343      // 'XHSC'
+
 // Artificial error code for situations where we don't know the result
 #define ERROR_UNDETERMINED_RESULT 0xC000FFFF
 
@@ -230,8 +232,8 @@ static const wchar_t szUnicodeName6[] = {   // Arabic
 
 static SFILE_MARKERS MpqMarkers[] =
 {
-    {sizeof(SFILE_MARKERS), ID_MPQ, "(hash table)", "(block table)"},
-    {sizeof(SFILE_MARKERS), 'XHSC', "(cash table)", "(clock table)"}
+    {sizeof(SFILE_MARKERS), ID_MPQ,  "(hash table)", "(block table)"},
+    {sizeof(SFILE_MARKERS), ID_XHSC, "(cash table)", "(clock table)"}
 };
 
 //-----------------------------------------------------------------------------
@@ -2242,7 +2244,7 @@ static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, DWORD bIgn
         if(SFileHasFile(hMpq, szFileName))
         {
             dwErrCode = LoadMpqFile(*pLogger, hMpq, szFileName, 0, dwSearchFlags, &pFileData);
-            if(dwErrCode != ERROR_SUCCESS && bIgnoreOpenErrors == FALSE)
+            if(dwErrCode != ERROR_SUCCESS && bIgnoreOpenErrors == 0)
             {
                 pLogger->PrintError("Error loading the file %s", szFileName);
                 break;
@@ -2760,7 +2762,7 @@ static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOrigin
     return dwErrCode;
 }
 
-static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, BOOL bAddUserData)
+static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, DWORD bAddUserData)
 {
     TLogHelper Logger("CompactMpqTest", szPlainName);
     ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
@@ -4209,7 +4211,7 @@ int _tmain(int argc, TCHAR * argv[])
                 break;
         }
     }
-#endif  TEST_STREAM_OPERATIONS
+#endif  // TEST_STREAM_OPERATIONS
 
 #ifdef TEST_MASTER_MIRROR       // Test master-mirror reading operations
     if(dwErrCode == ERROR_SUCCESS)
