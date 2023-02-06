@@ -92,7 +92,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -169,7 +169,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -245,7 +245,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -322,7 +322,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.bat $(ProjectName) $(PlatformName) $(ConfigurationName)"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>
