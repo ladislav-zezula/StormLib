@@ -461,7 +461,7 @@ static void Compress_LZMA(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuf
     *pbOutBuffer++ = 0;
 
     // Copy the encoded properties to the output buffer
-    memcpy(pvOutBuffer, encodedProps, encodedPropsSize);
+    memcpy(pbOutBuffer, encodedProps, encodedPropsSize);
     pbOutBuffer += encodedPropsSize;
 
     // Copy the size of the data

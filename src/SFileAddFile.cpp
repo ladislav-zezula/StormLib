@@ -896,6 +896,7 @@ bool WINAPI SFileAddFileEx(
     ULONGLONG FileSize = 0;
     ULONGLONG FileTime = 0;
     TFileStream * pStream = NULL;
+    TMPQArchive * ha;
     HANDLE hMpqFile = NULL;
     LPBYTE pbFileData = NULL;
     DWORD dwBytesRemaining = 0;
@@ -907,7 +908,7 @@ bool WINAPI SFileAddFileEx(
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Check parameters
-    if(hMpq == NULL || szFileName == NULL || *szFileName == 0)
+    if(hMpq == NULL || szFileName == NULL || *szFileName == 0 || (ha = IsValidMpqHandle(hMpq)) == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return false;
@@ -931,6 +932,13 @@ bool WINAPI SFileAddFileEx(
         pbFileData = STORM_ALLOC(BYTE, dwSectorSize);
         if(pbFileData == NULL)
             dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    // LZMA compression can only be present in MPQ version 2 or higher
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        if(dwCompression == MPQ_COMPRESSION_LZMA && ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+            dwErrCode = ERROR_INVALID_PARAMETER;
     }
 
     // Deal with various combination of compressions
