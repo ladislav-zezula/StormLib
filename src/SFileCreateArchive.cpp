@@ -27,6 +27,13 @@ static const DWORD MpqHeaderSizes[] =
 //-----------------------------------------------------------------------------
 // Local functions
 
+static DWORD GetValidFileFlags(DWORD dwMpqVersion)
+{
+    if(dwMpqVersion > MPQ_FORMAT_VERSION_1)
+        return MPQ_FILE_VALID_FLAGS;
+    return MPQ_FILE_VALID_FLAGS_W3X;
+}
+
 static USHORT GetSectorSizeShift(DWORD dwSectorSize)
 {
     USHORT wSectorSizeShift = 0;
@@ -211,7 +218,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         ha->dwMaxFileCount   = dwHashTableSize;
         ha->dwFileTableSize  = 0;
         ha->dwReservedFiles  = dwReservedFiles;
-        ha->dwValidFileFlags = (pCreateInfo->dwMpqVersion > 1) ? MPQ_FILE_VALID_FLAGS : MPQ_FILE_VALID_FLAGS_W3X;
+        ha->dwValidFileFlags = GetValidFileFlags(pCreateInfo->dwMpqVersion);
         ha->dwFileFlags1     = pCreateInfo->dwFileFlags1;
         ha->dwFileFlags2     = pCreateInfo->dwFileFlags2;
         ha->dwFileFlags3     = pCreateInfo->dwFileFlags3 ? MPQ_FILE_EXISTS : 0;
