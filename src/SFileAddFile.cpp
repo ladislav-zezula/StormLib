@@ -1043,6 +1043,127 @@ bool WINAPI SFileAddFile(HANDLE hMpq, const TCHAR * szFileName, const char * szA
                           DefaultDataCompression);
 }
 
+bool WINAPI SFileAddFileFromBufferEx(
+    HANDLE hMpq,
+    const char * szArchivedName,
+    LPBYTE fileData,
+    DWORD dwSize,
+    DWORD dwFlags,
+    DWORD dwCompression,            // Compression of the first sector
+    DWORD dwCompressionNext)        // Compression of next sectors
+{
+    HANDLE hMpqFile = NULL;
+    DWORD dwBytesRemaining = (DWORD)dwSize;
+    DWORD dwBytesToRead;
+    DWORD dwSectorSize = 0x1000;
+    DWORD dwChannels = 0;
+    bool bIsAdpcmCompression = false;
+    bool bIsFirstSector = true;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Check parameters
+    if(hMpq == NULL || fileData == NULL || dwSize == 0 )
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    // Deal with various combination of compressions
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // When the compression for next blocks is set to default,
+        // we will copy the compression for the first sector
+        if(dwCompressionNext == MPQ_COMPRESSION_NEXT_SAME)
+            dwCompressionNext = dwCompression;
+
+        // If the caller wants ADPCM compression, we make sure
+        // that the first sector is not compressed with lossy compression
+        if(dwCompressionNext & (MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_ADPCM_STEREO))
+        {
+            // The compression of the first file sector must not be ADPCM
+            // in order not to corrupt the headers
+            if(dwCompression & (MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_ADPCM_STEREO))
+                dwCompression = MPQ_COMPRESSION_PKWARE;
+
+            // Remove both flag mono and stereo flags.
+            // They will be re-added according to WAVE type
+            dwCompressionNext &= ~(MPQ_COMPRESSION_ADPCM_MONO | MPQ_COMPRESSION_ADPCM_STEREO);
+            bIsAdpcmCompression = true;
+        }
+
+        // Initiate adding file to the MPQ
+        if(!SFileCreateFile(hMpq, szArchivedName, NULL, (DWORD)dwSize, LANG_NEUTRAL, dwFlags, &hMpqFile))
+            dwErrCode = GetLastError();
+    }
+
+    // Write the file data to the MPQ
+    while(dwErrCode == ERROR_SUCCESS && dwBytesRemaining != 0)
+    {
+        // Get the number of bytes remaining
+        dwBytesToRead = dwBytesRemaining;
+        if(dwBytesToRead > dwSectorSize)
+            dwBytesToRead = dwSectorSize;
+
+        // Get pointer to data in fileData buffer
+        DWORD dwordPosition = dwSize - dwBytesRemaining;
+        LPBYTE pbFileData = &fileData[dwordPosition];
+
+        // If the file being added is a WAVE file, we check number of channels
+        if(bIsFirstSector && bIsAdpcmCompression)
+        {
+            // The file must really be a WAVE file with at least 16 bits per sample,
+            // otherwise the ADPCM compression will corrupt it
+            if(IsWaveFile_16BitsPerAdpcmSample(pbFileData, dwBytesToRead, &dwChannels))
+            {
+                // Setup the compression of next sectors according to number of channels
+                dwCompressionNext |= (dwChannels == 1) ? MPQ_COMPRESSION_ADPCM_MONO : MPQ_COMPRESSION_ADPCM_STEREO;
+            }
+            else
+            {
+                // Setup the compression of next sectors to a lossless compression
+                dwCompressionNext = (dwCompression & MPQ_LOSSY_COMPRESSION_MASK) ? MPQ_COMPRESSION_PKWARE : dwCompression;
+            }
+
+            bIsFirstSector = false;
+        }
+
+        // Add the file sectors to the MPQ
+        if(!SFileWriteFile(hMpqFile, pbFileData, dwBytesToRead, dwCompression))
+        {
+            dwErrCode = GetLastError();
+            break;
+        }
+
+        // Set the next data compression
+        dwBytesRemaining -= dwBytesToRead;
+        dwCompression = dwCompressionNext;
+    }
+
+    // Finish the file writing
+    if(hMpqFile != NULL)
+    {
+        if(!SFileFinishFile(hMpqFile))
+            dwErrCode = GetLastError();
+    }
+
+    // Cleanup and exit
+    if(dwErrCode != ERROR_SUCCESS)
+        SetLastError(dwErrCode);
+    return (dwErrCode == ERROR_SUCCESS);
+}
+
+// Adds a data file into the archive
+bool WINAPI SFileAddFileFromBuffer(HANDLE hMpq, const char * szArchivedName, LPBYTE fileData, DWORD dwSize, DWORD dwFlags)
+{
+    return SFileAddFileFromBufferEx(hMpq,
+                                    szArchivedName,
+                                    fileData,
+                                    dwSize,
+                                    dwFlags,
+                                    DefaultDataCompression,
+                                    DefaultDataCompression);
+}
+
 // Adds a WAVE file into the archive
 bool WINAPI SFileAddWave(HANDLE hMpq, const TCHAR * szFileName, const char * szArchivedName, DWORD dwFlags, DWORD dwQuality)
 {
@@ -1085,6 +1206,51 @@ bool WINAPI SFileAddWave(HANDLE hMpq, const TCHAR * szFileName, const char * szA
                           dwFlags,
                           MPQ_COMPRESSION_PKWARE,   // First sector should be compressed as data
                           dwCompression);           // Next sectors should be compressed as WAVE
+}
+
+// Adds a WAVE file into the archive from a buffer
+bool WINAPI SFileAddWaveFromBuffer(HANDLE hMpq, const char * szArchivedName, LPBYTE fileData, DWORD dwSize, DWORD dwFlags, DWORD dwQuality)
+{
+    DWORD dwCompression = 0;
+
+    //
+    // Note to wave compression level:
+    // The following conversion table applied:
+    // High quality:   WaveCompressionLevel = -1
+    // Medium quality: WaveCompressionLevel = 4
+    // Low quality:    WaveCompressionLevel = 2
+    //
+    // Starcraft files are packed as Mono (0x41) on medium quality.
+    // Because this compression is not used anymore, our compression functions
+    // will default to WaveCompressionLevel = 4 when using ADPCM compression
+    //
+
+    // Convert quality to data compression
+    switch(dwQuality)
+    {
+        case MPQ_WAVE_QUALITY_HIGH:
+//          WaveCompressionLevel = -1;
+            dwCompression = MPQ_COMPRESSION_PKWARE;
+            break;
+
+        case MPQ_WAVE_QUALITY_MEDIUM:
+//          WaveCompressionLevel = 4;
+            dwCompression = MPQ_COMPRESSION_ADPCM_STEREO | MPQ_COMPRESSION_HUFFMANN;
+            break;
+
+        case MPQ_WAVE_QUALITY_LOW:
+//          WaveCompressionLevel = 2;
+            dwCompression = MPQ_COMPRESSION_ADPCM_STEREO | MPQ_COMPRESSION_HUFFMANN;
+            break;
+    }
+
+    return SFileAddFileFromBufferEx(hMpq,
+                                    szArchivedName,
+                                    fileData,
+                                    dwSize,
+                                    dwFlags,
+                                    MPQ_COMPRESSION_PKWARE,   // First sector should be compressed as data
+                                    dwCompression);           // Next sectors should be compressed as WAVE
 }
 
 //-----------------------------------------------------------------------------

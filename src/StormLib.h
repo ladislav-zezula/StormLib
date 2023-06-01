@@ -1025,10 +1025,12 @@ bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 // so you can use this API to combining more listfiles.
 // Note that this function is internally called by SFileFindFirstFile
 DWORD  WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile);
+DWORD  WINAPI SFileAddListFileEntries(HANDLE hMpq, const char ** listFileEntries, DWORD dwEntryCount);
 
 // Archive compacting
 bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvUserData);
 bool   WINAPI SFileCompactArchive(HANDLE hMpq, const TCHAR * szListFile, bool bReserved);
+bool   WINAPI SFileCompactWithList(HANDLE hMpq, const char ** listFileEntries, DWORD dwEntryCount);
 
 // Changing the maximum file count
 DWORD  WINAPI SFileGetMaxFileCount(HANDLE hMpq);
@@ -1111,6 +1113,12 @@ bool   WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale);
 bool   WINAPI SFileSetDataCompression(DWORD DataCompression);
 
 bool   WINAPI SFileSetAddFileCallback(HANDLE hMpq, SFILE_ADDFILE_CALLBACK AddFileCB, void * pvUserData);
+
+//-----------------------------------------------------------------------------
+// Support for adding files to the MPQ from memory
+bool   WINAPI SFileAddFileFromBufferEx(HANDLE hMpq, const char * szArchivedName, LPBYTE fileData, DWORD dwSize, DWORD dwFlags, DWORD dwCompression, DWORD dwCompressionNext);
+bool   WINAPI SFileAddFileFromBuffer(HANDLE hMpq, const char * szArchivedName, LPBYTE fileData, DWORD dwSize, DWORD dwFlags);
+bool   WINAPI SFileAddWaveFromBuffer(HANDLE hMpq, const char * szArchivedName, LPBYTE fileData, DWORD dwSize, DWORD dwFlags, DWORD dwQuality); 
 
 //-----------------------------------------------------------------------------
 // Compression and decompression

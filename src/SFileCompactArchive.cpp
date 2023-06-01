@@ -93,6 +93,53 @@ static DWORD CheckIfAllKeysKnown(TMPQArchive * ha, const TCHAR * szListFile, LPD
     return dwErrCode;
 }
 
+static DWORD CheckIfAllKeysKnown(TMPQArchive * ha, const char ** listFileEntries, DWORD dwEntryCount, LPDWORD pFileKeys)
+{
+    TFileEntry * pFileTableEnd = ha->pFileTable + ha->dwFileTableSize;
+    TFileEntry * pFileEntry;
+    DWORD dwBlockIndex = 0;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Add the listfile to the MPQ
+    if(listFileEntries != NULL && dwEntryCount > 0)
+    {
+        // Notify the user
+        if(ha->pfnCompactCB != NULL)
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_CHECKING_FILES, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+
+        dwErrCode = SFileAddListFileEntries((HANDLE)ha, listFileEntries, dwEntryCount);
+    }
+
+    // Verify the file table
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++, dwBlockIndex++)
+        {
+            // If the file exists and it's encrypted
+            if(pFileEntry->dwFlags & MPQ_FILE_EXISTS)
+            {
+                // If we know the name, we decrypt the file key from the file name
+                if(pFileEntry->szFileName != NULL && !IsPseudoFileName(pFileEntry->szFileName, NULL))
+                {
+                    // Give the key to the caller
+                    pFileKeys[dwBlockIndex] = DecryptFileKey(pFileEntry->szFileName,
+                                                             pFileEntry->ByteOffset,
+                                                             pFileEntry->dwFileSize,
+                                                             pFileEntry->dwFlags);
+                    continue;
+                }
+
+                // We don't know the encryption key of this file,
+                // thus we cannot compact the file
+                dwErrCode = ERROR_UNKNOWN_FILE_NAMES;
+                break;
+            }
+        }
+    }
+
+    return dwErrCode;
+}
+
 static DWORD CopyNonMpqData(
     TMPQArchive * ha,
     TFileStream * pSrcStream,
@@ -562,6 +609,136 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const TCHAR * szListFile, bool /* b
         FileStream_GetSize(ha->pStream, &(ha->CompactTotalBytes));
         ha->CompactBytesProcessed = 0;
         dwErrCode = CheckIfAllKeysKnown(ha, szListFile, pFileKeys);
+    }
+
+    // Get the temporary file name and create it
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Create temporary file name. Prevent buffer overflow
+        StringCopy(szTempFile, _countof(szTempFile), FileStream_GetFileName(ha->pStream));
+        StringCat(szTempFile, _countof(szTempFile), _T(".tmp"));
+
+        // Create temporary file
+        pTempStream = FileStream_CreateFile(szTempFile, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE);
+        if(pTempStream == NULL)
+            dwErrCode = GetLastError();
+    }
+
+    // Write the data before MPQ user data (if any)
+    if(dwErrCode == ERROR_SUCCESS && ha->UserDataPos != 0)
+    {
+        // Inform the application about the progress
+        if(ha->pfnCompactCB != NULL)
+            ha->pfnCompactCB(ha->pvCompactUserData, CCB_COPYING_NON_MPQ_DATA, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+
+        ByteOffset = 0;
+        ByteCount = ha->UserDataPos;
+        dwErrCode = CopyNonMpqData(ha, ha->pStream, pTempStream, ByteOffset, ByteCount);
+    }
+
+    // Write the MPQ user data (if any)
+    if(dwErrCode == ERROR_SUCCESS && ha->MpqPos > ha->UserDataPos)
+    {
+        // At this point, we assume that the user data size is equal
+        // to pUserData->dwHeaderOffs.
+        // If this assumption doesn't work, then we have an unknown version of MPQ
+        ByteOffset = ha->UserDataPos;
+        ByteCount = ha->MpqPos - ha->UserDataPos;
+
+        assert(ha->pUserData != NULL);
+        assert(ha->pUserData->dwHeaderOffs == ByteCount);
+        dwErrCode = CopyNonMpqData(ha, ha->pStream, pTempStream, ByteOffset, ByteCount);
+    }
+
+    // Write the MPQ header
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        TMPQHeader SaveMpqHeader;
+
+        // Write the MPQ header to the file
+        memcpy(&SaveMpqHeader, ha->pHeader, ha->pHeader->dwHeaderSize);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_1);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_2);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_3);
+        BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_4);
+        if(!FileStream_Write(pTempStream, NULL, &SaveMpqHeader, ha->pHeader->dwHeaderSize))
+            dwErrCode = GetLastError();
+
+        // Update the progress
+        ha->CompactBytesProcessed += ha->pHeader->dwHeaderSize;
+    }
+
+    // Now copy all files
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = CopyMpqFiles(ha, pFileKeys, pTempStream);
+
+    // If succeeded, switch the streams
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        ha->dwFlags |= MPQ_FLAG_CHANGED;
+        if(FileStream_Replace(ha->pStream, pTempStream))
+            pTempStream = NULL;
+        else
+            dwErrCode = ERROR_CAN_NOT_COMPLETE;
+    }
+
+    // Final user notification
+    if(dwErrCode == ERROR_SUCCESS && ha->pfnCompactCB != NULL)
+    {
+        ha->CompactBytesProcessed += (ha->pHeader->dwHashTableSize * sizeof(TMPQHash));
+        ha->CompactBytesProcessed += (ha->dwFileTableSize * sizeof(TMPQBlock));
+        ha->pfnCompactCB(ha->pvCompactUserData, CCB_CLOSING_ARCHIVE, ha->CompactBytesProcessed, ha->CompactTotalBytes);
+    }
+
+    // Cleanup and return
+    if(pTempStream != NULL)
+        FileStream_Close(pTempStream);
+    if(pFileKeys != NULL)
+        STORM_FREE(pFileKeys);
+    if(dwErrCode != ERROR_SUCCESS)
+        SetLastError(dwErrCode);
+    return (dwErrCode == ERROR_SUCCESS);
+}
+
+bool WINAPI SFileCompactWithList(HANDLE hMpq, const char ** listFileEntries, DWORD dwEntryCount)
+{
+    TFileStream * pTempStream = NULL;
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
+    ULONGLONG ByteOffset;
+    ULONGLONG ByteCount;
+    LPDWORD pFileKeys = NULL;
+    TCHAR szTempFile[MAX_PATH+1] = _T("");
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Test the valid parameters
+    if(!IsValidMpqHandle(hMpq))
+        dwErrCode = ERROR_INVALID_HANDLE;
+    if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
+        dwErrCode = ERROR_ACCESS_DENIED;
+
+    // If the MPQ is changed at this moment, we have to flush the archive
+    if(dwErrCode == ERROR_SUCCESS && (ha->dwFlags & MPQ_FLAG_CHANGED))
+    {
+        SFileFlushArchive(hMpq);
+    }
+
+    // Create the table with file keys
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        if((pFileKeys = STORM_ALLOC(DWORD, ha->dwFileTableSize)) != NULL)
+            memset(pFileKeys, 0, sizeof(DWORD) * ha->dwFileTableSize);
+        else
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    // First of all, we have to check of we are able to decrypt all files.
+    // If not, sorry, but the archive cannot be compacted.
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Initialize the progress variables for compact callback
+        FileStream_GetSize(ha->pStream, &(ha->CompactTotalBytes));
+        ha->CompactBytesProcessed = 0;
+        dwErrCode = CheckIfAllKeysKnown(ha, listFileEntries, dwEntryCount, pFileKeys);
     }
 
     // Get the temporary file name and create it
