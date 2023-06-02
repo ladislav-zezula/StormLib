@@ -558,7 +558,7 @@ static DWORD SFileAddArbitraryListFile(
     return (pCache != NULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
-static int SFileAddArbitraryListFile(
+static DWORD SFileAddArbitraryListFile(
     TMPQArchive * ha,
     const char ** listFileEntries,
     DWORD dwEntryCount)
@@ -566,11 +566,13 @@ static int SFileAddArbitraryListFile(
     if(listFileEntries != NULL && dwEntryCount > 0)
     {
         // Get the next line
-        for (DWORD dwListFileNum=0; dwListFileNum<dwEntryCount; dwListFileNum++)
+        for(DWORD dwListFileNum = 0; dwListFileNum < dwEntryCount; dwListFileNum++)
         {
-            const char* listFileEntry = listFileEntries[dwListFileNum];
-            if ( listFileEntry != NULL )
+            const char * listFileEntry = listFileEntries[dwListFileNum];
+            if(listFileEntry != NULL)
+            {
                 SListFileCreateNodeForAllLocales(ha, listFileEntry);
+            }
         }
     }
 
