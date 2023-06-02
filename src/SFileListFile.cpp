@@ -558,6 +558,25 @@ static DWORD SFileAddArbitraryListFile(
     return (pCache != NULL) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
 }
 
+static int SFileAddArbitraryListFile(
+    TMPQArchive * ha,
+    const char ** listFileEntries,
+    DWORD dwEntryCount)
+{
+    if(listFileEntries != NULL && dwEntryCount > 0)
+    {
+        // Get the next line
+        for (DWORD dwListFileNum=0; dwListFileNum<dwEntryCount; dwListFileNum++)
+        {
+            const char* listFileEntry = listFileEntries[dwListFileNum];
+            if ( listFileEntry != NULL )
+                SListFileCreateNodeForAllLocales(ha, listFileEntry);
+        }
+    }
+
+    return (listFileEntries != NULL && dwEntryCount > 0) ? ERROR_SUCCESS : ERROR_INVALID_PARAMETER;
+}
+
 static DWORD SFileAddInternalListFile(
     TMPQArchive * ha,
     HANDLE hMpq)
@@ -659,6 +678,32 @@ DWORD WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile)
         ha = ha->haPatch;
     }
 
+    return dwErrCode;
+}
+
+DWORD WINAPI SFileAddListFileEntries(HANDLE hMpq, const char ** listFileEntries, DWORD dwEntryCount)
+{
+    TMPQArchive * ha = (TMPQArchive *)hMpq;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Add the listfile for each MPQ in the patch chain
+    while(ha != NULL)
+    {
+        if(listFileEntries != NULL && dwEntryCount > 0)
+            dwErrCode = SFileAddArbitraryListFile(ha, listFileEntries, dwEntryCount);
+        else
+            dwErrCode = SFileAddInternalListFile(ha, hMpq);
+
+        // Also, add three special files to the listfile:
+        // (listfile) itself, (attributes) and (signature)
+        SListFileCreateNodeForAllLocales(ha, LISTFILE_NAME);
+        SListFileCreateNodeForAllLocales(ha, SIGNATURE_NAME);
+        SListFileCreateNodeForAllLocales(ha, ATTRIBUTES_NAME);
+
+        // Move to the next archive in the chain
+        ha = ha->haPatch;
+    }
+    
     return dwErrCode;
 }
 

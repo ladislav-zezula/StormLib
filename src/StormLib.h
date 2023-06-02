@@ -1025,6 +1025,7 @@ bool   WINAPI SFileCloseArchive(HANDLE hMpq);
 // so you can use this API to combining more listfiles.
 // Note that this function is internally called by SFileFindFirstFile
 DWORD  WINAPI SFileAddListFile(HANDLE hMpq, const TCHAR * szListFile);
+DWORD  WINAPI SFileAddListFileEntries(HANDLE hMpq, const char ** listFileEntries, DWORD dwEntryCount);
 
 // Archive compacting
 bool   WINAPI SFileSetCompactCallback(HANDLE hMpq, SFILE_COMPACT_CALLBACK CompactCB, void * pvUserData);
