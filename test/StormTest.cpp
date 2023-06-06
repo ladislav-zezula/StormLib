@@ -4055,6 +4055,9 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),           NULL, "10e4dcdbe95b7ad731c563ec6b71bc16",    82},               // Encrypted archive from Starcraft II installer
     {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),NULL, "d41d8cd98f00b204e9800998ecf8427e", 14263},               // Partial MPQ with compressed hash table
     {_T("blk4-file://streaming/model.MPQ.0"),                   NULL, "e06b00efb2fc7e7469dd8b3b859ae15d", 39914},               // Archive that is merged with multiple files
+    {_T("MPQ_2023_v2_MemoryCorruption.SC2Replay"),              NULL, "4cf5021aa272298e64712a378a50df44",    10},               // MPQ archive v 2.0, archive size is wrong
+    {_T("MPQ_2023_v1_StarcraftMap.scm"),                        NULL, "7830c51700697dd3c175f086a3157b29",     4},               // StarCraft map from StarCraft: Brood War 1.16
+    {_T("MPQ_2023_v1_BroodWarMap.scx"),                         NULL, "dd3afa3c2f5e562ce3ca91c0c605a71f",     3},               // Brood War map from StarCraft: Brood War 1.16
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4165,9 +4168,9 @@ static const TEST_INFO Test_Signature[] =
 // Main
 
 //#define TEST_COMMAND_LINE
-#define TEST_LOCAL_LISTFILE
-#define TEST_STREAM_OPERATIONS
-#define TEST_MASTER_MIRROR
+//#define TEST_LOCAL_LISTFILE
+//#define TEST_STREAM_OPERATIONS
+//#define TEST_MASTER_MIRROR
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
@@ -4183,20 +4186,29 @@ int _tmain(int argc, TCHAR * argv[])
     // Initialize storage and mix the random number generator
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     dwErrCode = InitializeMpqDirectory(argv, argc);
-
-    // Check creation of the MPQ with LZMA compression
-    LPCTSTR szArchiveName = _T("e:\\MemoryCorruption.SC2Replay");
+/*
+    // Check opening of a MPQ
+    LPCTSTR szArchiveName = _T("e:\\Volcanis.scm");
+    LPBYTE pbBuffer = NULL;
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
-/*
+    DWORD dwFileSize;
+
     if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "DlgSearchFile.cpp", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
         {
-            DWORD dwBytesRead = 0;
-            BYTE Buffer[0x100];
+            if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
+            {
+                if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
+                {
+                    DWORD dwBytesRead = 0;
 
-            SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+                    SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
+                    assert(dwBytesRead == dwFileSize);
+                    STORM_FREE(pbBuffer);
+                }
+            }
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
@@ -4205,9 +4217,9 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
-    for(int i = 2; i < argc; i++)
+    for(int i = 1; i < argc; i++)
     {
-        TestOpenArchive(argv[i], Bliz, 0, "Scripts\\War3map.j", NULL);
+        TestOpenArchive(argv[i], NULL, NULL, 0, &LfBliz);
     }
 #endif  // TEST_COMMAND_LINE
 
