@@ -4183,30 +4183,23 @@ int _tmain(int argc, TCHAR * argv[])
     // Initialize storage and mix the random number generator
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     dwErrCode = InitializeMpqDirectory(argv, argc);
-/*
+
     // Check creation of the MPQ with LZMA compression
-    LPCTSTR szArchiveName = _T("E:\\new-mpq.mpq");
+    LPCTSTR szArchiveName = _T("e:\\MemoryCorruption.SC2Replay");
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
-
-    DeleteFile(szArchiveName);
-    if(SFileCreateArchive(szArchiveName, MPQ_CREATE_ARCHIVE_V2 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 0x1000, &hMpq))
+/*
+    if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
-        SFileAddFileEx(hMpq, _T("e:\\DlgSearchFile.cpp"), "DlgSearchFile.cpp", MPQ_FILE_SINGLE_UNIT | MPQ_FILE_COMPRESS, MPQ_COMPRESSION_LZMA, MPQ_COMPRESSION_NEXT_SAME);
-        SFileCloseArchive(hMpq);
-
-        if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
+        if(SFileOpenFileEx(hMpq, "DlgSearchFile.cpp", 0, &hFile))
         {
-            if(SFileOpenFileEx(hMpq, "DlgSearchFile.cpp", 0, &hFile))
-            {
-                DWORD dwBytesRead = 0;
-                BYTE Buffer[0x100];
+            DWORD dwBytesRead = 0;
+            BYTE Buffer[0x100];
 
-                SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
-                SFileCloseFile(hFile);
-            }
-            SFileCloseArchive(hMpq);
+            SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+            SFileCloseFile(hFile);
         }
+        SFileCloseArchive(hMpq);
     }
 */
 #ifdef TEST_COMMAND_LINE
