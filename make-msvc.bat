@@ -27,8 +27,8 @@ if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Enterprise\VC\Auxilia
 :: Build all libraries using Visual Studio 2008 and 2019
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x86 %LIB_NAME%_vs08.sln \vs2008
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x64 %LIB_NAME%_vs08.sln \vs2008
-if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x86 %LIB_NAME%_vs22.sln
-if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x64 %LIB_NAME%_vs22.sln
+if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x86 %LIB_NAME%.sln
+if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x64 %LIB_NAME%.sln
 goto:eof
 
 ::-----------------------------------------------------------------------------

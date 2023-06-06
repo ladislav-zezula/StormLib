@@ -317,29 +317,54 @@ static ULONGLONG DetermineArchiveSize_V2(
     ULONGLONG MpqOffset,
     ULONGLONG FileSize)
 {
-    ULONGLONG EndOfMpq = FileSize;
-    DWORD dwArchiveSize32;
+    ULONGLONG TableOffset;
+    ULONGLONG TableSize;
+    ULONGLONG MaxOffset = 0;
 
     // This could only be called for MPQs version 2.0
     assert(pHeader->wFormatVersion == MPQ_FORMAT_VERSION_2);
 
-    // Check if we can rely on the archive size in the header
-    if((FileSize >> 0x20) == 0)
-    {
-        if(pHeader->dwBlockTablePos < pHeader->dwArchiveSize)
-        {
-            if((pHeader->dwArchiveSize - pHeader->dwBlockTablePos) <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)))
-                return pHeader->dwArchiveSize;
+    // Is the hash table end greater than max offset?
+    TableOffset = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
+    TableSize = (ULONGLONG)pHeader->dwHashTableSize * sizeof(TMPQHash);
+    if((TableOffset + TableSize) > MaxOffset)
+        MaxOffset = TableOffset + TableSize;
 
-            // If the archive size in the header is less than real file size
-            dwArchiveSize32 = (DWORD)(FileSize - MpqOffset);
-            if(pHeader->dwArchiveSize <= dwArchiveSize32)
-                return pHeader->dwArchiveSize;
-        }
+    // Is the block table end greater than max offset?
+    TableOffset = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+    TableSize = (ULONGLONG)pHeader->dwBlockTableSize * sizeof(TMPQBlock);
+    if((TableOffset + TableSize) > MaxOffset)
+        MaxOffset = TableOffset + TableSize;
+
+    // Is the hi-block table end greater than max offset?
+    if((TableOffset = pHeader->HiBlockTablePos64) != 0)
+    {
+        TableSize = (ULONGLONG)pHeader->dwBlockTableSize * sizeof(USHORT);
+        if((TableOffset + TableSize) > MaxOffset)
+            MaxOffset = TableOffset + TableSize;
     }
 
-    // Return the calculated archive size
-    return (EndOfMpq - MpqOffset);
+    // Cut to the file size
+    if(MaxOffset > (FileSize - MpqOffset))
+        MaxOffset = FileSize - MpqOffset;
+    return MaxOffset;
+}
+
+static ULONGLONG DetermineBlockTableSize_V2(TMPQHeader * pHeader)
+{
+    ULONGLONG BlockTableOffset = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
+    ULONGLONG TableOffset;
+    ULONGLONG TableSize = (pHeader->ArchiveSize64 - BlockTableOffset);
+
+    // Subtract the offset of the hi-block table
+    if((TableOffset = pHeader->HiBlockTablePos64) != 0)
+    {
+        if(TableOffset > BlockTableOffset)
+        {
+            TableSize = TableOffset - BlockTableOffset;
+        }
+    }
+    return TableSize;
 }
 
 static ULONGLONG DetermineArchiveSize_V4(
@@ -564,9 +589,10 @@ DWORD ConvertMpqHeaderToFormat4(
                 {
                     // Determine real archive size
                     pHeader->ArchiveSize64 = DetermineArchiveSize_V2(pHeader, ByteOffset, FileSize);
+                    pHeader->dwArchiveSize = (DWORD)(pHeader->ArchiveSize64);
 
                     // Calculate size of the block table
-                    pHeader->BlockTableSize64 = pHeader->ArchiveSize64 - BlockTablePos64;
+                    pHeader->BlockTableSize64 = DetermineBlockTableSize_V2(pHeader);
                     assert(pHeader->BlockTableSize64 <= (pHeader->dwBlockTableSize * sizeof(TMPQBlock)));
                 }
             }
