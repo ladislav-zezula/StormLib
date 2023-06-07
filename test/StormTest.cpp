@@ -44,7 +44,7 @@
 // Artificial flag for not reporting open failure
 #define MPQ_OPEN_DONT_REPORT_FAILURE    0x80000000
 
-typedef DWORD(*FIND_FILE_CALLBACK)(LPCTSTR szFullPath);
+typedef DWORD(*FIND_FILE_CALLBACK)(LPCTSTR szFullPath, LPVOID lpContext);
 
 typedef enum _EXTRA_TYPE
 {
@@ -537,13 +537,14 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
     hash_state sha1_state;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
-    BYTE * pbFileBlock;
+    LPCTSTR szHashingFormat = _T("Hashing %s " fmt_X_of_Y_a);
+    LPBYTE pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Notify the user
-    pLogger->PrintProgress(_T("Hashing file %s"), szShortPlainName);
+    pLogger->PrintProgress(_T("Hashing %s ..."), szShortPlainName);
     szFileSha1[0] = 0;
 
     // Open the file to be verified
@@ -564,7 +565,7 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
             while(ByteOffset < FileSize)
             {
                 // Notify the user
-                pLogger->PrintProgress(_T("Hashing file %s (%I64u of %I64u)"), szShortPlainName, ByteOffset, FileSize);
+                pLogger->PrintProgress(szHashingFormat, szShortPlainName, ByteOffset, FileSize);
 
                 // Load the file block
                 cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
@@ -580,7 +581,7 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
             }
 
             // Notify the user
-            pLogger->PrintProgress(_T("Hashing file %s (%I64u of %I64u)"), szShortPlainName, ByteOffset, FileSize);
+            pLogger->PrintProgress(szHashingFormat, szShortPlainName, ByteOffset, FileSize);
 
             // Finalize SHA1
             sha1_done(&sha1_state, sha1_digest);
@@ -682,7 +683,58 @@ static void FreeDirectorySearch(HANDLE hFind)
 #endif
 }
 
-static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
+static PFILE_DATA LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool bMustSucceed)
+{
+    TFileStream * pStream;
+    PFILE_DATA pFileData = NULL;
+    ULONGLONG FileSize = 0;
+    size_t nAllocateBytes;
+
+    // Notify the user
+    if(pLogger != NULL)
+        pLogger->PrintProgress(_T("Loading %s ..."), GetPlainFileName(szFileName));
+
+    // Attempt to open the file
+    if((pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY)) != NULL)
+    {
+        // Get the file size
+        FileStream_GetSize(pStream, &FileSize);
+
+        // Check for too big files
+        if((FileSize >> 0x20) == 0)
+        {
+            // Allocate space for the file
+            nAllocateBytes = sizeof(FILE_DATA) + (size_t)FileSize;
+            pFileData = (PFILE_DATA)STORM_ALLOC(BYTE, nAllocateBytes);
+            if(pFileData != NULL)
+            {
+                // Make sure it;s properly zeroed
+                memset(pFileData, 0, nAllocateBytes);
+                pFileData->dwFileSize = (DWORD)FileSize;
+
+                // Load to memory
+                if(!FileStream_Read(pStream, NULL, pFileData->FileData, pFileData->dwFileSize))
+                {
+                    STORM_FREE(pFileData);
+                    pFileData = NULL;
+                }
+            }
+        }
+
+        // Close the stream
+        FileStream_Close(pStream);
+    }
+    else
+    {
+        if(pLogger != NULL && bMustSucceed == true)
+            pLogger->PrintError(_T("Open failed: %s"), szFileName);
+    }
+    
+    // Return the loaded file data or NULL
+    return pFileData;
+}
+
+static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, LPTSTR szDirectory, LPVOID lpContext = NULL)
 {
     TCHAR * szPlainName;
     HANDLE hFind;
@@ -713,14 +765,14 @@ static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
                 {
                     if(szDirEntry[0] != '.')
                     {
-                        dwErrCode = FindFilesInternal(pfnTest, szDirectory);
+                        dwErrCode = FindFilesInternal(pfnTest, szDirectory, lpContext);
                     }
                 }
                 else
                 {
                     if(pfnTest != NULL)
                     {
-                        dwErrCode = pfnTest(szDirectory);
+                        dwErrCode = pfnTest(szDirectory, lpContext);
                     }
                 }
             }
@@ -733,17 +785,71 @@ static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, TCHAR * szDirectory)
     return dwErrCode;
 }
 
-static DWORD FindFiles(FIND_FILE_CALLBACK pfnFindFile, LPCTSTR szSubDirectory)
+static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, LPVOID lpContext)
 {
+    TLogHelper * pLogger = (TLogHelper *)(lpContext);
+    PFILE_DATA pFileData;
+    TCHAR * szExtension;
+    TCHAR szShaFileName[MAX_PATH + 1];
+    TCHAR szSha1Text[0x40];
+    char szSha1TextA[0x40];
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Try to load the file with the SHA extension
+    StringCopy(szShaFileName, _countof(szShaFileName), szFullPath);
+    szExtension = _tcsrchr(szShaFileName, '.');
+    if(szExtension == NULL)
+        return ERROR_SUCCESS;
+
+    // Skip .SHA and .TXT files
+    if(!_tcsicmp(szExtension, _T(".sha")) || !_tcsicmp(szExtension, _T(".txt")))
+        return ERROR_SUCCESS;
+
+    // Load the local file to memory
+    _tcscpy(szExtension, _T(".sha"));
+    pFileData = LoadLocalFile(pLogger, szShaFileName, false);
+    if(pFileData != NULL)
+    {
+        // Calculate SHA1 of the entire file
+        dwErrCode = CalculateFileSha1(pLogger, szFullPath, szSha1Text);
+        if(dwErrCode == ERROR_SUCCESS)
+        {
+            // Compare with what we loaded from the file
+            if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
+            {
+                // Compare the SHA1
+                StringCopy(szSha1TextA, _countof(szSha1TextA), szSha1Text);
+                if(_strnicmp(szSha1TextA, (char *)pFileData->FileData, (SHA1_DIGEST_SIZE * 2)))
+                {
+                    SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
+                    pLogger->PrintError(_T("File hash check failed: %s"), szFullPath);
+                }
+            }
+        }
+
+        // Clear the line
+        if(dwErrCode == ERROR_SUCCESS)
+            pLogger->PrintProgress("OK");
+        STORM_FREE(pFileData);
+    }
+    return dwErrCode;
+}
+
+static DWORD VerifyFileHashes(LPCTSTR szSubDirectory)
+{
+    TLogHelper Logger("TestVerifyHash");
     TCHAR szWorkBuff[MAX_PATH];
 
+    // Construct the full directory name
     CreateFullPathName(szWorkBuff, _countof(szWorkBuff), szSubDirectory, NULL);
-    return FindFilesInternal(pfnFindFile, szWorkBuff);
+
+    // Find each file and check its hash
+    return FindFilesInternal(ForEachFile_VerifyFileHash, szWorkBuff, &Logger);
 }
 
 static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
 {
-    TLogHelper Logger("InitWorkDir");
+    TLogHelper Logger("InitWorkFolder");
     TFileStream * pStream;
     TCHAR szFullPath[MAX_PATH];
     LPCTSTR szWhereFrom = _T("default");
@@ -995,7 +1101,7 @@ static DWORD WriteFileData(
             DWORD cbToWrite = (ByteCount > cbDataBuffer) ? cbDataBuffer : (DWORD)ByteCount;
 
             // Notify the user
-            pLogger->PrintProgress("Writing file data (%I64u of %I64u) ...", BytesWritten, SaveByteCount);
+            pLogger->PrintProgress("Writing file data " fmt_X_of_Y_a " ...", BytesWritten, SaveByteCount);
 
             // Write the data
             if(!FileStream_Write(pStream, &ByteOffset, pbDataBuffer, cbToWrite))
@@ -1054,7 +1160,7 @@ static DWORD CopyFileData(
             ByteOffset += BytesToRead;
 
             // Notify the user
-            pLogger->PrintProgress("Copying (%I64u of %I64u complete) ...", BytesCopied, ByteCount);
+            pLogger->PrintProgress("Copying " fmt_X_of_Y_a " ...", BytesCopied, ByteCount);
         }
 
         STORM_FREE(pbCopyBuffer);
@@ -1212,52 +1318,6 @@ static bool CheckIfFileIsPresent(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFil
             pLogger->PrintMessage("The file \"%s\" is not present, but it should be", szFileName);
         return false;
     }
-}
-
-static PFILE_DATA LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool bMustSucceed)
-{
-    TFileStream * pStream;
-    PFILE_DATA pFileData = NULL;
-    ULONGLONG FileSize = 0;
-    size_t nAllocateBytes;
-
-    // Notify the user
-    if(pLogger != NULL)
-        pLogger->PrintProgress("Loading local file ...");
-
-    // Attempt to open the file
-    pStream = FileStream_OpenFile(szFileName, STREAM_FLAG_READ_ONLY);
-    if(pStream == NULL)
-    {
-        if(pLogger != NULL && bMustSucceed == true)
-            pLogger->PrintError(_T("Open failed: %s"), szFileName);
-        return NULL;
-    }
-
-    // Verify the size
-    FileStream_GetSize(pStream, &FileSize);
-    if((FileSize >> 0x20) == 0)
-    {
-        // Allocate space for the file
-        nAllocateBytes = sizeof(FILE_DATA) + (size_t)FileSize;
-        pFileData = (PFILE_DATA)STORM_ALLOC(BYTE, nAllocateBytes);
-        if(pFileData != NULL)
-        {
-            // Make sure it;s properly zeroed
-            memset(pFileData, 0, nAllocateBytes);
-            pFileData->dwFileSize = (DWORD)FileSize;
-
-            // Load to memory
-            if(!FileStream_Read(pStream, NULL, pFileData->FileData, pFileData->dwFileSize))
-            {
-                STORM_FREE(pFileData);
-                pFileData = NULL;
-            }
-        }
-    }
-
-    FileStream_Close(pStream);
-    return pFileData;
 }
 
 static DWORD LoadLocalFileMD5(TLogHelper * pLogger, LPCTSTR szFileFullName, LPBYTE md5_file_local)
@@ -1834,10 +1894,6 @@ static DWORD AddFileToMpq(
             pLogger->PrintError("Unexpected result from SFileCreateFile(%s)", szFileName);
             dwErrCode = ERROR_CAN_NOT_COMPLETE;
         }
-        else
-        {
-            dwErrCode = ERROR_SUCCESS;
-        }
     }
     return dwErrCode;
 }
@@ -1989,7 +2045,7 @@ static DWORD TestOnLocalListFile_Read(TLogHelper & Logger, HANDLE hFile)
 
 static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
 {
-    TLogHelper Logger("LocalListFile", szPlainName);
+    TLogHelper Logger("TestLiFiSearch", szPlainName);
     SFILE_FIND_DATA sf;
     HANDLE hFile;
     HANDLE hFind;
@@ -2066,7 +2122,7 @@ static DWORD TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterNam
 {
     TFileStream * pStream1;                     // Master file
     TFileStream * pStream2;                     // Mirror file
-    TLogHelper Logger("OpenMirrorFile", szMirrorName);
+    TLogHelper Logger("TestFileMirror", szMirrorName);
     TCHAR szMirrorPath[MAX_PATH + MAX_PATH];
     TCHAR szMasterPath[MAX_PATH];
     DWORD dwProvider = 0;
@@ -2111,7 +2167,7 @@ static DWORD TestReadFile_MasterMirror(LPCTSTR szMirrorName, LPCTSTR szMasterNam
 static DWORD TestFileStreamOperations(LPCTSTR szPlainName, DWORD dwStreamFlags)
 {
     TFileStream * pStream = NULL;
-    TLogHelper Logger("FileStreamTest", szPlainName);
+    TLogHelper Logger("TestFileStream", szPlainName);
     ULONGLONG ByteOffset;
     ULONGLONG FileSize = 0;
     TCHAR szFullPath[MAX_PATH];
@@ -2496,7 +2552,7 @@ static DWORD TestOpenArchive(
     DWORD dwFlags,                                  // Test flags. Lower bits contains the number of files
     const void * pExtra)                            // Extra parameter
 {
-    TLogHelper Logger("TestMpq", szMpqName1);
+    TLogHelper Logger("TestReadingMpq", szMpqName1);
     HANDLE hMpq = NULL;
     DWORD dwExpectedFileCount = 0;
     DWORD dwSearchFlags = 0;
@@ -2616,9 +2672,9 @@ static void WINAPI CompactCallback(void * pvUserData, DWORD dwWork, ULONGLONG By
     if(szWork != NULL)
     {
         if(pLogger != NULL)
-            pLogger->PrintProgress("%s (%I64u of %I64u) ...", szWork, BytesDone, TotalBytes);
+            pLogger->PrintProgress("%s " fmt_X_of_Y_a " ...", szWork, BytesDone, TotalBytes);
         else
-            printf("%s (" fmt_I64u_a " of " fmt_I64u_a ") ...     \r", szWork, BytesDone, TotalBytes);
+            printf("%s " fmt_X_of_Y_a " ...     \r", szWork, BytesDone, TotalBytes);
     }
 }
 
@@ -2643,7 +2699,7 @@ static DWORD TestReopenArchive(
     LPCSTR szExpectedHash,                          // Expected name+data hash
     DWORD dwFlags)                                  // Test flags. Lower bits contains the number of files
 {
-    TLogHelper Logger("ReopenMpqTest", szMpqName1);
+    TLogHelper Logger("Test_ReopenMpq", szMpqName1);
     ULONGLONG PreMpqDataSize = (dwFlags & TFLG_ADD_USER_DATA) ? 0x400 : 0;
     ULONGLONG UserDataSize = (dwFlags & TFLG_ADD_USER_DATA) ? 0x531 : 0;
     LPCTSTR szCopyName = _T("StormLibTest_Reopened.mpq");
@@ -2713,7 +2769,7 @@ static DWORD TestReopenArchive(
 
 static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOriginalName, DWORD dwFlags)
 {
-    TLogHelper Logger("SignatureTest", szPlainName);
+    TLogHelper Logger("Test_Signature", szPlainName);
     HANDLE hMpq;
     DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1;
     DWORD dwErrCode = ERROR_SUCCESS;
@@ -2764,7 +2820,7 @@ static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOrigin
 
 static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, DWORD bAddUserData)
 {
-    TLogHelper Logger("CompactMpqTest", szPlainName);
+    TLogHelper Logger("TestCompactMpq", szPlainName);
     ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
     ULONGLONG UserDataSize = (bAddUserData) ? 0x531 : 0;
     HANDLE hMpq;
@@ -2844,7 +2900,7 @@ static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyN
 
 static DWORD TestOpenArchive_AddFile(LPCTSTR szMpqName, DWORD dwFlags)
 {
-    TLogHelper Logger("AddFileToMpqTest", szMpqName);
+    TLogHelper Logger("TestAddFileToMpq", szMpqName);
     PFILE_DATA pFileData = NULL;
     LPCTSTR szBackupMpq = (dwFlags & TFLAG_REOPEN) ? _T("StormLibTest_Reopened.mpq") : szMpqName;
     LPCSTR szFileName = "AddedFile001.txt";
@@ -2905,93 +2961,6 @@ static DWORD TestOpenArchive_AddFile(LPCTSTR szMpqName, DWORD dwFlags)
     return dwErrCode;
 }
 
-
-static DWORD ForEachFile_VerifyFileChecksum(LPCTSTR szFullPath)
-{
-    PFILE_DATA pFileData;
-    TCHAR * szExtension;
-    TCHAR szShaFileName[MAX_PATH + 1];
-    TCHAR szSha1Text[0x40];
-    char szSha1TextA[0x40];
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Try to load the file with the SHA extension
-    StringCopy(szShaFileName, _countof(szShaFileName), szFullPath);
-    szExtension = _tcsrchr(szShaFileName, '.');
-    if(szExtension == NULL)
-        return ERROR_SUCCESS;
-
-    // Skip .SHA and .TXT files
-    if(!_tcsicmp(szExtension, _T(".sha")) || !_tcsicmp(szExtension, _T(".txt")))
-        return ERROR_SUCCESS;
-
-    // Load the local file to memory
-    _tcscpy(szExtension, _T(".sha"));
-    pFileData = LoadLocalFile(NULL, szShaFileName, false);
-    if(pFileData != NULL)
-    {
-        TLogHelper Logger("VerifyFileHash");
-
-        // Calculate SHA1 of the entire file
-        dwErrCode = CalculateFileSha1(&Logger, szFullPath, szSha1Text);
-        if(dwErrCode == ERROR_SUCCESS)
-        {
-            // Compare with what we loaded from the file
-            if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
-            {
-                // Compare the SHA1
-                StringCopy(szSha1TextA, _countof(szSha1TextA), szSha1Text);
-                if(_strnicmp(szSha1TextA, (char *)pFileData->FileData, (SHA1_DIGEST_SIZE * 2)))
-                {
-                    SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
-                    Logger.PrintError(_T("File CRC check failed: %s"), szFullPath);
-                }
-            }
-        }
-
-        STORM_FREE(pFileData);
-    }
-
-    return dwErrCode;
-}
-
-// Opens a found archive
-static DWORD ForEachFile_OpenArchive(LPCTSTR szFullPath)
-{
-    HANDLE hMpq = NULL;
-    DWORD dwFileCount = 0;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Check if it's a MPQ file type
-    if(IsMpqExtension(szFullPath))
-    {
-        TLogHelper Logger("OpenEachMpqTest", GetShortPlainName(szFullPath));
-
-        // Open the MPQ name
-        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(dwErrCode == ERROR_AVI_FILE || dwErrCode == ERROR_FILE_CORRUPT || dwErrCode == ERROR_BAD_FORMAT)
-            return ERROR_SUCCESS;
-
-        // Search the archive and load every file
-        if(dwErrCode == ERROR_SUCCESS)
-        {
-            dwErrCode = SearchArchive(&Logger, hMpq, 0, &dwFileCount);
-            SFileCloseArchive(hMpq);
-        }
-
-        // Show warning if no files found
-        if(dwFileCount == 0)
-        {
-            Logger.PrintMessage("Warning: no files in the archive");
-        }
-    }
-
-    // Correct some errors
-    if(dwErrCode == ERROR_FILE_CORRUPT || dwErrCode == ERROR_FILE_INCOMPLETE)
-        return ERROR_SUCCESS;
-    return dwErrCode;
-}
-
 static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
 {
     TLogHelper Logger("CreateEmptyMpq", szPlainName);
@@ -3027,7 +2996,7 @@ static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags
 
 static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
 {
-    TLogHelper Logger("CreateGapsTest", szPlainName);
+    TLogHelper Logger("TestCreateGaps", szPlainName);
     ULONGLONG ByteOffset1 = 0xFFFFFFFF;
     ULONGLONG ByteOffset2 = 0xEEEEEEEE;
     HANDLE hMpq = NULL;
@@ -3100,7 +3069,7 @@ static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
 
 static DWORD TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
 {
-    TLogHelper Logger("NonStdNamesTest", szPlainName);
+    TLogHelper Logger("TestNonStdNames", szPlainName);
     HANDLE hMpq = NULL;
     DWORD dwErrCode = ERROR_SUCCESS;
 
@@ -3167,7 +3136,7 @@ static DWORD TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
 
 static DWORD TestCreateArchive_FillArchive(LPCTSTR szPlainName, DWORD dwCreateFlags)
 {
-    TLogHelper Logger("CreateFullMpq", szPlainName);
+    TLogHelper Logger("TestCreateFull", szPlainName);
     LPCSTR szFileData = "TestCreateArchive_FillArchive: Testing file data";
     char szFileName[MAX_PATH];
     HANDLE hMpq = NULL;
@@ -3375,7 +3344,7 @@ static DWORD TestCreateArchive_UnicodeNames()
 
 static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
 {
-    TLogHelper Logger("FileFlagTest", szPlainName);
+    TLogHelper Logger("TestFileFlag", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive
     TCHAR szFileName1[MAX_PATH];
     TCHAR szFileName2[MAX_PATH];
@@ -3532,9 +3501,9 @@ static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
 
 static DWORD TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR szWaveFile)
 {
-    TLogHelper Logger("CompressionsTest", szPlainName);
+    TLogHelper Logger("TestCompressions", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive
-    TCHAR szFileName[MAX_PATH];          // Source file to be added
+    TCHAR szFileName[MAX_PATH];         // Source file to be added
     char szArchivedName[MAX_PATH];
     DWORD dwCmprCount = sizeof(WaveCompressions) / sizeof(DWORD);
     DWORD dwAddedFiles = 0;
@@ -3681,7 +3650,7 @@ static DWORD TestCreateArchive_ListFilePos(LPCTSTR szPlainName)
 
 static DWORD TestCreateArchive_BigArchive(LPCTSTR szPlainName)
 {
-    TLogHelper Logger("BigMpqTest", szPlainName);
+    TLogHelper Logger("TestBigArchive", szPlainName);
     HANDLE hMpq = NULL;                 // Handle of created archive
     TCHAR szLocalFileName[MAX_PATH];
     char szArchivedName[MAX_PATH];
@@ -3736,7 +3705,7 @@ static DWORD TestCreateArchive_BigArchive(LPCTSTR szPlainName)
 // "MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events"
 static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName)
 {
-    TLogHelper Logger("ModifyTest", szMpqPlainName);
+    TLogHelper Logger("TestModifyMpq", szMpqPlainName);
     HANDLE hMpq = NULL;
     TCHAR szFileFullName[MAX_PATH];
     TCHAR szMpqFullName[MAX_PATH];
@@ -4167,10 +4136,10 @@ static const TEST_INFO Test_Signature[] =
 //-----------------------------------------------------------------------------
 // Main
 
-//#define TEST_COMMAND_LINE
-//#define TEST_LOCAL_LISTFILE
-//#define TEST_STREAM_OPERATIONS
-//#define TEST_MASTER_MIRROR
+#define TEST_COMMAND_LINE
+#define TEST_LOCAL_LISTFILE
+#define TEST_STREAM_OPERATIONS
+#define TEST_MASTER_MIRROR
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
@@ -4299,11 +4268,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Verify SHA1 of each MPQ that we have in the list
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = FindFiles(ForEachFile_VerifyFileChecksum, szMpqSubDir);
-
-    // Open every MPQ that we have in the storage
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = FindFiles(ForEachFile_OpenArchive, NULL);
+        dwErrCode = VerifyFileHashes(szMpqSubDir);
 
     // Create an empty archive v2
     if(dwErrCode == ERROR_SUCCESS)

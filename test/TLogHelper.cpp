@@ -28,6 +28,8 @@
 #define fmt_I64X_a "%llX"
 #endif
 
+#define fmt_X_of_Y_a  "(" fmt_I64u_a " of " fmt_I64u_a ")"
+
 #ifdef __CASCLIB_SELF__
 #define TEST_MIN CASCLIB_MIN
 #define TEST_PRINT_PREFIX   false
