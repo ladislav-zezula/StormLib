@@ -44,7 +44,7 @@
 // Artificial flag for not reporting open failure
 #define MPQ_OPEN_DONT_REPORT_FAILURE    0x80000000
 
-typedef DWORD(*FIND_FILE_CALLBACK)(LPCTSTR szFullPath, LPVOID lpContext);
+typedef DWORD (*FS_SEARCH_CALLBACK)(LPCTSTR szFullPath, LPVOID lpContext);
 
 typedef enum _EXTRA_TYPE
 {
@@ -105,17 +105,14 @@ typedef struct _LINE_INFO
 
 #ifdef STORMLIB_WINDOWS
 #define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0x65B0, (TCHAR)0x5EFA, (TCHAR)0x6587, (TCHAR)0x4EF6, (TCHAR)0x5939, 0 };
 #endif
 
 #ifdef STORMLIB_LINUX
 #define WORK_PATH_ROOT "/media/ladik/MPQs"
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
 #ifdef STORMLIB_HAIKU
 #define WORK_PATH_ROOT "~/StormLib/test"
-static const TCHAR szListFileDir[] = { '1', '9', '9', '5', ' ', '-', ' ', 'T', 'e', 's', 't', ' ', 'M', 'P', 'Q', 's', '\\', 'l', 'i', 's', 't', 'f', 'i', 'l', 'e', 's', '-', (TCHAR)0xe6, (TCHAR)0x96, (TCHAR)0xB0, (TCHAR)0xE5, (TCHAR)0xBB, (TCHAR)0xBA, (TCHAR)0xE6, (TCHAR)0x96, (TCHAR)0x87, (TCHAR)0xE4, (TCHAR)0xBB, (TCHAR)0xB6, (TCHAR)0xE5, (TCHAR)0xA4, (TCHAR)0xB9, 0 };
 #endif
 
 // Definition of the path separator
@@ -129,8 +126,8 @@ static const TCHAR PATH_SEPARATOR = '/';            // Path separator for Non-Wi
 
 // Global for the work MPQ
 static LPCTSTR szMpqSubDir   = _T("1995 - Test MPQs");
-static LPCTSTR szMpqPatchDir = _T("1995 - Test MPQs\\patches");
-static LPCSTR  IntToHexChar = "0123456789abcdef";
+static TCHAR szListFileDir[MAX_PATH] = {0};
+static TCHAR szMpqPatchDir[MAX_PATH] = {0};
 
 //-----------------------------------------------------------------------------
 // Testing data
@@ -265,6 +262,20 @@ static bool IsFullPath(const XCHAR * szFileName)
     return false;
 }
 
+LPCTSTR GetRelativePath(LPCTSTR szFullPath)
+{
+    LPCTSTR szRelativePath;
+
+    if(szFullPath && szFullPath[0])
+    {
+        if((szRelativePath = _tcsstr(szFullPath, szMpqSubDir)) != NULL)
+        {
+            return szRelativePath;
+        }
+    }
+    return _T("");
+}
+
 static bool IsMpqExtension(LPCTSTR szFileName)
 {
     LPCTSTR szExtension = _tcsrchr(szFileName, '.');
@@ -308,6 +319,7 @@ template <typename xchar>
 xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
 {
     xchar * szSaveBuffer = szBuffer;
+    char * IntToHexChar = "0123456789abcdef";
 
     // Verify the binary pointer
     if(pbBinary && cbBinary)
@@ -623,24 +635,15 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 #endif
 }
 
-static bool SearchDirectory(HANDLE hFind, TCHAR * szDirEntry, size_t cchDirEntry, bool & IsDirectory)
+static bool SearchDirectory(HANDLE hFind, LPTSTR szDirEntry, size_t cchDirEntry, bool & IsDirectory)
 {
 #ifdef STORMLIB_WINDOWS
 
     WIN32_FIND_DATA wf;
-    TCHAR szDirEntryT[MAX_PATH];
-    char szDirEntryA[MAX_PATH];
-
-    __SearchNextEntry:
 
     // Search for the hnext entry.
     if(FindNextFile(hFind, &wf))
     {
-        // Verify if the directory entry is an UNICODE name that would be destroyed
-        // by Unicode->ANSI->Unicode conversion
-        if(CopyStringAndVerifyConversion(wf.cFileName, szDirEntryT, szDirEntryA, _countof(szDirEntryA)) == false)
-            goto __SearchNextEntry;
-
         IsDirectory = (wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? true : false;
         StringCopy(szDirEntry, cchDirEntry, wf.cFileName);
         return true;
@@ -729,9 +732,9 @@ static PFILE_DATA LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool b
     return pFileData;
 }
 
-static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, LPTSTR szDirectory, LPVOID lpContext = NULL)
+static DWORD FindFilesInternal(FS_SEARCH_CALLBACK PfnFolderCallback, FS_SEARCH_CALLBACK PfnFileCallback, LPTSTR szDirectory, LPVOID lpContext = NULL)
 {
-    TCHAR * szPlainName;
+    LPTSTR szPlainName;
     HANDLE hFind;
     size_t nLength;
     TCHAR szDirEntry[MAX_PATH];
@@ -760,14 +763,16 @@ static DWORD FindFilesInternal(FIND_FILE_CALLBACK pfnTest, LPTSTR szDirectory, L
                 {
                     if(szDirEntry[0] != '.')
                     {
-                        dwErrCode = FindFilesInternal(pfnTest, szDirectory, lpContext);
+                        if(PfnFolderCallback != NULL)
+                            PfnFolderCallback(szDirectory, lpContext);
+                        dwErrCode = FindFilesInternal(PfnFolderCallback, PfnFileCallback, szDirectory, lpContext);
                     }
                 }
                 else
                 {
-                    if(pfnTest != NULL)
+                    if(PfnFileCallback != NULL)
                     {
-                        dwErrCode = pfnTest(szDirectory, lpContext);
+                        dwErrCode = PfnFileCallback(szDirectory, lpContext);
                     }
                 }
             }
@@ -839,14 +844,41 @@ static DWORD VerifyFileHashes(LPCTSTR szSubDirectory)
     CreateFullPathName(szWorkBuff, _countof(szWorkBuff), szSubDirectory, NULL);
 
     // Find each file and check its hash
-    return FindFilesInternal(ForEachFile_VerifyFileHash, szWorkBuff, &Logger);
+    return FindFilesInternal(NULL, ForEachFile_VerifyFileHash, szWorkBuff, &Logger);
+}
+
+static DWORD FindListFileFolder(LPCTSTR szFullPath, LPVOID /* lpContext */)
+{
+    LPCTSTR szPlainName = GetPlainFileName(szFullPath);
+
+    // Check listfile directory
+    if(szListFileDir[0] == 0)
+    {
+        if(!_tcsnicmp(szPlainName, _T("listfiles-"), 10))
+        {
+            StringCopy(szListFileDir, _countof(szListFileDir), GetRelativePath(szFullPath));
+            return ERROR_SUCCESS;
+        }
+    }
+
+    if(szMpqPatchDir[0] == 0)
+    {
+        if(!_tcsnicmp(szPlainName, _T("patches-"), 8))
+        {
+            StringCopy(szMpqPatchDir, _countof(szMpqPatchDir), GetRelativePath(szFullPath));
+            return ERROR_SUCCESS;
+        }
+    }
+
+    // Check patch directory
+    return ERROR_SUCCESS;
 }
 
 static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
 {
     TLogHelper Logger("InitWorkFolder");
     TFileStream * pStream;
-    TCHAR szFullPath[MAX_PATH];
+    TCHAR szFullPath[MAX_PATH] = {0};
     LPCTSTR szWhereFrom = _T("default");
     LPCTSTR szDirName = WORK_PATH_ROOT;
 
@@ -877,6 +909,14 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
 
     // Print the work directory info
     Logger.PrintMessage(_T("Work directory %s (%s)"), szMpqDirectory, szWhereFrom);
+
+    // Find the listfile directory within the MPQ directory
+    CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szMpqSubDir);
+    FindFilesInternal(FindListFileFolder, NULL, szFullPath, NULL);
+    if(szListFileDir == NULL || szListFileDir[0] == 0)
+        return Logger.PrintError(_T("Listfile folder was not found in the MPQ directory"));
+    if(szMpqPatchDir == NULL || szMpqPatchDir[0] == 0)
+        return Logger.PrintError(_T("Patches folder was not found in the MPQ directory"));
 
     // Verify if the work MPQ directory is writable
     CreateFullPathName(szFullPath, _countof(szFullPath), NULL, _T("TestFile.bin"));
