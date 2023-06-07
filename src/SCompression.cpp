@@ -895,6 +895,16 @@ int WINAPI SCompCompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuff
 /*                                                                           */
 /*****************************************************************************/
 
+// Decompression table specific for Starcraft I BETA
+// WAVE files are compressed by different ADPCM compression
+static TDecompressTable dcmp_table_sc_beta[] =
+{
+    {MPQ_COMPRESSION_PKWARE,       Decompress_PKLIB},        // Decompression with Pkware Data Compression Library
+    {MPQ_COMPRESSION_HUFFMANN,     Decompress_huff},         // Huffmann decompression
+    {0x10,                         Decompress_ADPCM1_sc1b},  // IMA ADPCM mono decompression
+    {0x20,                         Decompress_ADPCM2_sc1b},  // IMA ADPCM stereo decompression
+};
+
 // This table contains decompress functions which can be applied to
 // uncompressed data. The compression mask is stored in the first byte
 // of compressed data
@@ -909,25 +919,22 @@ static TDecompressTable dcmp_table[] =
     {MPQ_COMPRESSION_SPARSE,       Decompress_SPARSE}        // Sparse decompression
 };
 
-// Decompression table specific for Starcraft I BETA
-// WAVE files are compressed by different ADPCM compression
-static TDecompressTable dcmp_table_sc1b[] =
-{
-    {MPQ_COMPRESSION_PKWARE,       Decompress_PKLIB},        // Decompression with Pkware Data Compression Library
-    {MPQ_COMPRESSION_HUFFMANN,     Decompress_huff},         // Huffmann decompression
-    {0x10,                         Decompress_ADPCM1_sc1b},  // IMA ADPCM mono decompression
-    {0x20,                         Decompress_ADPCM2_sc1b},  // IMA ADPCM stereo decompression
-};
-
-static int SCompDecompressInternal(TDecompressTable * table, size_t table_length, void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+static int SCompDecompressInternal(
+    TDecompressTable * table,
+    size_t table_length,
+    void * pvOutBuffer,
+    int * pcbOutBuffer,
+    void * pvInBuffer,
+    int cbInBuffer,
+    unsigned uValidMask = 0xFF)
 {
     unsigned char * pbWorkBuffer = NULL;
     unsigned char * pbOutBuffer = (unsigned char *)pvOutBuffer;
     unsigned char * pbInBuffer = (unsigned char *)pvInBuffer;
     unsigned char * pbOutput = (unsigned char *)pvOutBuffer;
     unsigned char * pbInput;
-    unsigned uCompressionMask;              // Decompressions applied to the data
-    unsigned uCompressionCopy;              // Decompressions applied to the data
+    unsigned uCompressionMask1;             // Decompressions applied to the data
+    unsigned uCompressionMask2;              // Decompressions applied to the data
     int      cbOutBuffer = *pcbOutBuffer;   // Current size of the output buffer
     int      cbInLength;                    // Current size of the input buffer
     int      nCompressCount = 0;            // Number of compressions to be applied
@@ -948,7 +955,8 @@ static int SCompDecompressInternal(TDecompressTable * table, size_t table_length
     }
 
     // Get applied compression types and decrement data length
-    uCompressionMask = uCompressionCopy = (unsigned char)(*pbInBuffer++);
+    uCompressionMask1 = ((unsigned char)(*pbInBuffer++) & (uValidMask));
+    uCompressionMask2 = uCompressionMask1;
     cbInBuffer--;
 
     // Get current compressed data and length of it
@@ -956,21 +964,21 @@ static int SCompDecompressInternal(TDecompressTable * table, size_t table_length
     cbInLength = cbInBuffer;
 
     // This compression function doesn't support LZMA
-    assert(uCompressionMask != MPQ_COMPRESSION_LZMA);
+    assert(uCompressionMask1 != MPQ_COMPRESSION_LZMA);
 
     // Parse the compression mask
     for(size_t i = 0; i < table_length; i++)
     {
         // If the mask agrees, insert the compression function to the array
-        if(uCompressionMask & table[i].uMask)
+        if(uCompressionMask1 & table[i].uMask)
         {
-            uCompressionCopy &= ~table[i].uMask;
+            uCompressionMask2 &= ~table[i].uMask;
             nCompressCount++;
         }
     }
 
     // If at least one of the compressions remaing unknown, return an error
-    if(nCompressCount == 0 || uCompressionCopy != 0)
+    if(nCompressCount == 0 || uCompressionMask2 != 0)
     {
         SetLastError(ERROR_NOT_SUPPORTED);
         return 0;
@@ -994,7 +1002,7 @@ static int SCompDecompressInternal(TDecompressTable * table, size_t table_length
     for(size_t i = 0; i < table_length; i++)
     {
         // Perform the (next) decompression
-        if(uCompressionMask & table[i].uMask)
+        if(uCompressionMask1 & table[i].uMask)
         {
             // Get the correct output buffer
             pbOutput = (nCompressIndex & 1) ? pbWorkBuffer : pbOutBuffer;
@@ -1028,11 +1036,6 @@ static int SCompDecompressInternal(TDecompressTable * table, size_t table_length
 int WINAPI SCompDecompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     return SCompDecompressInternal(dcmp_table, _countof(dcmp_table), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
-}
-
-int WINAPI SCompDecompress_SC1B(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
-{
-    return SCompDecompressInternal(dcmp_table_sc1b, _countof(dcmp_table_sc1b), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
 }
 
 int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
@@ -1147,6 +1150,24 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     if(nResult == 0)
         SetLastError(ERROR_FILE_CORRUPT);
     return nResult;
+}
+
+int WINAPI SCompDecompressX(TMPQArchive * ha, void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
+{
+    // MPQs version 2 use their own fixed list of compression flags.
+    if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
+    {
+        return SCompDecompress2(pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
+    }
+
+    // Starcraft BETA has specific decompression table.
+    if(ha->dwFlags & MPQ_FLAG_STARCRAFT_BETA)
+    {
+        return SCompDecompressInternal(dcmp_table_sc_beta, _countof(dcmp_table_sc_beta), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
+    }
+
+    // Default: Use the common MPQ v1 decompression routine
+    return SCompDecompressInternal(dcmp_table, _countof(dcmp_table), pvOutBuffer, pcbOutBuffer, pvInBuffer, cbInBuffer);
 }
 
 /*****************************************************************************/

@@ -14,6 +14,11 @@
 #include "StormCommon.h"
 
 //-----------------------------------------------------------------------------
+// External references (not public functions)
+
+int WINAPI SCompDecompressX(TMPQArchive * ha, void * pvOutBuffer, int * pcbOutBuffer, void * pbInBuffer, int cbInBuffer);
+
+//-----------------------------------------------------------------------------
 // Local functions
 
 //  hf            - MPQ File handle.
@@ -171,18 +176,10 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
                         // Remember the last used compression
                         hf->dwCompression0 = pbInSector[0];
 
-                        // Decompress the data
-                        if(ha->pHeader->wFormatVersion >= MPQ_FORMAT_VERSION_2)
-                        {
-                            nResult = SCompDecompress2(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                        }
-                        else
-                        {
-                            if(ha->dwFlags & MPQ_FLAG_STARCRAFT_BETA)
-                                nResult = SCompDecompress_SC1B(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                            else
-                                nResult = SCompDecompress(pbOutSector, &cbOutSector, pbInSector, cbInSector);
-                        }
+                        // Decompress the data. We need to perform MPQ-specific decompression,
+                        // as multiple Blizzard games may have their own decompression tables
+                        // and even decompression methods.
+                        nResult = SCompDecompressX(ha, pbOutSector, &cbOutSector, pbInSector, cbInSector);
                     }
 
                     // Is the file compressed by PKWARE Data Compression Library ?

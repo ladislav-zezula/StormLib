@@ -463,16 +463,19 @@ bool WINAPI SFileOpenArchive(
         if(IsStarcraftBetaArchive(ha->pHeader))
             ha->dwFlags |= MPQ_FLAG_STARCRAFT_BETA;
 
-        // Remember whether whis is a map for Warcraft III
-        if(MapType == MapTypeWarcraft3)
+        // Maps from StarCraft and Warcraft III need special treatment
+        switch(MapType)
         {
-            ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS_W3X;
-            ha->dwFlags |= MPQ_FLAG_WAR3_MAP;
-        }
+            case MapTypeStarcraft:
+                ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS_SCX;
+                ha->dwFlags |= MPQ_FLAG_STARCRAFT;
+                break;
 
-        // If this is starcraft map, set the flag mask
-        if(MapType == MapTypeStarcraft)
-            ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS_SCX;
+            case MapTypeWarcraft3:
+                ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS_W3X;
+                ha->dwFlags |= MPQ_FLAG_WAR3_MAP;
+                break;
+        }
 
         // Set the size of file sector
         ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize);

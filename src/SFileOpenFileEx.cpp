@@ -298,32 +298,32 @@ bool WINAPI SFileOpenFileEx(HANDLE hMpq, const char * szFileName, DWORD dwSearch
     if(dwErrCode == ERROR_SUCCESS)
     {
         // If we didn't find the file, try to open it using pseudo file name ("File
-        if (pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
+        if(pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
         {
             // Check the pseudo-file name ("File00000001.ext")
-            if ((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
+            if((bOpenByIndex = IsPseudoFileName(szFileName, &dwFileIndex)) == true)
             {
                 // Get the file entry for the file
-                if (dwFileIndex < ha->dwFileTableSize)
+                if(dwFileIndex < ha->dwFileTableSize)
                 {
                     pFileEntry = ha->pFileTable + dwFileIndex;
                 }
             }
 
             // Still not found?
-            if (pFileEntry == NULL)
+            if(pFileEntry == NULL || (pFileEntry->dwFlags & MPQ_FILE_EXISTS) == 0)
             {
                 dwErrCode = ERROR_FILE_NOT_FOUND;
             }
         }
 
         // Perform some checks of invalid files
-        if (pFileEntry != NULL)
+        if(pFileEntry != NULL)
         {
             // MPQ protectors use insanely amount of fake files, often with very high size.
             // We won't open any files whose compressed size is bigger than archive size
             // If the file is not compressed, its size cannot be bigger than archive size
-            if ((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
+            if((pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK) == 0 && (pFileEntry->dwFileSize > ha->FileSize))
             {
                 dwErrCode = ERROR_FILE_CORRUPT;
                 pFileEntry = NULL;
