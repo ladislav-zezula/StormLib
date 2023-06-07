@@ -2655,7 +2655,7 @@ static DWORD TestOpenArchive(
     }
 
     // Reset error code, if the failure is expected
-    if((dwErrCode != ERROR_SUCCESS) && (hMpq == NULL) && (dwFlags & TFLG_WILL_FAIL))
+    if((dwErrCode != ERROR_SUCCESS || hMpq == NULL) && (dwFlags & TFLG_WILL_FAIL))
         SetLastError(dwErrCode = ERROR_SUCCESS);
 
     // Cleanup and exit

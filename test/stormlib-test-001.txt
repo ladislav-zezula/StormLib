@@ -1,7 +1,3 @@
-Microsoft Windows [Version 10.0.19045.2965]
-(c) Microsoft Corporation. All rights reserved.
-
-E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
 ==== Test Suite for StormLib version 9.24 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
@@ -138,5 +134,3 @@ ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.
 TestModifyMpq (MPQ_2014_v4_Base.StormReplay) succeeded.
 TestModifyMpq (MPQ_2022_v1_v4.329.w3x) succeeded.
-
-E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>
