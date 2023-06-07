@@ -1,7 +1,7 @@
-Microsoft Windows [Version 10.0.19045.2486]
+Microsoft Windows [Version 10.0.19045.2965]
 (c) Microsoft Corporation. All rights reserved.
 
-E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
+E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>StormLib_test.exe
 ==== Test Suite for StormLib version 9.24 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
@@ -42,6 +42,10 @@ TestReadingMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
 TestReadingMpq (mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE) succeeded.
 TestReadingMpq (part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part) succeeded.
 TestReadingMpq (blk4-file://streaming/model.MPQ.0) succeeded.
+TestReadingMpq: Warning: CRC32 error on replay.message.events
+TestReadingMpq (MPQ_2023_v2_MemoryCorruption.SC2Replay) succeeded.
+TestReadingMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
+TestReadingMpq (MPQ_2023_v1_BroodWarMap.scx) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_Spazzler.w3x) succeeded.
@@ -98,41 +102,41 @@ TestReadingMpq (MPQ_1998_v1_StarDat.mpq) succeeded.
 TestReadingMpq (MPQ_1999_v1_WeakSignature.exe) succeeded.
 TestReadingMpq (flat-file://streaming/model.MPQ.0) succeeded.
 TestReadingMpq (MPQ_2013_vX_Battle.net.MPQ) succeeded.
-TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) failed.
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 TestReadingMpq (MPQ_2002_v1_StrongSignature.w3m) succeeded.
 TestReadingMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
-TestReopenMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
-TestReopenMpq (MPQ_2016_v1_00000.pak) succeeded.
-TestReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
-TestReopenMpq (MPQ_2013_v4_expansion1.MPQ) succeeded.
-TestReopenMpq (MPQ_2014_v1_out1.w3x) succeeded.
-TestReopenMpq (MPQ_2014_v1_out2.w3x) succeeded.
-TestReopenMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
-TestReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
-SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
-SignatureTest (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
-VerifyFileHash succeeded.
-CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
-CreateEmptyMpq: The file "File00000000.xxx" is present, but it should not be
-CreateGapsTest (StormLibTest_GapsTest.mpq) succeeded.
-NonStdNamesTest (StormLibTest_NonStdNames.mpq) succeeded.
+Test_ReopenMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
+Test_ReopenMpq (MPQ_2016_v1_00000.pak) succeeded.
+Test_ReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
+Test_ReopenMpq (MPQ_2013_v4_expansion1.MPQ) succeeded.
+Test_ReopenMpq (MPQ_2014_v1_out1.w3x) succeeded.
+Test_ReopenMpq (MPQ_2014_v1_out2.w3x) succeeded.
+Test_ReopenMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+Test_ReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
+Test_Signature (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+Test_Signature (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+TestVerifyHash succeeded.
+CreateEmptyMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
+CreateEmptyMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
+TestCreateGaps (StormLibTest_GapsTest.mpq) succeeded.
+TestNonStdNames (StormLibTest_NonStdNames.mpq) succeeded.
 CreateMpqEditor (StormLibTest_MpqEditorTest.mpq) succeeded.
-CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
-CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
-CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
-CreateFullMpq (StormLibTest_FileTableFull.mpq) succeeded.
+TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
+TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
+TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
+TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
 IncMaxFileCount (StormLibTest_IncMaxFileCount.mpq) succeeded.
 MpqUnicodeName succeeded.
-FileFlagTest (StormLibTest_FileFlagTest.mpq) succeeded.
-CompressionsTest: Warning: CRC32 error on WaveFile_01.wav
-CompressionsTest: Warning: CRC32 error on WaveFile_02.wav
-CompressionsTest (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.
-CompressionsTest: Warning: CRC32 error on WaveFile_01.wav
-CompressionsTest: Warning: CRC32 error on WaveFile_02.wav
+TestFileFlag (StormLibTest_FileFlagTest.mpq) succeeded.
+TestCompressions: Warning: CRC32 error on WaveFile_01.wav
+TestCompressions: Warning: CRC32 error on WaveFile_02.wav
+TestCompressions (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.
+TestCompressions: Warning: CRC32 error on WaveFile_01.wav
+TestCompressions: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
-BigMpqTest (StormLibTest_BigArchive_v4.mpq) succeeded.
-ModifyTest (MPQ_2014_v4_Base.StormReplay) succeeded.
-ModifyTest (MPQ_2022_v1_v4.329.w3x) succeeded.
+TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.
+TestModifyMpq (MPQ_2014_v4_Base.StormReplay) succeeded.
+TestModifyMpq (MPQ_2022_v1_v4.329.w3x) succeeded.
 
-E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>
+E:\Ladik\AppDir\StormLib\bin\StormLib_test\x64\Release>
