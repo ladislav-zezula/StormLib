@@ -44,7 +44,7 @@
 // Artificial flag for not reporting open failure
 #define MPQ_OPEN_DONT_REPORT_FAILURE    0x80000000
 
-typedef DWORD (*FS_SEARCH_CALLBACK)(LPCTSTR szFullPath, LPVOID lpContext);
+typedef DWORD (*FS_SEARCH_CALLBACK)(LPCTSTR szFullPath, void * lpContext);
 
 typedef enum _EXTRA_TYPE
 {
@@ -318,8 +318,8 @@ static bool IsMpqExtension(LPCTSTR szFileName)
 template <typename xchar>
 xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
 {
+    const char * IntToHexChar = "0123456789abcdef";
     xchar * szSaveBuffer = szBuffer;
-    char * IntToHexChar = "0123456789abcdef";
 
     // Verify the binary pointer
     if(pbBinary && cbBinary)
@@ -732,7 +732,7 @@ static PFILE_DATA LoadLocalFile(TLogHelper * pLogger, LPCTSTR szFileName, bool b
     return pFileData;
 }
 
-static DWORD FindFilesInternal(FS_SEARCH_CALLBACK PfnFolderCallback, FS_SEARCH_CALLBACK PfnFileCallback, LPTSTR szDirectory, LPVOID lpContext = NULL)
+static DWORD FindFilesInternal(FS_SEARCH_CALLBACK PfnFolderCallback, FS_SEARCH_CALLBACK PfnFileCallback, LPTSTR szDirectory, void * lpContext = NULL)
 {
     LPTSTR szPlainName;
     HANDLE hFind;
@@ -785,7 +785,7 @@ static DWORD FindFilesInternal(FS_SEARCH_CALLBACK PfnFolderCallback, FS_SEARCH_C
     return dwErrCode;
 }
 
-static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, LPVOID lpContext)
+static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
 {
     TLogHelper * pLogger = (TLogHelper *)(lpContext);
     PFILE_DATA pFileData;
@@ -847,7 +847,7 @@ static DWORD VerifyFileHashes(LPCTSTR szSubDirectory)
     return FindFilesInternal(NULL, ForEachFile_VerifyFileHash, szWorkBuff, &Logger);
 }
 
-static DWORD FindListFileFolder(LPCTSTR szFullPath, LPVOID /* lpContext */)
+static DWORD FindListFileFolder(LPCTSTR szFullPath, void * /* lpContext */)
 {
     LPCTSTR szPlainName = GetPlainFileName(szFullPath);
 
@@ -913,9 +913,9 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
     // Find the listfile directory within the MPQ directory
     CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szMpqSubDir);
     FindFilesInternal(FindListFileFolder, NULL, szFullPath, NULL);
-    if(szListFileDir == NULL || szListFileDir[0] == 0)
+    if(szListFileDir[0] == 0)
         return Logger.PrintError(_T("Listfile folder was not found in the MPQ directory"));
-    if(szMpqPatchDir == NULL || szMpqPatchDir[0] == 0)
+    if(szMpqPatchDir[0] == 0)
         return Logger.PrintError(_T("Patches folder was not found in the MPQ directory"));
 
     // Verify if the work MPQ directory is writable
