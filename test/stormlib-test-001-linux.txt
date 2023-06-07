@@ -1,5 +1,5 @@
 ==== Test Suite for StormLib version 9.24 ====
-InitWorkFolder: Work directory \Multimedia\MPQs (default)
+InitWorkFolder: Work directory /media/ladik/MPQs (default)
 TestLiFiSearch (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
 TestLiFiSearch (ListFile_Blizzard.txt) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.
