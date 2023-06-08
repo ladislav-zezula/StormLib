@@ -932,7 +932,7 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
         return Logger.PrintError(_T("Patches folder was not found in the MPQ directory"));
 
     // Verify if the work MPQ directory is writable
-    CreateFullPathName(szFullPath, _countof(szFullPath), NULL, _T("TestFile.bin"));
+    CreateFullPathName(szFullPath, _countof(szFullPath), szDataFileDir, _T("new-file.bin"));
     pStream = FileStream_CreateFile(szFullPath, 0);
     if(pStream == NULL)
         return Logger.PrintError(_T("MPQ subdirectory doesn't exist or is not writable"));
@@ -4427,15 +4427,15 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Create a MPQ file, add a mono-WAVE file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("Mono.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("wave-mono.wav"));
 
     // Create a MPQ file, add a mono-WAVE with 8 bits per sample file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("MonoBad.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("wave-mono-bad.wav"));
 
     // Create a MPQ file, add a stereo-WAVE file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("Stereo.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("wave-stereo.wav"));
 
     // Check if the listfile is always created at the end of the file table in the archive
     if(dwErrCode == ERROR_SUCCESS)
