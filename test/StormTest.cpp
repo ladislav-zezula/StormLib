@@ -2105,7 +2105,7 @@ static DWORD TestOnLocalListFile(LPCTSTR szPlainName)
     int nFileCount = 0;
 
     // Get the full name of the local file
-    CreateFullPathName(szFileName1, _countof(szFileName1), szMpqSubDir, szPlainName);
+    CreateFullPathName(szFileName1, _countof(szFileName1), szDataFileDir, szPlainName);
 
     // Test opening the local file
     if(SFileOpenFileEx(NULL, szFileName1, SFILE_OPEN_LOCAL_FILE, &hFile))
@@ -4286,8 +4286,8 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_LOCAL_LISTFILE      // Tests on a local listfile
     if(dwErrCode == ERROR_SUCCESS)
     {
-        TestOnLocalListFile(_T("FLAT-MAP:ListFile_Blizzard.txt"));
-        dwErrCode = TestOnLocalListFile(_T("ListFile_Blizzard.txt"));
+        TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
+        dwErrCode = TestOnLocalListFile(_T("listfile-test.txt"));
     }
 #endif  // TEST_LOCAL_LISTFILE
 
