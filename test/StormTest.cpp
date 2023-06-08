@@ -932,7 +932,7 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
         return Logger.PrintError(_T("Patches folder was not found in the MPQ directory"));
 
     // Verify if the work MPQ directory is writable
-    CreateFullPathName(szFullPath, _countof(szFullPath), szDataFileDir, _T("new-file.bin"));
+    CreateFullPathName(szFullPath, _countof(szFullPath), szMpqSubDir, _T("new-file.bin"));
     pStream = FileStream_CreateFile(szFullPath, 0);
     if(pStream == NULL)
         return Logger.PrintError(_T("MPQ subdirectory doesn't exist or is not writable"));

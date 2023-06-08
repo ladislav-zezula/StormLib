@@ -1,4 +1,4 @@
-==== Test Suite for StormLib version 9.24 ====
+==== Test Suite for StormLib version 9.25 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
 TestLiFiSearch (ListFile_Blizzard.txt) succeeded.
@@ -42,6 +42,7 @@ TestReadingMpq: Warning: CRC32 error on replay.message.events
 TestReadingMpq (MPQ_2023_v2_MemoryCorruption.SC2Replay) succeeded.
 TestReadingMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestReadingMpq (MPQ_2023_v1_BroodWarMap.scx) succeeded.
+TestReadingMpq (MPQ_2023_v1_Volcanis.scm) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_Spazzler.w3x) succeeded.
@@ -112,6 +113,9 @@ Test_ReopenMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 Test_ReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 Test_Signature (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
 Test_Signature (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
+TestModifyMpq (MPQ_2014_v4_Base.StormReplay) succeeded.
+TestModifyMpq (MPQ_2022_v1_v4.329.w3x) succeeded.
+TestModifyMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestVerifyHash succeeded.
 CreateEmptyMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateEmptyMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
@@ -132,5 +136,3 @@ TestCompressions: Warning: CRC32 error on WaveFile_01.wav
 TestCompressions: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.
-TestModifyMpq (MPQ_2014_v4_Base.StormReplay) succeeded.
-TestModifyMpq (MPQ_2022_v1_v4.329.w3x) succeeded.
