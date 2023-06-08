@@ -126,6 +126,7 @@ static const TCHAR PATH_SEPARATOR = '/';            // Path separator for Non-Wi
 
 // Global for the work MPQ
 static LPCTSTR szMpqSubDir   = _T("1995 - Test MPQs");
+static TCHAR szDataFileDir[MAX_PATH] = {0};
 static TCHAR szListFileDir[MAX_PATH] = {0};
 static TCHAR szMpqPatchDir[MAX_PATH] = {0};
 
@@ -851,6 +852,16 @@ static DWORD FindListFileFolder(LPCTSTR szFullPath, void * /* lpContext */)
 {
     LPCTSTR szPlainName = GetPlainFileName(szFullPath);
 
+    // Check data file dir
+    if(szDataFileDir[0] == 0)
+    {
+        if(!_tcsnicmp(szPlainName, _T("addfiles-"), 9))
+        {
+            StringCopy(szDataFileDir, _countof(szDataFileDir), GetRelativePath(szFullPath));
+            return ERROR_SUCCESS;
+        }
+    }
+
     // Check listfile directory
     if(szListFileDir[0] == 0)
     {
@@ -913,6 +924,8 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
     // Find the listfile directory within the MPQ directory
     CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szMpqSubDir);
     FindFilesInternal(FindListFileFolder, NULL, szFullPath, NULL);
+    if(szDataFileDir[0] == 0)
+        return Logger.PrintError(_T("Data files folder was not found in the MPQ directory"));
     if(szListFileDir[0] == 0)
         return Logger.PrintError(_T("Listfile folder was not found in the MPQ directory"));
     if(szMpqPatchDir[0] == 0)
@@ -3392,8 +3405,8 @@ static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
     DWORD dwErrCode;
 
     // Create paths for local file to be added
-    CreateFullPathName(szFileName1, _countof(szFileName1), szMpqSubDir, _T("AddFile.exe"));
-    CreateFullPathName(szFileName2, _countof(szFileName2), szMpqSubDir, _T("AddFile.bin"));
+    CreateFullPathName(szFileName1, _countof(szFileName1), szDataFileDir, _T("new-file.exe"));
+    CreateFullPathName(szFileName2, _countof(szFileName2), szDataFileDir, _T("new-file.bin"));
 
     // Create an empty file that will serve as holder for the MPQ
     dwErrCode = CreateEmptyFile(&Logger, szPlainName, 0x100000, szFullPath);
@@ -3546,7 +3559,7 @@ static DWORD TestCreateArchive_WaveCompressionsTest(LPCTSTR szPlainName, LPCTSTR
     DWORD dwErrCode;
 
     // Create paths for local file to be added
-    CreateFullPathName(szFileName, _countof(szFileName), szMpqSubDir, szWaveFile);
+    CreateFullPathName(szFileName, _countof(szFileName), szDataFileDir, szWaveFile);
 
     // Create new archive
     dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 0x40, &hMpq);
@@ -3737,29 +3750,31 @@ static DWORD TestCreateArchive_BigArchive(LPCTSTR szPlainName)
     return dwErrCode;
 }
 
-// "MPQ_2014_v4_Heroes_Replay.MPQ", "AddFile-replay.message.events"
-static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName)
+// Test replacing a file in an archive
+static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LPCSTR szFileFlags, DWORD dwCompression)
 {
     TLogHelper Logger("TestModifyMpq", szMpqPlainName);
     HANDLE hMpq = NULL;
     TCHAR szFileFullName[MAX_PATH];
     TCHAR szMpqFullName[MAX_PATH];
     char szArchivedName[MAX_PATH];
-    size_t nOffset = 0;
     DWORD dwErrCode;
+    DWORD dwFileFlags = (DWORD)(DWORD_PTR)(szFileFlags);        // szFileFlags is a file flags cast to LPCSTR
     BYTE md5_file_in_mpq1[MD5_DIGEST_SIZE];
     BYTE md5_file_in_mpq2[MD5_DIGEST_SIZE];
     BYTE md5_file_in_mpq3[MD5_DIGEST_SIZE];
     BYTE md5_file_local[MD5_DIGEST_SIZE];
 
-    // Get the name of archived file as plain text
-    if(!_tcsnicmp(szFilePlainName, _T("AddFile-"), 8))
-        nOffset = 8;
-    StringCopy(szArchivedName, _countof(szArchivedName), szFilePlainName + nOffset);
+    // Get the name of archived file as plain text. If the file shall be in a subfolder,
+    // its name must contain a hashtag, e.g. "staredit#scenario.chk"
+    StringCopy(szArchivedName, _countof(szArchivedName), szFilePlainName);
+    for(size_t i = 0; szArchivedName[i] != 0; i++)
+        szArchivedName[i] = (szArchivedName[i] == '#') ? '\\' : szArchivedName[i];
 
     // Get the full path of the archive and local file
-    CreateFullPathName(szFileFullName, _countof(szFileFullName), szMpqSubDir, szFilePlainName);
+    CreateFullPathName(szFileFullName, _countof(szFileFullName), szDataFileDir, szFilePlainName);
     CreateFullPathName(szMpqFullName, _countof(szMpqFullName), NULL, szMpqPlainName);
+    dwFileFlags |= MPQ_FILE_REPLACEEXISTING | MPQ_FILE_COMPRESS;
 
     // Open an existing archive
     dwErrCode = OpenExistingArchiveWithCopy(&Logger, szMpqPlainName, szMpqPlainName, &hMpq);
@@ -3783,8 +3798,8 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
         dwErrCode = AddLocalFileToMpq(&Logger, hMpq,
                                                szArchivedName,
                                                szFileFullName,
-                                               MPQ_FILE_REPLACEEXISTING | MPQ_FILE_COMPRESS | MPQ_FILE_SINGLE_UNIT,
-                                               MPQ_COMPRESSION_ZLIB,
+                                               dwFileFlags,
+                                               dwCompression,
                                                true);
     }
 
@@ -3823,6 +3838,7 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
         // For that reason, we ignore the result of SFileCompactArchive().
         SFileCompactArchive(hMpq, NULL, 0);
         SFileCloseArchive(hMpq);
+        hMpq = NULL;
     }
 
     // Try to open the archive again. Ignore the previous errors
@@ -3844,10 +3860,65 @@ static DWORD TestModifyArchive_ReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFil
             }
 
             SFileCloseArchive(hMpq);
+            hMpq = NULL;
         }
     }
 
+    // Finally, close the archive
+    if(hMpq != NULL)
+        SFileCloseArchive(hMpq);
     return dwErrCode;
+}
+
+static DWORD Test_PlayingSpace()
+{
+    BYTE PlainText1[0x1000];
+    BYTE Compressed[0x1000];
+    BYTE PlainText2[0x1000];
+    int cbCompressed;
+    int cbOutBuffer;
+
+    // Prepare buffer that is hard to compress
+    memset(PlainText1, 0x01, sizeof(PlainText1));
+    
+    // Compress the data
+    cbOutBuffer = sizeof(Compressed);
+    SCompCompress(Compressed, &cbOutBuffer, PlainText1, sizeof(PlainText1), MPQ_COMPRESSION_HUFFMANN | MPQ_COMPRESSION_ZLIB, 0, 0);
+    cbCompressed = cbOutBuffer;
+
+    // Decompress the data
+    cbOutBuffer = sizeof(PlainText2);
+    SCompDecompress(PlainText2, &cbOutBuffer, Compressed, cbCompressed);
+    return ERROR_SUCCESS;
+
+/*
+    // Check opening of a MPQ
+    LPCTSTR szArchiveName = _T("e:\\Volcanis.scm");
+    LPBYTE pbBuffer = NULL;
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
+    DWORD dwFileSize;
+
+    if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
+    {
+        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
+        {
+            if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
+            {
+                if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
+                {
+                    DWORD dwBytesRead = 0;
+
+                    SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
+                    assert(dwBytesRead == dwFileSize);
+                    STORM_FREE(pbBuffer);
+                }
+            }
+            SFileCloseFile(hFile);
+        }
+        SFileCloseArchive(hMpq);
+    }
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4062,6 +4133,7 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("MPQ_2023_v2_MemoryCorruption.SC2Replay"),              NULL, "4cf5021aa272298e64712a378a50df44",    10},               // MPQ archive v 2.0, archive size is wrong
     {_T("MPQ_2023_v1_StarcraftMap.scm"),                        NULL, "7830c51700697dd3c175f086a3157b29",     4},               // StarCraft map from StarCraft: Brood War 1.16
     {_T("MPQ_2023_v1_BroodWarMap.scx"),                         NULL, "dd3afa3c2f5e562ce3ca91c0c605a71f",     3},               // Brood War map from StarCraft: Brood War 1.16
+    {_T("MPQ_2023_v1_Volcanis.scm"),                            NULL, "522c89ca96d6736427b01f7c80dd626f",     3},               // Map modified with unusual file compression: ZLIB+Huffman
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4161,11 +4233,18 @@ static const TEST_INFO Test_ReopenMpqs[] =
 
 };
 
-// TODO: Include this in the CreateArchive tests
+// Tests for signature file
 static const TEST_INFO Test_Signature[] =
 {
-    {_T("MPQ_1999_v1_WeakSigned1.mpq"),             NULL,                                   NULL, SFLAG_CREATE_ARCHIVE | SFLAG_SIGN_AT_CREATE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
-    {_T("MPQ_1999_v1_WeakSigned1.mpq"),             NULL,                                   NULL, SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+    {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_SIGN_AT_CREATE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+    {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
+};
+
+static const TEST_INFO Test_ReplaceFile[] =
+{
+    {_T("MPQ_2014_v4_Base.StormReplay"), _T("replay.message.events"), (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
+    {_T("MPQ_2022_v1_v4.329.w3x"),       _T("war3map.j"),             (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
+    {_T("MPQ_2023_v1_StarcraftMap.scm"), _T("staredit#scenario.chk"), NULL,                           MPQ_COMPRESSION_ZLIB | MPQ_COMPRESSION_HUFFMANN},
 };
 
 //-----------------------------------------------------------------------------
@@ -4178,6 +4257,7 @@ static const TEST_INFO Test_Signature[] =
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
+#define TEST_REPLACE_FILE
 
 int _tmain(int argc, TCHAR * argv[])
 {
@@ -4190,34 +4270,10 @@ int _tmain(int argc, TCHAR * argv[])
     // Initialize storage and mix the random number generator
     printf("==== Test Suite for StormLib version %s ====\n", STORMLIB_VERSION_STRING);
     dwErrCode = InitializeMpqDirectory(argv, argc);
-/*
-    // Check opening of a MPQ
-    LPCTSTR szArchiveName = _T("e:\\Volcanis.scm");
-    LPBYTE pbBuffer = NULL;
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
-    DWORD dwFileSize;
 
-    if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
-    {
-        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
-        {
-            if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
-            {
-                if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
-                {
-                    DWORD dwBytesRead = 0;
+    // Placeholder function for various testing purposes
+    Test_PlayingSpace();
 
-                    SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
-                    assert(dwBytesRead == dwFileSize);
-                    STORM_FREE(pbBuffer);
-                }
-            }
-            SFileCloseFile(hFile);
-        }
-        SFileCloseArchive(hMpq);
-    }
-*/
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
@@ -4301,6 +4357,22 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
+#ifdef TEST_REPLACE_FILE        // Replace a file in archives
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(Test_ReplaceFile); i++)
+        {
+            // Ignore the error code here; we want to see results of all opens
+            dwErrCode = TestReplaceFile(Test_ReplaceFile[i].szName1,
+                                        Test_ReplaceFile[i].szName2,
+                                        Test_ReplaceFile[i].szDataHash,
+                                        Test_ReplaceFile[i].dwFlags);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
+#endif
+
     // Verify SHA1 of each MPQ that we have in the list
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = VerifyFileHashes(szMpqSubDir);
@@ -4355,15 +4427,15 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Create a MPQ file, add a mono-WAVE file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("AddFile-Mono.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoTest.mpq"), _T("Mono.wav"));
 
     // Create a MPQ file, add a mono-WAVE with 8 bits per sample file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("AddFile-MonoBad.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveMonoBadTest.mpq"), _T("MonoBad.wav"));
 
     // Create a MPQ file, add a stereo-WAVE file with various compressions
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("AddFile-Stereo.wav"));
+        dwErrCode = TestCreateArchive_WaveCompressionsTest(_T("StormLibTest_AddWaveStereoTest.mpq"), _T("Stereo.wav"));
 
     // Check if the listfile is always created at the end of the file table in the archive
     if(dwErrCode == ERROR_SUCCESS)
@@ -4372,13 +4444,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Open a MPQ (add custom user data to it)
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_BigArchive(_T("StormLibTest_BigArchive_v4.mpq"));
-
-    // Test replacing a file with zero size file
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestModifyArchive_ReplaceFile(_T("MPQ_2014_v4_Base.StormReplay"), _T("AddFile-replay.message.events"));
-
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestModifyArchive_ReplaceFile(_T("MPQ_2022_v1_v4.329.w3x"), _T("AddFile-war3map.j"));
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();

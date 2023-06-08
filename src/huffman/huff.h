@@ -29,8 +29,8 @@ class TInputStream
 
     TInputStream(void * pvInBuffer, size_t cbInBuffer);
     unsigned int Get1Bit();
-    unsigned int Peek7Bits();
     unsigned int Get8Bits();
+    bool Peek7Bits(unsigned int & Value);
     void SkipBits(unsigned int BitCount);
 
     unsigned char * pbInBufferEnd;      // End position in the the input buffer
