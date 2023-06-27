@@ -4,7 +4,7 @@
             "name": "Linux",
             "compilerPathInCppPropertiesJson": "/usr/bin/clang",
             "includePath": [
-                "/home/ladik/AppDir/StormLib/**"
+                "${workspaceFolder}/**"
             ],
             "defines": [],
             "compileCommands": "${workspaceFolder}/build/compile_commands.json",
