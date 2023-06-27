@@ -3,13 +3,13 @@
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
-    "program": "./build/storm_test",
+    "program": "./build/StormLib_test",
     "configurations": [
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/storm_test",
+            "program": "${workspaceFolder}/build/StormLib_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
