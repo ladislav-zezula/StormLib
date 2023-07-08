@@ -999,18 +999,20 @@ void * LoadMpqTable(
     LPBYTE pbCompressed = NULL;
     LPBYTE pbMpqTable;
     LPBYTE pbToRead;
-    DWORD dwBytesToRead = dwCompressedSize;
+    DWORD dwBytesToRead = dwTableSize;
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Allocate the MPQ table
     pbMpqTable = pbToRead = STORM_ALLOC(BYTE, dwTableSize);
     if(pbMpqTable != NULL)
     {
-        // Check if the MPQ table is encrypted
+        // Check if the MPQ table is compressed
         if(dwCompressedSize < dwTableSize)
         {
             // Allocate temporary buffer for holding compressed data
             pbCompressed = pbToRead = STORM_ALLOC(BYTE, dwCompressedSize);
+            dwBytesToRead = dwCompressedSize;
+
             if(pbCompressed == NULL)
             {
                 STORM_FREE(pbMpqTable);

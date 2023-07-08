@@ -564,11 +564,11 @@ static DWORD CreatePseudoFileName(HANDLE hFile, TFileEntry * pFileEntry, char * 
 
 bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
 {
-    TMPQFile * hf = (TMPQFile *)hFile;  // MPQ File handle
+    TMPQFile * hf;
     DWORD dwErrCode = ERROR_INVALID_HANDLE;
 
     // Check valid parameters
-    if(IsValidFileHandle(hFile))
+    if((hf = IsValidFileHandle(hFile)) != NULL)
     {
         TFileEntry * pFileEntry = hf->pFileEntry;
 
