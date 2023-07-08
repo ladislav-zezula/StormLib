@@ -3870,30 +3870,11 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
     return dwErrCode;
 }
 
-static DWORD Test_PlayingSpace()
+static void Test_PlayingSpace()
 {
-    BYTE PlainText1[0x1000];
-    BYTE Compressed[0x1000];
-    BYTE PlainText2[0x1000];
-    int cbCompressed;
-    int cbOutBuffer;
-
-    // Prepare buffer that is hard to compress
-    memset(PlainText1, 0x01, sizeof(PlainText1));
-    
-    // Compress the data
-    cbOutBuffer = sizeof(Compressed);
-    SCompCompress(Compressed, &cbOutBuffer, PlainText1, sizeof(PlainText1), MPQ_COMPRESSION_HUFFMANN | MPQ_COMPRESSION_ZLIB, 0, 0);
-    cbCompressed = cbOutBuffer;
-
-    // Decompress the data
-    cbOutBuffer = sizeof(PlainText2);
-    SCompDecompress(PlainText2, &cbOutBuffer, Compressed, cbCompressed);
-    return ERROR_SUCCESS;
-
 /*
     // Check opening of a MPQ
-    LPCTSTR szArchiveName = _T("e:\\Volcanis.scm");
+    LPCTSTR szArchiveName = _T("e:\\GreenTD.w3x");
     LPBYTE pbBuffer = NULL;
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
@@ -3901,7 +3882,7 @@ static DWORD Test_PlayingSpace()
 
     if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "File00000160.xxx", 0, &hFile))
         {
             if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
             {
@@ -3910,7 +3891,6 @@ static DWORD Test_PlayingSpace()
                     DWORD dwBytesRead = 0;
 
                     SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
-                    assert(dwBytesRead == dwFileSize);
                     STORM_FREE(pbBuffer);
                 }
             }
@@ -4109,7 +4089,6 @@ static const TEST_INFO TestList_MasterMirror[] =
 
 static const TEST_INFO Test_OpenMpqs[] =
 {
-
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
     {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                       NULL, "43fe7d362955be68a708486e399576a7",    10},               // From Starcraft 1 BETA
@@ -4134,6 +4113,8 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("MPQ_2023_v1_StarcraftMap.scm"),                        NULL, "7830c51700697dd3c175f086a3157b29",     4},               // StarCraft map from StarCraft: Brood War 1.16
     {_T("MPQ_2023_v1_BroodWarMap.scx"),                         NULL, "dd3afa3c2f5e562ce3ca91c0c605a71f",     3},               // Brood War map from StarCraft: Brood War 1.16
     {_T("MPQ_2023_v1_Volcanis.scm"),                            NULL, "522c89ca96d6736427b01f7c80dd626f",     3},               // Map modified with unusual file compression: ZLIB+Huffman
+    {_T("MPQ_2023_v4_UTF8.s2ma"),                               NULL, "97b7a686650f3307d135e1d1b017a36a",    67},               // Map contaning files with Chinese names (UTF8-encoded)
+    {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "477af4ddf11eead1412d7c87cb81b530",  2004},               // Corrupt sector checksum table in file #A0
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4250,7 +4231,7 @@ static const TEST_INFO Test_ReplaceFile[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
+//#define TEST_COMMAND_LINE
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR

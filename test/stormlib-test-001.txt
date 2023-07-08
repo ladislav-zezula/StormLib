@@ -1,7 +1,7 @@
 ==== Test Suite for StormLib version 9.25 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
-TestLiFiSearch (FLAT-MAP:ListFile_Blizzard.txt) succeeded.
-TestLiFiSearch (ListFile_Blizzard.txt) succeeded.
+TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
+TestLiFiSearch (listfile-test.txt) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-complete.MPQ) succeeded.
@@ -43,6 +43,8 @@ TestReadingMpq (MPQ_2023_v2_MemoryCorruption.SC2Replay) succeeded.
 TestReadingMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestReadingMpq (MPQ_2023_v1_BroodWarMap.scx) succeeded.
 TestReadingMpq (MPQ_2023_v1_Volcanis.scm) succeeded.
+TestReadingMpq (MPQ_2023_v4_UTF8.s2ma) succeeded.
+TestReadingMpq (MPQ_2023_v1_GreenTD.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_Spazzler.w3x) succeeded.
