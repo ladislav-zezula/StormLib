@@ -8,7 +8,7 @@ set SAVE_PATH=%PATH%
 set LIB_NAME=StormLib
 
 :: Determine where the program files are, both for 64-bit and 32-bit Windows
-if exist "%ProgramFiles%"      set PROGRAM_FILES_X64=%ProgramFiles%
+if exist "%ProgramW6432%"      set PROGRAM_FILES_X64=%ProgramW6432%
 if exist "%ProgramFiles%"      set PROGRAM_FILES_DIR=%ProgramFiles%
 if exist "%ProgramFiles(x86)%" set PROGRAM_FILES_DIR=%ProgramFiles(x86)%
 

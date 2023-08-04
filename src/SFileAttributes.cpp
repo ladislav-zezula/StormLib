@@ -391,7 +391,10 @@ DWORD SAttrLoadAttributes(TMPQArchive * ha)
                 pbAttrFile[cbAttrFile] = 0;
 
                 // Load the entire file to memory
-                SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL);
+                if(!SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL))
+                    ha->dwFlags |= (GetLastError() == ERROR_FILE_CORRUPT) ? MPQ_FLAG_MALFORMED : 0;
+
+                // Parse the (attributes)
                 if(dwBytesRead == cbAttrFile)
                     dwErrCode = LoadAttributesFile(ha, pbAttrFile, cbAttrFile);
 

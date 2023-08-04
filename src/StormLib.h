@@ -215,7 +215,7 @@ extern "C" {
 #define SFILE_INVALID_POS           0xFFFFFFFF
 #define SFILE_INVALID_ATTRIBUTES    0xFFFFFFFF
 
-// Flags for SFileAddFile
+// Flags for TMPQBlock::dwFlags
 #define MPQ_FILE_IMPLODE            0x00000100  // Implode method (By PKWARE Data Compression Library)
 #define MPQ_FILE_COMPRESS           0x00000200  // Compress methods (By multiple methods)
 #define MPQ_FILE_ENCRYPTED          0x00010000  // Indicates whether file is encrypted
@@ -258,6 +258,9 @@ extern "C" {
                                   MPQ_FILE_ENCRYPTED     |  \
                                   MPQ_FILE_FIX_KEY       |  \
                                   MPQ_FILE_EXISTS)
+
+// Flags for TPatchInfo::dwFlags
+#define MPQ_PATCH_INFO_VALID        0x80000000  // Set if the patch info is valid
 
 // We need to mask out the upper 4 bits of the block table index.
 // This is because it gets shifted out when calculating block table offset
@@ -676,7 +679,7 @@ typedef struct _TMPQBlock
 typedef struct _TPatchInfo
 {
     DWORD dwLength;                             // Length of patch info header, in bytes
-    DWORD dwFlags;                              // Flags. 0x80000000 = MD5 (?)
+    DWORD dwFlags;                              // Flags. 0x80000000 = valid (?)
     DWORD dwDataSize;                           // Uncompressed size of the patch file
     BYTE  md5[0x10];                            // MD5 of the entire patch file after decompression
 

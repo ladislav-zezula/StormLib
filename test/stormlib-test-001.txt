@@ -45,6 +45,7 @@ TestReadingMpq (MPQ_2023_v1_BroodWarMap.scx) succeeded.
 TestReadingMpq (MPQ_2023_v1_Volcanis.scm) succeeded.
 TestReadingMpq (MPQ_2023_v4_UTF8.s2ma) succeeded.
 TestReadingMpq (MPQ_2023_v1_GreenTD.w3x) succeeded.
+TestReadingMpq (MPQ_2023_v4_1F644C5A.SC2Replay) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_Spazzler.w3x) succeeded.
