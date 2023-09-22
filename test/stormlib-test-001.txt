@@ -119,6 +119,7 @@ Test_Signature (MPQ_1999_v1_WeakSigned1.mpq) succeeded.
 TestModifyMpq (MPQ_2014_v4_Base.StormReplay) succeeded.
 TestModifyMpq (MPQ_2022_v1_v4.329.w3x) succeeded.
 TestModifyMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
+TestAddFileOver2GB (MPQ_2002_v1_LargeMapFile.w3m) succeeded.
 TestVerifyHash succeeded.
 CreateEmptyMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateEmptyMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
@@ -139,3 +140,5 @@ TestCompressions: Warning: CRC32 error on WaveFile_01.wav
 TestCompressions: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.
+
+E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>

@@ -2,9 +2,10 @@
 @echo off
 
 :: Save the values of INCLUDE, LIB and PATH
+set PROJECT_DIR=%~dp0
 set SAVE_INCLUDE=%INCLUDE%
-set SAVE_LIB=%LIB%
 set SAVE_PATH=%PATH%
+set SAVE_LIB=%LIB%
 set LIB_NAME=StormLib
 
 :: Determine where the program files are, both for 64-bit and 32-bit Windows
@@ -59,13 +60,18 @@ call :BuildAndCopyLib %3 %SLN_TRG% %LIB_TRG% ReleaseAS
 call :BuildAndCopyLib %3 %SLN_TRG% %LIB_TRG% ReleaseUD
 call :BuildAndCopyLib %3 %SLN_TRG% %LIB_TRG% ReleaseUS
 
-:: Restore environment variables to the old level
+:: Restore environment variables to the old values
 set INCLUDE=%SAVE_INCLUDE%
-set LIB=%SAVE_LIB%
 set PATH=%SAVE_PATH%
+set LIB=%SAVE_LIB%
+
+:: Delete environment variables that are set by Visual Studio
+set __VSCMD_PREINIT_PATH=
+set EXTERNAL_INCLUDE=
 set VSINSTALLDIR=
 set VCINSTALLDIR=
 set DevEnvDir=
+set LIBPATH=
 goto:eof
 
 ::-----------------------------------------------------------------------------
@@ -73,7 +79,7 @@ goto:eof
 ::
 :: Parameters:
 ::
-::   %1     Plain name of the .sln solution file ("StormLib_vs##.sln")
+::   %1     Plain name of the .sln solution file
 ::   %2     Target build platform ("Win32" or "x64")
 ::   %3     Target directory for the library ("lib32", "lib32\vs2008", "lib64" or "lib64\vs2008")
 ::   %4     Subvariant of the library ("DebugAD", "ReleaseUS", ...)
@@ -86,4 +92,4 @@ if not exist ..\aaa goto:eof
 xcopy.exe /Y /D .\src\StormLib.h ..\aaa\inc >nul
 xcopy.exe /Y /D .\src\StormPort.h ..\aaa\inc >nul
 xcopy.exe /Y /D .\bin\StormLib\%2\%4\*.lib ..\aaa\%3 >nul
-goto:eof
+

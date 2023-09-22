@@ -403,6 +403,10 @@ extern "C" {
 #define SHA1_DIGEST_SIZE                  0x14  // 160 bits
 #endif
 
+#ifndef SHA256_DIGEST_SIZE
+#define SHA256_DIGEST_SIZE                0x20  // 256 bits
+#endif
+
 #ifndef LANG_NEUTRAL
 #define LANG_NEUTRAL                      0x00  // Neutral locale
 #endif

@@ -155,11 +155,6 @@ static TCHAR szMpqPatchDir[MAX_PATH] = {0};
 #define SFLAG_SIGN_ARCHIVE      0x00000010              // Sign the archive
 #define SFLAG_VERIFY_AFTER      0x00000020              // Verify the signature after modification
 
-// Flags for TestOpenArchive_AddFile
-#define TFLAG_REOPEN            0x00000001              // Reopen the archive
-#define TFLAG_HAS_LISTFILE      0x00000002              // The archive must have (listfile) after reopen
-#define TFLAG_HAS_ATTRIBUTES    0x00000004              // The archive must have (attributes) after reopen
-
 static DWORD AddFlags[] =
 {
 //  Compression          Encryption             Fixed key           Single Unit            Sector CRC
@@ -277,43 +272,6 @@ LPCTSTR GetRelativePath(LPCTSTR szFullPath)
     return _T("");
 }
 
-static bool IsMpqExtension(LPCTSTR szFileName)
-{
-    LPCTSTR szExtension = _tcsrchr(szFileName, '.');
-
-    if(szExtension != NULL)
-    {
-        if(!_tcsicmp(szExtension, _T(".mpq")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".w3m")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".w3x")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".asi")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".mpqe")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".part")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".sv")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".s2ma")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".SC2Map")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".SC2Mod")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".SC2Replay")))
-            return true;
-        if(!_tcsicmp(szExtension, _T(".0")))        // .MPQ.0
-            return true;
-//      if(!_tcsicmp(szExtension, ".link"))
-//          return true;
-    }
-
-    return false;
-}
-
 // Converts binary array to string.
 // The caller must ensure that the buffer has at least ((cbBinary * 2) + 1) characters
 template <typename xchar>
@@ -418,33 +376,19 @@ static const XCHAR * GetShortPlainName(const XCHAR * szFileName)
     return szPlainName;
 }
 
-static bool CopyStringAndVerifyConversion(
-    LPCTSTR szFoundFile,
-    TCHAR * szBufferT,
-    char * szBufferA,
-    size_t cchMaxChars)
-{
-    // Convert the TCHAR name to ANSI name
-    StringCopy(szBufferA, cchMaxChars, szFoundFile);
-    StringCopy(szBufferT, cchMaxChars, szBufferA);
-
-    // Compare both TCHAR strings
-    return (_tcsicmp(szBufferT, szFoundFile) == 0) ? true : false;
-}
-
-static size_t ConvertSha1ToText(const unsigned char * sha1_digest, TCHAR * szSha1Text)
+static size_t ConvertSha256ToText(const unsigned char * sha_digest, LPTSTR szBuffer)
 {
     LPCSTR szTable = "0123456789abcdef";
 
-    for(size_t i = 0; i < SHA1_DIGEST_SIZE; i++)
+    for(size_t i = 0; i < SHA256_DIGEST_SIZE; i++)
     {
-        *szSha1Text++ = szTable[(sha1_digest[0] >> 0x04)];
-        *szSha1Text++ = szTable[(sha1_digest[0] & 0x0F)];
-        sha1_digest++;
+        *szBuffer++ = szTable[(sha_digest[0] >> 0x04)];
+        *szBuffer++ = szTable[(sha_digest[0] & 0x0F)];
+        sha_digest++;
     }
 
-    *szSha1Text = 0;
-    return (SHA1_DIGEST_SIZE * 2);
+    *szBuffer = 0;
+    return (SHA256_DIGEST_SIZE * 2);
 }
 
 static void CreateFullPathName(TCHAR * szBuffer, size_t cchBuffer, LPCTSTR szSubDir, LPCTSTR szNamePart1, LPCTSTR szNamePart2 = NULL)
@@ -537,12 +481,12 @@ static void CreateFullPathName(char * szBuffer, size_t cchBuffer, LPCTSTR szSubD
 }
 #endif
 
-static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR * szFileSha1)
+static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR szFileHash)
 {
     TFileStream * pStream;
-    unsigned char sha1_digest[SHA1_DIGEST_SIZE];
+    unsigned char file_hash[SHA256_DIGEST_SIZE];
     LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
-    hash_state sha1_state;
+    hash_state sha256_state;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
     LPCTSTR szHashingFormat = _T("Hashing %s " fmt_X_of_Y_a);
@@ -553,7 +497,7 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
 
     // Notify the user
     pLogger->PrintProgress(_T("Hashing %s ..."), szShortPlainName);
-    szFileSha1[0] = 0;
+    szFileHash[0] = 0;
 
     // Open the file to be verified
     pStream = FileStream_OpenFile(szFullPath, STREAM_FLAG_READ_ONLY);
@@ -566,10 +510,10 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
         pbFileBlock = STORM_ALLOC(BYTE, cbFileBlock);
         if(pbFileBlock != NULL)
         {
-            // Initialize SHA1 calculation
-            sha1_init(&sha1_state);
+            // Initialize SHA256 calculation
+            sha256_init(&sha256_state);
 
-            // Calculate the SHA1 of the file
+            // Calculate the SHA256 of the file
             while(ByteOffset < FileSize)
             {
                 // Notify the user
@@ -583,19 +527,19 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
                     break;
                 }
 
-                // Add to SHA1
-                sha1_process(&sha1_state, pbFileBlock, cbBytesToRead);
+                // Add to SHA256
+                sha256_process(&sha256_state, pbFileBlock, cbBytesToRead);
                 ByteOffset += cbBytesToRead;
             }
 
             // Notify the user
             pLogger->PrintProgress(szHashingFormat, szShortPlainName, ByteOffset, FileSize);
 
-            // Finalize SHA1
-            sha1_done(&sha1_state, sha1_digest);
+            // Finalize SHA256
+            sha256_done(&sha256_state, file_hash);
 
-            // Convert the SHA1 to ANSI text
-            ConvertSha1ToText(sha1_digest, szFileSha1);
+            // Convert the SHA256 to ANSI text
+            ConvertSha256ToText(file_hash, szFileHash);
             STORM_FREE(pbFileBlock);
         }
 
@@ -603,7 +547,7 @@ static DWORD CalculateFileSha1(TLogHelper * pLogger, LPCTSTR szFullPath, TCHAR *
     }
 
     // If we calculated something, return OK
-    if(dwErrCode == ERROR_SUCCESS && szFileSha1[0] == 0)
+    if(dwErrCode == ERROR_SUCCESS && szFileHash[0] == 0)
         dwErrCode = ERROR_CAN_NOT_COMPLETE;
     return dwErrCode;
 }
@@ -790,10 +734,11 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
 {
     TLogHelper * pLogger = (TLogHelper *)(lpContext);
     PFILE_DATA pFileData;
-    TCHAR * szExtension;
+    LPCTSTR szHashExtension = _T(".sha256");
+    LPTSTR szExtension;
     TCHAR szShaFileName[MAX_PATH + 1];
-    TCHAR szSha1Text[0x40];
-    char szSha1TextA[0x40];
+    TCHAR szHashText[0x80];
+    char szHashTextA[0x80];
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Try to load the file with the SHA extension
@@ -802,25 +747,25 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
     if(szExtension == NULL)
         return ERROR_SUCCESS;
 
-    // Skip .SHA and .TXT files
-    if(!_tcsicmp(szExtension, _T(".sha")) || !_tcsicmp(szExtension, _T(".txt")))
+    // Skip .SHA256
+    if(!_tcsicmp(szExtension, szHashExtension))
         return ERROR_SUCCESS;
 
     // Load the local file to memory
-    _tcscpy(szExtension, _T(".sha"));
+    _tcscpy(szExtension, szHashExtension);
     pFileData = LoadLocalFile(pLogger, szShaFileName, false);
     if(pFileData != NULL)
     {
-        // Calculate SHA1 of the entire file
-        dwErrCode = CalculateFileSha1(pLogger, szFullPath, szSha1Text);
+        // Calculate SHA256 of the entire file
+        dwErrCode = CalculateFileHash(pLogger, szFullPath, szHashText);
         if(dwErrCode == ERROR_SUCCESS)
         {
             // Compare with what we loaded from the file
-            if(pFileData->dwFileSize >= (SHA1_DIGEST_SIZE * 2))
+            if(pFileData->dwFileSize >= (SHA256_DIGEST_SIZE * 2))
             {
-                // Compare the SHA1
-                StringCopy(szSha1TextA, _countof(szSha1TextA), szSha1Text);
-                if(_strnicmp(szSha1TextA, (char *)pFileData->FileData, (SHA1_DIGEST_SIZE * 2)))
+                // Compare the SHA256
+                StringCopy(szHashTextA, _countof(szHashTextA), szHashText);
+                if(_strnicmp(szHashTextA, (char *)pFileData->FileData, (SHA256_DIGEST_SIZE * 2)))
                 {
                     SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
                     pLogger->PrintError(_T("File hash check failed: %s"), szFullPath);
@@ -1995,22 +1940,6 @@ static DWORD AddLocalFileToMpq(
     return ERROR_SUCCESS;
 }
 
-static DWORD RenameMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szOldFileName, LPCSTR szNewFileName, DWORD dwExpectedError)
-{
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Notify the user
-    pLogger->PrintProgress("Renaming %s to %s ...", szOldFileName, szNewFileName);
-
-    // Perform the deletion
-    if(!SFileRenameFile(hMpq, szOldFileName, szNewFileName))
-        dwErrCode = GetLastError();
-
-    if(dwErrCode != dwExpectedError)
-        return pLogger->PrintErrorVa("Unexpected result from SFileRenameFile(%s -> %s)", szOldFileName, szNewFileName);
-    return ERROR_SUCCESS;
-}
-
 static DWORD RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, DWORD dwExpectedError)
 {
     DWORD dwErrCode = ERROR_SUCCESS;
@@ -2946,66 +2875,50 @@ static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyN
     return dwErrCode;
 }
 
-static DWORD TestOpenArchive_AddFile(LPCTSTR szMpqName, DWORD dwFlags)
+static DWORD TestOpenArchive_AddFiles2GB(LPCTSTR szMpqName, DWORD /* dwFlags */)
 {
-    TLogHelper Logger("TestAddFileToMpq", szMpqName);
-    PFILE_DATA pFileData = NULL;
-    LPCTSTR szBackupMpq = (dwFlags & TFLAG_REOPEN) ? _T("StormLibTest_Reopened.mpq") : szMpqName;
-    LPCSTR szFileName = "AddedFile001.txt";
-    LPCSTR szFileData = "0123456789ABCDEF";
+    TLogHelper Logger("TestAddFileOver2GB", szMpqName);
+    LPCTSTR szCopyName = _T("size-overflow.w3m");
     HANDLE hMpq = NULL;
-    DWORD dwFileSize = (DWORD)strlen(szFileData);
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szFullPath[MAX_PATH];
+    bool bSucceeded = true;
 
     // Copy the archive so we won't fuck up the original one
-    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szMpqName, szBackupMpq, &hMpq);
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szMpqName, szCopyName, &hMpq);
     if(dwErrCode == ERROR_SUCCESS)
     {
-        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, szFileData, MPQ_FILE_IMPLODE, MPQ_COMPRESSION_PKWARE, ERROR_SUCCESS);
+        // Create both file names
+        CreateFullPathName(szFullPath, _countof(szFullPath), szDataFileDir, _T("new-file-big.mp4"));
+
+        // Add the file to MPQ. This must fail, because the map size
+        // will go over 2GB and StormLib marks the file malformed on subsequent open
+        dwErrCode = AddLocalFileToMpq(&Logger, hMpq, "added-extra-file.mp4", szFullPath);
+        if(dwErrCode != ERROR_DISK_FULL)
+            bSucceeded = false;
+
         SFileCloseArchive(hMpq);
     }
 
-    // Now the file has been written and the MPQ has been saved.
-    // We reopen the MPQ and check the state of (listfile) and (attributes)
-    if((dwErrCode == ERROR_SUCCESS) && (dwFlags & TFLAG_REOPEN))
+    // Open the MPQ again
+    if(dwErrCode == ERROR_SUCCESS || dwErrCode == ERROR_DISK_FULL)
     {
-        if((dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szBackupMpq, &hMpq)) == ERROR_SUCCESS)
+        CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szCopyName);
+        if((dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq)) == ERROR_SUCCESS)
         {
-            // Verify presence of (listfile) and (attributes)
-            CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME,   (dwFlags & TFLAG_HAS_LISTFILE));
-            CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, (dwFlags & TFLAG_HAS_ATTRIBUTES));
+            DWORD dwFlags = 0;
 
-            // Try to open the file that we recently added
-            dwErrCode = LoadMpqFile(Logger, hMpq, szFileName, 0, 0, &pFileData);
-            if(dwErrCode == ERROR_SUCCESS)
-            {
-                // Verify if the file size matches
-                if(pFileData->dwFileSize == dwFileSize)
-                {
-                    // Verify if the file data match
-                    if(memcmp(pFileData->FileData, szFileData, dwFileSize))
-                    {
-                        Logger.PrintError("The data of the added file does not match");
-                        dwErrCode = ERROR_FILE_CORRUPT;
-                    }
-                }
-                else
-                {
-                    Logger.PrintError("The size of the added file does not match");
-                    dwErrCode = ERROR_FILE_CORRUPT;
-                }
+            SFileGetFileInfo(hMpq, SFileMpqFlags, &dwFlags, sizeof(dwFlags), NULL);
+            if(dwFlags & MPQ_FLAG_MALFORMED)
+                bSucceeded = false;
 
-                // Delete the file data
-                STORM_FREE(pFileData);
-            }
-            else
-            {
-                Logger.PrintError("Failed to open the file previously added");
-            }
-        
             SFileCloseArchive(hMpq);
         }
     }
+
+    // Both tests must have succeeded
+    if(bSucceeded == false)
+        dwErrCode = ERROR_CAN_NOT_COMPLETE;
     return dwErrCode;
 }
 
@@ -4232,7 +4145,7 @@ static const TEST_INFO Test_ReplaceFile[] =
 //-----------------------------------------------------------------------------
 // Main
 
-//#define TEST_COMMAND_LINE
+#define TEST_COMMAND_LINE
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR
@@ -4355,7 +4268,11 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
-    // Verify SHA1 of each MPQ that we have in the list
+    // Add files so the archive will go over 2GB
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestOpenArchive_AddFiles2GB(_T("MPQ_2002_v1_LargeMapFile.w3m"), 0);
+
+    // Verify SHA256 of each MPQ that we have in the list
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = VerifyFileHashes(szMpqSubDir);
 

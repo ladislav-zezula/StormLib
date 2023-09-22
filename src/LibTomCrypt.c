@@ -8,6 +8,7 @@
 #include "libtomcrypt/src/hashes/hash_memory.c"
 #include "libtomcrypt/src/hashes/md5.c"
 #include "libtomcrypt/src/hashes/sha1.c"
+#include "libtomcrypt/src/hashes/sha256.c"
 #include "libtomcrypt/src/math/multi.c"
 #include "libtomcrypt/src/math/rand_prime.c"
 #include "libtomcrypt/src/misc/base64_decode.c"

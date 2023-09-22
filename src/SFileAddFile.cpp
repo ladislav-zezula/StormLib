@@ -246,6 +246,14 @@ static DWORD WriteDataToMpqFile(
                     BSWAP_ARRAY32_UNSIGNED(pbToWrite, dwBytesInSector);
                 }
 
+                // Do not allow Warcraft III maps to go over 2GB. 
+                // https://github.com/ladislav-zezula/StormLib/issues/306
+                if((ha->dwFlags & MPQ_FLAG_WAR3_MAP) && (ByteOffset + dwBytesInSector) > 0x7FFFFFFF)
+                {
+                    dwErrCode = ERROR_DISK_FULL;
+                    break;
+                }
+
                 // Write the file sector
                 if(!FileStream_Write(ha->pStream, &ByteOffset, pbToWrite, dwBytesInSector))
                 {

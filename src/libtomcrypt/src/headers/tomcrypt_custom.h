@@ -11,29 +11,29 @@
 #define LTC_NO_ROLC
 
 #define LTC_SOURCE
+#define LTC_SHA256
 #define LTC_SHA1
 #define LTC_MD5
 #define LTC_DER
-#define LTC_RC4
 
-#define USE_LTM
 #define LTM_DESC
+#define USE_LTM
 
 /* macros for various libc functions you can change for embedded targets */
 #ifndef XMALLOC
-   #ifdef malloc 
+   #ifdef malloc
    #define LTC_NO_PROTOTYPES
    #endif
 #define XMALLOC  LibTomMalloc
 #endif
 #ifndef XREALLOC
-   #ifdef realloc 
+   #ifdef realloc
    #define LTC_NO_PROTOTYPES
    #endif
 #define XREALLOC LibTomRealloc
 #endif
 #ifndef XCALLOC
-   #ifdef calloc 
+   #ifdef calloc
    #define LTC_NO_PROTOTYPES
    #endif
 #define XCALLOC  LibTomCalloc
@@ -58,7 +58,7 @@
 #define XMEMCPY  memcpy
 #endif
 #ifndef XMEMCMP
-   #ifdef memcmp 
+   #ifdef memcmp
    #define LTC_NO_PROTOTYPES_MEMCMP
    #endif
 #define XMEMCMP  memcmp
@@ -91,19 +91,19 @@
    #define LTC_BLOWFISH
    #define LTC_DES
    #define LTC_CAST5
-   
+
    #define LTC_NO_MODES
    #define LTC_ECB_MODE
    #define LTC_CBC_MODE
    #define LTC_CTR_MODE
-   
+
    #define LTC_NO_HASHES
    #define LTC_SHA1
    #define LTC_SHA512
    #define LTC_SHA384
    #define LTC_SHA256
    #define LTC_SHA224
-   
+
    #define LTC_NO_MACS
    #define LTC_HMAC
    #define LTC_OMAC
@@ -114,11 +114,11 @@
    #define LTC_YARROW
    #define LTC_DEVRANDOM
    #define TRY_URANDOM_FIRST
-      
+
    #define LTC_NO_PK
    #define LTC_MRSA
    #define LTC_MECC
-#endif   
+#endif
 
 /* Use small code where possible */
 /* #define LTC_SMALL_CODE */
@@ -194,7 +194,7 @@
 #define LTC_LRW_MODE
 #ifndef LTC_NO_TABLES
    /* like GCM mode this will enable 16 8x128 tables [64KB] that make
-    * seeking very fast.  
+    * seeking very fast.
     */
    #define LRW_TABLES
 #endif
@@ -205,7 +205,7 @@
 #endif /* LTC_NO_MODES */
 
 /* ---> One-Way Hash Functions <--- */
-#ifndef LTC_NO_HASHES 
+#ifndef LTC_NO_HASHES
 
 #define LTC_CHC_HASH
 #define LTC_WHIRLPOOL
@@ -252,7 +252,7 @@
 
 /* Use 64KiB tables */
 #ifndef LTC_NO_TABLES
-   #define LTC_GCM_TABLES 
+   #define LTC_GCM_TABLES
 #endif
 
 /* USE SSE2? requires GCC works on x86_32 and x86_64*/
@@ -319,7 +319,7 @@
 #define LTC_MRSA
 
 /* Include Katja (a Rabin variant like RSA) */
-/* #define MKAT */ 
+/* #define MKAT */
 
 /* Digital Signature Algorithm */
 #define LTC_MDSA
@@ -332,7 +332,7 @@
 
 #if defined(TFM_LTC_DESC) && defined(LTC_MECC)
    #define LTC_MECC_ACCEL
-#endif   
+#endif
 
 /* do we want fixed point ECC */
 /* #define LTC_MECC_FP */
@@ -376,9 +376,9 @@
 
 #ifdef LTC_MRSA
    #define LTC_PKCS_1
-#endif   
+#endif
 
-#if defined(LTC_DER) && !defined(MPI) 
+#if defined(LTC_DER) && !defined(MPI)
    #error ASN.1 DER requires MPI functionality
 #endif
 

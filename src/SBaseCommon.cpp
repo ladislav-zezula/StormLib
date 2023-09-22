@@ -244,8 +244,9 @@ void InitializeMpqCryptography()
         }
 
         // Also register both MD5 and SHA1 hash algorithms
-        register_hash(&md5_desc);
+        register_hash(&sha256_desc);
         register_hash(&sha1_desc);
+        register_hash(&md5_desc);
 
         // Use LibTomMath as support math library for LibTomCrypt
         ltc_mp = ltm_desc;
