@@ -44,6 +44,9 @@
 // Artificial flag for not reporting open failure
 #define MPQ_OPEN_DONT_REPORT_FAILURE    0x80000000
 
+// Size of SHA256, in bytes
+#define SHA256_DIGEST_SIZE              0x20
+
 typedef DWORD (*FS_SEARCH_CALLBACK)(LPCTSTR szFullPath, void * lpContext);
 
 typedef enum _EXTRA_TYPE
@@ -837,6 +840,9 @@ static DWORD InitializeMpqDirectory(TCHAR * argv[], int argc)
     TCHAR szFullPath[MAX_PATH] = {0};
     LPCTSTR szWhereFrom = _T("default");
     LPCTSTR szDirName = WORK_PATH_ROOT;
+
+    // Make sure SHA256 works in test program
+    register_hash(&sha256_desc);
 
     // Retrieve the first argument
     if(argc > 1 && argv[1] != NULL)
