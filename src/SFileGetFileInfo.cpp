@@ -437,7 +437,7 @@ bool WINAPI SFileGetFileInfo(
 
         case SFileInfoEncryptionKeyRaw:
             dwInt32Value = hf->dwFileKey;
-            if(pFileEntry->dwFlags & MPQ_FILE_FIX_KEY)
+            if(pFileEntry->dwFlags & MPQ_FILE_KEY_V2)
                 dwInt32Value = (dwInt32Value ^ pFileEntry->dwFileSize) - (DWORD)hf->MpqFilePos;
             return GetInfo(pvFileInfo, cbFileInfo, &dwInt32Value, sizeof(DWORD), pcbLengthNeeded);
 

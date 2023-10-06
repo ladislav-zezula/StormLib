@@ -163,7 +163,7 @@ static DWORD CopyMpqFileSectors(
     if(dwErrCode == ERROR_SUCCESS && (pFileEntry->dwFlags & MPQ_FILE_ENCRYPTED))
     {
         dwFileKey2 = dwFileKey1 = hf->dwFileKey;
-        if(pFileEntry->dwFlags & MPQ_FILE_FIX_KEY)
+        if(pFileEntry->dwFlags & MPQ_FILE_KEY_V2)
         {
             dwFileKey2 = (dwFileKey1 ^ pFileEntry->dwFileSize) - (DWORD)pFileEntry->ByteOffset;
             dwFileKey2 = (dwFileKey2 + (DWORD)MpqFilePos) ^ pFileEntry->dwFileSize;

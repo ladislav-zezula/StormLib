@@ -433,7 +433,7 @@ DWORD SFileAddFile_Init(
 
     // Fix Key is not allowed if the file is not encrypted
     if(!(dwFlags & MPQ_FILE_ENCRYPTED))
-        dwFlags &= ~MPQ_FILE_FIX_KEY;
+        dwFlags &= ~MPQ_FILE_KEY_V2;
 
     // If the MPQ is of version 3.0 or higher, we ignore file locale.
     // This is because HET and BET tables have no known support for it
@@ -1303,7 +1303,7 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
     }
 
     // We have to check if the file+locale is not already there
-    pFileEntry = GetFileEntryLocale(ha, hf->pFileEntry->szFileName, lcNewLocale, NULL);
+    pFileEntry = GetFileEntryExact(ha, hf->pFileEntry->szFileName, lcNewLocale, NULL);
     if(pFileEntry != NULL)
     {
         SetLastError(ERROR_ALREADY_EXISTS);

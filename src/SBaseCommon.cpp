@@ -403,7 +403,7 @@ DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
 {
     // Fixed for format 1.0
     if(wFormatVersion == MPQ_FORMAT_VERSION_1)
-        return MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_FIX_KEY;
+        return MPQ_FILE_COMPRESS | MPQ_FILE_ENCRYPTED | MPQ_FILE_KEY_V2;
 
     // Size-dependent for formats 2.0-4.0
     return (dwFileSize > 0x4000) ? (MPQ_FILE_COMPRESS | MPQ_FILE_SECTOR_CRC) : (MPQ_FILE_COMPRESS | MPQ_FILE_SINGLE_UNIT);
@@ -696,7 +696,7 @@ DWORD DecryptFileKey(
     dwFileKey = HashString(szFileName, MPQ_HASH_FILE_KEY);
 
     // Fix the key, if needed
-    if(dwFlags & MPQ_FILE_FIX_KEY)
+    if(dwFlags & MPQ_FILE_KEY_V2)
         dwFileKey = (dwFileKey + dwMpqPos) ^ dwFileSize;
 
     // Return the key

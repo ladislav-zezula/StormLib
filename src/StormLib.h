@@ -218,8 +218,8 @@ extern "C" {
 // Flags for TMPQBlock::dwFlags
 #define MPQ_FILE_IMPLODE            0x00000100  // Implode method (By PKWARE Data Compression Library)
 #define MPQ_FILE_COMPRESS           0x00000200  // Compress methods (By multiple methods)
-#define MPQ_FILE_ENCRYPTED          0x00010000  // Indicates whether file is encrypted
-#define MPQ_FILE_FIX_KEY            0x00020000  // File decryption key has to be fixed
+#define MPQ_FILE_ENCRYPTED          0x00010000  // Indicates an encrypted file
+#define MPQ_FILE_KEY_V2             0x00020000  // Indicates an encrypted file with key v2
 #define MPQ_FILE_PATCH_FILE         0x00100000  // The file is a patch file. Raw file data begin with TPatchInfo structure
 #define MPQ_FILE_SINGLE_UNIT        0x01000000  // File is stored as a single unit, rather than split into sectors (Thx, Quantam)
 #define MPQ_FILE_DELETE_MARKER      0x02000000  // File is a deletion marker. Used in MPQ patches, indicating that the file no longer exists.
@@ -233,10 +233,12 @@ extern "C" {
 
 #define MPQ_FILE_DEFAULT_INTERNAL   0xFFFFFFFF  // Use default flags for internal files
 
+#define MPQ_FILE_FIX_KEY            0x00020000  // Obsolete, do not use
+
 #define MPQ_FILE_VALID_FLAGS     (MPQ_FILE_IMPLODE       |  \
                                   MPQ_FILE_COMPRESS      |  \
                                   MPQ_FILE_ENCRYPTED     |  \
-                                  MPQ_FILE_FIX_KEY       |  \
+                                  MPQ_FILE_KEY_V2        |  \
                                   MPQ_FILE_PATCH_FILE    |  \
                                   MPQ_FILE_SINGLE_UNIT   |  \
                                   MPQ_FILE_DELETE_MARKER |  \
@@ -247,7 +249,7 @@ extern "C" {
 #define MPQ_FILE_VALID_FLAGS_W3X (MPQ_FILE_IMPLODE       |  \
                                   MPQ_FILE_COMPRESS      |  \
                                   MPQ_FILE_ENCRYPTED     |  \
-                                  MPQ_FILE_FIX_KEY       |  \
+                                  MPQ_FILE_KEY_V2        |  \
                                   MPQ_FILE_DELETE_MARKER |  \
                                   MPQ_FILE_SECTOR_CRC    |  \
                                   MPQ_FILE_SIGNATURE     |  \
@@ -256,7 +258,7 @@ extern "C" {
 #define MPQ_FILE_VALID_FLAGS_SCX (MPQ_FILE_IMPLODE       |  \
                                   MPQ_FILE_COMPRESS      |  \
                                   MPQ_FILE_ENCRYPTED     |  \
-                                  MPQ_FILE_FIX_KEY       |  \
+                                  MPQ_FILE_KEY_V2        |  \
                                   MPQ_FILE_EXISTS)
 
 // Flags for TPatchInfo::dwFlags
