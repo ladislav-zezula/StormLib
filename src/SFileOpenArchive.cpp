@@ -387,7 +387,7 @@ bool WINAPI SFileOpenArchive(
                 }
 
                 // Check for MPK archives (Longwu Online - MPQ fork)
-                if(MapType == MapTypeNotRecognized && dwHeaderID == ID_MPK)
+                if(MapType == MapTypeNotRecognized && (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) == 0 && dwHeaderID == ID_MPK)
                 {
                     // Now convert the MPK header to MPQ Header version 4
                     dwErrCode = ConvertMpkHeaderToFormat4(ha, FileSize, dwFlags);
