@@ -148,7 +148,11 @@ static DWORD WriteDataToMpqFile(
         DWORD dwBytesInSector = hf->dwFilePos % hf->dwSectorSize;
         DWORD dwSectorIndex = hf->dwFilePos / hf->dwSectorSize;
         DWORD dwBytesToCopy;
-
+        // Allocate memory for SCompImplode (Compress_PKLIB)
+        if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+        {
+            InitializeSComp(true);
+        }
         // Process all data.
         while(dwDataSize != 0)
         {
@@ -270,6 +274,11 @@ static DWORD WriteDataToMpqFile(
                 dwBytesInSector = 0;
                 dwSectorIndex++;
             }
+        }
+        // Cleanup allocated memory of SCompImplode
+        if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+        {
+            UnInitializeSComp();
         }
     }
 

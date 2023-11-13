@@ -102,6 +102,11 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
     // Set file pointer and read all required sectors
     if(FileStream_Read(ha->pStream, &RawFilePos, pbInSector, dwRawBytesToRead))
     {
+        // Allocate memory for SCompExplode (Decompress_PKLIB) 
+        if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+        {
+            InitializeSComp(false);
+        }
         // Now we have to decrypt and decompress all file sectors that have been loaded
         for(DWORD i = 0; i < dwSectorsToRead; i++)
         {
@@ -213,6 +218,11 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
             pbOutSector += dwBytesInThisSector;
             pbInSector += dwRawBytesInThisSector;
             dwSectorsDone++;
+        }
+        // Cleanup allocated memory of SCompExplode
+        if(pFileEntry->dwFlags & MPQ_FILE_IMPLODE)
+        {
+            UnInitializeSComp();
         }
     }
     else

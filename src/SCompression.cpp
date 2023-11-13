@@ -185,6 +185,18 @@ int Decompress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
 /*                                                                            */
 /******************************************************************************/
 
+// Function pre-allocates the memory for Compress_PKLIB/Decompress_PKLIB
+static char * PKLIB_work_buf = NULL;
+void InitializeSComp(bool implode)
+{
+    PKLIB_work_buf = STORM_ALLOC(char, implode ? CMP_BUFFER_SIZE : EXP_BUFFER_SIZE);
+}
+// Function frees the memory for Compress_PKLIB/Decompress_PKLIB
+void UnInitializeSComp()
+{
+    STORM_FREE(PKLIB_work_buf);
+}
+
 // Function loads data from the input buffer. Used by Pklib's "implode"
 // and "explode" function as user-defined callback
 // Returns number of bytes loaded
@@ -236,7 +248,7 @@ static void WriteOutputData(char * buf, unsigned int * size, void * param)
 static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer, int * pCmpType, int nCmpLevel)
 {
     TDataInfo Info;                                      // Data information
-    char * work_buf = STORM_ALLOC(char, CMP_BUFFER_SIZE);// Pklib's work buffer
+    char * work_buf = PKLIB_work_buf;                    // Pklib's work buffer
     unsigned int dict_size;                              // Dictionary size
     unsigned int ctype = CMP_BINARY;                     // Compression type
 
@@ -244,6 +256,11 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     STORMLIB_UNUSED(pCmpType);
     STORMLIB_UNUSED(nCmpLevel);
 
+    // Allocate Pklib's work buffer
+    if(work_buf == NULL)
+    {
+        work_buf = STORM_ALLOC(char, CMP_BUFFER_SIZE);
+    }
     // Handle no-memory condition
     if(work_buf != NULL)
     {
@@ -270,19 +287,26 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
         // Do the compression
         if(implode(ReadInputData, WriteOutputData, work_buf, &Info, &ctype, &dict_size) == CMP_NO_ERROR)
             *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
-
-        STORM_FREE(work_buf);
+        // Free the work buffer
+        if(PKLIB_work_buf == NULL) {
+            STORM_FREE(work_buf);
+        }
     }
 }
 
 static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     TDataInfo Info;                             // Data information
-    char * work_buf;
+    char * work_buf = PKLIB_work_buf;           // Pklib's work buffer
     int nResult = 0;
 
     // Allocate Pklib's work buffer
-    if((work_buf = STORM_ALLOC(char, EXP_BUFFER_SIZE)) != NULL)
+    if(work_buf == NULL)
+    {
+        work_buf = STORM_ALLOC(char, EXP_BUFFER_SIZE);
+    }
+    // Handle no-memory condition
+    if(work_buf != NULL)
     {
         // Fill data information structure
         Info.pbInBuff     = (unsigned char *)pvInBuffer;
@@ -296,7 +320,10 @@ static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
 
         // Give away the number of decompressed bytes
         *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
-        STORM_FREE(work_buf);
+        // Free the work buffer
+        if(PKLIB_work_buf == NULL) {
+            STORM_FREE(work_buf);
+        }
     }
 
     return nResult;

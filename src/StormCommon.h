@@ -318,6 +318,8 @@ DWORD ConvertMpkHeaderToFormat4(TMPQArchive * ha, ULONGLONG FileSize, DWORD dwFl
 void DecryptMpkTable(void * pvMpkTable, size_t cbSize);
 TMPQHash * LoadMpkHashTable(TMPQArchive * ha);
 TMPQBlock * LoadMpkBlockTable(TMPQArchive * ha);
+void InitializeSComp(bool implode);
+void UnInitializeSComp();
 int SCompDecompressMpk(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
 
 //-----------------------------------------------------------------------------
