@@ -2800,17 +2800,17 @@ DWORD DefragmentFileTable(TMPQArchive * ha)
             {
                 TMPQHash * pHashTableEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
                 TMPQHash * pHash;
-				DWORD dwNewBlockIndex;
+                DWORD dwNewBlockIndex;
 
                 for(pHash = ha->pHashTable; pHash < pHashTableEnd; pHash++)
                 {
                     if(MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
-					{
-						// If that block entry is there, set it to the hash entry
-						// If not, set it as DELETED
-						dwNewBlockIndex = DefragmentTable[MPQ_BLOCK_INDEX(pHash)];
-						pHash->dwBlockIndex = (dwNewBlockIndex != HASH_ENTRY_FREE) ? dwNewBlockIndex : HASH_ENTRY_DELETED;
-					}
+                    {
+                        // If that block entry is there, set it to the hash entry
+                        // If not, set it as DELETED
+                        dwNewBlockIndex = DefragmentTable[MPQ_BLOCK_INDEX(pHash)];
+                        pHash->dwBlockIndex = (dwNewBlockIndex != HASH_ENTRY_FREE) ? dwNewBlockIndex : HASH_ENTRY_DELETED;
+                    }
                 }
             }
         }

@@ -863,7 +863,7 @@ DWORD SSignFileFinish(TMPQArchive * ha)
     // Sign the hash
     memset(WeakSignature, 0, sizeof(WeakSignature));
     rsa_sign_hash_ex(Md5Digest, sizeof(Md5Digest), WeakSignature + 8, &signature_len, LTC_LTC_PKCS_1_V1_5, 0, 0, hash_idx, 0, &key);
-	memrev(WeakSignature + 8, MPQ_WEAK_SIGNATURE_SIZE);
+    memrev(WeakSignature + 8, MPQ_WEAK_SIGNATURE_SIZE);
     rsa_free(&key);
 
     // Write the signature to the MPQ. Don't use SFile* functions, but write the hash directly

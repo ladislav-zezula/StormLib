@@ -176,7 +176,7 @@ int Decompress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, i
         inflateEnd(&z);
     }
 
-	return (nResult >= Z_OK);
+    return (nResult >= Z_OK);
 }
 
 /******************************************************************************/
@@ -279,27 +279,27 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
 static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer)
 {
     TDataInfo Info;                             // Data information
-	char * work_buf;
-	int nResult = 0;
+    char * work_buf;
+    int nResult = 0;
 
     // Allocate Pklib's work buffer
     if((work_buf = STORM_ALLOC(char, EXP_BUFFER_SIZE)) != NULL)
-	{
-		// Fill data information structure
-		memset(work_buf, 0, EXP_BUFFER_SIZE);
-		Info.pbInBuff     = (unsigned char *)pvInBuffer;
-		Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
-		Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
-		Info.pbOutBuffEnd = (unsigned char *)pvOutBuffer + *pcbOutBuffer;
-
-		// Do the decompression
-		if(explode(ReadInputData, WriteOutputData, work_buf, &Info) == CMP_NO_ERROR)
-			nResult = 1;
-
-		// Give away the number of decompressed bytes
-		*pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
-        STORM_FREE(work_buf);
-	}
+    {
+        // Fill data information structure
+        memset(work_buf, 0, EXP_BUFFER_SIZE);
+        Info.pbInBuff     = (unsigned char *)pvInBuffer;
+        Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
+        Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
+        Info.pbOutBuffEnd = (unsigned char *)pvOutBuffer + *pcbOutBuffer;
+        
+        // Do the decompression
+        if(explode(ReadInputData, WriteOutputData, work_buf, &Info) == CMP_NO_ERROR)
+            nResult = 1;
+        
+        // Give away the number of decompressed bytes
+        *pcbOutBuffer = (int)(Info.pbOutBuff - (unsigned char *)pvOutBuffer);
+              STORM_FREE(work_buf);
+    }
 
     return nResult;
 }
@@ -374,7 +374,7 @@ static int Decompress_BZIP2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
         BZ2_bzDecompressEnd(&strm);
     }
 
-	return (nResult >= BZ_OK);
+    return (nResult >= BZ_OK);
 }
 
 /******************************************************************************/
