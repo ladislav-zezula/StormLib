@@ -248,7 +248,6 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     if(work_buf != NULL)
     {
         // Fill data information structure
-        memset(work_buf, 0, CMP_BUFFER_SIZE);
         Info.pbInBuff     = (unsigned char *)pvInBuffer;
         Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
         Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
@@ -286,7 +285,6 @@ static int Decompress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     if((work_buf = STORM_ALLOC(char, EXP_BUFFER_SIZE)) != NULL)
 	{
 		// Fill data information structure
-		memset(work_buf, 0, EXP_BUFFER_SIZE);
 		Info.pbInBuff     = (unsigned char *)pvInBuffer;
 		Info.pbInBuffEnd  = (unsigned char *)pvInBuffer + cbInBuffer;
 		Info.pbOutBuff    = (unsigned char *)pvOutBuffer;
