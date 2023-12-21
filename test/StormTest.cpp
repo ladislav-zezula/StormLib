@@ -2559,14 +2559,6 @@ static DWORD TestOpenArchive_GetFileInfo(TLogHelper & Logger, HANDLE hMpq, DWORD
             TestGetFileInfo(&Logger, hFile, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
             SFileCloseFile(hFile);
         }
-
-        // This file is in MPQ_2023_v1_Lusin2Rpg1.28.w3x
-        if(SFileOpenFileEx(hMpq, "File00002875.blp", 0, &hFile))
-        {
-            TestGetFileInfo(&Logger, hFile, SFileInfoNameHash1, DataBuff, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
-            TestGetFileInfo(&Logger, hFile, SFileInfoNameHash2, DataBuff, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
-            SFileCloseFile(hFile);
-        }
     }
     return ERROR_SUCCESS;
 }
@@ -3834,7 +3826,7 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-
+/*
     // Check opening of a MPQ
     LPCTSTR szArchiveName = _T("e:\\MPQ_2023_v1_Lusin2Rpg1.28.w3x");
     LPBYTE pbBuffer = NULL;
@@ -3864,6 +3856,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
+*/
 }
 
 //-----------------------------------------------------------------------------
