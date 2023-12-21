@@ -75,6 +75,7 @@ TestReadingMpq (MPQ_2002_v1_ProtectedMap_HashTable_FakeValid.w3x) succeeded.
 TestReadingMpq (MPQ_2021_v1_CantExtractCHK.scx) succeeded.
 TestReadingMpq (MPQ_2022_v1_Sniper.scx) succeeded.
 TestReadingMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.
+TestReadingMpq (MPQ_2023_v1_Lusin2Rpg1.28.w3x) succeeded.
 TestReadingMpq (MPQ_2020_v1_HS0.1.asi) succeeded.
 TestReadingMpq (MPQ_2022_v1_hs0.8.asi) succeeded.
 TestReadingMpq (MPQ_2022_v1_MoeMoeMod.asi) succeeded.
@@ -140,5 +141,3 @@ TestCompressions: Warning: CRC32 error on WaveFile_01.wav
 TestCompressions: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.
 TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.
-
-E:\Ladik\Appdir\StormLib\bin\StormLib_test\x64\Release>

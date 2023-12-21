@@ -68,6 +68,10 @@ static bool GetInfo_BufferCheck(void * pvFileInfo, DWORD cbFileInfo, DWORD cbDat
 
 static bool GetInfo(void * pvFileInfo, DWORD cbFileInfo, const void * pvData, DWORD cbData, LPDWORD pcbLengthNeeded)
 {
+    // Verify the input parameter
+    if(pvData == NULL)
+        return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
+
     // Verify buffer pointer and buffer size
     if(!GetInfo_BufferCheck(pvFileInfo, cbFileInfo, cbData, pcbLengthNeeded))
         return false;
@@ -80,6 +84,10 @@ static bool GetInfo(void * pvFileInfo, DWORD cbFileInfo, const void * pvData, DW
 static bool GetInfo_Allocated(void * pvFileInfo, DWORD cbFileInfo, void * pvData, DWORD cbData, LPDWORD pcbLengthNeeded)
 {
     bool bResult;
+
+    // Verify the input parameter
+    if(pvData == NULL)
+        return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
 
     // Verify buffer pointer and buffer size
     if((bResult = GetInfo_BufferCheck(pvFileInfo, cbFileInfo, cbData, pcbLengthNeeded)) != false)
@@ -401,15 +409,21 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &hf->dwHashIndex, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoNameHash1:
+            if(hf->pHashEntry == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwName1, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoNameHash2:
+            if(hf->pHashEntry == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwName2, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoNameHash3:
             return GetInfo(pvFileInfo, cbFileInfo, &pFileEntry->FileNameHash, sizeof(ULONGLONG), pcbLengthNeeded);
 
         case SFileInfoLocale:
+            if(hf->pHashEntry == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             dwInt32Value = SFILE_MAKE_LCID(hf->pHashEntry->Locale, hf->pHashEntry->Platform);
             return GetInfo(pvFileInfo, cbFileInfo, &dwInt32Value, sizeof(DWORD), pcbLengthNeeded);
 

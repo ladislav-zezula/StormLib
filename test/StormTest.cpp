@@ -55,6 +55,7 @@ typedef enum _EXTRA_TYPE
     ListFile,
     TwoFiles,
     PatchList,
+    HashValues,
 } EXTRA_TYPE, *PEXTRA_TYPE;
 
 typedef struct _FILE_DATA
@@ -86,6 +87,14 @@ typedef struct _TEST_EXTRA_PATCHES
     LPCSTR szFileName;                      // Example of patched file
     DWORD dwPatchCount;                     // Number of patches
 } TEST_EXTRA_PATCHES, *PTEST_EXTRA_PATCHES;
+
+typedef struct _TEST_EXTRA_HASHVALS
+{
+    EXTRA_TYPE Type;                        // Must be PatchList
+    LPCSTR szFileName;                      // File name
+    DWORD dwHash1;                          // Hash A of the file name
+    DWORD dwHash2;                          // Hash B of the file name
+} TEST_EXTRA_HASHVALS, *PTEST_EXTRA_HASHVALS;
 
 typedef struct _TEST_INFO
 {
@@ -2422,6 +2431,29 @@ static DWORD TestOpenArchive_Extra_Patches(TLogHelper & Logger, HANDLE hMpq, PTE
     return dwErrCode;
 }
 
+static DWORD TestOpenArchive_Extra_HashValues(TLogHelper & Logger, HANDLE hMpq, PTEST_EXTRA_HASHVALS pExtra)
+{
+    HANDLE hFile = NULL;
+    DWORD dwErrCode = ERROR_SUCCESS;
+    DWORD dwHash1 = 0;
+    DWORD dwHash2 = 0;
+    DWORD cbHash = 0;
+
+    if(SFileOpenFileEx(hMpq, pExtra->szFileName, 0, &hFile))
+    {
+        SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwHash1, sizeof(dwHash1), &cbHash);
+        assert(cbHash == sizeof(DWORD));
+
+        SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwHash2, sizeof(dwHash2), &cbHash);
+        assert(cbHash == sizeof(DWORD));
+
+        if(dwHash1 != pExtra->dwHash1 || dwHash2 != pExtra->dwHash2)
+            dwErrCode = Logger.PrintError("Name hash values mismatch on %s", pExtra->szFileName);
+        SFileCloseFile(hFile);
+    }
+    return dwErrCode;
+}
+
 static DWORD TestOpenArchive_ExtraType(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearchFlags, const void * pExtra)
 {
     switch(GetExtraType(pExtra))
@@ -2434,6 +2466,9 @@ static DWORD TestOpenArchive_ExtraType(TLogHelper & Logger, HANDLE hMpq, DWORD d
 
         case PatchList:
             return TestOpenArchive_Extra_Patches(Logger, hMpq, (PTEST_EXTRA_PATCHES)(pExtra));
+
+        case HashValues:
+            return TestOpenArchive_Extra_HashValues(Logger, hMpq, (PTEST_EXTRA_HASHVALS)(pExtra));
 
         default:
             return ERROR_SUCCESS;
@@ -2484,8 +2519,8 @@ static DWORD TestOpenArchive_GetFileInfo(TLogHelper & Logger, HANDLE hMpq, DWORD
         SFileGetFileInfo(hMpq, SFileMpqHeader, &Header, sizeof(TMPQHeader), NULL);
 
         // Test on invalid archive/file handle
-        TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
-        TestGetFileInfo(&Logger, NULL, (SFileInfoClass)0xFFF, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+        TestGetFileInfo(&Logger, NULL, SFileMpqBetHeader,  NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
+        TestGetFileInfo(&Logger, NULL, SFileInfoInvalid,   NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
         TestGetFileInfo(&Logger, NULL, SFileInfoNameHash1, NULL, 0, NULL, false, ERROR_INVALID_HANDLE);
 
         // Valid handle but all parameters NULL
@@ -2522,6 +2557,14 @@ static DWORD TestOpenArchive_GetFileInfo(TLogHelper & Logger, HANDLE hMpq, DWORD
         {
             TestGetFileInfo(&Logger, hMpq, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, false, ERROR_INVALID_HANDLE);
             TestGetFileInfo(&Logger, hFile, SFileInfoFileTime, DataBuff, sizeof(DataBuff), &cbLength, true, ERROR_SUCCESS);
+            SFileCloseFile(hFile);
+        }
+
+        // This file is in MPQ_2023_v1_Lusin2Rpg1.28.w3x
+        if(SFileOpenFileEx(hMpq, "File00002875.blp", 0, &hFile))
+        {
+            TestGetFileInfo(&Logger, hFile, SFileInfoNameHash1, DataBuff, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
+            TestGetFileInfo(&Logger, hFile, SFileInfoNameHash2, DataBuff, sizeof(DWORD), NULL, true, ERROR_SUCCESS);
             SFileCloseFile(hFile);
         }
     }
@@ -3791,18 +3834,22 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-/*
+
     // Check opening of a MPQ
-    LPCTSTR szArchiveName = _T("e:\\GreenTD.w3x");
+    LPCTSTR szArchiveName = _T("e:\\MPQ_2023_v1_Lusin2Rpg1.28.w3x");
     LPBYTE pbBuffer = NULL;
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
     DWORD dwFileSize;
+    DWORD dwInt32;
 
     if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "File00000160.xxx", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "File00002875.blp", 0, &hFile))
         {
+            SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwInt32, sizeof(dwInt32), NULL);
+            SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwInt32, sizeof(dwInt32), NULL);
+
             if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
             {
                 if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
@@ -3817,7 +3864,6 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------
@@ -3837,6 +3883,8 @@ static const TEST_EXTRA_TWOFILES TwoFilesD1 = {TwoFiles, "music\\dintro.wav", "F
 static const TEST_EXTRA_TWOFILES TwoFilesD2 = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3X = {TwoFiles, "BlueCrystal.mdx"};
+
+static const TEST_EXTRA_HASHVALS HashVals = {HashValues, "File00002875.blp", 0xb93b0e63, 0xe50dfdd8};
 
 static const TEST_EXTRA_PATCHES PatchSC1 =
 {
@@ -4066,6 +4114,7 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("MPQ_2021_v1_CantExtractCHK.scx"),                      NULL, "055fd548a789c910d9dd37472ecc1e66",    28},
     {_T("MPQ_2022_v1_Sniper.scx"),                              NULL, "2e955271b70b79344ad85b698f6ce9d8",    64},               // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
     {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                        NULL, "25cad16a2fb4e883767a1f512fc1dce7",    16},
+    {_T("MPQ_2023_v1_Lusin2Rpg1.28.w3x"),                       NULL, "9c21352f06cf763fcf05e8a2691e6194", 10305, &HashVals},
 
     // ASI plugins
     {_T("MPQ_2020_v1_HS0.1.asi"),                               NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
