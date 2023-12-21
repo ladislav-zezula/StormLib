@@ -20,7 +20,6 @@ static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
 {
     TMPQHash * pHashTableEnd;
     TMPQHash * pHash;
-    DWORD dwFirstIndex = HASH_ENTRY_FREE;
 
     // Should only be called if the archive has hash table
     assert(ha->pHashTable != NULL);
@@ -32,15 +31,15 @@ static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
     {
         if(MPQ_BLOCK_INDEX(pHash) == dwFileIndex)
         {
-            // Duplicate hash entry found
-            if(dwFirstIndex != HASH_ENTRY_FREE)
-                return HASH_ENTRY_FREE;
-            dwFirstIndex = (DWORD)(pHash - ha->pHashTable);
+            // Find the first hash entry that points to it.
+            // If there are multiple hash entries that point
+            // to the same file, only the first one is returned.
+            return (DWORD)(pHash - ha->pHashTable);
         }
     }
 
-    // Return the hash table entry index
-    return dwFirstIndex;
+    // No item was found
+    return HASH_ENTRY_FREE;
 }
 
 static const char * GetPatchFileName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
