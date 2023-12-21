@@ -34,7 +34,7 @@ static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
         {
             // Duplicate hash entry found
             if(dwFirstIndex != HASH_ENTRY_FREE)
-                return HASH_ENTRY_FREE;
+                return dwFirstIndex;
             dwFirstIndex = (DWORD)(pHash - ha->pHashTable);
         }
     }

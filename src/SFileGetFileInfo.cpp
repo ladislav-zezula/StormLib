@@ -72,6 +72,9 @@ static bool GetInfo(void * pvFileInfo, DWORD cbFileInfo, const void * pvData, DW
     if(!GetInfo_BufferCheck(pvFileInfo, cbFileInfo, cbData, pcbLengthNeeded))
         return false;
 
+    if (pvData == NULL)
+        return false;
+
     // Copy the data to the caller-supplied buffer
     memcpy(pvFileInfo, pvData, cbData);
     return true;
@@ -80,6 +83,9 @@ static bool GetInfo(void * pvFileInfo, DWORD cbFileInfo, const void * pvData, DW
 static bool GetInfo_Allocated(void * pvFileInfo, DWORD cbFileInfo, void * pvData, DWORD cbData, LPDWORD pcbLengthNeeded)
 {
     bool bResult;
+
+    if (pvData == NULL)
+        return false;
 
     // Verify buffer pointer and buffer size
     if((bResult = GetInfo_BufferCheck(pvFileInfo, cbFileInfo, cbData, pcbLengthNeeded)) != false)
