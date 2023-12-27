@@ -16,10 +16,13 @@
 /* Local functions                                                           */
 /*****************************************************************************/
 
+// Finds hash index of the entry that was open by pseudo-name
 static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
 {
     TMPQHash * pHashTableEnd;
     TMPQHash * pHash;
+    DWORD dwHashIndex = HASH_ENTRY_FREE;
+    DWORD dwCount = 0;
 
     // Should only be called if the archive has hash table
     assert(ha->pHashTable != NULL);
@@ -31,15 +34,18 @@ static DWORD FindHashIndex(TMPQArchive * ha, DWORD dwFileIndex)
     {
         if(MPQ_BLOCK_INDEX(pHash) == dwFileIndex)
         {
-            // Find the first hash entry that points to it.
-            // If there are multiple hash entries that point
-            // to the same file, only the first one is returned.
-            return (DWORD)(pHash - ha->pHashTable);
+            // Example: MPQ_2023_v1_Lusin2Rpg1.28.w3x, file index 24483
+            // ReplaceableTextures\CommandButtons\BTNHaboss79.blp
+            // Hash Table Index #1 = 18
+            // Hash Table Index #2 = 8446
+            if(dwCount++ > 0)
+                return HASH_ENTRY_FREE;
+            dwHashIndex = (DWORD)(pHash - ha->pHashTable);
         }
     }
 
-    // No item was found
-    return HASH_ENTRY_FREE;
+    // Return the found hash index, if there are no duplicities
+    return dwHashIndex;
 }
 
 static const char * GetPatchFileName(TMPQArchive * ha, const char * szFileName, char * szBuffer)
