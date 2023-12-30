@@ -88,12 +88,17 @@ typedef struct _TEST_EXTRA_PATCHES
     DWORD dwPatchCount;                     // Number of patches
 } TEST_EXTRA_PATCHES, *PTEST_EXTRA_PATCHES;
 
+typedef struct _TEST_EXTRA_HASHVAL
+{
+    DWORD dwHash1;                          // Hash A of the file name
+    DWORD dwHash2;                          // Hash B of the file name
+    LPCSTR szFileName;                      // File name
+} TEST_EXTRA_HASHVAL, *PTEST_EXTRA_HASHVAL;
+
 typedef struct _TEST_EXTRA_HASHVALS
 {
     EXTRA_TYPE Type;                        // Must be PatchList
-    LPCSTR szFileName;                      // File name
-    DWORD dwHash1;                          // Hash A of the file name
-    DWORD dwHash2;                          // Hash B of the file name
+    TEST_EXTRA_HASHVAL Items[2];
 } TEST_EXTRA_HASHVALS, *PTEST_EXTRA_HASHVALS;
 
 typedef struct _TEST_INFO
@@ -2439,17 +2444,29 @@ static DWORD TestOpenArchive_Extra_HashValues(TLogHelper & Logger, HANDLE hMpq, 
     DWORD dwHash2 = 0;
     DWORD cbHash = 0;
 
-    if(SFileOpenFileEx(hMpq, pExtra->szFileName, 0, &hFile))
+    for(size_t i = 0; i < _countof(pExtra->Items); i++)
     {
-        SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwHash1, sizeof(dwHash1), &cbHash);
-        assert(cbHash == sizeof(DWORD));
+        PTEST_EXTRA_HASHVAL pItem = &pExtra->Items[i];
 
-        SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwHash2, sizeof(dwHash2), &cbHash);
-        assert(cbHash == sizeof(DWORD));
+        if(SFileOpenFileEx(hMpq, pItem->szFileName, 0, &hFile))
+        {
+            if(SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwHash1, sizeof(dwHash1), &cbHash))
+            {
+                assert(cbHash == sizeof(DWORD));
+            }
 
-        if(dwHash1 != pExtra->dwHash1 || dwHash2 != pExtra->dwHash2)
-            dwErrCode = Logger.PrintError("Name hash values mismatch on %s", pExtra->szFileName);
-        SFileCloseFile(hFile);
+            if(SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwHash2, sizeof(dwHash2), &cbHash))
+            {
+                assert(cbHash == sizeof(DWORD));
+            }
+
+            if(dwHash1 != pItem->dwHash1 || dwHash2 != pItem->dwHash2)
+            {
+                dwErrCode = Logger.PrintError("Name hash values mismatch on %s", pItem->szFileName);
+            }
+
+            SFileCloseFile(hFile);
+        }
     }
     return dwErrCode;
 }
@@ -3877,7 +3894,14 @@ static const TEST_EXTRA_TWOFILES TwoFilesD2 = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3X = {TwoFiles, "BlueCrystal.mdx"};
 
-static const TEST_EXTRA_HASHVALS HashVals = {HashValues, "File00002875.blp", 0xb93b0e63, 0xe50dfdd8};
+static const TEST_EXTRA_HASHVALS HashVals =
+{
+    HashValues,
+    {
+        {0x00000000, 0x00000000, "File00024483.blp"},
+        {0x8bd6929a, 0xfd55129b, "ReplaceableTextures\\CommandButtons\\BTNHaboss79.blp"}
+    }
+};
 
 static const TEST_EXTRA_PATCHES PatchSC1 =
 {
@@ -4193,7 +4217,7 @@ static const TEST_INFO Test_ReplaceFile[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
+//#define TEST_COMMAND_LINE
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR

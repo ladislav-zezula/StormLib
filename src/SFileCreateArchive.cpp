@@ -238,6 +238,9 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         pHeader->dwBlockTablePos  = pHeader->dwHashTablePos + dwHashTableSize * sizeof(TMPQHash);
         pHeader->dwBlockTableSize = dwBlockTableSize;
 
+        // Set the mask for MPQ byte offset
+        ha->FileOffsetMask = GetFileOffsetMask(ha);
+        
         // For MPQs version 4 and higher, we set the size of raw data block
         // for calculating MD5
         if(pCreateInfo->dwMpqVersion >= MPQ_FORMAT_VERSION_4)
