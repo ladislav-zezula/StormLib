@@ -463,6 +463,11 @@ bool WINAPI SFileOpenArchive(
         if(IsStarcraftBetaArchive(ha->pHeader))
             ha->dwFlags |= MPQ_FLAG_STARCRAFT_BETA;
 
+        // Set the mask for the file offset. In MPQs version 1,
+        // all offsets are 32-bit and overflow is allowed.
+        // For MPQs v2+, file offset if 64-bit.
+        ha->FileOffsetMask = GetFileOffsetMask(ha);
+
         // Maps from StarCraft and Warcraft III need special treatment
         switch(MapType)
         {

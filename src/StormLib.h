@@ -830,6 +830,7 @@ typedef struct _TMPQArchive
     ULONGLONG      UserDataPos;                 // Position of user data (relative to the begin of the file)
     ULONGLONG      MpqPos;                      // MPQ header offset (relative to the begin of the file)
     ULONGLONG      FileSize;                    // Size of the file at the moment of file open
+    ULONGLONG      FileOffsetMask;              // 0xFFFFFFFF for MPQ v 1, otherwise 0xFFFFFFFFFFFFFFFFull
 
     struct _TMPQArchive * haPatch;              // Pointer to patch archive, if any
     struct _TMPQArchive * haBase;               // Pointer to base ("previous version") archive, if any

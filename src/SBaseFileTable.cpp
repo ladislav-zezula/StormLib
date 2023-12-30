@@ -385,19 +385,38 @@ static ULONGLONG DetermineArchiveSize_V4(
     return ArchiveSize;
 }
 
+ULONGLONG GetFileOffsetMask(TMPQArchive * ha)
+{
+    ULONGLONG FileOffsetMask = (ULONGLONG)(-1);
+
+    // Sanity checks
+    assert(ha != NULL);
+    assert(ha->pHeader != NULL);
+
+    // MPQs of format 1 are 32-bit only
+    if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+        FileOffsetMask = (ULONGLONG)(DWORD)(-1);
+    return FileOffsetMask;
+}
+
 ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset)
 {
-    if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
-    {
-        // For MPQ archive v1, any file offset is only 32-bit
-        return (ULONGLONG)((DWORD)ha->MpqPos + (DWORD)MpqOffset);
-    }
-    else
-    {
-        // For MPQ archive v2+, file offsets are full 64-bit
-        return ha->MpqPos + MpqOffset;
-    }
+    return (ha->MpqPos + MpqOffset) & ha->FileOffsetMask;
 }
+
+//ULONGLONG FileOffsetFromMpqOffset(TMPQArchive * ha, ULONGLONG MpqOffset)
+//{
+//    if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+//    {
+//        // For MPQ archive v1, any file offset is only 32-bit
+//        return (ULONGLONG)((DWORD)ha->MpqPos + (DWORD)MpqOffset);
+//    }
+//    else
+//    {
+//        // For MPQ archive v2+, file offsets are full 64-bit
+//        return ha->MpqPos + MpqOffset;
+//    }
+//}
 
 ULONGLONG CalculateRawSectorOffset(
     TMPQFile * hf,
@@ -418,9 +437,7 @@ ULONGLONG CalculateRawSectorOffset(
     // For MPQs version 1.0, the offset is purely 32-bit
     //
 
-    RawFilePos = hf->RawFilePos + dwSectorOffset;
-    if(hf->ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
-        RawFilePos = (DWORD)hf->ha->MpqPos + (DWORD)hf->pFileEntry->ByteOffset + dwSectorOffset;
+    RawFilePos = (hf->RawFilePos + dwSectorOffset) & hf->ha->FileOffsetMask;
 
     // We also have to add patch header size, if patch header is present
     if(hf->pPatchInfo != NULL)
