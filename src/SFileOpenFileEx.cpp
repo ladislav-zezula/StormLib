@@ -204,9 +204,9 @@ DWORD WINAPI SFileEnumLocales(
     if(IsPseudoFileName(szFileName, &dwFileIndex))
         return ERROR_INVALID_PARAMETER;
 
-    // Keep compiler happy
+    // Keep compilers happy
     dwMaxLocales = PtrMaxLocales[0];
-    dwSearchScope = dwSearchScope;
+    STORMLIB_UNUSED(dwSearchScope);
 
     // Parse all files with that name
     pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);

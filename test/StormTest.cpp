@@ -591,7 +591,7 @@ static HANDLE InitDirectorySearch(LPCTSTR szDirectory)
 
 #if defined(STORMLIB_LINUX) || defined(STORMLIB_MAC)
 
-    // Keep compilers happy
+    // Open the directory
     return (HANDLE)opendir(szDirectory);
 
 #endif
@@ -1296,8 +1296,8 @@ static void WINAPI AddFileCallback(void * pvUserData, DWORD dwBytesWritten, DWOR
 {
     TLogHelper * pLogger = (TLogHelper *)pvUserData;
 
-    // Keep compiler happy
-    bFinalCall = bFinalCall;
+    // Keep compilers happy
+    STORMLIB_UNUSED(bFinalCall);
 
     pLogger->PrintProgress("Adding file (%s) (%u of %u) (%u of %u) ...", pLogger->UserString,
                                                                          pLogger->UserCount,

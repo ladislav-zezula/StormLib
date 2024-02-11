@@ -107,8 +107,8 @@ void TMPQBits::GetBits(
     unsigned int nBitOffset = (nBitPosition & 0x07);
     unsigned char BitBuffer;
 
-    // Keep compiler happy for platforms where nResultByteSize is not used
-    nResultByteSize = nResultByteSize;
+    // Keep compilers happy for platforms where nResultByteSize is not used
+    STORMLIB_UNUSED(nResultByteSize);
 
 #ifdef _DEBUG
     // Check if the target is properly zeroed
@@ -172,8 +172,8 @@ void TMPQBits::SetBits(
     unsigned short AndMask = 0;
     unsigned short OneByte = 0;
 
-    // Keep compiler happy for platforms where nResultByteSize is not used
-    nResultByteSize = nResultByteSize;
+    // Keep compilers happy for platforms where nResultByteSize is not used
+    STORMLIB_UNUSED(nResultByteSize);
 
 #ifndef STORMLIB_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
