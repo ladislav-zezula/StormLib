@@ -1081,7 +1081,6 @@ void Patch_Finalize(TMPQPatcher * pPatcher)
     }
 }
 
-
 //-----------------------------------------------------------------------------
 // Public functions
 
@@ -1095,9 +1094,6 @@ bool WINAPI SFileOpenPatchArchive(
     TMPQArchive * ha = (TMPQArchive *)hMpq;
     HANDLE hPatchMpq = NULL;
     DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Keep compiler happy
-    dwFlags = dwFlags;
 
     // Verify input parameters
     if(!IsValidMpqHandle(hMpq))
@@ -1114,7 +1110,7 @@ bool WINAPI SFileOpenPatchArchive(
     // 2) Modify or replace a file
     // 3) Add patch archive to the opened MPQ
     // 4) Read patched file
-    // 5) Now what ?
+    // 5) Now what?
     //
 
     if(dwErrCode == ERROR_SUCCESS)
@@ -1126,7 +1122,11 @@ bool WINAPI SFileOpenPatchArchive(
     // Open the archive like it is normal archive
     if(dwErrCode == ERROR_SUCCESS)
     {
-        if(SFileOpenArchive(szPatchMpqName, 0, MPQ_OPEN_READ_ONLY | MPQ_OPEN_PATCH, &hPatchMpq))
+        // These flags will be propagated to SFileOpenArchive
+        dwFlags = (dwFlags & MPQ_OPEN_NO_LISTFILE) | MPQ_OPEN_READ_ONLY | MPQ_OPEN_PATCH;
+
+        // Open the patch as MPQ
+        if(SFileOpenArchive(szPatchMpqName, 0, dwFlags, &hPatchMpq))
         {
             // Cast the archive handle to structure pointer
             haPatch = (TMPQArchive *)hPatchMpq;

@@ -1107,8 +1107,8 @@ bool WINAPI SFileRemoveFile(HANDLE hMpq, const char * szFileName, DWORD dwSearch
     TMPQFile * hf = NULL;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // Keep compiler happy
-    dwSearchScope = dwSearchScope;
+    // Keep compilers happy
+    STORMLIB_UNUSED(dwSearchScope);
 
     // Check the parameters
     if(ha == NULL)

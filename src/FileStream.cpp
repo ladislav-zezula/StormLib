@@ -508,8 +508,8 @@ static bool BaseMap_Open(TFileStream * pStream, LPCTSTR szFileName, DWORD dwStre
     HANDLE hMap = NULL;
     bool bResult = false;
 
-    // Keep compiler happy
-    dwStreamFlags = dwStreamFlags;
+    // Keep compilers happy
+    STORMLIB_UNUSED(dwStreamFlags);
 
     // 1) Try to treat "szFileName" as a section name
     hMap = OpenFileMapping(SECTION_QUERY | FILE_MAP_READ, FALSE, szFileName);
@@ -699,8 +699,8 @@ static bool BaseHttp_Open(TFileStream * pStream, const TCHAR * szFileName, DWORD
     HINTERNET hRequest;
     DWORD dwTemp = 0;
 
-    // Keep compiler happy
-    dwStreamFlags = dwStreamFlags;
+    // Keep compilers happy
+    STORMLIB_UNUSED(dwStreamFlags);
 
     // Don't connect to the internet
     if(!InternetGetConnectedState(&dwTemp, 0))
@@ -2245,9 +2245,9 @@ static bool Block4Stream_BlockRead(
     assert(StartOffset < EndOffset);
     assert(bAvailable == true);
 
-    // Keep compiler happy
-    bAvailable = bAvailable;
-    EndOffset = EndOffset;
+    // Keep compilers happy
+    STORMLIB_UNUSED(bAvailable);
+    STORMLIB_UNUSED(EndOffset);
 
     while(BytesNeeded != 0)
     {
