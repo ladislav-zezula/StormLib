@@ -1,6 +1,6 @@
 # StormLib
 
-This is official repository for the StomLib library, an open-source project that can work with Blizzard MPQ archives.
+This is official repository for the StormLib library, an open-source project that can work with Blizzard MPQ archives.
 
 ## Installation and basic usage
 ### Linux
