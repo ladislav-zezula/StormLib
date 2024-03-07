@@ -154,30 +154,18 @@ void StringCreatePseudoFileName(char * szBuffer, size_t cchMaxChars, unsigned in
 #ifdef _UNICODE
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource)
 {
-    if(cchTarget > 0)
-    {
-        size_t cchSource = strlen(szSource);
+    int ccResult;
 
-        if(cchSource >= cchTarget)
-            cchSource = cchTarget - 1;
-
-        mbstowcs(szTarget, szSource, cchSource);
-        szTarget[cchSource] = 0;
-    }
+    ccResult = MultiByteToWideChar(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget));
+    szTarget[ccResult] = 0;
 }
 
 void StringCopy(char * szTarget, size_t cchTarget, const TCHAR * szSource)
 {
-    if(cchTarget > 0)
-    {
-        size_t cchSource = _tcslen(szSource);
+    int ccResult;
 
-        if(cchSource >= cchTarget)
-            cchSource = cchTarget - 1;
-
-        wcstombs(szTarget, szSource, cchSource);
-        szTarget[cchSource] = 0;
-    }
+    ccResult = WideCharToMultiByte(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget), NULL, NULL);
+    szTarget[ccResult] = 0;
 }
 
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource)
@@ -195,6 +183,18 @@ void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource)
 }
 
 void StringCat(TCHAR * szTarget, size_t cchTargetMax, const TCHAR * szSource)
+{
+    // Get the current length of the target
+    size_t cchTarget = _tcslen(szTarget);
+
+    // Copy the string to the target
+    if(cchTarget < cchTargetMax)
+    {
+        StringCopy(szTarget + cchTarget, (cchTargetMax - cchTarget), szSource);
+    }
+}
+
+void StringCat(TCHAR * szTarget, size_t cchTargetMax, const char * szSource)
 {
     // Get the current length of the target
     size_t cchTarget = _tcslen(szTarget);

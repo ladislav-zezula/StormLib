@@ -31,6 +31,7 @@
 
 #ifndef STORMLIB_WINDOWS
 #include <dirent.h>
+#include <alsa/asoundlib.h>                 // sudo apt-get install libasound2-dev
 #endif
 
 //------------------------------------------------------------------------------
@@ -53,6 +54,7 @@ typedef enum _EXTRA_TYPE
 {
     NoExtraType = 0,
     ListFile,
+    Utf8File,
     TwoFiles,
     PatchList,
     HashValues,
@@ -72,6 +74,13 @@ typedef struct _TEST_EXTRA_ONEFILE
     EXTRA_TYPE Type;                        // Must be ListFile
     LPCTSTR szFile;                         // The name of the (list)file
 } TEST_EXTRA_ONEFILE, *PTEST_EXTRA_ONEFILE;
+
+typedef struct _TEST_EXTRA_UTF8
+{
+    EXTRA_TYPE Type;                        // Must be Utf8File
+    const BYTE * szMpqFile;                 // (UTF-8) The name of the MPQ file
+    const BYTE * szListFile;                // (UTF-8) The name of the listfile
+} TEST_EXTRA_UTF8, *PTEST_EXTRA_UTF8;
 
 typedef struct _TEST_EXTRA_TWOFILES
 {
@@ -101,14 +110,23 @@ typedef struct _TEST_EXTRA_HASHVALS
     TEST_EXTRA_HASHVAL Items[2];
 } TEST_EXTRA_HASHVALS, *PTEST_EXTRA_HASHVALS;
 
-typedef struct _TEST_INFO
+typedef struct _TEST_INFO1
 {
     LPCTSTR szName1;                        // MPQ name
     LPCTSTR szName2;                        // ListFile name or NULL if none
-    LPCSTR  szDataHash;                     // Compound name+data hash
-    DWORD   dwFlags;                        // Flags for testing the file. Low 16 bits contains number of files
+    LPCSTR szDataHash;                      // Compound name+data hash
+    DWORD  dwFlags;                         // Flags for testing the file. Low 16 bits contains number of files
     const void * pExtra;
-} TEST_INFO, *PTEST_INFO;
+} TEST_INFO1, *PTEST_INFO1;
+
+typedef struct _TEST_INFO2
+{
+    LPCSTR szName1;                         // (UTF-8) MPQ name
+    LPCSTR szName2;                         // (UTF-8) Added file name or NULL if none
+    LPCSTR szDataHash;                      // Compound name+data hash
+    DWORD  dwFlags;                         // Flags for testing the file. Low 16 bits contains number of files
+    const void * pExtra;
+} TEST_INFO2, *PTEST_INFO2;
 
 typedef struct _LINE_INFO
 {
@@ -116,6 +134,23 @@ typedef struct _LINE_INFO
     DWORD nLineLen;
     const char * szLine;
 } LINE_INFO, *PLINE_INFO;
+
+typedef struct _WAVE_FILE_HEADER
+{
+    DWORD dwRiffSignature;                  // 'RIFF'
+    DWORD dwFileSize;
+    DWORD dwTypeSignature;                  // 'WAVE'
+    DWORD dwChunkMarker;                    // 'fmt\0'
+    DWORD dwLength;                         // 16
+    USHORT wFormat;                         // 1 = PCM
+    USHORT wChannels;                       // Number of channels
+    DWORD dwSamplesPerSec;                  // Bitrate
+    DWORD dwAvgSamplesPerSec;
+    USHORT wBlockAlign;
+    USHORT wBitsPerSample;
+    DWORD dwDataSignature;                  // 'data'
+    DWORD dwDataSize;                       // 'data'
+} WAVE_FILE_HEADER, *PWAVE_FILE_HEADER;
 
 //------------------------------------------------------------------------------
 // Local variables
@@ -161,8 +196,16 @@ static TCHAR szMpqPatchDir[MAX_PATH] = {0};
 #define TFLG_ADD_USER_DATA      0x04000000              // Add user data during MPQ copying
 #define TFLG_HAS_LISTFILE       0x08000000              // The MPQ must have (listfile)
 #define TFLG_HAS_ATTRIBUTES     0x10000000              // The MPQ must have (attributes)
-#define TFLG_COMPACT            0x20000000              // Perform archive compacting between two opens
+#define TFLG_BIGFILE            0x20000000              // Add a big file to the MPQ
+#define TFLG_COMPACT            0x40000000              // Perform archive compacting between two opens
 #define TFLG_WILL_FAIL          0x80000000              // The process is expected to fail
+
+// Flags for TestCreateArchive
+#define CFLG_V2                 0x00010000              // Create archive version 2
+#define CFLG_V4                 0x00020000              // Create archive version 4
+#define CFLG_EMPTY              0x00040000              // The archive will be empty
+#define CFLG_NONSTD_NAMES       0x00080000              // Create archive containing non-standard names
+#define CFLG_MPQEDITOR          0x00100000              // Create archive like MPQEditor would do
 
 // Flags for TestOpenArchive_SignatureTest
 #define SFLAG_VERIFY_BEFORE     0x00000001              // Verify signature before modification
@@ -211,29 +254,12 @@ static DWORD WaveCompressions[] =
     MPQ_COMPRESSION_BZIP2
 };
 
-static const wchar_t szUnicodeName1[] = {   // Czech
-    0x010C, 0x0065, 0x0073, 0x006B, 0x00FD, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
-
-static const wchar_t szUnicodeName2[] = {   // Russian
-    0x0420, 0x0443, 0x0441, 0x0441, 0x043A, 0x0438, 0x0439, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
-
-static const wchar_t szUnicodeName3[] = {   // Greek
-    0x03B5, 0x03BB, 0x03BB, 0x03B7, 0x03BD, 0x03B9, 0x03BA, 0x03AC, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
-
-static const wchar_t szUnicodeName4[] = {   // Chinese
-    0x65E5, 0x672C, 0x8A9E, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
-
-static const wchar_t szUnicodeName5[] = {   // Japanese
-    0x7B80, 0x4F53, 0x4E2D, 0x6587, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
-
-static const wchar_t szUnicodeName6[] = {   // Arabic
-    0x0627, 0x0644, 0x0639, 0x0639, 0x0631, 0x0628, 0x064A, 0x0629, _T('.'), _T('m'), _T('p'), _T('q'), 0
-};
+static const BYTE szPlainName_CZE[] = {                                                      0xc4, 0x8c, 0x65, 0x73, 0x6b, 0xc3, 0xbd, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Czech
+static const BYTE szPlainName_RUS[] = {            0xd0, 0xa0, 0xd1, 0x83, 0xd1, 0x81, 0xd1, 0x81, 0xd0, 0xba, 0xd0, 0xb8, 0xd0, 0xb9, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Russian
+static const BYTE szPlainName_GRC[] = {0xce, 0xb5, 0xce, 0xbb, 0xce, 0xbb, 0xce, 0xb7, 0xce, 0xbd, 0xce, 0xb9, 0xce, 0xba, 0xce, 0xac, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Greek
+static const BYTE szPlainName_CHN[] = {                                          0xe6, 0x97, 0xa5, 0xe6, 0x9c, 0xac, 0xe8, 0xaa, 0x9e, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Chinese
+static const BYTE szPlainName_JPN[] = {                        0xe7, 0xae, 0x80, 0xe4, 0xbd, 0x93, 0xe4, 0xb8, 0xad, 0xe6, 0x96, 0x87, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Japanese
+static const BYTE szPlainName_SAU[] = {0xd8, 0xa7, 0xd9, 0x84, 0xd8, 0xb9, 0xd8, 0xb9, 0xd8, 0xb1, 0xd8, 0xa8, 0xd9, 0x8a, 0xd8, 0xa9, 0x2e, 0x6d, 0x70, 0x71, 0x00};   // (UTF-8) Arabic
 
 static SFILE_MARKERS MpqMarkers[] =
 {
@@ -258,6 +284,19 @@ static EXTRA_TYPE GetExtraType(const void * pExtra)
     else
     {
         return NoExtraType;
+    }
+}
+
+LPCTSTR SwapMpqName(LPTSTR szBuffer, size_t ccBuffer, LPCTSTR szMpqName, PTEST_EXTRA_UTF8 pExtra)
+{
+    if((pExtra != NULL) && (pExtra->Type == Utf8File))
+    {
+        StringCopy(szBuffer, ccBuffer, (LPCSTR)(pExtra->szMpqFile));
+        return szBuffer;
+    }
+    else
+    {
+        return szMpqName;
     }
 }
 
@@ -312,6 +351,48 @@ xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
     *szBuffer = 0;
     return szSaveBuffer;
 }
+
+const char * GetFileText(PFILE_DATA pFileData)
+{
+    const char * szFileText = (const char *)(pFileData->FileData);
+
+    // Skip UTF-8 marker
+    if(pFileData->dwFileSize > 3 && !memcmp(szFileText, "\xEF\xBB\xBF", 3))
+        szFileText += 3;
+    return szFileText;
+}
+
+static void PlayWaveSound(PFILE_DATA pFileData)
+{
+#ifdef STORMLIB_WINDOWS
+    PlaySound((LPCTSTR)pFileData->FileData, NULL, SND_MEMORY);
+#endif    
+
+#ifdef STORMLIB_LINUX
+    PWAVE_FILE_HEADER pHeader = (PWAVE_FILE_HEADER)(pFileData->FileData);
+    snd_pcm_hw_params_t *params;
+    snd_pcm_t *pcm_handle;
+    unsigned int bitrate = pHeader->dwSamplesPerSec;
+
+    if(snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0) >= 0)
+    {
+        snd_pcm_format_t format = (pHeader->wBitsPerSample == 16) ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_S8;
+        unsigned int divider = (pHeader->wBitsPerSample == 16) ? 4 : 2;
+        void * wave_buffer = &pFileData->FileData[sizeof(WAVE_FILE_HEADER)];
+
+        snd_pcm_hw_params_alloca(&params);
+        snd_pcm_hw_params_any(pcm_handle, params);
+        snd_pcm_hw_params_set_access(pcm_handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+        snd_pcm_hw_params_set_format(pcm_handle, params, format);
+        snd_pcm_hw_params_set_channels(pcm_handle, params, pHeader->wChannels);
+        snd_pcm_hw_params_set_rate_near(pcm_handle, params, &bitrate, 0);
+        snd_pcm_hw_params(pcm_handle, params);
+
+        snd_pcm_writei(pcm_handle, wave_buffer, pHeader->dwDataSize / divider);
+        snd_pcm_close(pcm_handle);
+    }
+#endif    
+}                    
 
 static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWORD * pdwDifference)
 {
@@ -764,8 +845,8 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
     if(szExtension == NULL)
         return ERROR_SUCCESS;
 
-    // Skip .SHA256
-    if(!_tcsicmp(szExtension, szHashExtension))
+    // Skip .sha and .sha256 files
+    if(!_tcsicmp(szExtension, _T(".txt")) || !_tcsicmp(szExtension, _T(".sha")) || !_tcsicmp(szExtension, szHashExtension))
         return ERROR_SUCCESS;
 
     // Load the local file to memory
@@ -782,7 +863,7 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
             {
                 // Compare the SHA256
                 StringCopy(szHashTextA, _countof(szHashTextA), szHashText);
-                if(_strnicmp(szHashTextA, (char *)pFileData->FileData, (SHA256_DIGEST_SIZE * 2)))
+                if(_strnicmp(szHashTextA, GetFileText(pFileData), (SHA256_DIGEST_SIZE * 2)))
                 {
                     SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
                     pLogger->PrintError(_T("File hash check failed: %s"), szFullPath);
@@ -798,6 +879,7 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
     return dwErrCode;
 }
 
+// Verify SHA256 of each MPQ that we have in the collection
 static DWORD VerifyFileHashes(LPCTSTR szSubDirectory)
 {
     TLogHelper Logger("TestVerifyHash");
@@ -1570,7 +1652,7 @@ static DWORD SearchArchive(
 
     // Construct the full name of the listfile
     CreateFullPathName(szListFile, _countof(szListFile), szListFileDir, _T("ListFile_Blizzard.txt"));
-    //fp = fopen("E:\\mpq-listing.txt", "wt");
+    // fp = fopen("E:\\mpq-listing.txt", "wt");
 
     // Prepare hashing
     md5_init(&md5state);
@@ -1605,10 +1687,8 @@ static DWORD SearchArchive(
                 // Play sound files, if required
                 if((dwSearchFlags & SEARCH_FLAG_PLAY_WAVES) && strstr(sf.cFileName, ".wav") != NULL)
                 {
-#ifdef _MSC_VER
                     pLogger->PrintProgress("Playing sound %s", sf.cFileName);
-                    PlaySound((LPCTSTR)pFileData->FileData, NULL, SND_MEMORY);
-#endif
+                    PlayWaveSound(pFileData);
                 }
 
                 // Debug: Show CRC32 of each file in order to debug differences
@@ -1741,37 +1821,6 @@ static DWORD CreateNewArchive_V2(TLogHelper * pLogger, LPCTSTR szPlainName, DWOR
     else
         *phMpq = hMpq;
 
-    return ERROR_SUCCESS;
-}
-
-// Creates new archive with UNICODE name. Adds prefix to the name
-static DWORD CreateNewArchiveU(TLogHelper * pLogger, const wchar_t * szPlainName, DWORD dwCreateFlags, DWORD dwMaxFileCount)
-{
-#ifdef _UNICODE
-    HANDLE hMpq = NULL;
-    TCHAR szMpqName[MAX_PATH+1];
-    TCHAR szFullPath[MAX_PATH];
-
-    // Construct the full UNICODE name
-    CreateFullPathName(szFullPath, _countof(szFullPath), NULL, _T("StormLibTest_"));
-    StringCopy(szMpqName, _countof(szMpqName), szFullPath);
-    StringCat(szMpqName, _countof(szMpqName), szPlainName);
-
-    // Make sure that the MPQ is deleted
-    _tremove(szMpqName);
-
-    // Create the archive
-    pLogger->PrintProgress("Creating new archive with UNICODE name ...");
-    if(!SFileCreateArchive(szMpqName, dwCreateFlags, dwMaxFileCount, &hMpq))
-        return pLogger->PrintError(_T("Failed to create archive %s"), szMpqName);
-
-    SFileCloseArchive(hMpq);
-#else
-    pLogger = pLogger;
-    szPlainName = szPlainName;
-    dwCreateFlags = dwCreateFlags;
-    dwMaxFileCount = dwMaxFileCount;
-#endif
     return ERROR_SUCCESS;
 }
 
@@ -2373,6 +2422,23 @@ static DWORD TestOpenArchive_Extra_ListFile(TLogHelper & Logger, HANDLE hMpq, PT
     return dwErrCode;
 }
 
+static DWORD TestOpenArchive_Extra_Utf8File(TLogHelper & Logger, HANDLE hMpq, PTEST_EXTRA_UTF8 pExtra)
+{
+    DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szFullName[MAX_PATH];
+    TCHAR szListName[MAX_PATH];
+
+    if(IS_VALID_STRING(pExtra->szListFile))
+    {
+        StringCopy(szListName, _countof(szListName), (const char *)pExtra->szListFile);
+        Logger.PrintProgress(_T("Adding listfile %s ..."), szListName);
+        CreateFullPathName(szFullName, _countof(szFullName), szListFileDir, szListName);
+        if((dwErrCode = SFileAddListFile(hMpq, szFullName)) != ERROR_SUCCESS)
+            Logger.PrintMessage("Failed to add the listfile to the MPQ");
+    }
+    return dwErrCode;
+}
+
 static DWORD TestOpenArchive_Extra_TwoFiles(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearchFlags, PTEST_EXTRA_TWOFILES pExtra)
 {
     PFILE_DATA pFileData1 = NULL;
@@ -2478,6 +2544,9 @@ static DWORD TestOpenArchive_ExtraType(TLogHelper & Logger, HANDLE hMpq, DWORD d
         case ListFile:
             return TestOpenArchive_Extra_ListFile(Logger, hMpq, (PTEST_EXTRA_ONEFILE)(pExtra));
 
+        case Utf8File:
+            return TestOpenArchive_Extra_Utf8File(Logger, hMpq, (PTEST_EXTRA_UTF8)(pExtra));
+
         case TwoFiles:
             return TestOpenArchive_Extra_TwoFiles(Logger, hMpq, dwSearchFlags, (PTEST_EXTRA_TWOFILES)(pExtra));
 
@@ -2494,14 +2563,28 @@ static DWORD TestOpenArchive_ExtraType(TLogHelper & Logger, HANDLE hMpq, DWORD d
 
 static DWORD TestOpenArchive_ModifyArchive(TLogHelper & Logger, HANDLE hMpq, DWORD dwFlags)
 {
-    DWORD dwExpectedError = (dwFlags & TFLG_READ_ONLY) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+    DWORD dwExpectedError;
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szFullPath[MAX_PATH];
 
     // Modify the archive, if required
     if(dwFlags & TFLG_MODIFY)
     {
         Logger.PrintProgress("Modifying archive ...");
-        dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", MPQ_FILE_COMPRESS, 0, dwExpectedError);
+
+        if(dwFlags & TFLG_BIGFILE)
+        {
+            dwExpectedError = (dwFlags & TFLG_WILL_FAIL) ? ERROR_DISK_FULL : ERROR_SUCCESS;
+
+            CreateFullPathName(szFullPath, _countof(szFullPath), szDataFileDir, _T("new-file-big.mp4"));
+            dwErrCode = AddLocalFileToMpq(&Logger, hMpq, "added-extra-file.mp4", szFullPath);
+            dwErrCode = (dwErrCode == dwExpectedError) ? ERROR_SUCCESS : ERROR_FILE_CORRUPT;
+        }
+        else
+        {
+            dwExpectedError = (dwFlags & TFLG_READ_ONLY) ? ERROR_ACCESS_DENIED : ERROR_SUCCESS;
+            dwErrCode = AddFileToMpq(&Logger, hMpq, "AddedFile01.txt", "This is a file added to signed MPQ", MPQ_FILE_COMPRESS, 0, dwExpectedError);
+        }
     }
     return dwErrCode;
 }
@@ -2581,8 +2664,8 @@ static DWORD TestOpenArchive_GetFileInfo(TLogHelper & Logger, HANDLE hMpq, DWORD
 }
 
 static DWORD TestOpenArchive(
-    LPCTSTR szMpqName1,                             // Name of the MPQ
-    LPCTSTR szMpqName2,                             // Name of the MPQ (original name or name of a copy)
+    LPCTSTR szMpqName1,                             // (UTF-8) Name of the MPQ
+    LPCTSTR szMpqName2,                             // (UTF-8) Name of the MPQ (original name or name of a copy)
     LPCSTR szExpectedHash,                          // Expected name+data hash
     DWORD dwFlags,                                  // Test flags. Lower bits contains the number of files
     const void * pExtra)                            // Extra parameter
@@ -2594,10 +2677,14 @@ static DWORD TestOpenArchive(
     DWORD dwOpenFlags = 0;
     DWORD dwMpqFlags = 0;
     DWORD dwErrCode;
+    TCHAR szMpqNameBuff[MAX_PATH];
 
     // Propagate the open MPQ flags from the input
     dwOpenFlags |= (dwFlags & TFLG_WILL_FAIL) ? MPQ_OPEN_DONT_REPORT_FAILURE : 0;
     dwOpenFlags |= (dwFlags & TFLG_READ_ONLY) ? STREAM_FLAG_READ_ONLY : 0;
+
+    // Shall we switch the name of the MPQ?
+    szMpqName1 = SwapMpqName(szMpqNameBuff, _countof(szMpqNameBuff), szMpqName1, (PTEST_EXTRA_UTF8)(pExtra));
 
     // If the file is a partial MPQ, don't load all files
     if(_tcsstr(szMpqName1, _T(".MPQ.part")) == NULL)
@@ -2664,7 +2751,7 @@ static DWORD TestOpenArchive(
     return Logger.PrintVerdict(dwErrCode);
 }
 
-static DWORD TestOpenArchive(const TEST_INFO & TestInfo)
+static DWORD TestOpenArchive(const TEST_INFO1 & TestInfo)
 {
     return TestOpenArchive(TestInfo.szName1,            // Name of the MPQ
                            TestInfo.szName2,            // Name of the listfile or NULL
@@ -2785,7 +2872,7 @@ static DWORD TestReopenArchive(
     }
 
     // Open the archive and load some files
-    if((dwErrCode == ERROR_SUCCESS) && STORMLIB_TEST_FLAGS(dwFlags, TFLG_COMPACT | TFLG_MODIFY, TFLG_COMPACT))
+    if((dwErrCode == ERROR_SUCCESS) && STORMLIB_TEST_FLAGS(dwFlags, TFLG_COMPACT | TFLG_MODIFY | TFLG_BIGFILE, TFLG_COMPACT))
     {
         // Open the archive
         if((dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq)) == ERROR_SUCCESS)
@@ -2853,144 +2940,60 @@ static DWORD TestOpenArchive_SignatureTest(LPCTSTR szPlainName, LPCTSTR szOrigin
     return dwErrCode;
 }
 
-static DWORD TestOpenArchive_CompactArchive(LPCTSTR szPlainName, LPCTSTR szCopyName, DWORD bAddUserData)
+static DWORD TestCreateArchive(LPCTSTR szPlainName, LPCSTR szFileName, DWORD dwFlags)
 {
-    TLogHelper Logger("TestCompactMpq", szPlainName);
-    ULONGLONG PreMpqDataSize = (bAddUserData) ? 0x400 : 0;
-    ULONGLONG UserDataSize = (bAddUserData) ? 0x531 : 0;
-    HANDLE hMpq;
-    DWORD dwFileCount1 = 0;
-    DWORD dwFileCount2 = 0;
-    TCHAR szFullPath[MAX_PATH];
-    BYTE FileHash1[MD5_DIGEST_SIZE];
-    BYTE FileHash2[MD5_DIGEST_SIZE];
-    DWORD dwErrCode;
-
-    // Create copy of the archive, with interleaving some user data
-    dwErrCode = CreateFileCopy(&Logger, szPlainName, szCopyName, szFullPath, _countof(szFullPath), PreMpqDataSize, UserDataSize);
-
-    // Open the archive and load some files
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Open the archive
-        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(dwErrCode != ERROR_SUCCESS)
-            return dwErrCode;
-
-        // Verify presence of (listfile) and (attributes)
-        CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, true);
-        CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, true);
-
-        // Search the archive and load every file
-        dwErrCode = SearchArchive(&Logger, hMpq, SEARCH_FLAG_LOAD_FILES | SEARCH_FLAG_HASH_FILES, &dwFileCount1, FileHash1);
-        SFileCloseArchive(hMpq);
-    }
-
-    // Try to compact the MPQ
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Open the archive again
-        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(dwErrCode != ERROR_SUCCESS)
-            return dwErrCode;
-
-        // Compact the archive
-        Logger.PrintProgress("Compacting archive %s ...", GetShortPlainName(szFullPath));
-        if(!SFileSetCompactCallback(hMpq, CompactCallback, &Logger))
-            dwErrCode = Logger.PrintError(_T("Failed to compact archive %s"), szFullPath);
-
-        SFileCompactArchive(hMpq, NULL, false);
-        SFileCloseArchive(hMpq);
-    }
-
-    // Open the archive and load some files
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Open the archive
-        dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq);
-        if(dwErrCode != ERROR_SUCCESS)
-            return dwErrCode;
-
-        // Verify presence of (listfile) and (attributes)
-        CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, true);
-        CheckIfFileIsPresent(&Logger, hMpq, ATTRIBUTES_NAME, true);
-
-        // Search the archive and load every file
-        dwErrCode = SearchArchive(&Logger, hMpq, SEARCH_FLAG_LOAD_FILES | SEARCH_FLAG_HASH_FILES, &dwFileCount2, FileHash2);
-        SFileCloseArchive(hMpq);
-    }
-
-    // Compare the file counts and their hashes
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        if(dwFileCount2 != dwFileCount1)
-            Logger.PrintMessage("Different file count after compacting archive: %u vs %u", dwFileCount2, dwFileCount1);
-
-        if(memcmp(FileHash2, FileHash1, MD5_DIGEST_SIZE))
-            Logger.PrintMessage("Different file hash after compacting archive");
-    }
-
-    return dwErrCode;
-}
-
-static DWORD TestOpenArchive_AddFiles2GB(LPCTSTR szMpqName, DWORD /* dwFlags */)
-{
-    TLogHelper Logger("TestAddFileOver2GB", szMpqName);
-    LPCTSTR szCopyName = _T("size-overflow.w3m");
+    TLogHelper Logger("CreateNewMpq", szPlainName);
     HANDLE hMpq = NULL;
-    DWORD dwErrCode = ERROR_SUCCESS;
-    TCHAR szFullPath[MAX_PATH];
-    bool bSucceeded = true;
-
-    // Copy the archive so we won't fuck up the original one
-    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szMpqName, szCopyName, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Create both file names
-        CreateFullPathName(szFullPath, _countof(szFullPath), szDataFileDir, _T("new-file-big.mp4"));
-
-        // Add the file to MPQ. This must fail, because the map size
-        // will go over 2GB and StormLib marks the file malformed on subsequent open
-        dwErrCode = AddLocalFileToMpq(&Logger, hMpq, "added-extra-file.mp4", szFullPath);
-        if(dwErrCode != ERROR_DISK_FULL)
-            bSucceeded = false;
-
-        SFileCloseArchive(hMpq);
-    }
-
-    // Open the MPQ again
-    if(dwErrCode == ERROR_SUCCESS || dwErrCode == ERROR_DISK_FULL)
-    {
-        CreateFullPathName(szFullPath, _countof(szFullPath), NULL, szCopyName);
-        if((dwErrCode = OpenExistingArchive(&Logger, szFullPath, 0, &hMpq)) == ERROR_SUCCESS)
-        {
-            DWORD dwFlags = 0;
-
-            SFileGetFileInfo(hMpq, SFileMpqFlags, &dwFlags, sizeof(dwFlags), NULL);
-            if(dwFlags & MPQ_FLAG_MALFORMED)
-                bSucceeded = false;
-
-            SFileCloseArchive(hMpq);
-        }
-    }
-
-    // Both tests must have succeeded
-    if(bSucceeded == false)
-        dwErrCode = ERROR_CAN_NOT_COMPLETE;
-    return dwErrCode;
-}
-
-static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags)
-{
-    TLogHelper Logger("CreateEmptyMpq", szPlainName);
-    HANDLE hMpq = NULL;
+    DWORD dwMaxFileCount = dwFlags & 0x0000FFFF;
+    DWORD dwCreateFlags = 0;
     DWORD dwFileCount = 0;
     DWORD dwErrCode;
 
+    // Fixup the MPQ format
+    dwCreateFlags |= (dwFlags & CFLG_EMPTY) ? 0 : MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES;
+    dwCreateFlags |= (dwFlags & CFLG_V2) ? MPQ_CREATE_ARCHIVE_V2 : 0;
+    dwCreateFlags |= (dwFlags & CFLG_V4) ? MPQ_CREATE_ARCHIVE_V4 : 0;
+
     // Create the full path name
-    dwErrCode = CreateNewArchive(&Logger, szPlainName, dwCreateFlags, 0, &hMpq);
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, dwCreateFlags, dwMaxFileCount, &hMpq);
     if(dwErrCode == ERROR_SUCCESS)
     {
+        // Add non-standard names, if needed
+        if(dwFlags & CFLG_NONSTD_NAMES)
+        {
+            // Add few files and close the archive
+            AddFileToMpq(&Logger, hMpq, "AddedFile000.txt", "This is the file data 000.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\/\\/\\/\\AddedFile001.txt", "This is the file data 001.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\\\\\\\\\\\\\\\", "This is the file data 002.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "////////////////", "This is the file data 003.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "//\\//\\//\\//\\", "This is the file data 004.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "................", "This is the file data 005.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "//****//****//****//****.***", "This is the file data 006.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "//*??*//*??*//*??*//?**?.?*?", "This is the file data 007.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt", "This is the file data 008.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt..", "This is the file data 009.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 010.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 011.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\\\Dir1\\\\Dir2\\\\Dir3\\\\File.txt..", "This is the file data 012.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "/Dir1/Dir2/Dir3/File.txt..", "This is the file data 013.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "////Dir1////Dir2////Dir3////File.txt..", "This is the file data 014.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\\//\\Dir1\\//\\Dir2\\//\\File.txt..", "This is the file data 015.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\x10\x11\x12\x13\\\x14\x15\x16\x17\\\x18\x19\x1a\x1b\\\x1c\x1D\x1E\x1F.txt", "This is the file data 016.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\x09\x20\x09\x20\\\x20\x09\x20\x09\\\x09\x20\x09\x20\\\x20\x09\x20\x09.txt", "This is the file data 017.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "\x80\x91\xA2\xB3\\\xC4\xD5\xE6\xF7\\\x80\x91\xA2\xB3.txt", "This is the file data 018.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "Dir1\x20\x09\x20\\Dir2\x20\x09\x20\\File.txt\x09\x09\x20\x2e", "This is the file data 019.", MPQ_FILE_COMPRESS);
+            AddFileToMpq(&Logger, hMpq, "Dir1\x20\x09\x20\\Dir2\x20\x09\x20\\\x09\x20\x2e\x09\x20\x2e", "This is the file data 020.", MPQ_FILE_COMPRESS);
+        }
+
+        // Like MPQEditor: Flush archive, add one file, flush again
+        if(dwFlags & CFLG_MPQEDITOR)
+        {
+            SFileFlushArchive(hMpq);
+            dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, "This is the file data.", MPQ_FILE_COMPRESS);
+            SFileFlushArchive(hMpq);
+        }
+
+        // Search the archive
         SearchArchive(&Logger, hMpq);
         SFileCloseArchive(hMpq);
     }
@@ -3001,16 +3004,42 @@ static DWORD TestCreateArchive_EmptyMpq(LPCTSTR szPlainName, DWORD dwCreateFlags
         dwErrCode = OpenExistingArchiveWithCopy(&Logger, NULL, szPlainName, &hMpq);
         if(dwErrCode == ERROR_SUCCESS)
         {
+            // Retrieve the number of files
             SFileGetFileInfo(hMpq, SFileMpqNumberOfFiles, &dwFileCount, sizeof(dwFileCount), NULL);
 
-            CheckIfFileIsPresent(&Logger, hMpq, "File00000000.xxx", false);
-            CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, false);
-            SearchArchive(&Logger, hMpq);
+            // Special check for empty MPQs
+            if(dwFlags & CFLG_EMPTY)
+            {
+                if(dwFileCount != 0)
+                    dwErrCode = ERROR_FILE_CORRUPT;
+                CheckIfFileIsPresent(&Logger, hMpq, "File00000000.xxx", false);
+                CheckIfFileIsPresent(&Logger, hMpq, LISTFILE_NAME, false);
+                SearchArchive(&Logger, hMpq);
+            }
+            else
+            {
+                if(dwFileCount == 0)
+                    dwErrCode = ERROR_FILE_CORRUPT;
+            }
+
+            // Close the MPQ
             SFileCloseArchive(hMpq);
         }
     }
 
     return dwErrCode;
+}
+
+static DWORD TestCreateArchive(const TEST_INFO2 & TestInfo)
+{
+    TCHAR szPlainNameT[MAX_PATH];
+
+    // Always prefix the archive name with "StormLibTest_"
+    StringCopy(szPlainNameT, _countof(szPlainNameT), "StormLibTest_");
+    StringCat(szPlainNameT, _countof(szPlainNameT), TestInfo.szName1);
+
+    // Perform creation of the archive
+    return TestCreateArchive(szPlainNameT, TestInfo.szName2, TestInfo.dwFlags);
 }
 
 static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
@@ -3083,73 +3112,6 @@ static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
     // Close the archive if needed
     if(hMpq != NULL)
         SFileCloseArchive(hMpq);
-    return dwErrCode;
-}
-
-static DWORD TestCreateArchive_NonStdNames(LPCTSTR szPlainName)
-{
-    TLogHelper Logger("TestNonStdNames", szPlainName);
-    HANDLE hMpq = NULL;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Create new MPQ
-    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_FORMAT_VERSION_1, 4000, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Add few files and close the archive
-        AddFileToMpq(&Logger, hMpq, "AddedFile000.txt", "This is the file data 000.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\/\\/\\/\\AddedFile001.txt", "This is the file data 001.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\\\\\\\\\\\\\\\", "This is the file data 002.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "////////////////", "This is the file data 003.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "//\\//\\//\\//\\", "This is the file data 004.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "................", "This is the file data 005.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "//****//****//****//****.***", "This is the file data 006.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "//*??*//*??*//*??*//?**?.?*?", "This is the file data 007.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt", "This is the file data 008.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\/\\/File.txt..", "This is the file data 009.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 010.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\Dir1\\Dir2\\Dir3\\File.txt..", "This is the file data 011.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\\\Dir1\\\\Dir2\\\\Dir3\\\\File.txt..", "This is the file data 012.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "/Dir1/Dir2/Dir3/File.txt..", "This is the file data 013.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "////Dir1////Dir2////Dir3////File.txt..", "This is the file data 014.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\\//\\Dir1\\//\\Dir2\\//\\File.txt..", "This is the file data 015.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\x10\x11\x12\x13\\\x14\x15\x16\x17\\\x18\x19\x1a\x1b\\\x1c\x1D\x1E\x1F.txt", "This is the file data 016.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\x09\x20\x09\x20\\\x20\x09\x20\x09\\\x09\x20\x09\x20\\\x20\x09\x20\x09.txt", "This is the file data 017.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "\x80\x91\xA2\xB3\\\xC4\xD5\xE6\xF7\\\x80\x91\xA2\xB3.txt", "This is the file data 018.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "Dir1\x20\x09\x20\\Dir2\x20\x09\x20\\File.txt\x09\x09\x20\x2e", "This is the file data 019.", MPQ_FILE_COMPRESS);
-        AddFileToMpq(&Logger, hMpq, "Dir1\x20\x09\x20\\Dir2\x20\x09\x20\\\x09\x20\x2e\x09\x20\x2e", "This is the file data 020.", MPQ_FILE_COMPRESS);
-
-        SFileCloseArchive(hMpq);
-    }
-
-    return ERROR_SUCCESS;
-}
-
-static DWORD TestCreateArchive_MpqEditor(LPCTSTR szPlainName, LPCSTR szFileName)
-{
-    TLogHelper Logger("CreateMpqEditor", szPlainName);
-    HANDLE hMpq = NULL;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    // Create new MPQ
-    dwErrCode = CreateNewArchive_V2(&Logger, szPlainName, MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 4000, &hMpq);
-    if(dwErrCode == ERROR_SUCCESS)
-    {
-        // Flush the archive first
-        SFileFlushArchive(hMpq);
-
-        // Add one file
-        dwErrCode = AddFileToMpq(&Logger, hMpq, szFileName, "This is the file data.", MPQ_FILE_COMPRESS);
-
-        // Flush the archive again
-        SFileFlushArchive(hMpq);
-        SFileCloseArchive(hMpq);
-    }
-    else
-    {
-        dwErrCode = GetLastError();
-    }
-
     return dwErrCode;
 }
 
@@ -3324,39 +3286,6 @@ static DWORD TestCreateArchive_IncMaxFileCount(LPCTSTR szPlainName)
                 break;
         }
     }
-
-    return dwErrCode;
-}
-
-static DWORD TestCreateArchive_UnicodeNames()
-{
-    TLogHelper Logger("MpqUnicodeName");
-    DWORD dwCreateFlags = MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES;
-    DWORD dwErrCode = ERROR_SUCCESS;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName1, dwCreateFlags | MPQ_CREATE_ARCHIVE_V1, 15);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName2, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 58);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName3, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 15874);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName4, dwCreateFlags | MPQ_CREATE_ARCHIVE_V4, 87541);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V3, 87541);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
-
-    dwErrCode = CreateNewArchiveU(&Logger, szUnicodeName5, dwCreateFlags | MPQ_CREATE_ARCHIVE_V2, 87541);
-    if(dwErrCode != ERROR_SUCCESS)
-        return dwErrCode;
 
     return dwErrCode;
 }
@@ -3889,6 +3818,10 @@ static LPCTSTR szDiabdatMPQ = _T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
 static const TEST_EXTRA_ONEFILE  LfBliz = {ListFile, _T("ListFile_Blizzard.txt")};
 static const TEST_EXTRA_ONEFILE  LfWotI = {ListFile, _T("ListFile_WarOfTheImmortals.txt")};
 
+static const BYTE szMpqFileNameUTF8[] = {0x4D, 0x50, 0x51, 0x5F, 0x32, 0x30, 0x32, 0x34, 0x5F, 0x76, 0x31, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x77, 0x33, 0x78, 0x00};
+static const BYTE szLstFileNameUTF8[] = {0x4C, 0x69, 0x73, 0x74, 0x46, 0x69, 0x6C, 0x65, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x74, 0x78, 0x74, 0x00};
+static const TEST_EXTRA_UTF8     MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
+
 static const TEST_EXTRA_TWOFILES TwoFilesD1 = {TwoFiles, "music\\dintro.wav", "File00000023.xxx"};
 static const TEST_EXTRA_TWOFILES TwoFilesD2 = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
@@ -4048,7 +3981,7 @@ static const TEST_EXTRA_PATCHES PatchH6898 =
     10
 };
 
-static const TEST_INFO TestList_StreamOps[] =
+static const TEST_INFO1 TestList_StreamOps[] =
 {
     {_T("MPQ_2013_v4_alternate-original.MPQ"),                  NULL, NULL, 0},
     {_T("MPQ_2013_v4_alternate-original.MPQ"),                  NULL, NULL, STREAM_FLAG_READ_ONLY},
@@ -4058,7 +3991,7 @@ static const TEST_INFO TestList_StreamOps[] =
     {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),           NULL, NULL, STREAM_PROVIDER_MPQE}
 };
 
-static const TEST_INFO TestList_MasterMirror[] =
+static const TEST_INFO1 TestList_MasterMirror[] =
 {
     {_T("part-file://MPQ_2009_v1_patch-created.MPQ.part"),      _T("MPQ_2009_v1_patch-original.MPQ"),       NULL, 0},
     {_T("part-file://MPQ_2009_v1_patch-partial.MPQ.part"),      _T("MPQ_2009_v1_patch-original.MPQ"),       NULL, 1},
@@ -4071,7 +4004,7 @@ static const TEST_INFO TestList_MasterMirror[] =
 //  {_T("MPQ_2013_v4_alternate-downloaded.MPQ"),                _T("http://www.zezula.net\\mpqs\\alternate.zip"), NULL, 0}
 };
 
-static const TEST_INFO Test_OpenMpqs[] =
+static const TEST_INFO1 Test_OpenMpqs[] =
 {
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
@@ -4100,6 +4033,7 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("MPQ_2023_v4_UTF8.s2ma"),                               NULL, "97b7a686650f3307d135e1d1b017a36a",    67},               // Map contaning files with Chinese names (UTF8-encoded)
     {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "477af4ddf11eead1412d7c87cb81b530",  2004},               // Corrupt sector checksum table in file #A0
     {_T("MPQ_2023_v4_1F644C5A.SC2Replay"),                      NULL, "b225828ffbf5037553e6a1290187caab",    17},               // Corrupt patch info of the "(attributes)" file
+    {_T("<Chinese MPQ name>"),                                  NULL, "67faeffd0c0aece205ac8b7282d8ad8e",  4697, &MpqUtf8},     // Chinese name of the MPQ
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4181,7 +4115,7 @@ static const TEST_INFO Test_OpenMpqs[] =
     {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_GET_FILE_INFO},
 };
 
-static const TEST_INFO Test_ReopenMpqs[] =
+static const TEST_INFO1 Test_ReopenMpqs[] =
 {
     // Test the archive compacting feature
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),           NULL,     "0c8fc921466f07421a281a05fad08b01",    53 | TFLG_COMPACT | TFLG_ADD_USER_DATA | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES},
@@ -4196,28 +4130,61 @@ static const TEST_INFO Test_ReopenMpqs[] =
 
     // Adding a file to MPQ and testing that (listfile) and (attributes) has the same state like before
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                 NULL,     "554b538541e42170ed41cb236483489e",  2910 | TFLG_MODIFY},
-    {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_MODIFY | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES}
+    {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_MODIFY | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES},
 
+    // Adding a large file to archive version 1. This must fail
+    {_T("MPQ_2002_v1_LargeMapFile.w3m"),                    NULL,     "2f302705280f0cf9da50ac10e3d71522",    22 | TFLG_MODIFY | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES | TFLG_BIGFILE | TFLG_WILL_FAIL}
 };
 
 // Tests for signature file
-static const TEST_INFO Test_Signature[] =
+static const TEST_INFO1 Test_Signature[] =
 {
     {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_SIGN_AT_CREATE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
     {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
 };
 
-static const TEST_INFO Test_ReplaceFile[] =
+static const TEST_INFO1 Test_ReplaceFile[] =
 {
     {_T("MPQ_2014_v4_Base.StormReplay"), _T("replay.message.events"), (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
     {_T("MPQ_2022_v1_v4.329.w3x"),       _T("war3map.j"),             (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
     {_T("MPQ_2023_v1_StarcraftMap.scm"), _T("staredit#scenario.chk"), NULL,                           MPQ_COMPRESSION_ZLIB | MPQ_COMPRESSION_HUFFMANN},
 };
 
+static const TEST_INFO2 Test_CreateMpqs[] =
+{
+    // Create empty MPQs containing nothing
+    {"EmptyMpq_v2.mpq",                 NULL, NULL, CFLG_V2 | CFLG_EMPTY},
+    {"EmptyMpq_v4.mpq",                 NULL, NULL, CFLG_V4 | CFLG_EMPTY},
+
+    // Create empty MPQs with localized names
+    {(LPCSTR)szPlainName_CZE,           NULL, NULL, CFLG_V2 | 15},       // (UTF-8) Czech
+    {(LPCSTR)szPlainName_RUS,           NULL, NULL, CFLG_V2 | 58},       // (UTF-8) Russian
+    {(LPCSTR)szPlainName_GRC,           NULL, NULL, CFLG_V2 | 15874},    // (UTF-8) Greek
+    {(LPCSTR)szPlainName_CHN,           NULL, NULL, CFLG_V4 | 87541},    // (UTF-8) Chinese
+    {(LPCSTR)szPlainName_JPN,           NULL, NULL, CFLG_V4 | 87541},    // (UTF-8) Japanese
+    {(LPCSTR)szPlainName_SAU,           NULL, NULL, CFLG_V4 | 87541},    // (UTF-8) Arabic
+
+    // Create archive containing files with non-std names
+    {"NonStdNames.mpq",                 NULL, NULL, CFLG_NONSTD_NAMES | 4000},
+
+    // Test creating of an archive the same way like MPQ Editor does
+    {"MpqEditorTest.mpq",    "AddedFile.exe", NULL, CFLG_V2 | CFLG_MPQEDITOR | 4000},
+};
+
+static const LPCSTR Test_CreateMpq_Localized[] =
+{
+    (LPCSTR)szPlainName_CZE,    // (UTF-8) Czech
+    (LPCSTR)szPlainName_RUS,    // (UTF-8) Russian
+    (LPCSTR)szPlainName_GRC,    // (UTF-8) Greek
+    (LPCSTR)szPlainName_CHN,    // (UTF-8) Chinese
+    (LPCSTR)szPlainName_JPN,    // (UTF-8) Japanese
+    (LPCSTR)szPlainName_SAU     // (UTF-8) Arabic
+};
+
 //-----------------------------------------------------------------------------
 // Main
 
-//#define TEST_COMMAND_LINE
+#define TEST_COMMAND_LINE
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR
@@ -4225,6 +4192,8 @@ static const TEST_INFO Test_ReplaceFile[] =
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
 #define TEST_REPLACE_FILE
+#define TEST_VERIFY_HASHES
+#define TEST_CREATE_MPQS
 
 int _tmain(int argc, TCHAR * argv[])
 {
@@ -4340,33 +4309,27 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
-    // Add files so the archive will go over 2GB
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestOpenArchive_AddFiles2GB(_T("MPQ_2002_v1_LargeMapFile.w3m"), 0);
-
-    // Verify SHA256 of each MPQ that we have in the list
+#ifdef TEST_VERIFY_HASHES
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = VerifyFileHashes(szMpqSubDir);
+#endif
 
-    // Create an empty archive v2
+#ifdef TEST_CREATE_MPQS
     if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v2.mpq"), MPQ_CREATE_ARCHIVE_V2 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
-
-    // Create an empty archive v4
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_EmptyMpq(_T("StormLibTest_EmptyMpq_v4.mpq"), MPQ_CREATE_ARCHIVE_V4 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES);
+    {
+        for(size_t i = 0; i < _countof(Test_CreateMpqs); i++)
+        {
+            // Ignore the error code here; we want to see results of all opens
+            dwErrCode = TestCreateArchive(Test_CreateMpqs[i]);
+            if(dwErrCode != ERROR_SUCCESS)
+                break;
+        }
+    }
+#endif
 
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
-
-    // Test creating of an archive with non standard file names
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_NonStdNames(_T("StormLibTest_NonStdNames.mpq"));
-
-    // Test creating of an archive the same way like MPQ Editor does
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_MpqEditor(_T("StormLibTest_MpqEditorTest.mpq"), "AddedFile.exe");
 
     // Create an archive and fill it with files up to the max file count
     if(dwErrCode == ERROR_SUCCESS)
@@ -4387,10 +4350,6 @@ int _tmain(int argc, TCHAR * argv[])
     // Create an archive, and increment max file count several times
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_IncMaxFileCount(_T("StormLibTest_IncMaxFileCount.mpq"));
-
-    // Create a MPQ archive with UNICODE names
-    if(dwErrCode == ERROR_SUCCESS)
-        dwErrCode = TestCreateArchive_UnicodeNames();
 
     // Create a MPQ file, add files with various flags
     if(dwErrCode == ERROR_SUCCESS)

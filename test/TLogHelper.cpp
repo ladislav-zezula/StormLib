@@ -61,55 +61,6 @@ inline DWORD Test_GetLastError()
 #endif
 }
 
-void TestStrCopy(char * szTarget, size_t cchTarget, const char * szSource, size_t cchSource = -1)
-{
-    size_t cchToCopy;
-
-    if(cchTarget > 0)
-    {
-        // Make sure we know the length
-        if(cchSource == -1)
-            cchSource = strlen(szSource);
-        cchToCopy = TEST_MIN((cchTarget - 1), cchSource);
-
-        // Copy the string
-        memcpy(szTarget, szSource, cchToCopy);
-        szTarget[cchToCopy] = 0;
-    }
-}
-
-void TestStrCopy(char * szTarget, size_t cchTarget, const wchar_t * szSource, size_t cchSource = -1)
-{
-    size_t cchToCopy;
-
-    if(cchTarget > 0)
-    {
-        // Make sure we know the length
-        if(cchSource == -1)
-            cchSource = wcslen(szSource);
-        cchToCopy = TEST_MIN((cchTarget - 1), cchSource);
-
-        wcstombs(szTarget, szSource, cchToCopy);
-        szTarget[cchToCopy] = 0;
-    }
-}
-
-void TestStrCopy(wchar_t * szTarget, size_t cchTarget, const char * szSource, size_t cchSource = -1)
-{
-    size_t cchToCopy;
-
-    if(cchTarget > 0)
-    {
-        // Make sure we know the length
-        if(cchSource == -1)
-            cchSource = strlen(szSource);
-        cchToCopy = TEST_MIN((cchTarget - 1), cchSource);
-
-        mbstowcs(szTarget, szSource, cchToCopy);
-        szTarget[cchToCopy] = 0;
-    }
-}
-
 #ifdef STORMLIB_WINDOWS
 wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
 {
@@ -151,7 +102,7 @@ char * CopyFormatCharacter(char * szBuffer, const char *& szFormat)
     {
         if(szFormat[1] == 's')
         {
-            TestStrCopy(szBuffer, 32, szStringFormat);
+            StringCopy(szBuffer, 32, szStringFormat);
             szFormat += 2;
             return szBuffer + strlen(szStringFormat);
         }
@@ -159,7 +110,7 @@ char * CopyFormatCharacter(char * szBuffer, const char *& szFormat)
         // Replace %I64u with the proper platform-dependent suffix
         if(szFormat[1] == 'I' && szFormat[2] == '6' && szFormat[3] == '4' && szFormat[4] == 'u')
         {
-            TestStrCopy(szBuffer, 32, szUint64Format);
+            StringCopy(szBuffer, 32, szUint64Format);
             szFormat += 5;
             return szBuffer + strlen(szUint64Format);
         }
@@ -263,7 +214,7 @@ class TLogHelper
             TCHAR szMainTitleT[0x100] = {0};
 
             // Copy the UNICODE main title
-            TestStrCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
+            StringCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
 
             if(szSubTitle1 != NULL && szSubTitle2 != NULL)
                 nPrevPrinted = _tprintf(_T("\rRunning %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
@@ -346,9 +297,9 @@ class TLogHelper
         }
 
         // Construct the message
-        nLength = TestStrPrintfV(szMessage, _countof(szMessage), szFormat, argList);
-        TestStrCopy(szBufferPtr, (szBufferEnd - szBufferPtr), szMessage);
-        szBufferPtr += nLength;
+        TestStrPrintfV(szMessage, _countof(szMessage), szFormat, argList);
+        StringCopy(szBufferPtr, (szBufferEnd - szBufferPtr), szMessage);
+        szBufferPtr = szBufferPtr + strlen(szBufferPtr);
 
         // Append the last error
         if(bPrintLastError)
@@ -457,7 +408,7 @@ class TLogHelper
         TCHAR szSaveMainTitle[0x80];
 
         // Set both to NULL so they won't be printed
-        TestStrCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
+        StringCopy(szSaveMainTitle, _countof(szSaveMainTitle), szMainTitle);
         szMainTitle = NULL;
         szSubTitle1 = NULL;
         szSubTitle2 = NULL;

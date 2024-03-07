@@ -64,6 +64,7 @@ set(TOMCRYPT_FILES
            src/libtomcrypt/src/hashes/hash_memory.c
            src/libtomcrypt/src/hashes/md5.c
            src/libtomcrypt/src/hashes/sha1.c
+           src/libtomcrypt/src/hashes/sha256.c
            src/libtomcrypt/src/math/ltm_desc.c
            src/libtomcrypt/src/math/multi.c
            src/libtomcrypt/src/math/rand_prime.c
@@ -393,8 +394,9 @@ if (NOT STORM_SKIP_INSTALL)
 endif()
 
 if(STORM_BUILD_TESTS)
+    find_package(ALSA REQUIRED)
     add_executable(StormLib_test ${TEST_SRC_FILES})
-    target_link_libraries(StormLib_test ${LIBRARY_NAME})
+    target_link_libraries(StormLib_test ${LIBRARY_NAME} ${ALSA_LIBRARIES})
     install(TARGETS StormLib_test RUNTIME DESTINATION bin)
 endif()
 

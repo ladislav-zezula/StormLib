@@ -206,6 +206,7 @@ void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource);
 void StringCopy(char * szTarget, size_t cchTarget, const TCHAR * szSource);
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource);
 void StringCat(TCHAR * szTarget, size_t cchTargetMax, const TCHAR * szSource);
+void StringCat(TCHAR * szTarget, size_t cchTargetMax, const char * szSource);
 #endif
 
 //-----------------------------------------------------------------------------
