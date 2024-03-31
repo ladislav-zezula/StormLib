@@ -587,7 +587,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
     hash_state sha256_state;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
-    LPCTSTR szHashingFormat = _T("Hashing %s " fmt_X_of_Y_a);
+    LPCSTR szHashingFormat = "Hashing %s " fmt_X_of_Y_a;
     LPBYTE pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
@@ -1646,7 +1646,6 @@ static DWORD SearchArchive(
     DWORD dwFileCount = 0;
     hash_state md5state;
     TCHAR szListFile[MAX_PATH] = _T("");
-    char szMostPatched[MAX_PATH] = "";
     DWORD dwErrCode = ERROR_SUCCESS;
     bool bFound = true;
 
@@ -3772,37 +3771,18 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-/*
-    // Check opening of a MPQ
-    LPCTSTR szArchiveName = _T("e:\\MPQ_2023_v1_Lusin2Rpg1.28.w3x");
-    LPBYTE pbBuffer = NULL;
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
-    DWORD dwFileSize;
-    DWORD dwInt32;
 
-    if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("(4)Duskwood.w3m"), 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "File00002875.blp", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "war3map.j", 0, &hFile))
         {
-            SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwInt32, sizeof(dwInt32), NULL);
-            SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwInt32, sizeof(dwInt32), NULL);
-
-            if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
-            {
-                if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
-                {
-                    DWORD dwBytesRead = 0;
-
-                    SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
-                    STORM_FREE(pbBuffer);
-                }
-            }
+            SFileSetFileLocale(hFile, 1033);
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------

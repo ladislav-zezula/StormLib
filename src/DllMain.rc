@@ -16,8 +16,10 @@
 // Neutral resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 #pragma code_page(1250)
+#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -43,12 +45,12 @@ BEGIN
         BEGIN
             VALUE "Comments", "http://www.zezula.net/mpq.html"
             VALUE "FileDescription", "StormLib library for reading Blizzard MPQ archives"
-            VALUE "FileVersion", "9.25.0.3"
+            VALUE "FileVersion", "9.25.0.4"
             VALUE "InternalName", "StormLib"
             VALUE "LegalCopyright", "Copyright (c) 2014 - 2023 Ladislav Zezula"
             VALUE "OriginalFilename", "StormLib.dll"
             VALUE "ProductName", "StormLib"
-            VALUE "ProductVersion", "9.25.0.3"
+            VALUE "ProductVersion", "9.25.0.4"
         END
     END
     BLOCK "VarFileInfo"
@@ -62,11 +64,13 @@ END
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Czech (Czech Republic) resources
+// Czech resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
+#ifdef _WIN32
 LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
 #pragma code_page(1250)
+#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -93,7 +97,7 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Czech (Czech Republic) resources
+#endif    // Czech resources
 /////////////////////////////////////////////////////////////////////////////
 
 
