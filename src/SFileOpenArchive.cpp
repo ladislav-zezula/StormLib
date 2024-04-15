@@ -228,7 +228,7 @@ bool WINAPI SFileOpenArchive(
     DWORD dwFlags,
     HANDLE * phMpq)
 {
-    TMPQUserData * pUserData;
+    TMPQUserData * pUserData = NULL;
     TFileStream * pStream = NULL;       // Open file stream
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
@@ -354,18 +354,25 @@ bool WINAPI SFileOpenArchive(
                 {
                     if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                     {
+                        // Copy the eventual user data to the separate buffer
+                        memcpy(&ha->UserData, ha->HeaderData, sizeof(TMPQUserData));
+
                         // Verify if this looks like a valid user data
-                        pUserData = IsValidMpqUserData(ByteOffset, FileSize, ha->HeaderData);
+                        pUserData = IsValidMpqUserData(ByteOffset, FileSize, &ha->UserData);
                         if(pUserData != NULL)
                         {
-                            // Fill the user data header
-                            ha->UserDataPos = ByteOffset;
-                            ha->pUserData = &ha->UserData;
-                            memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
+                            // Set the byte offset to the loaded user data
+                            ULONGLONG TempByteOffset = ByteOffset + pUserData->dwHeaderOffs;
 
-                            // Continue searching from that position
-                            ByteOffset += ha->pUserData->dwHeaderOffs;
-                            break;
+                            // Read the eventual MPQ header from the position where the user data points
+                            if(!FileStream_Read(ha->pStream, &TempByteOffset, ha->HeaderData, sizeof(ha->HeaderData)))
+                            {
+                                dwErrCode = GetLastError();
+                                break;
+                            }
+
+                            // Re-initialize the header ID
+                            dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
                         }
                     }
                 }
@@ -405,12 +412,24 @@ bool WINAPI SFileOpenArchive(
 
                 // Move the pointers
                 ByteOffset += 0x200;
+                pUserData = NULL;
             }
         }
 
         // Did we identify one of the supported headers?
         if(dwErrCode == ERROR_SUCCESS)
         {
+            // If we retrieved the offset from the user data offset, initialize the user data
+            if(pUserData != NULL)
+            {
+                // Fill the user data header
+                ha->pUserData = &ha->UserData;
+                ha->UserDataPos = ByteOffset;
+
+                // Set the real byte offset
+                ByteOffset = ByteOffset + pUserData->dwHeaderOffs;
+            }
+
             // Set the user data position to the MPQ header, if none
             if(ha->pUserData == NULL)
                 ha->UserDataPos = ByteOffset;

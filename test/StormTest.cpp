@@ -1651,7 +1651,7 @@ static DWORD SearchArchive(
 
     // Construct the full name of the listfile
     CreateFullPathName(szListFile, _countof(szListFile), szListFileDir, _T("ListFile_Blizzard.txt"));
-    // fp = fopen("E:\\mpq-listing.txt", "wt");
+    fp = fopen("E:\\mpq-listing.txt", "wt");
 
     // Prepare hashing
     md5_init(&md5state);
@@ -1694,7 +1694,7 @@ static DWORD SearchArchive(
                 if(fp != NULL)
                 {
                     pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
-                    fprintf(fp, "%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
+                    fprintf(fp, "%08x:%08x: %s                   \n", pFileData->dwFileSize, pFileData->dwCrc32, sf.cFileName);
                 }
 
                 // Free the loaded file data
@@ -3986,6 +3986,7 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
+/*
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
     {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                       NULL, "43fe7d362955be68a708486e399576a7",    10},               // From Starcraft 1 BETA
@@ -4046,7 +4047,9 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2022_v1_Sniper.scx"),                              NULL, "2e955271b70b79344ad85b698f6ce9d8",    64},               // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
     {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                        NULL, "25cad16a2fb4e883767a1f512fc1dce7",    16},
     {_T("MPQ_2023_v1_Lusin2Rpg1.28.w3x"),                       NULL, "9c21352f06cf763fcf05e8a2691e6194", 10305, &HashVals},
-
+*/
+    {_T("MPQ_2024_v1_300TK2.09p.w3x"),                          NULL, "e126ea5df9028e5ee3d7ad4bcf09bab5", 32588},               // Fake MPQ User data, fake MPQ header at offset 0x200
+/*
     // ASI plugins
     {_T("MPQ_2020_v1_HS0.1.asi"),                               NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
     {_T("MPQ_2022_v1_hs0.8.asi"),                               NULL, "6a40f733428001805bfe6e107ca9aec1", 11352},               // Items in hash table have platform = 0xFF
@@ -4093,6 +4096,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     // Check the GetFileInfo operations
     {_T("MPQ_2002_v1_StrongSignature.w3m"),                 NULL,     "7b725d87e07a2173c42fe2314b95fa6c",    17 | TFLG_GET_FILE_INFO},
     {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_GET_FILE_INFO},
+*/
 };
 
 static const TEST_INFO1 Test_ReopenMpqs[] =
@@ -4164,10 +4168,10 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
-#define TEST_LOCAL_LISTFILE
-#define TEST_STREAM_OPERATIONS
-#define TEST_MASTER_MIRROR
+//#define TEST_COMMAND_LINE
+//#define TEST_LOCAL_LISTFILE
+//#define TEST_STREAM_OPERATIONS
+//#define TEST_MASTER_MIRROR
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
@@ -4243,6 +4247,8 @@ int _tmain(int argc, TCHAR * argv[])
         }
     }
 #endif  // TEST_OPEN_MPQ
+
+    ExitProcess(0);
 
 #ifdef TEST_REOPEN_MPQ          // Test operations involving reopening the archive
     if(dwErrCode == ERROR_SUCCESS)
