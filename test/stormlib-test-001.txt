@@ -1,7 +1,7 @@
 ==== Test Suite for StormLib version 9.25 ====
 InitWorkFolder: Work directory /media/ladik/MPQs (default)
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.  
-TestLiFiSearch (listfile-test.txt) succeeded.         
+TestLiFiSearch (listfile-test.txt) succeeded.              
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.          
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.          
 TestFileStream (MPQ_2013_v4_alternate-complete.MPQ) succeeded.          
@@ -11,7 +11,7 @@ TestFileStream (mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE) succeeded.
 TestFileMirror (part-file://MPQ_2009_v1_patch-created.MPQ.part) succeeded.  
 TestFileMirror (part-file://MPQ_2009_v1_patch-partial.MPQ.part) succeeded.  
 TestFileMirror (part-file://MPQ_2009_v1_patch-complete.MPQ.part) succeeded.  
-TestFileMirror (MPQ_2013_v4_alternate-created.MPQ) succeeded.     
+TestFileMirror (MPQ_2013_v4_alternate-created.MPQ) succeeded.      
 TestFileMirror (MPQ_2013_v4_alternate-incomplete.MPQ) succeeded.          
 TestFileMirror (MPQ_2013_v4_alternate-complete.MPQ) succeeded.          
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.         
@@ -77,6 +77,7 @@ TestReadingMpq (MPQ_2021_v1_CantExtractCHK.scx) succeeded.
 TestReadingMpq (MPQ_2022_v1_Sniper.scx) succeeded.         
 TestReadingMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.         
 TestReadingMpq (MPQ_2023_v1_Lusin2Rpg1.28.w3x) succeeded.         
+TestReadingMpq (MPQ_2024_v1_300TK2.09p.w3x) succeeded.         
 TestReadingMpq (MPQ_2020_v1_HS0.1.asi) succeeded.         
 TestReadingMpq (MPQ_2022_v1_hs0.8.asi) succeeded.         
 TestReadingMpq (MPQ_2022_v1_MoeMoeMod.asi) succeeded.         
@@ -84,11 +85,11 @@ TestReadingMpq (MPx_2013_v1_LongwuOnline.mpk) succeeded.
 TestReadingMpq (MPx_2013_v1_WarOfTheImmortals.sqp) succeeded.         
 TestReadingMpq (MPx_2022_v1_Music.mpk) succeeded.         
 TestReadingMpq (MPx_2022_v1_Scp.mpk) succeeded.         
-TestReadingMpq (MPx_2022_v1_UI.mpk) succeeded.                   
+TestReadingMpq (MPx_2022_v1_UI.mpk) succeeded.                    
 TestReadingMpq (MPQ_1998_v1_StarCraft.mpq) succeeded.         
-TestReadingMpq (MPQ_2012_v4_OldWorld.MPQ) succeeded.                       
-TestReadingMpq (MPQ_2013_v4_world.MPQ) succeeded.                             
-TestReadingMpq (MPQ_2013_v4_locale-enGB.MPQ) succeeded.         
+TestReadingMpq (MPQ_2012_v4_OldWorld.MPQ) succeeded.                         
+TestReadingMpq (MPQ_2013_v4_world.MPQ) succeeded.                               
+TestReadingMpq (MPQ_2013_v4_locale-enGB.MPQ) succeeded.               
 TestReadingMpq (MPQ_2013_v4_Base1.SC2Data) succeeded.         
 TestReadingMpq (MPQ_2013_v4_Mods#Core.SC2Mod#enGB.SC2Assets) succeeded.         
 TestReadingMpq (MPQ_2013_v4_Base1.SC2Data) succeeded.         
@@ -111,7 +112,7 @@ TestReadingMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.
 Test_ReopenMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.          
 Test_ReopenMpq (MPQ_2016_v1_00000.pak) succeeded.               
 Test_ReopenMpq (MPQ_2013_v4_SC2_EmptyMap.SC2Map) succeeded.          
-Test_ReopenMpq (MPQ_2013_v4_expansion1.MPQ) succeeded.                    
+Test_ReopenMpq (MPQ_2013_v4_expansion1.MPQ) succeeded.                  
 Test_ReopenMpq (MPQ_2014_v1_out1.w3x) succeeded.          
 Test_ReopenMpq (MPQ_2014_v1_out2.w3x) succeeded.          
 Test_ReopenMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.          
@@ -139,11 +140,11 @@ TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
 TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.  
 TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.  
 IncMaxFileCount (StormLibTest_IncMaxFileCount.mpq) succeeded.  
-TestFileFlag (StormLibTest_FileFlagTest.mpq) succeeded.                     
+TestFileFlag (StormLibTest_FileFlagTest.mpq) succeeded.                    
 TestCompressions: Warning: CRC32 error on WaveFile_01.wav       
 TestCompressions: Warning: CRC32 error on WaveFile_02.wav
-TestCompressions (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.         
-TestCompressions: Warning: CRC32 error on WaveFile_01.wav         
+TestCompressions (StormLibTest_AddWaveMonoBadTest.mpq) succeeded.  
+TestCompressions: Warning: CRC32 error on WaveFile_01.wav                       
 TestCompressions: Warning: CRC32 error on WaveFile_02.wav
 ListFilePos (StormLibTest_ListFilePos.mpq) succeeded.  
-TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.                             
+TestBigArchive (StormLibTest_BigArchive_v4.mpq) succeeded.    
