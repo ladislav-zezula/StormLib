@@ -479,8 +479,16 @@ DWORD ConvertMpqHeaderToFormat4(
     {
         case MPQ_FORMAT_VERSION_1:
 
-            // Check for malformed MPQ header version 1.0
+            // Make sure that the MPQ Header is properly swapped
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_1);
+
+            // Check for blatantly wrong MPQ header by the hash table position
+            if(((ByteOffset + pHeader->dwHashTablePos) & 0xFFFFFFFF) > FileSize)
+                return ERROR_FAKE_MPQ_HEADER;
+            if(((ByteOffset + pHeader->dwBlockTablePos) & 0xFFFFFFFF) > FileSize)
+                return ERROR_FAKE_MPQ_HEADER;
+
+            // Check for malformed MPQ header version 1.0
             if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_1 || pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V1)
             {
                 pHeader->wFormatVersion = MPQ_FORMAT_VERSION_1;

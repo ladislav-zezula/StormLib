@@ -194,6 +194,13 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
                         dwErrCode = ERROR_FILE_CORRUPT;
                         break;
                     }
+
+                    // Special case (MPQ_2024_v1_300TK2.09p.w3x, file File00010254.blp):
+                    // Extracted less than required. Fill the rest with zeros
+                    if((DWORD)(cbOutSector) < dwBytesInThisSector)
+                    {
+                        memset(pbOutSector + cbOutSector, 0, dwBytesInThisSector - cbOutSector);
+                    }
                 }
                 else
                 {
