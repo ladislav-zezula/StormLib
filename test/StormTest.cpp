@@ -3787,15 +3787,13 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-/*
     HANDLE hMpq = NULL;
 
-    if(SFileOpenArchive(_T("e:\\poc17"), 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("e:\\poc18"), 0, 0, &hMpq))
     {
-        SFileCompactArchive(hMpq, _T("e:\\Ladik\\Incoming\\poc17"), true);
+        SFileCompactArchive(hMpq, _T("e:\\Ladik\\Incoming\\poc18"), true);
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------

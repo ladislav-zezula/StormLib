@@ -28,7 +28,7 @@ class TInputStream
     public:
 
     TInputStream(void * pvInBuffer, size_t cbInBuffer);
-    unsigned int Get1Bit();
+    bool Get1Bit(unsigned int & BitValue);
     unsigned int Get8Bits();
     bool Peek7Bits(unsigned int & Value);
     void SkipBits(unsigned int BitCount);
