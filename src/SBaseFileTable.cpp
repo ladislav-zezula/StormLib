@@ -635,6 +635,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the hi-block table
             if(pHeader->HiBlockTablePos64)
             {
+                if(pHeader->HiBlockTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HiBlockTableSize64 = MaxOffset - pHeader->HiBlockTablePos64;
                 MaxOffset = pHeader->HiBlockTablePos64;
             }
@@ -642,6 +644,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the block table
             if(BlockTablePos64)
             {
+                if(BlockTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->BlockTableSize64 = MaxOffset - BlockTablePos64;
                 MaxOffset = BlockTablePos64;
             }
@@ -649,6 +653,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the hash table
             if(HashTablePos64)
             {
+                if(HashTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HashTableSize64 = MaxOffset - HashTablePos64;
                 MaxOffset = HashTablePos64;
             }
@@ -656,6 +662,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the BET table
             if(pHeader->BetTablePos64)
             {
+                if(pHeader->BetTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->BetTableSize64 = MaxOffset - pHeader->BetTablePos64;
                 MaxOffset = pHeader->BetTablePos64;
             }
@@ -663,6 +671,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the HET table
             if(pHeader->HetTablePos64)
             {
+                if(pHeader->HetTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HetTableSize64 = MaxOffset - pHeader->HetTablePos64;
 //              MaxOffset = pHeader->HetTablePos64;
             }

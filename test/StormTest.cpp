@@ -4002,6 +4002,11 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
+    // PoC's by Gabe Sherman from FuturesLab
+    {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
+    {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
+    {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",  TFLG_WILL_FAIL},
+
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
     {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                       NULL, "43fe7d362955be68a708486e399576a7",    10},               // From Starcraft 1 BETA
@@ -4182,11 +4187,10 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
+//#define TEST_COMMAND_LINE
 //#define TEST_LOCAL_LISTFILE
 //#define TEST_STREAM_OPERATIONS
 //#define TEST_MASTER_MIRROR
-#define TEST_OPEN_MPQ
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
