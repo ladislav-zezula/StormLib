@@ -4008,6 +4008,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     //{_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",  TFLG_WILL_FAIL},
     //{_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
     {_T("pocs/MPQ_2024_06_HeapOverflowReadFile.mpq"),           NULL, "d41d8cd98f00b204e9800998ecf8427e",     1},
+    {_T("pocs/MPQ_2024_07_InvalidBitmapFooter.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
 
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
