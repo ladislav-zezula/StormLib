@@ -3785,45 +3785,17 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
     return dwErrCode;
 }
 
-typedef uint8_t   u8;
-typedef uint16_t  u16;
-typedef uint32_t  u32;
-typedef ULONGLONG  u64;
-typedef unsigned int usize;
-typedef char   i8;
-typedef short i16;
-typedef int i32;
-typedef LONGLONG i64;
-typedef int isize;
-typedef float f32;
-typedef double f64;
-
 static void Test_PlayingSpace()
 {
-    void * v0 = NULL; // hMpq
-    void * v1 = NULL; // hFile
-    u8 v2_tmp[] = {181, 0,}; // file_buf
-    u8 * v2 = (u8 *)malloc(sizeof v2_tmp);
-    memcpy(v2, v2_tmp, sizeof v2_tmp);
-    char * path_v3 = "e:\\hop-poc10";
-    FILE * f_v3 = fopen(path_v3, "wb");
-    fwrite(v2, sizeof v2_tmp, 1, f_v3);
-    fclose(f_v3);
-    char * v3 = path_v3; // szFileName
-    u32 v4 = 4294967295; // dwSearchScope
-    void ** v5 = &v1; // phFile
-    i8 v6 = SFileOpenFileEx(v0, v3, v4, v5); // $relative
-    if(v6 == false) exit(1);
-    i8 * v8 = NULL; // pvData
-    u32 v9 = 254; // dwSize
-    u32 v10 = 11; // dwCompression
-    enum _SFileInfoClass v11 = (enum _SFileInfoClass)(55); // InfoClass
-    i8 * v12 = NULL; // pvFileInfo
-    u32 v13 = 0; // cbFileInfo
-    u32 * v14 = NULL; // pcbLengthNeeded
-    i8 v15 = SFileGetFileInfo(v1, v11, v12, v13, (LPDWORD)(v14)); // $relative
-    if(v15 == false) exit(1);
-    i8 v16 = SFileWriteFile(v1, v8, v9, v10); // $target
+/*
+    i8 v0_tmp[] = {5, 34, -58, 65, 113, -118, 76, 11, 40, 32, 27, 20, 83, 15, 22, 46, 25, -24, -77, -88, -70, -118, -58, 56, 55, -94, -69, 43, -87, -1, -70, 0,}; // pvFileInfo
+    i8 * v0 = (i8 *)malloc(sizeof v0_tmp);
+    memcpy(v0, v0_tmp, sizeof v0_tmp);
+    i8 * v1 = v0; // pvFileInfo
+
+    enum _SFileInfoClass v2 = (enum _SFileInfoClass)(11); // InfoClass
+    i8 v3 = SFileFreeFileInfo(v1, v2); // $target
+*/
 }
 
 //-----------------------------------------------------------------------------
