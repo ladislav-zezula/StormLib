@@ -261,6 +261,8 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     // If the file sector is not loaded yet, do it
     if(hf->dwSectorOffs != 0)
     {
+        DWORD cbRawData = hf->dwDataSize;
+
         // Is the file compressed?
         if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
@@ -268,11 +270,14 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
             pbCompressed = STORM_ALLOC(BYTE, pFileEntry->dwCmpSize);
             if(pbCompressed == NULL)
                 return ERROR_NOT_ENOUGH_MEMORY;
+            
+            // Redirect reading
             pbRawData = pbCompressed;
+            cbRawData = pFileEntry->dwCmpSize;
         }
 
         // Load the raw (compressed, encrypted) data
-        if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, pFileEntry->dwCmpSize))
+        if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, cbRawData))
         {
             STORM_FREE(pbCompressed);
             return GetLastError();

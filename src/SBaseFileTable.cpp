@@ -63,8 +63,8 @@ struct TMPQBits
 {
     static TMPQBits * Create(DWORD NumberOfBits, BYTE FillValue);
 
-    void GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
-    void SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
+    DWORD GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, unsigned int nResultSize);
+    DWORD SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, unsigned int nResultSize);
 
     static const USHORT SetBitsMask[];          // Bit mask for each number of bits (0-8)
 
@@ -94,11 +94,11 @@ TMPQBits * TMPQBits::Create(
     return pBitArray;
 }
 
-void TMPQBits::GetBits(
+DWORD TMPQBits::GetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
-    int nResultByteSize)
+    unsigned int nResultByteSize)
 {
     unsigned char * pbBuffer = (unsigned char *)pvBuffer;
     unsigned int nBytePosition0 = (nBitPosition / 8);
@@ -107,12 +107,17 @@ void TMPQBits::GetBits(
     unsigned int nBitOffset = (nBitPosition & 0x07);
     unsigned char BitBuffer;
 
-    // Keep compilers happy for platforms where nResultByteSize is not used
-    STORMLIB_UNUSED(nResultByteSize);
+    // Check for bit overflow
+    if(nBitPosition + nBitLength < nBitPosition)
+        return ERROR_BUFFER_OVERFLOW;
+    if(nBitPosition + nBitLength > NumberOfBits)
+        return ERROR_BUFFER_OVERFLOW;
+    if(nByteLength > nResultByteSize)
+        return ERROR_BUFFER_OVERFLOW;
 
 #ifdef _DEBUG
     // Check if the target is properly zeroed
-    for(int i = 0; i < nResultByteSize; i++)
+    for(unsigned int i = 0; i < nResultByteSize; i++)
         assert(pbBuffer[i] == 0);
 #endif
 
@@ -157,13 +162,14 @@ void TMPQBits::GetBits(
 
         *pbBuffer &= (0x01 << nBitLength) - 1;
     }
+    return ERROR_SUCCESS;
 }
 
-void TMPQBits::SetBits(
+DWORD TMPQBits::SetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
-    int nResultByteSize)
+    unsigned int nResultByteSize)
 {
     unsigned char * pbBuffer = (unsigned char *)pvBuffer;
     unsigned int nBytePosition = (nBitPosition / 8);
@@ -174,6 +180,14 @@ void TMPQBits::SetBits(
 
     // Keep compilers happy for platforms where nResultByteSize is not used
     STORMLIB_UNUSED(nResultByteSize);
+
+    // Check for bit overflow
+    if(nBitPosition + nBitLength < nBitPosition)
+        return ERROR_BUFFER_OVERFLOW;
+    if(nBitPosition + nBitLength > NumberOfBits)
+        return ERROR_BUFFER_OVERFLOW;
+    if(nBitLength / 8 > nResultByteSize)
+        return ERROR_BUFFER_OVERFLOW;
 
 #ifndef STORMLIB_LITTLE_ENDIAN
     // Adjust the buffer pointer for big endian platforms
@@ -223,6 +237,7 @@ void TMPQBits::SetBits(
             Elements[nBytePosition] = (BYTE)((Elements[nBytePosition] & ~AndMask) | BitBuffer);
         }
     }
+    return ERROR_SUCCESS;
 }
 
 void GetMPQBits(TMPQBits * pBits, unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultByteSize)
@@ -559,6 +574,10 @@ DWORD ConvertMpqHeaderToFormat4(
             // Fill the rest of the header with zeros
             memset((LPBYTE)pHeader + MPQ_HEADER_SIZE_V2, 0, sizeof(TMPQHeader) - MPQ_HEADER_SIZE_V2);
 
+            // Check position of the hi-block table
+            if(pHeader->HiBlockTablePos64 > FileSize)
+                return ERROR_FILE_CORRUPT;
+
             // Calculate the expected hash table size
             pHeader->HashTableSize64 = (pHeader->dwHashTableSize * sizeof(TMPQHash));
             HashTablePos64 = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
@@ -602,6 +621,9 @@ DWORD ConvertMpqHeaderToFormat4(
                 pHeader->BetTablePos64 = 0;
             }
 
+            // Fixup malformed MPQ header sizes
+            pHeader->dwHeaderSize = STORMLIB_MIN(pHeader->dwHeaderSize, MPQ_HEADER_SIZE_V3);
+
             //
             // We need to calculate the compressed size of each table. We assume the following order:
             // 1) HET table
@@ -620,6 +642,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the hi-block table
             if(pHeader->HiBlockTablePos64)
             {
+                if(pHeader->HiBlockTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HiBlockTableSize64 = MaxOffset - pHeader->HiBlockTablePos64;
                 MaxOffset = pHeader->HiBlockTablePos64;
             }
@@ -627,6 +651,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the block table
             if(BlockTablePos64)
             {
+                if(BlockTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->BlockTableSize64 = MaxOffset - BlockTablePos64;
                 MaxOffset = BlockTablePos64;
             }
@@ -634,6 +660,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the hash table
             if(HashTablePos64)
             {
+                if(HashTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HashTableSize64 = MaxOffset - HashTablePos64;
                 MaxOffset = HashTablePos64;
             }
@@ -641,6 +669,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the BET table
             if(pHeader->BetTablePos64)
             {
+                if(pHeader->BetTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->BetTableSize64 = MaxOffset - pHeader->BetTablePos64;
                 MaxOffset = pHeader->BetTablePos64;
             }
@@ -648,6 +678,8 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the HET table
             if(pHeader->HetTablePos64)
             {
+                if(pHeader->HetTablePos64 > FileSize)
+                    return ERROR_FILE_CORRUPT;
                 pHeader->HetTableSize64 = MaxOffset - pHeader->HetTablePos64;
 //              MaxOffset = pHeader->HetTablePos64;
             }
@@ -660,7 +692,6 @@ DWORD ConvertMpqHeaderToFormat4(
 
             // Verify header MD5. Header MD5 is calculated from the MPQ header since the 'MPQ\x1A'
             // signature until the position of header MD5 at offset 0xC0
-
             // Apparently, Starcraft II only accepts MPQ headers where the MPQ header hash matches
             // If MD5 doesn't match, we ignore this offset. We also ignore it if there's no MD5 at all
             if(!IsValidMD5(pHeader->MD5_MpqHeader))
@@ -670,6 +701,9 @@ DWORD ConvertMpqHeaderToFormat4(
 
             // Byteswap after header MD5 is verified
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_4);
+
+            // Fixup malformed MPQ header sizes
+            pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V4;
 
             // HiBlockTable must be 0 for archives under 4GB
             if((pHeader->ArchiveSize64 >> 0x20) == 0 && pHeader->HiBlockTablePos64 != 0)
@@ -759,9 +793,12 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
         pBlock = pBlockTable + MPQ_BLOCK_INDEX(pHash);
 
         // Check whether this is an existing file
-        // Also we do not allow to be file size greater than 2GB
-        if((pBlock->dwFlags & MPQ_FILE_EXISTS) && (pBlock->dwFSize & 0x80000000) == 0)
+        if(pBlock->dwFlags & MPQ_FILE_EXISTS)
         {
+            // We don't allow to be file size greater than 2GB in malformed archives
+            if((ha->dwFlags & MPQ_FLAG_MALFORMED) && (pBlock->dwFSize >= 0x80000000))
+                return false;
+
             // The begin of the file must be within the archive
             ByteOffset = FileOffsetFromMpqOffset(ha, pBlock->dwFilePos);
             return (ByteOffset < ha->FileSize);
@@ -1604,15 +1641,16 @@ static DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
             DWORD dwFileIndex = 0;
 
             // Get the file index
-            pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * Index,
-                                            pHetTable->dwIndexSize,
-                                           &dwFileIndex,
-                                            sizeof(DWORD));
-
-            // Verify the FileNameHash against the entry in the table of name hashes
-            if(dwFileIndex <= ha->dwFileTableSize && ha->pFileTable[dwFileIndex].FileNameHash == FileNameHash)
+            if(pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * Index,
+                                               pHetTable->dwIndexSize,
+                                              &dwFileIndex,
+                                               sizeof(DWORD)) == ERROR_SUCCESS)
             {
-                return dwFileIndex;
+                // Verify the FileNameHash against the entry in the table of name hashes
+                if(dwFileIndex <= ha->dwFileTableSize && ha->pFileTable[dwFileIndex].FileNameHash == FileNameHash)
+                {
+                    return dwFileIndex;
+                }
             }
         }
 
@@ -1642,6 +1680,16 @@ void FreeHetTable(TMPQHetTable * pHetTable)
 
 //-----------------------------------------------------------------------------
 // Support for BET table
+
+static bool VerifyBetHeaderSize(TMPQArchive * /* ha */, TMPQBetHeader * pBetHeader)
+{
+    LPBYTE pbSrcData = (LPBYTE)(pBetHeader + 1);
+    LPBYTE pbSrcEnd = (LPBYTE)(pBetHeader) + pBetHeader->dwTableSize;
+
+    // Move past the flags
+    pbSrcData = pbSrcData + (pBetHeader->dwFlagCount * sizeof(DWORD)) + (pBetHeader->dwEntryCount * pBetHeader->dwTableEntrySize) / 8;
+    return (pbSrcData <= pbSrcEnd);
+}
 
 static void CreateBetHeader(
     TMPQArchive * ha,
@@ -1776,68 +1824,72 @@ static TMPQBetTable * TranslateBetTable(
             // Note that if it's not, it is not a problem
             //assert(pBetHeader->dwEntryCount == ha->pHetTable->dwEntryCount);
 
-            // Create translated table
-            pBetTable = CreateBetTable(pBetHeader->dwEntryCount);
-            if(pBetTable != NULL)
+            // Verify an obviously-wrong values
+            if(VerifyBetHeaderSize(ha, pBetHeader))
             {
-                // Copy the variables from the header to the BetTable
-                pBetTable->dwTableEntrySize     = pBetHeader->dwTableEntrySize;
-                pBetTable->dwBitIndex_FilePos   = pBetHeader->dwBitIndex_FilePos;
-                pBetTable->dwBitIndex_FileSize  = pBetHeader->dwBitIndex_FileSize;
-                pBetTable->dwBitIndex_CmpSize   = pBetHeader->dwBitIndex_CmpSize;
-                pBetTable->dwBitIndex_FlagIndex = pBetHeader->dwBitIndex_FlagIndex;
-                pBetTable->dwBitIndex_Unknown   = pBetHeader->dwBitIndex_Unknown;
-                pBetTable->dwBitCount_FilePos   = pBetHeader->dwBitCount_FilePos;
-                pBetTable->dwBitCount_FileSize  = pBetHeader->dwBitCount_FileSize;
-                pBetTable->dwBitCount_CmpSize   = pBetHeader->dwBitCount_CmpSize;
-                pBetTable->dwBitCount_FlagIndex = pBetHeader->dwBitCount_FlagIndex;
-                pBetTable->dwBitCount_Unknown   = pBetHeader->dwBitCount_Unknown;
-
-                // Since we don't know what the "unknown" is, we'll assert when it's zero
-                assert(pBetTable->dwBitCount_Unknown == 0);
-
-                // Allocate array for flags
-                if(pBetHeader->dwFlagCount != 0)
+                // Create translated table
+                pBetTable = CreateBetTable(pBetHeader->dwEntryCount);
+                if(pBetTable != NULL)
                 {
-                    // Allocate array for file flags and load it
-                    pBetTable->pFileFlags = STORM_ALLOC(DWORD, pBetHeader->dwFlagCount);
-                    if(pBetTable->pFileFlags != NULL)
+                    // Copy the variables from the header to the BetTable
+                    pBetTable->dwTableEntrySize = pBetHeader->dwTableEntrySize;
+                    pBetTable->dwBitIndex_FilePos = pBetHeader->dwBitIndex_FilePos;
+                    pBetTable->dwBitIndex_FileSize = pBetHeader->dwBitIndex_FileSize;
+                    pBetTable->dwBitIndex_CmpSize = pBetHeader->dwBitIndex_CmpSize;
+                    pBetTable->dwBitIndex_FlagIndex = pBetHeader->dwBitIndex_FlagIndex;
+                    pBetTable->dwBitIndex_Unknown = pBetHeader->dwBitIndex_Unknown;
+                    pBetTable->dwBitCount_FilePos = pBetHeader->dwBitCount_FilePos;
+                    pBetTable->dwBitCount_FileSize = pBetHeader->dwBitCount_FileSize;
+                    pBetTable->dwBitCount_CmpSize = pBetHeader->dwBitCount_CmpSize;
+                    pBetTable->dwBitCount_FlagIndex = pBetHeader->dwBitCount_FlagIndex;
+                    pBetTable->dwBitCount_Unknown = pBetHeader->dwBitCount_Unknown;
+
+                    // Since we don't know what the "unknown" is, we'll assert when it's zero
+                    assert(pBetTable->dwBitCount_Unknown == 0);
+
+                    // Allocate array for flags
+                    if(pBetHeader->dwFlagCount != 0)
                     {
-                        LengthInBytes = pBetHeader->dwFlagCount * sizeof(DWORD);
-                        memcpy(pBetTable->pFileFlags, pbSrcData, LengthInBytes);
-                        BSWAP_ARRAY32_UNSIGNED(pBetTable->pFileFlags, LengthInBytes);
+                        // Allocate array for file flags and load it
+                        pBetTable->pFileFlags = STORM_ALLOC(DWORD, pBetHeader->dwFlagCount);
+                        if(pBetTable->pFileFlags != NULL)
+                        {
+                            LengthInBytes = pBetHeader->dwFlagCount * sizeof(DWORD);
+                            memcpy(pBetTable->pFileFlags, pbSrcData, LengthInBytes);
+                            BSWAP_ARRAY32_UNSIGNED(pBetTable->pFileFlags, LengthInBytes);
+                            pbSrcData += LengthInBytes;
+                        }
+
+                        // Save the number of flags
+                        pBetTable->dwFlagCount = pBetHeader->dwFlagCount;
+                    }
+
+                    // Load the bit-based file table
+                    pBetTable->pFileTable = TMPQBits::Create(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
+                    if(pBetTable->pFileTable != NULL)
+                    {
+                        LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
+                        memcpy(pBetTable->pFileTable->Elements, pbSrcData, LengthInBytes);
                         pbSrcData += LengthInBytes;
                     }
 
-                    // Save the number of flags
-                    pBetTable->dwFlagCount = pBetHeader->dwFlagCount;
+                    // Fill the sizes of BET hash
+                    pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
+                    pBetTable->dwBitExtra_NameHash2 = pBetHeader->dwBitExtra_NameHash2;
+                    pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
+
+                    // Create and load the array of BET hashes
+                    pBetTable->pNameHashes = TMPQBits::Create(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
+                    if(pBetTable->pNameHashes != NULL)
+                    {
+                        LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
+                        memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
+                        //                      pbSrcData += LengthInBytes;
+                    }
+
+                    // Dump both tables
+//                  DumpHetAndBetTable(ha->pHetTable, pBetTable);
                 }
-
-                // Load the bit-based file table
-                pBetTable->pFileTable = TMPQBits::Create(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
-                if(pBetTable->pFileTable != NULL)
-                {
-                    LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
-                    memcpy(pBetTable->pFileTable->Elements, pbSrcData, LengthInBytes);
-                    pbSrcData += LengthInBytes;
-                }
-
-                // Fill the sizes of BET hash
-                pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
-                pBetTable->dwBitExtra_NameHash2 = pBetHeader->dwBitExtra_NameHash2;
-                pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
-
-                // Create and load the array of BET hashes
-                pBetTable->pNameHashes = TMPQBits::Create(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
-                if(pBetTable->pNameHashes != NULL)
-                {
-                    LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
-                    memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
-//                  pbSrcData += LengthInBytes;
-                }
-
-                // Dump both tables
-//              DumpHetAndBetTable(ha->pHetTable, pBetTable);
             }
         }
     }
@@ -2599,7 +2651,7 @@ static DWORD BuildFileTable_HetBet(TMPQArchive * ha)
     TMPQBits * pBitArray;
     DWORD dwBitPosition = 0;
     DWORD i;
-    DWORD dwErrCode = ERROR_FILE_CORRUPT;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Load the BET table from the MPQ
     pBetTable = LoadBetTable(ha);
@@ -2622,10 +2674,16 @@ static DWORD BuildFileTable_HetBet(TMPQArchive * ha)
             if(pHetTable->pNameHashes[i] != HET_ENTRY_FREE)
             {
                 // Load the index to the BET table
-                pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * i,
-                                                pHetTable->dwIndexSize,
-                                               &dwFileIndex,
-                                                4);
+                dwErrCode = pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * i,
+                                                            pHetTable->dwIndexSize,
+                                                           &dwFileIndex,
+                                                            4);
+                if(dwErrCode != ERROR_SUCCESS)
+                {
+                    FreeBetTable(pBetTable);
+                    return ERROR_FILE_CORRUPT;
+                }
+
                 // Overflow test
                 if(dwFileIndex < pBetTable->dwEntryCount)
                 {
@@ -2633,10 +2691,15 @@ static DWORD BuildFileTable_HetBet(TMPQArchive * ha)
                     ULONGLONG NameHash2 = 0;
 
                     // Load the BET hash
-                    pBetTable->pNameHashes->GetBits(pBetTable->dwBitTotal_NameHash2 * dwFileIndex,
-                                                    pBetTable->dwBitCount_NameHash2,
-                                                   &NameHash2,
-                                                    8);
+                    dwErrCode = pBetTable->pNameHashes->GetBits(pBetTable->dwBitTotal_NameHash2 * dwFileIndex,
+                                                                pBetTable->dwBitCount_NameHash2,
+                                                               &NameHash2,
+                                                                8);
+                    if(dwErrCode != ERROR_SUCCESS)
+                    {
+                        FreeBetTable(pBetTable);
+                        return ERROR_FILE_CORRUPT;
+                    }
 
                     // Combine both part of the name hash and put it to the file table
                     pFileEntry = ha->pFileTable + dwFileIndex;
@@ -2653,31 +2716,35 @@ static DWORD BuildFileTable_HetBet(TMPQArchive * ha)
             DWORD dwFlagIndex = 0;
 
             // Read the file position
-            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FilePos,
-                               pBetTable->dwBitCount_FilePos,
-                              &pFileEntry->ByteOffset,
-                               8);
+            if((dwErrCode = pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FilePos,
+                                               pBetTable->dwBitCount_FilePos,
+                                              &pFileEntry->ByteOffset,
+                                               8)) != ERROR_SUCCESS)
+                break;
 
             // Read the file size
-            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FileSize,
-                               pBetTable->dwBitCount_FileSize,
-                              &pFileEntry->dwFileSize,
-                               4);
+            if((dwErrCode = pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FileSize,
+                                               pBetTable->dwBitCount_FileSize,
+                                              &pFileEntry->dwFileSize,
+                                               4)) != ERROR_SUCCESS)
+                break;
 
             // Read the compressed size
-            pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_CmpSize,
-                               pBetTable->dwBitCount_CmpSize,
-                              &pFileEntry->dwCmpSize,
-                               4);
-
+            if((dwErrCode = pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_CmpSize,
+                                               pBetTable->dwBitCount_CmpSize,
+                                              &pFileEntry->dwCmpSize,
+                                               4)) != ERROR_SUCCESS)
+                break;
 
             // Read the flag index
             if(pBetTable->dwFlagCount != 0)
             {
-                pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FlagIndex,
-                                   pBetTable->dwBitCount_FlagIndex,
-                                  &dwFlagIndex,
-                                   4);
+                if((dwErrCode = pBitArray->GetBits(dwBitPosition + pBetTable->dwBitIndex_FlagIndex,
+                    pBetTable->dwBitCount_FlagIndex,
+                    &dwFlagIndex,
+                    4)) != ERROR_SUCCESS)
+                    break;
+
                 pFileEntry->dwFlags = pBetTable->pFileFlags[dwFlagIndex];
             }
 
@@ -2692,13 +2759,11 @@ static DWORD BuildFileTable_HetBet(TMPQArchive * ha)
 
         // Set the current size of the file table
         FreeBetTable(pBetTable);
-        dwErrCode = ERROR_SUCCESS;
     }
     else
     {
         dwErrCode = ERROR_FILE_CORRUPT;
     }
-
     return dwErrCode;
 }
 
@@ -3100,6 +3165,7 @@ DWORD SaveMPQTables(TMPQArchive * ha)
         CalculateDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader);
 
         // Write the MPQ header to the file
+        assert(pHeader->dwHeaderSize <= sizeof(SaveMpqHeader));
         memcpy(&SaveMpqHeader, pHeader, pHeader->dwHeaderSize);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_1);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_2);

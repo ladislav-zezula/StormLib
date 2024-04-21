@@ -1198,7 +1198,7 @@ static bool FlatStream_LoadBitmap(TBlockStream * pStream)
             BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&Footer), sizeof(FILE_BITMAP_FOOTER));
 
             // Verify if there is actually a footer
-            if(Footer.Signature == ID_FILE_BITMAP_FOOTER && Footer.Version == 0x03)
+            if(Footer.Signature == ID_FILE_BITMAP_FOOTER && Footer.Version == 0x03 && Footer.BlockSize != 0)
             {
                 // Get the offset of the bitmap, number of blocks and size of the bitmap
                 ByteOffset = MAKE_OFFSET64(Footer.MapOffsetHi, Footer.MapOffsetLo);

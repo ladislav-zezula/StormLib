@@ -3787,18 +3787,15 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
+/*
+    i8 v0_tmp[] = {5, 34, -58, 65, 113, -118, 76, 11, 40, 32, 27, 20, 83, 15, 22, 46, 25, -24, -77, -88, -70, -118, -58, 56, 55, -94, -69, 43, -87, -1, -70, 0,}; // pvFileInfo
+    i8 * v0 = (i8 *)malloc(sizeof v0_tmp);
+    memcpy(v0, v0_tmp, sizeof v0_tmp);
+    i8 * v1 = v0; // pvFileInfo
 
-    if(SFileOpenArchive(_T("(4)Duskwood.w3m"), 0, 0, &hMpq))
-    {
-        if(SFileOpenFileEx(hMpq, "war3map.j", 0, &hFile))
-        {
-            SFileSetFileLocale(hFile, 1033);
-            SFileCloseFile(hFile);
-        }
-        SFileCloseArchive(hMpq);
-    }
+    enum _SFileInfoClass v2 = (enum _SFileInfoClass)(11); // InfoClass
+    i8 v3 = SFileFreeFileInfo(v1, v2); // $target
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4002,6 +3999,21 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
+
+    // PoC's by Gabe Sherman from FuturesLab
+    {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
+    {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
+    {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
+    {_T("pocs/MPQ_2024_06_HeapOverflowReadFile.mpq"),           NULL, "d41d8cd98f00b204e9800998ecf8427e",     1},
+    {_T("pocs/MPQ_2024_07_InvalidBitmapFooter.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_08_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_09_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_HuffDecompressError.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_SparseDecompressError.mpq"),          NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_11_HiBlockTablePosInvalid.mpq"),         NULL, "--------------------------------",     TFLG_WILL_FAIL},
+
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
     {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                       NULL, "43fe7d362955be68a708486e399576a7",    10},               // From Starcraft 1 BETA
@@ -4027,7 +4039,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2023_v1_BroodWarMap.scx"),                         NULL, "dd3afa3c2f5e562ce3ca91c0c605a71f",     3},               // Brood War map from StarCraft: Brood War 1.16
     {_T("MPQ_2023_v1_Volcanis.scm"),                            NULL, "522c89ca96d6736427b01f7c80dd626f",     3},               // Map modified with unusual file compression: ZLIB+Huffman
     {_T("MPQ_2023_v4_UTF8.s2ma"),                               NULL, "97b7a686650f3307d135e1d1b017a36a",    67},               // Map contaning files with Chinese names (UTF8-encoded)
-    {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "477af4ddf11eead1412d7c87cb81b530",  2004},               // Corrupt sector checksum table in file #A0
+    {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "a8d91fc4e52d7c21ff7feb498c74781a",  2004},               // Corrupt sector checksum table in file #A0
     {_T("MPQ_2023_v4_1F644C5A.SC2Replay"),                      NULL, "b225828ffbf5037553e6a1290187caab",    17},               // Corrupt patch info of the "(attributes)" file
     {_T("<Chinese MPQ name>"),                                  NULL, "67faeffd0c0aece205ac8b7282d8ad8e",  4697, &MpqUtf8},     // Chinese name of the MPQ
 
@@ -4211,7 +4223,7 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
-    for(int i = 1; i < argc; i++)
+    for(int i = 2; i < argc; i++)
     {
         TestOpenArchive(argv[i], NULL, NULL, 0, &LfBliz);
     }
