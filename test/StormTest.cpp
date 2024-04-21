@@ -3801,27 +3801,29 @@ typedef double f64;
 static void Test_PlayingSpace()
 {
     void * v0 = NULL; // hMpq
-    void * v1 = NULL; // hMpqOrFile
-    u8 v2_tmp[] = {83, 0,}; // file_buf
-    u8 * v2 = (u8 *)HeapAlloc(GetProcessHeap(), 0, sizeof v2_tmp);
+    void * v1 = NULL; // hFile
+    u8 v2_tmp[] = {181, 0,}; // file_buf
+    u8 * v2 = (u8 *)malloc(sizeof v2_tmp);
     memcpy(v2, v2_tmp, sizeof v2_tmp);
-
-    char * path_v3 = "e:\\hop-poc09";
+    char * path_v3 = "e:\\hop-poc10";
     FILE * f_v3 = fopen(path_v3, "wb");
     fwrite(v2, sizeof v2_tmp, 1, f_v3);
     fclose(f_v3);
-
     char * v3 = path_v3; // szFileName
     u32 v4 = 4294967295; // dwSearchScope
     void ** v5 = &v1; // phFile
     i8 v6 = SFileOpenFileEx(v0, v3, v4, v5); // $relative
     if(v6 == false) exit(1);
-
-    enum _SFileInfoClass v8 = (enum _SFileInfoClass)48; // InfoClass
-    i8 * v9 = NULL; // pvFileInfo
-    u32 * v10 = NULL; // pcbLengthNeeded
-    u32 v11 = 0; // cbFileInfo
-    i8 v12 = SFileGetFileInfo(v1, v8, v9, v11, (LPDWORD)(v10)); // $target
+    i8 * v8 = NULL; // pvData
+    u32 v9 = 254; // dwSize
+    u32 v10 = 11; // dwCompression
+    enum _SFileInfoClass v11 = (enum _SFileInfoClass)(55); // InfoClass
+    i8 * v12 = NULL; // pvFileInfo
+    u32 v13 = 0; // cbFileInfo
+    u32 * v14 = NULL; // pcbLengthNeeded
+    i8 v15 = SFileGetFileInfo(v1, v11, v12, v13, (LPDWORD)(v14)); // $relative
+    if(v15 == false) exit(1);
+    i8 v16 = SFileWriteFile(v1, v8, v9, v10); // $target
 }
 
 //-----------------------------------------------------------------------------

@@ -452,6 +452,8 @@ bool WINAPI SFileGetFileInfo(
             return GetInfo(pvFileInfo, cbFileInfo, &hf->dwFileKey, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoEncryptionKeyRaw:
+            if(pFileEntry == NULL)
+                return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
             dwInt32Value = hf->dwFileKey;
             if(pFileEntry->dwFlags & MPQ_FILE_KEY_V2)
                 dwInt32Value = (dwInt32Value ^ pFileEntry->dwFileSize) - (DWORD)hf->MpqFilePos;
