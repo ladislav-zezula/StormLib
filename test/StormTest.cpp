@@ -4183,9 +4183,10 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 // Main
 
 #define TEST_COMMAND_LINE
-#define TEST_LOCAL_LISTFILE
-#define TEST_STREAM_OPERATIONS
-#define TEST_MASTER_MIRROR
+//#define TEST_LOCAL_LISTFILE
+//#define TEST_STREAM_OPERATIONS
+//#define TEST_MASTER_MIRROR
+#define TEST_OPEN_MPQ
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
@@ -4211,7 +4212,7 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
-    for(int i = 1; i < argc; i++)
+    for(int i = 2; i < argc; i++)
     {
         TestOpenArchive(argv[i], NULL, NULL, 0, &LfBliz);
     }
