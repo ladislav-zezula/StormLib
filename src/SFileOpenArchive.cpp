@@ -501,10 +501,14 @@ bool WINAPI SFileOpenArchive(
                 break;
         }
 
-        // Set the size of file sector
-        ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize);
+        // Set the size of file sector. Be sure to check for integer overflow
+        if((ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize)) == 0)
+            dwErrCode = ERROR_FILE_CORRUPT;
+    }
 
-        // Verify if any of the tables doesn't start beyond the end of the file
+    // Verify if any of the tables doesn't start beyond the end of the file
+    if(dwErrCode == ERROR_SUCCESS)
+    {
         dwErrCode = VerifyMpqTablePositions(ha, FileSize);
     }
 
