@@ -3800,21 +3800,28 @@ typedef double f64;
 
 static void Test_PlayingSpace()
 {
-/*
-    i8 v0_tmp[] = {3, 31, -86, 93, 105, -118, -9, -9, 65, 31, 111, 123, -36, 45, -4, -113, 70, 111, -118, 65, 31, 122, 127, 6, -97, 36, 69, 117, 67, 106, -37, 64, 41, 64, -18, 120, -48, -61, -121, 43, 66, 31, 37, -6, -33, 40, 93, -98, 38, 106, 62, -71, 44, -110, 122, 37, 37, -50, -65, 98, 80, 12, 89, 74, -89, 21, -42, -99, -24, 112, 89, 83, 87, -30, 65, 103, -46, -118, 64, 96, 89, -1, -77, 4, 63, 102, -69, -120, -40, 66, -64, 16, 12, 29, -18, -121, 98, -41, 47, 68, 28, -28, 116, -79, 113, -77, -35, -54, -25, -5, 19, -2, 15, 62, 55, -59, -21, -28, -96, -94, -118, 19, 125, 102, 54, 20, 70, 0,}; // pvOutBuffer
-    i8 * v0 = (i8 *)HeapAlloc(GetProcessHeap(), 0, sizeof(v0_tmp));
-    memcpy(v0, v0_tmp, sizeof v0_tmp);
-    i8 * v1 = v0; // pvOutBuffer
-    i32 v2_tmp[] = {129, 0,}; // pcbOutBuffer
-    i32 * v2 = (i32 *)HeapAlloc(GetProcessHeap(), 0, sizeof(v2_tmp));
+    void * v0 = NULL; // hMpq
+    void * v1 = NULL; // hMpqOrFile
+    u8 v2_tmp[] = {83, 0,}; // file_buf
+    u8 * v2 = (u8 *)HeapAlloc(GetProcessHeap(), 0, sizeof v2_tmp);
     memcpy(v2, v2_tmp, sizeof v2_tmp);
-    i32 * v3 = v2; // pcbOutBuffer
-    i8 v4_tmp[] = {38, 17, 14, -64, 78, 79, -10, 115, 120, 103, 94, 9, 6, 21, 25, 43, 127, -17, -115, 118, 53, 76, 13, -105, 39, -11, -12, -35, -74, -114, -112, 75, 54, -100, -44, 68, 61, 7, 85, 96, 103, 103, 106, -95, -85, -113, -78, -78, 43, -39, 59, -58, -15, 35, -63, 125, -5, -13, 110, -66, -39, -97, -23, 37, -25, -105, -57, -128, 77, 7, 54, 95, 116, -128, -114, 13, -54, -17, 12, 126, -102, -83, 101, -103, -17, 78, 40, -103, -75, -55, -86, 23, 24, 87, -73, -123, 107, 112, -30, -77, -16, 93, -49, 84, -109, 78, 106, 62, -68, -61, 4, -121, 112, 94, 36, -39, 9, -59, 123, -49, -91, -111, -2, 32, 117, 30, 23, 0, 0,}; // pvInBuffer
-    i8 * v4 = (i8 *)HeapAlloc(GetProcessHeap(), 0, sizeof(v4_tmp));
-    memcpy(v4, v4_tmp, sizeof v4_tmp);
 
-    SCompCompress(v1, v3, v4, 128, 8, 122, 57); // $target
-*/
+    char * path_v3 = "e:\\hop-poc09";
+    FILE * f_v3 = fopen(path_v3, "wb");
+    fwrite(v2, sizeof v2_tmp, 1, f_v3);
+    fclose(f_v3);
+
+    char * v3 = path_v3; // szFileName
+    u32 v4 = 4294967295; // dwSearchScope
+    void ** v5 = &v1; // phFile
+    i8 v6 = SFileOpenFileEx(v0, v3, v4, v5); // $relative
+    if(v6 == false) exit(1);
+
+    enum _SFileInfoClass v8 = (enum _SFileInfoClass)48; // InfoClass
+    i8 * v9 = NULL; // pvFileInfo
+    u32 * v10 = NULL; // pcbLengthNeeded
+    u32 v11 = 0; // cbFileInfo
+    i8 v12 = SFileGetFileInfo(v1, v8, v9, v11, (LPDWORD)(v10)); // $target
 }
 
 //-----------------------------------------------------------------------------
