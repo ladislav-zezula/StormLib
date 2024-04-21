@@ -3787,16 +3787,13 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-    HANDLE hFile = NULL;
+    SFILE_FIND_DATA sf;
     HANDLE hMpq = NULL;
 
-    if(SFileOpenArchive(_T("(4)Duskwood.w3m"), 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("e:\\poc11"), 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "war3map.j", 0, &hFile))
-        {
-            SFileSetFileLocale(hFile, 1033);
-            SFileCloseFile(hFile);
-        }
+        SFileFindFirstFile(hMpq, "*", &sf, NULL);
+        SFileAddWave(hMpq, _T("e:\\Ladik\\Incoming\\poc11"), "poc11", MPQ_FILE_FIX_KEY, 1);
         SFileCloseArchive(hMpq);
     }
 }

@@ -617,6 +617,9 @@ DWORD ConvertMpqHeaderToFormat4(
                 pHeader->BetTablePos64 = 0;
             }
 
+            // Fixup malformed MPQ header sizes
+            pHeader->dwHeaderSize = STORMLIB_MIN(pHeader->dwHeaderSize, MPQ_HEADER_SIZE_V3);
+
             //
             // We need to calculate the compressed size of each table. We assume the following order:
             // 1) HET table
@@ -685,7 +688,6 @@ DWORD ConvertMpqHeaderToFormat4(
 
             // Verify header MD5. Header MD5 is calculated from the MPQ header since the 'MPQ\x1A'
             // signature until the position of header MD5 at offset 0xC0
-
             // Apparently, Starcraft II only accepts MPQ headers where the MPQ header hash matches
             // If MD5 doesn't match, we ignore this offset. We also ignore it if there's no MD5 at all
             if(!IsValidMD5(pHeader->MD5_MpqHeader))
@@ -695,6 +697,9 @@ DWORD ConvertMpqHeaderToFormat4(
 
             // Byteswap after header MD5 is verified
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_4);
+
+            // Fixup malformed MPQ header sizes
+            pHeader->dwHeaderSize = MPQ_HEADER_SIZE_V4;
 
             // HiBlockTable must be 0 for archives under 4GB
             if((pHeader->ArchiveSize64 >> 0x20) == 0 && pHeader->HiBlockTablePos64 != 0)
@@ -784,9 +789,12 @@ static bool IsValidHashEntry1(TMPQArchive * ha, TMPQHash * pHash, TMPQBlock * pB
         pBlock = pBlockTable + MPQ_BLOCK_INDEX(pHash);
 
         // Check whether this is an existing file
-        // Also we do not allow to be file size greater than 2GB
-        if((pBlock->dwFlags & MPQ_FILE_EXISTS) && (pBlock->dwFSize & 0x80000000) == 0)
+        if(pBlock->dwFlags & MPQ_FILE_EXISTS)
         {
+            // We don't allow to be file size greater than 2GB in malformed archives
+            if((ha->dwFlags & MPQ_FLAG_MALFORMED) && (pBlock->dwFSize >= 0x80000000))
+                return false;
+
             // The begin of the file must be within the archive
             ByteOffset = FileOffsetFromMpqOffset(ha, pBlock->dwFilePos);
             return (ByteOffset < ha->FileSize);
@@ -1669,17 +1677,14 @@ void FreeHetTable(TMPQHetTable * pHetTable)
 //-----------------------------------------------------------------------------
 // Support for BET table
 
-static bool VerifyBetHeaderSize(TMPQArchive * ha, TMPQBetHeader * pBetHeader)
+static bool VerifyBetHeaderSize(TMPQArchive * /* ha */, TMPQBetHeader * pBetHeader)
 {
     LPBYTE pbSrcData = (LPBYTE)(pBetHeader + 1);
     LPBYTE pbSrcEnd = (LPBYTE)(pBetHeader) + pBetHeader->dwTableSize;
 
     // Move past the flags
     pbSrcData = pbSrcData + (pBetHeader->dwFlagCount * sizeof(DWORD)) + (pBetHeader->dwEntryCount * pBetHeader->dwTableEntrySize);
-    if(pbSrcData > pbSrcEnd)
-        return false;
-
-    return true;
+    return (pbSrcData <= pbSrcEnd);
 }
 
 static void CreateBetHeader(
@@ -3156,6 +3161,7 @@ DWORD SaveMPQTables(TMPQArchive * ha)
         CalculateDataBlockHash(pHeader, MPQ_HEADER_SIZE_V4 - MD5_DIGEST_SIZE, pHeader->MD5_MpqHeader);
 
         // Write the MPQ header to the file
+        assert(pHeader->dwHeaderSize <= sizeof(SaveMpqHeader));
         memcpy(&SaveMpqHeader, pHeader, pHeader->dwHeaderSize);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_1);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_2);
