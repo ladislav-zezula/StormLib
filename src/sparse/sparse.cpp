@@ -261,7 +261,12 @@ int DecompressSparse(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, 
         // If highest bit, it means that that normal data follow
         if(OneByte & 0x80)
         {
+            // Check the length of one chunk. Check for overflows
             cbChunkSize = (OneByte & 0x7F) + 1;
+            if((pbInBuffer + cbChunkSize) > pbInBufferEnd)
+                return 0;
+
+            // Copy the chunk. Make sure that the buffer won't overflow
             cbChunkSize = (cbChunkSize < cbOutBuffer) ? cbChunkSize : cbOutBuffer;
             memcpy(pbOutBuffer, pbInBuffer, cbChunkSize);
             pbInBuffer += cbChunkSize;

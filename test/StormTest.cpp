@@ -3789,7 +3789,7 @@ static void Test_PlayingSpace()
 {
     HANDLE hMpq = NULL;
 
-    if(SFileOpenArchive(_T("e:\\poc18"), 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("e:\\poc21"), 0, 0, &hMpq))
     {
         SFileCompactArchive(hMpq, _T("e:\\Ladik\\Incoming\\poc18"), true);
         SFileCloseArchive(hMpq);
@@ -4008,6 +4008,8 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("pocs/MPQ_2024_07_InvalidBitmapFooter.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2024_08_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2024_09_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_HuffDecompressError.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_SparseDecompressError.mpq"),          NULL, "--------------------------------",     TFLG_WILL_FAIL},
 
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1

@@ -29,7 +29,7 @@ class TInputStream
 
     TInputStream(void * pvInBuffer, size_t cbInBuffer);
     bool Get1Bit(unsigned int & BitValue);
-    unsigned int Get8Bits();
+    bool Get8Bits(unsigned int & ByteValue);
     bool Peek7Bits(unsigned int & Value);
     void SkipBits(unsigned int BitCount);
 
