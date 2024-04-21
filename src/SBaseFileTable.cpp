@@ -1683,7 +1683,7 @@ static bool VerifyBetHeaderSize(TMPQArchive * /* ha */, TMPQBetHeader * pBetHead
     LPBYTE pbSrcEnd = (LPBYTE)(pBetHeader) + pBetHeader->dwTableSize;
 
     // Move past the flags
-    pbSrcData = pbSrcData + (pBetHeader->dwFlagCount * sizeof(DWORD)) + (pBetHeader->dwEntryCount * pBetHeader->dwTableEntrySize);
+    pbSrcData = pbSrcData + (pBetHeader->dwFlagCount * sizeof(DWORD)) + (pBetHeader->dwEntryCount * pBetHeader->dwTableEntrySize) / 8;
     return (pbSrcData <= pbSrcEnd);
 }
 

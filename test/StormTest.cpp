@@ -3999,12 +3999,13 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
+
     // PoC's by Gabe Sherman from FuturesLab
-    //{_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
-    //{_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
-    //{_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",  TFLG_WILL_FAIL},
-    //{_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",  TFLG_WILL_FAIL},
-    //{_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
+    {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
+    {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
+    {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
     {_T("pocs/MPQ_2024_06_HeapOverflowReadFile.mpq"),           NULL, "d41d8cd98f00b204e9800998ecf8427e",     1},
     {_T("pocs/MPQ_2024_07_InvalidBitmapFooter.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2024_08_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
@@ -4191,9 +4192,9 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 // Main
 
 #define TEST_COMMAND_LINE
-//#define TEST_LOCAL_LISTFILE
-//#define TEST_STREAM_OPERATIONS
-//#define TEST_MASTER_MIRROR
+#define TEST_LOCAL_LISTFILE
+#define TEST_STREAM_OPERATIONS
+#define TEST_MASTER_MIRROR
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
