@@ -1027,20 +1027,16 @@ void * LoadMpqTable(
         if(ByteOffset == SFILE_INVALID_POS)
             FileStream_GetPos(ha->pStream, &ByteOffset);
 
-        // On archives v 1.0, hash table and block table can go beyond EOF.
+        // The hash table and block table can go beyond EOF.
         // Storm.dll reads as much as possible, then fills the missing part with zeros.
         // Abused by Spazzler map protector which sets hash table size to 0x00100000
         // Abused by NP_Protect in MPQs v4 as well
-        if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+        FileStream_GetSize(ha->pStream, &FileSize);
+        if((ByteOffset + dwBytesToRead) > FileSize)
         {
-            // Cut the table size
-            FileStream_GetSize(ha->pStream, &FileSize);
-            if((ByteOffset + dwBytesToRead) > FileSize)
-            {
-                // Fill the extra data with zeros
-                dwBytesToRead = (DWORD)(FileSize - ByteOffset);
-                memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
-            }
+            // Fill the extra data with zeros
+            dwBytesToRead = (DWORD)(FileSize - ByteOffset);
+            memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
         }
 
         // Give the caller information that the table was cut

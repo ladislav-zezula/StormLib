@@ -63,8 +63,8 @@ struct TMPQBits
 {
     static TMPQBits * Create(DWORD NumberOfBits, BYTE FillValue);
 
-    DWORD GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
-    DWORD SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, int nResultSize);
+    DWORD GetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, unsigned int nResultSize);
+    DWORD SetBits(unsigned int nBitPosition, unsigned int nBitLength, void * pvBuffer, unsigned int nResultSize);
 
     static const USHORT SetBitsMask[];          // Bit mask for each number of bits (0-8)
 
@@ -98,7 +98,7 @@ DWORD TMPQBits::GetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
-    int nResultByteSize)
+    unsigned int nResultByteSize)
 {
     unsigned char * pbBuffer = (unsigned char *)pvBuffer;
     unsigned int nBytePosition0 = (nBitPosition / 8);
@@ -107,18 +107,17 @@ DWORD TMPQBits::GetBits(
     unsigned int nBitOffset = (nBitPosition & 0x07);
     unsigned char BitBuffer;
 
-    // Keep compilers happy for platforms where nResultByteSize is not used
-    STORMLIB_UNUSED(nResultByteSize);
-
     // Check for bit overflow
     if(nBitPosition + nBitLength < nBitPosition)
         return ERROR_BUFFER_OVERFLOW;
     if(nBitPosition + nBitLength > NumberOfBits)
         return ERROR_BUFFER_OVERFLOW;
+    if(nByteLength > nResultByteSize)
+        return ERROR_BUFFER_OVERFLOW;
 
 #ifdef _DEBUG
     // Check if the target is properly zeroed
-    for(int i = 0; i < nResultByteSize; i++)
+    for(unsigned int i = 0; i < nResultByteSize; i++)
         assert(pbBuffer[i] == 0);
 #endif
 
@@ -170,7 +169,7 @@ DWORD TMPQBits::SetBits(
     unsigned int nBitPosition,
     unsigned int nBitLength,
     void * pvBuffer,
-    int nResultByteSize)
+    unsigned int nResultByteSize)
 {
     unsigned char * pbBuffer = (unsigned char *)pvBuffer;
     unsigned int nBytePosition = (nBitPosition / 8);
@@ -186,6 +185,8 @@ DWORD TMPQBits::SetBits(
     if(nBitPosition + nBitLength < nBitPosition)
         return ERROR_BUFFER_OVERFLOW;
     if(nBitPosition + nBitLength > NumberOfBits)
+        return ERROR_BUFFER_OVERFLOW;
+    if(nBitLength / 8 > nResultByteSize)
         return ERROR_BUFFER_OVERFLOW;
 
 #ifndef STORMLIB_LITTLE_ENDIAN
@@ -1618,15 +1619,16 @@ static DWORD GetFileIndex_Het(TMPQArchive * ha, const char * szFileName)
             DWORD dwFileIndex = 0;
 
             // Get the file index
-            pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * Index,
-                                            pHetTable->dwIndexSize,
-                                           &dwFileIndex,
-                                            sizeof(DWORD));
-
-            // Verify the FileNameHash against the entry in the table of name hashes
-            if(dwFileIndex <= ha->dwFileTableSize && ha->pFileTable[dwFileIndex].FileNameHash == FileNameHash)
+            if(pHetTable->pBetIndexes->GetBits(pHetTable->dwIndexSizeTotal * Index,
+                                               pHetTable->dwIndexSize,
+                                              &dwFileIndex,
+                                               sizeof(DWORD)) == ERROR_SUCCESS)
             {
-                return dwFileIndex;
+                // Verify the FileNameHash against the entry in the table of name hashes
+                if(dwFileIndex <= ha->dwFileTableSize && ha->pFileTable[dwFileIndex].FileNameHash == FileNameHash)
+                {
+                    return dwFileIndex;
+                }
             }
         }
 
