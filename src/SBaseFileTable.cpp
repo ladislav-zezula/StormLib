@@ -574,6 +574,10 @@ DWORD ConvertMpqHeaderToFormat4(
             // Fill the rest of the header with zeros
             memset((LPBYTE)pHeader + MPQ_HEADER_SIZE_V2, 0, sizeof(TMPQHeader) - MPQ_HEADER_SIZE_V2);
 
+            // Check position of the Hi-block table
+            if(pHeader->HiBlockTablePos64 > FileSize)
+                return ERROR_FILE_CORRUPT;
+
             // Calculate the expected hash table size
             pHeader->HashTableSize64 = (pHeader->dwHashTableSize * sizeof(TMPQHash));
             HashTablePos64 = MAKE_OFFSET64(pHeader->wHashTablePosHi, pHeader->dwHashTablePos);
