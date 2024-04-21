@@ -1669,6 +1669,19 @@ void FreeHetTable(TMPQHetTable * pHetTable)
 //-----------------------------------------------------------------------------
 // Support for BET table
 
+static bool VerifyBetHeaderSize(TMPQArchive * ha, TMPQBetHeader * pBetHeader)
+{
+    LPBYTE pbSrcData = (LPBYTE)(pBetHeader + 1);
+    LPBYTE pbSrcEnd = (LPBYTE)(pBetHeader) + pBetHeader->dwTableSize;
+
+    // Move past the flags
+    pbSrcData = pbSrcData + (pBetHeader->dwFlagCount * sizeof(DWORD)) + (pBetHeader->dwEntryCount * pBetHeader->dwTableEntrySize);
+    if(pbSrcData > pbSrcEnd)
+        return false;
+
+    return true;
+}
+
 static void CreateBetHeader(
     TMPQArchive * ha,
     TMPQBetHeader * pBetHeader)
@@ -1802,68 +1815,72 @@ static TMPQBetTable * TranslateBetTable(
             // Note that if it's not, it is not a problem
             //assert(pBetHeader->dwEntryCount == ha->pHetTable->dwEntryCount);
 
-            // Create translated table
-            pBetTable = CreateBetTable(pBetHeader->dwEntryCount);
-            if(pBetTable != NULL)
+            // Verify an obviously-wrong values
+            if(VerifyBetHeaderSize(ha, pBetHeader))
             {
-                // Copy the variables from the header to the BetTable
-                pBetTable->dwTableEntrySize     = pBetHeader->dwTableEntrySize;
-                pBetTable->dwBitIndex_FilePos   = pBetHeader->dwBitIndex_FilePos;
-                pBetTable->dwBitIndex_FileSize  = pBetHeader->dwBitIndex_FileSize;
-                pBetTable->dwBitIndex_CmpSize   = pBetHeader->dwBitIndex_CmpSize;
-                pBetTable->dwBitIndex_FlagIndex = pBetHeader->dwBitIndex_FlagIndex;
-                pBetTable->dwBitIndex_Unknown   = pBetHeader->dwBitIndex_Unknown;
-                pBetTable->dwBitCount_FilePos   = pBetHeader->dwBitCount_FilePos;
-                pBetTable->dwBitCount_FileSize  = pBetHeader->dwBitCount_FileSize;
-                pBetTable->dwBitCount_CmpSize   = pBetHeader->dwBitCount_CmpSize;
-                pBetTable->dwBitCount_FlagIndex = pBetHeader->dwBitCount_FlagIndex;
-                pBetTable->dwBitCount_Unknown   = pBetHeader->dwBitCount_Unknown;
-
-                // Since we don't know what the "unknown" is, we'll assert when it's zero
-                assert(pBetTable->dwBitCount_Unknown == 0);
-
-                // Allocate array for flags
-                if(pBetHeader->dwFlagCount != 0)
+                // Create translated table
+                pBetTable = CreateBetTable(pBetHeader->dwEntryCount);
+                if(pBetTable != NULL)
                 {
-                    // Allocate array for file flags and load it
-                    pBetTable->pFileFlags = STORM_ALLOC(DWORD, pBetHeader->dwFlagCount);
-                    if(pBetTable->pFileFlags != NULL)
+                    // Copy the variables from the header to the BetTable
+                    pBetTable->dwTableEntrySize = pBetHeader->dwTableEntrySize;
+                    pBetTable->dwBitIndex_FilePos = pBetHeader->dwBitIndex_FilePos;
+                    pBetTable->dwBitIndex_FileSize = pBetHeader->dwBitIndex_FileSize;
+                    pBetTable->dwBitIndex_CmpSize = pBetHeader->dwBitIndex_CmpSize;
+                    pBetTable->dwBitIndex_FlagIndex = pBetHeader->dwBitIndex_FlagIndex;
+                    pBetTable->dwBitIndex_Unknown = pBetHeader->dwBitIndex_Unknown;
+                    pBetTable->dwBitCount_FilePos = pBetHeader->dwBitCount_FilePos;
+                    pBetTable->dwBitCount_FileSize = pBetHeader->dwBitCount_FileSize;
+                    pBetTable->dwBitCount_CmpSize = pBetHeader->dwBitCount_CmpSize;
+                    pBetTable->dwBitCount_FlagIndex = pBetHeader->dwBitCount_FlagIndex;
+                    pBetTable->dwBitCount_Unknown = pBetHeader->dwBitCount_Unknown;
+
+                    // Since we don't know what the "unknown" is, we'll assert when it's zero
+                    assert(pBetTable->dwBitCount_Unknown == 0);
+
+                    // Allocate array for flags
+                    if(pBetHeader->dwFlagCount != 0)
                     {
-                        LengthInBytes = pBetHeader->dwFlagCount * sizeof(DWORD);
-                        memcpy(pBetTable->pFileFlags, pbSrcData, LengthInBytes);
-                        BSWAP_ARRAY32_UNSIGNED(pBetTable->pFileFlags, LengthInBytes);
+                        // Allocate array for file flags and load it
+                        pBetTable->pFileFlags = STORM_ALLOC(DWORD, pBetHeader->dwFlagCount);
+                        if(pBetTable->pFileFlags != NULL)
+                        {
+                            LengthInBytes = pBetHeader->dwFlagCount * sizeof(DWORD);
+                            memcpy(pBetTable->pFileFlags, pbSrcData, LengthInBytes);
+                            BSWAP_ARRAY32_UNSIGNED(pBetTable->pFileFlags, LengthInBytes);
+                            pbSrcData += LengthInBytes;
+                        }
+
+                        // Save the number of flags
+                        pBetTable->dwFlagCount = pBetHeader->dwFlagCount;
+                    }
+
+                    // Load the bit-based file table
+                    pBetTable->pFileTable = TMPQBits::Create(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
+                    if(pBetTable->pFileTable != NULL)
+                    {
+                        LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
+                        memcpy(pBetTable->pFileTable->Elements, pbSrcData, LengthInBytes);
                         pbSrcData += LengthInBytes;
                     }
 
-                    // Save the number of flags
-                    pBetTable->dwFlagCount = pBetHeader->dwFlagCount;
+                    // Fill the sizes of BET hash
+                    pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
+                    pBetTable->dwBitExtra_NameHash2 = pBetHeader->dwBitExtra_NameHash2;
+                    pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
+
+                    // Create and load the array of BET hashes
+                    pBetTable->pNameHashes = TMPQBits::Create(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
+                    if(pBetTable->pNameHashes != NULL)
+                    {
+                        LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
+                        memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
+                        //                      pbSrcData += LengthInBytes;
+                    }
+
+                    // Dump both tables
+//                  DumpHetAndBetTable(ha->pHetTable, pBetTable);
                 }
-
-                // Load the bit-based file table
-                pBetTable->pFileTable = TMPQBits::Create(pBetTable->dwTableEntrySize * pBetHeader->dwEntryCount, 0);
-                if(pBetTable->pFileTable != NULL)
-                {
-                    LengthInBytes = (pBetTable->pFileTable->NumberOfBits + 7) / 8;
-                    memcpy(pBetTable->pFileTable->Elements, pbSrcData, LengthInBytes);
-                    pbSrcData += LengthInBytes;
-                }
-
-                // Fill the sizes of BET hash
-                pBetTable->dwBitTotal_NameHash2 = pBetHeader->dwBitTotal_NameHash2;
-                pBetTable->dwBitExtra_NameHash2 = pBetHeader->dwBitExtra_NameHash2;
-                pBetTable->dwBitCount_NameHash2 = pBetHeader->dwBitCount_NameHash2;
-
-                // Create and load the array of BET hashes
-                pBetTable->pNameHashes = TMPQBits::Create(pBetTable->dwBitTotal_NameHash2 * pBetHeader->dwEntryCount, 0);
-                if(pBetTable->pNameHashes != NULL)
-                {
-                    LengthInBytes = (pBetTable->pNameHashes->NumberOfBits + 7) / 8;
-                    memcpy(pBetTable->pNameHashes->Elements, pbSrcData, LengthInBytes);
-//                  pbSrcData += LengthInBytes;
-                }
-
-                // Dump both tables
-//              DumpHetAndBetTable(ha->pHetTable, pBetTable);
             }
         }
     }

@@ -4006,6 +4006,8 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
     {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
     {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",  TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",  TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
 
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
@@ -4187,7 +4189,7 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 //-----------------------------------------------------------------------------
 // Main
 
-//#define TEST_COMMAND_LINE
+#define TEST_COMMAND_LINE
 //#define TEST_LOCAL_LISTFILE
 //#define TEST_STREAM_OPERATIONS
 //#define TEST_MASTER_MIRROR
