@@ -414,6 +414,7 @@
   #define ERROR_HANDLE_EOF               1002        // No such error code under Linux
   #define ERROR_CAN_NOT_COMPLETE         1003        // No such error code under Linux
   #define ERROR_FILE_CORRUPT             1004        // No such error code under Linux
+  #define ERROR_BUFFER_OVERFLOW          1005        // No such error code under Linux
 #endif
 
 // Macros that can sometimes be missing
