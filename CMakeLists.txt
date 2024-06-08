@@ -334,8 +334,9 @@ if(WIN32)
 endif()
 
 target_link_libraries(${LIBRARY_NAME} ${LINK_LIBS})
+add_library(${PROJECT_NAME}::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME}) # Allow users to link StormLib::storm when using add_subdirectory
 target_compile_definitions(${LIBRARY_NAME} INTERFACE STORMLIB_NO_AUTO_LINK) #CMake will take care of the linking
-target_include_directories(${LIBRARY_NAME} PUBLIC src/)
+target_include_directories(${LIBRARY_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>)
 set_target_properties(${LIBRARY_NAME} PROPERTIES PUBLIC_HEADER "src/StormLib.h;src/StormPort.h")
 if(BUILD_SHARED_LIBS)
     message(STATUS "Linking against dependent libraries dynamically")
@@ -358,12 +359,15 @@ endif()
 
 if (NOT STORM_SKIP_INSTALL)
     install(TARGETS ${LIBRARY_NAME}
-	    RUNTIME DESTINATION bin
-	    LIBRARY DESTINATION lib
-	    ARCHIVE DESTINATION lib
-	    FRAMEWORK DESTINATION /Library/Frameworks
-	    PUBLIC_HEADER DESTINATION include
-	    INCLUDES DESTINATION include)
+        EXPORT ${PROJECT_NAME}Config
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        FRAMEWORK DESTINATION /Library/Frameworks
+        PUBLIC_HEADER DESTINATION include
+        INCLUDES DESTINATION include)
+
+        install(EXPORT ${PROJECT_NAME}Config NAMESPACE ${PROJECT_NAME}:: DESTINATION share/${PROJECT_NAME})
 
         #CPack configurtion
         SET(CPACK_GENERATOR "DEB" "RPM")
