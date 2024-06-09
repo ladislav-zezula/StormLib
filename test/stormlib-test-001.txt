@@ -1,5 +1,5 @@
-==== Test Suite for StormLib version 9.25 ====
-InitWorkFolder: Work directory /media/ladik/MPQs (default)
+==== Test Suite for StormLib version 9.26 ====
+InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
 TestLiFiSearch (listfile-test.txt) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.
@@ -14,6 +14,20 @@ TestFileMirror (part-file://MPQ_2009_v1_patch-complete.MPQ.part) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-created.MPQ) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-incomplete.MPQ) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-complete.MPQ) succeeded.
+TestReadingMpq: Warning: CRC32 error on replay.game.events
+TestReadingMpq (pocs/MPQ_2024_01_HeapOverrun.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_02_StackOverflow.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_03_TooBigAlloc.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_04_HeapOverflow.mpq) succeeded.
+TestReadingMpq: Warning: CRC32 error on replay.tracker.events
+TestReadingMpq (pocs/MPQ_2024_05_HeapOverflow.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_06_HeapOverflowReadFile.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_07_InvalidBitmapFooter.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_08_InvalidSectorSize.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_09_InvalidSectorSize.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_10_HuffDecompressError.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_10_SparseDecompressError.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2024_11_HiBlockTablePosInvalid.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 TestReadingMpq (MPQ_1997_v1_patch_rt_SC1B.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_StarDat_SC1B.mpq) succeeded.
@@ -126,12 +140,12 @@ TestModifyMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestVerifyHash succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
-CreateNewMpq (StormLibTest_Český.mpq) succeeded.     .
-CreateNewMpq (StormLibTest_Русский.mpq) succeeded. ...
-CreateNewMpq (StormLibTest_ελληνικά.mpq) succeeded.
-CreateNewMpq (StormLibTest_日本語.mpq) succeeded.   ..
-CreateNewMpq (StormLibTest_简体中文.mpq) succeeded....
-CreateNewMpq (StormLibTest_الععربية.mpq) succeeded....
+CreateNewMpq (StormLibTest_─îesk├Ż.mpq) succeeded.
+CreateNewMpq (StormLibTest_đáĐâĐüĐüđ║đŞđ╣.mpq) succeeded.
+CreateNewMpq (StormLibTest_╬Á╬╗╬╗╬Ě╬Ż╬╣╬║╬Č.mpq) succeeded.
+CreateNewMpq (StormLibTest_ŠŚąŠťČŔ¬×.mpq) succeeded.
+CreateNewMpq (StormLibTest_š«ÇńŻôńŞşŠľç.mpq) succeeded.
+CreateNewMpq (StormLibTest_ěž┘äě╣ě╣ě▒ěĘ┘Őěę.mpq) succeeded.
 CreateNewMpq (StormLibTest_NonStdNames.mpq) succeeded.
 CreateNewMpq (StormLibTest_MpqEditorTest.mpq) succeeded.
 TestCreateGaps (StormLibTest_GapsTest.mpq) succeeded.
