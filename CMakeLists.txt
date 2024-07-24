@@ -9,6 +9,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CMakeDependentOption)
 include(GNUInstallDirs)
 
+option(STORM_UNICODE "Compile UNICODE version instead of ANSI one (Visual Studio only)" OFF)
+
+if(WIN32)
+    if(STORM_UNICODE)
+        message(STATUS "Build UNICODE version")
+        add_definitions(-DUNICODE -D_UNICODE)
+    else()
+        message(STATUS "Build ANSI version")
+    endif()
+endif()
+
 option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)
 option(STORM_SKIP_INSTALL "Skip installing files" OFF)
 option(STORM_USE_BUNDLED_LIBRARIES
