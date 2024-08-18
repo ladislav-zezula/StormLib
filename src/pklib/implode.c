@@ -254,7 +254,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
         }
     }
 
-    // If the repetition has max length of 0x204 bytes, we can't go any fuhrter
+    // If the repetition has max length of 0x204 bytes, we can't go any further
     if(equal_byte_count == MAX_REP_LENGTH)
     {
         pWork->distance--;
@@ -376,7 +376,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
         // Find out how many more characters are equal to the first repetition.
         while(*prev_rep_end == input_data[rep_length2])
         {
-            if(++rep_length2 >= 0x204)
+            if(++rep_length2 >= MAX_REP_LENGTH)
                 break;
             prev_rep_end++;
         }
@@ -386,7 +386,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
         {
             // Calculate the distance of the new repetition
             pWork->distance = (unsigned int)(input_data - prev_repetition - 1);
-            if((rep_length = rep_length2) == 0x204)
+            if((rep_length = rep_length2) == MAX_REP_LENGTH)
                 return rep_length;
 
             // Update the additional elements in the "offs09BC" table
@@ -408,7 +408,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
 static void WriteCmpData(TCmpStruct * pWork)
 {
     unsigned char * input_data_end;         // Pointer to the end of the input data
-    unsigned char * input_data = pWork->work_buff + pWork->dsize_bytes + 0x204;
+    unsigned char * input_data = pWork->work_buff + pWork->dsize_bytes + MAX_REP_LENGTH;
     unsigned int input_data_ended = 0;      // If 1, then all data from the input stream have been already loaded
     unsigned int save_rep_length;           // Saved length of current repetition
     unsigned int save_distance = 0;         // Saved distance of current repetition
@@ -433,7 +433,7 @@ static void WriteCmpData(TCmpStruct * pWork)
         // Load the bytes from the input stream, up to 0x1000 bytes
         while(bytes_to_load != 0)
         {
-            bytes_loaded = pWork->read_buf((char *)pWork->work_buff + pWork->dsize_bytes + 0x204 + total_loaded,
+            bytes_loaded = pWork->read_buf((char *)pWork->work_buff + pWork->dsize_bytes + MAX_REP_LENGTH + total_loaded,
                                                   &bytes_to_load,
                                                    pWork->param);
             if(bytes_loaded == 0)
@@ -452,7 +452,7 @@ static void WriteCmpData(TCmpStruct * pWork)
 
         input_data_end = pWork->work_buff + pWork->dsize_bytes + total_loaded;
         if(input_data_ended)
-            input_data_end += 0x204;
+            input_data_end += MAX_REP_LENGTH;
 
         //
         // Warning: The end of the buffer passed to "SortBuffer" is actually 2 bytes beyond
@@ -475,7 +475,7 @@ static void WriteCmpData(TCmpStruct * pWork)
                 break;
 
             case 1:
-                SortBuffer(pWork, input_data - pWork->dsize_bytes + 0x204, input_data_end + 1);
+                SortBuffer(pWork, input_data - pWork->dsize_bytes + MAX_REP_LENGTH, input_data_end + 1);
                 phase++;
                 break;
 
@@ -573,7 +573,7 @@ _00402252:;
         if(input_data_ended == 0)
         {
             input_data -= 0x1000;
-            memmove(pWork->work_buff, pWork->work_buff + 0x1000, pWork->dsize_bytes + 0x204);
+            memmove(pWork->work_buff, pWork->work_buff + 0x1000, pWork->dsize_bytes + MAX_REP_LENGTH);
         }
     }
 
