@@ -159,7 +159,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
     unsigned char * input_data_ptr;
     unsigned short phash_offs_index;            // Index to the table with PAIR_HASH positions
     unsigned short min_phash_offs;              // The lowest allowed hash offset
-    unsigned short offs_in_rep;                 // Offset within found repetition
+    unsigned int offs_in_rep;                   // Offset within found repetition
     unsigned int equal_byte_count;              // Number of bytes that are equal to the previous occurence
     unsigned int rep_length = 1;                // Length of the found repetition
     unsigned int rep_length2;                   // Secondary repetition
