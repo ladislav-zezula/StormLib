@@ -3,17 +3,6 @@
 This is official repository for the StormLib library, an open-source project that can work with Blizzard MPQ archives.
 
 ## Installation and basic usage
-### Linux
-1. Download latest release
-2. Install StormLib:
-```
-$ cd <path-to-StormLib>
-$ cmake CMakeLists.txt
-$ make
-$ make install
-```
-3. Include StormLib in your project: `#include <StormLib.h>`
-4. Make sure you compile your project with `-lstorm -lz -lbz2`
 
 ### Windows (Visual Studio 2022)
 0. Make sure you have the toolset for Visual Studio 2017 - Windows XP installed
@@ -39,3 +28,15 @@ Note that you can also build the library using newer toolset, such as v143. To d
    * Y: A = ANSI build, U = Unicode build
    * Z: S = Using static CRT library, D = Using Dynamic CRT library
 3. Rebuild
+
+### Linux
+1. Download latest release
+2. Install StormLib:
+```
+$ cd <path-to-StormLib>
+$ cmake CMakeLists.txt
+$ make
+$ make install
+```
+3. Include StormLib in your project: `#include <StormLib.h>`
+4. Make sure you compile your project with `-lstorm -lz -lbz2`
