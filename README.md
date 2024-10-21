@@ -23,7 +23,7 @@ $ make install
 4. Choose "Rebuild"
 5. The result libraries are in `.\bin\Win32` and `.\bin\x64`
 
-Note that you can also build the library using newer toolset, such as v143. to do that, you need to retarget the projects. Right-click on the solution, then choose "Retarget solution" and pick your desired toolset version. 
+Note that you can also build the library using newer toolset, such as v143. To do that, you need to retarget the projects. Right-click on the solution, then choose "Retarget solution" and pick your desired toolset version. 
 
 ### Windows (Visual Studio 2008)
 1. Download the latest release of StormLib
