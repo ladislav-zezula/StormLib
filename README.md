@@ -15,17 +15,18 @@ $ make install
 3. Include StormLib in your project: `#include <StormLib.h>`
 4. Make sure you compile your project with `-lstorm -lz -lbz2`
 
-### Windows (Visual Studio 2008)
+### Windows (Visual Studio 2022)
+0. Make sure you have the toolset for Visual Studio 2017 - Windows XP installed
 1. Download the latest release of StormLib
-2. Open the solution file `StormLib_vs08.sln` in Visual Studio 2008
+2. Open the solution file `StormLib.sln` in Visual Studio 2017/2019/2022
 3. Choose "Build / Batch Build" and select every build of "StormLib"
 4. Choose "Rebuild"
 5. The result libraries are in `.\bin\Win32` and `.\bin\x64`
+Note that you can also build the library using newer toolset, such as v143. to do that, you need to retarget the projects. Right-click on the solution, then choose "Retarget solution" and pick your desired toolset version. 
 
-### Windows (Visual Studio 2017 or 2019)
-0. Make sure you have SDK 10.0.17134.0 installed
+### Windows (Visual Studio 2008)
 1. Download the latest release of StormLib
-2. Open the solution file `StormLib_vs19.sln` in Visual Studio 2017/2019
+2. Open the solution file `StormLib_vs08.sln` in Visual Studio 2008
 3. Choose "Build / Batch Build" and select every build of "StormLib"
 4. Choose "Rebuild"
 5. The result libraries are in `.\bin\Win32` and `.\bin\x64`

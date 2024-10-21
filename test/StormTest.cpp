@@ -3787,15 +3787,19 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
 
 static void Test_PlayingSpace()
 {
-/*
-    i8 v0_tmp[] = {5, 34, -58, 65, 113, -118, 76, 11, 40, 32, 27, 20, 83, 15, 22, 46, 25, -24, -77, -88, -70, -118, -58, 56, 55, -94, -69, 43, -87, -1, -70, 0,}; // pvFileInfo
-    i8 * v0 = (i8 *)malloc(sizeof v0_tmp);
-    memcpy(v0, v0_tmp, sizeof v0_tmp);
-    i8 * v1 = v0; // pvFileInfo
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
 
-    enum _SFileInfoClass v2 = (enum _SFileInfoClass)(11); // InfoClass
-    i8 v3 = SFileFreeFileInfo(v1, v2); // $target
-*/
+    if(SFileOpenArchive(_T("c:\\RedHero vs 7Com22 (Final Stage GOD).scx"), 0, 0, &hMpq))
+    {
+        SFileSetLocale(0x409);
+
+        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
+        {
+            SFileCloseFile(hFile);
+        }
+        SFileCloseArchive(hMpq);
+    }
 }
 
 //-----------------------------------------------------------------------------
