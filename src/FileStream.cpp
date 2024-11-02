@@ -78,7 +78,7 @@ static void CreateNameWithSuffix(LPTSTR szBuffer, size_t cchMaxChars, LPCTSTR sz
         *szBuffer++ = '.';
 
     // Append the number
-    IntToString(szBuffer, szBufferEnd - szBuffer + 1, nValue);
+    SMemIntToStr(szBuffer, szBufferEnd - szBuffer + 1, nValue);
 }
 
 //-----------------------------------------------------------------------------
@@ -1765,7 +1765,7 @@ static void PartStream_Close(TBlockStream * pStream)
 
         // Make sure that the header is properly BSWAPed
         BSWAP_ARRAY32_UNSIGNED(&PartHeader, sizeof(PART_FILE_HEADER));
-        IntToString(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
+        SMemIntToStr(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
 
         // Write the part header
         pStream->BaseWrite(pStream, &ByteOffset, &PartHeader, sizeof(PART_FILE_HEADER));

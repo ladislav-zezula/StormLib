@@ -24,3 +24,4 @@
 #include "src\SFilePatchArchives.cpp"
 #include "src\SFileReadFile.cpp"
 #include "src\SFileVerify.cpp"
+#include "src\SMemUtf8.cpp"

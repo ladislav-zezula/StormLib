@@ -60,6 +60,7 @@ set(SRC_FILES
            src/SFilePatchArchives.cpp
            src/SFileReadFile.cpp
            src/SFileVerify.cpp
+           src/SMemUtf8.cpp
            src/libtomcrypt/src/pk/rsa/rsa_verify_simple.c
            src/libtomcrypt/src/misc/crypt_libc.c
 )

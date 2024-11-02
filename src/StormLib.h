@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /* StormLib.h                        Copyright (c) Ladislav Zezula 1999-2017 */
 /*---------------------------------------------------------------------------*/
-/* StormLib library v 9.22                                                   */
+/* StormLib library v 9.30                                                   */
 /*                                                                           */
 /* Author : Ladislav Zezula                                                  */
 /* E-mail : ladik@zezula.net                                                 */
@@ -74,6 +74,7 @@
 /* 12.12.16  9.21  Lad  Release 9.21                                         */
 /* 10.11.17  9.22  Lad  Release 9.22                                         */
 /* 28.09.22  9.24  Lad  lcLocale -> lcFileLocale, also contains platform     */
+/* 01.11.24  9.30  Lad  Added conversion from UTF-8 to file name and back    */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -143,8 +144,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x091A  // Current version of StormLib
-#define STORMLIB_VERSION_STRING         "9.26"  // Current version of StormLib as string
+#define STORMLIB_VERSION                0x091E  // Current version of StormLib
+#define STORMLIB_VERSION_STRING         "9.30"  // Current version of StormLib as string
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
@@ -1130,6 +1131,30 @@ int    WINAPI SCompExplode    (void * pvOutBuffer, int * pcbOutBuffer, void * pv
 int    WINAPI SCompCompress   (void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer, unsigned uCompressionMask, int nCmpType, int nCmpLevel);
 int    WINAPI SCompDecompress (void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
 int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
+
+//-----------------------------------------------------------------------------
+// Conversion of UTF-8 (MPQ listfiles) into file name safe strings
+
+#define SFILE_UTF8_ALLOW_INVALID_CHARS  0x01        // If set, then the function will treat invalid chars like like MultiByteToWideChar
+#define SFILE_UTF8_INVALID_CHARACTER    0xFFFD      // Marker of an invalid character
+#define SFILE_UNICODE_MAX               0x10FFFF    // The highest valid UNICODE char
+
+// Conversion of MPQ file name to file-name-safe string
+DWORD  WINAPI SMemUTF8ToFileName(
+    TCHAR * szBuffer,               // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    size_t ccBuffer,                // Length of the output buffer (must include EOS)
+    const void * lpString,          // Pointer to the begin of the string
+    const void * lpStringEnd,       // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
+    DWORD dwFlags,                  // Additional flags
+    size_t * pOutLength);           // Pointer to a variable that receives the needed length (optional)
+
+DWORD  WINAPI SMemFileNameToUTF8(
+    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    size_t ccBuffer,                // Length of the output buffer (must include EOS)
+    const TCHAR * szString,         // Pointer to the begin of the string
+    const TCHAR * szStringEnd,      // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
+    DWORD dwFlags,                  // Reserved
+    size_t * pOutLength);           // Pointer to a variable that receives the needed length in bytes (optional)
 
 //-----------------------------------------------------------------------------
 // Non-Windows support for SetLastError/GetLastError
