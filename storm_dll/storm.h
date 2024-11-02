@@ -23,7 +23,7 @@
 // will not conflict with other MPQ tools.
 #ifdef STORM_ALTERNATE_NAMES
   #define SFILE(Name) Storm##Name
-  #define SMEM(Name) Storm##Name
+  #define SMEM(Name)  Storm##Name
   #define SCOMP(Name) Storm##Name
 #else
   #define SFILE(Name) SFile##Name
