@@ -70,6 +70,9 @@ EXPORTS
     SFileSetDataCompression
     SFileSetAddFileCallback
 
+    SMemUTF8ToFileName
+    SMemFileNameToUTF8
+
     SCompImplode
     SCompExplode
     SCompCompress
