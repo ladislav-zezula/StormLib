@@ -2,6 +2,10 @@
   StormLib history
   ================
 
+ Version 9.30
+
+ - Added functions for conversions between file names and safe operating system file names
+
  Version 9.11
 
  - Fixed bug in processing HET table.
@@ -34,13 +38,13 @@
  - Updated support for protected maps from Warcraft III
 
  Version 7.11
- 
+
  - Support for MPQs v 3.0 (WOW-Cataclysm BETA)
  - StormLib now deals properly with files that have MPQ_SECTOR_CHECKSUM missing,
    but have sector checksum entry present in the sector offset table
 
  Version 7.10
- 
+
  - Support for partial MPQs ("interface.MPQ.part")
  - The only operation that is externally allowed to do with internal files
    ("(listfile)", "(attributes)" and "(signature)") is reading. Attempt to modify any of the file
@@ -48,7 +52,7 @@
  - Fixed memory leak that has occured when writing more than one sector to the file at once
 
  Version 7.01
- 
+
  - Support for adding files from memory
  - Fixed improper validation of handles to MPQ file and MPQ archive
  - Fixed bug where StormLib didn't save CRC32 of the file when added to archive

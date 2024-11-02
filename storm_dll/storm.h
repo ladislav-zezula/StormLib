@@ -23,9 +23,11 @@
 // will not conflict with other MPQ tools.
 #ifdef STORM_ALTERNATE_NAMES
   #define SFILE(Name) Storm##Name
+  #define SMEM(Name)  Storm##Name
   #define SCOMP(Name) Storm##Name
 #else
   #define SFILE(Name) SFile##Name
+  #define SMEM(Name)  SMem##Name
   #define SCOMP(Name) SComp##Name
 #endif
 
@@ -49,6 +51,10 @@ BOOL  WINAPI SFILE(ReadFile)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytes
 LCID  WINAPI SFILE(SetLocale)(LCID nNewLocale);
 BOOL  WINAPI SFILE(GetBasePath)(LPCSTR lpBuffer, DWORD dwBufferLength);
 BOOL  WINAPI SFILE(SetBasePath)(LPCSTR lpNewBasePath);
+
+// File name safe functions
+BOOL  WINAPI SMEM(UTF8ToFileName)(LPTSTR szBuffer, size_t ccBuffer, const void * lpString, const void * lpStringEnd, DWORD dwFlags, size_t * pOutLength);
+BOOL  WINAPI SMEM(FileNameToUTF8)(void * lpBuffer, size_t ccBuffer, const TCHAR * szString, const TCHAR * szStringEnd, DWORD dwFlags, size_t * pOutLength);
 
 // Storm (de)compression functions
 BOOL  WINAPI SCOMP(Compress)  (char * pbOutBuffer, int * pdwOutLength, char * pbInBuffer, int dwInLength, int uCmp, int uCmpType, int nCmpLevel);
