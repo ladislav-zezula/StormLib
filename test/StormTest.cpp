@@ -275,6 +275,21 @@ static SFILE_MARKERS MpqMarkers[] =
 static TCHAR szMpqDirectory[MAX_PATH+1];
 size_t cchMpqDirectory = 0;
 
+inline bool AssertTrue(bool bCondition)
+{
+    if(!bCondition)
+    {
+#ifdef STORMLIB_WINDOWS
+        __debugbreak();
+#else
+        assert(false);
+#endif        
+    }
+    return bCondition;
+}
+
+#define ASSERT_TRUE(condition)      { if(!AssertTrue(condition)) { return false; } }
+
 static EXTRA_TYPE GetExtraType(const void * pExtra)
 {
     if(pExtra != NULL)
@@ -326,30 +341,6 @@ LPCTSTR GetRelativePath(LPCTSTR szFullPath)
         }
     }
     return _T("");
-}
-
-// Converts binary array to string.
-// The caller must ensure that the buffer has at least ((cbBinary * 2) + 1) characters
-template <typename xchar>
-xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
-{
-    const char * IntToHexChar = "0123456789abcdef";
-    xchar * szSaveBuffer = szBuffer;
-
-    // Verify the binary pointer
-    if(pbBinary && cbBinary)
-    {
-        // Convert the bytes to string array
-        for(size_t i = 0; i < cbBinary; i++)
-        {
-            *szBuffer++ = IntToHexChar[pbBinary[i] >> 0x04];
-            *szBuffer++ = IntToHexChar[pbBinary[i] & 0x0F];
-        }
-    }
-
-    // Terminate the string
-    *szBuffer = 0;
-    return szSaveBuffer;
 }
 
 const char * GetFileText(PFILE_DATA pFileData)
@@ -1764,7 +1755,7 @@ static DWORD VerifyDataChecksum(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearch
         // Check the MD5 hash, if given
         if(IS_VALID_STRING(szNameHash))
         {
-            StringFromBinary(NameHash, MD5_DIGEST_SIZE, szNameHash);
+            SMemBinToStr(szNameHash, _countof(szNameHash), NameHash, MD5_DIGEST_SIZE);
             if(_stricmp(szNameHash, szExpectedHash))
             {
                 Logger.PrintMessage("Extracted files MD5 mismatch (expected: %s, obtained: %s)", szExpectedHash, szNameHash);
@@ -3785,22 +3776,90 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
     return dwErrCode;
 }
 
-static void Test_PlayingSpace()
+static bool TestUtfConversion(const void * lpString)
 {
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
+    LPTSTR szBuffer;
+    LPBYTE pbBuffer;
+    size_t nLength1 = 0;
+    size_t nLength2 = 0;
+    DWORD dwErrCode1;
+    DWORD dwErrCode2;
+    TCHAR szWideBuffer[1];
+    BYTE szByteBuffer[1];
+    int nResult;
 
-    if(SFileOpenArchive(_T("c:\\RedHero vs 7Com22 (Final Stage GOD).scx"), 0, 0, &hMpq))
+    // Get the number of bytes of the buffer while the output buffer is 0
+    dwErrCode1 = SMemUTF8ToFileName(NULL, 0, lpString, NULL, 0, &nLength1);
+
+    // Check the number of bytes when the buffer is non-NULL, but buffer length is insufficient
+    dwErrCode2 = SMemUTF8ToFileName(szWideBuffer, _countof(szWideBuffer), lpString, NULL, 0, &nLength2);
+    ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+    ASSERT_TRUE(nLength2 == nLength1);
+
+    // Check the number of bytes when the buffer is non-NULL, and buffer length is sufficient
+    if((szBuffer = STORM_ALLOC(TCHAR, nLength1)) != NULL)
     {
-        SFileSetLocale(0x409);
+        dwErrCode2 = SMemUTF8ToFileName(szBuffer, nLength1, lpString, NULL, 0, &nLength2);
+        ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+        ASSERT_TRUE(nLength2 == nLength1);
 
-        if(SFileOpenFileEx(hMpq, "staredit\\scenario.chk", 0, &hFile))
+        // Get the number of bytes of the buffer while the output buffer is 0
+        dwErrCode1 = SMemFileNameToUTF8(NULL, 0, szBuffer, NULL, 0, &nLength1);
+
+        // Check the number of bytes when the buffer is non-NULL, but buffer length is insufficient
+        dwErrCode2 = SMemFileNameToUTF8(szByteBuffer, _countof(szByteBuffer), szBuffer, NULL, 0, &nLength2);
+        ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+        ASSERT_TRUE(nLength2 == nLength1);
+
+        // Check the conversion into a buffer large enough
+        if((pbBuffer = STORM_ALLOC(BYTE, nLength1)) != NULL)
         {
-            SFileCloseFile(hFile);
+            dwErrCode2 = SMemFileNameToUTF8(pbBuffer, nLength1, szBuffer, NULL, 0, &nLength2);
+            ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+            ASSERT_TRUE(nLength2 == nLength1);
+
+            nResult = memcmp(pbBuffer, lpString, nLength1);
+            ASSERT_TRUE(nResult == 0);
+
+            STORM_FREE(pbBuffer);
         }
-        SFileCloseArchive(hMpq);
+
+        STORM_FREE(szBuffer);
     }
+    return true;
 }
+
+static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szListFile)
+{
+    SFILE_FIND_DATA sf;
+    HANDLE hFind;
+    TCHAR szFullPath[MAX_PATH];
+
+    // Check conversion of the invalid UTF8 string
+    TestUtfConversion(szTestString);
+
+    // Create full path of the listfile
+    CreateFullPathName(szFullPath, _countof(szFullPath), szListFileDir, szListFile);
+
+    // Test all file names in the Chinese listfile
+    hFind = SListFileFindFirstFile(NULL, szFullPath, "*", &sf);
+    if(hFind != NULL)
+    {
+        while(SListFileFindNextFile(hFind, &sf))
+        {
+            if(!TestUtfConversion(sf.cFileName))
+            {
+                return ERROR_INVALID_DATA;
+            }
+        }
+        SListFileFindClose(hFind);
+    }
+
+    return ERROR_SUCCESS;
+}
+
+static void Test_PlayingSpace()
+{}
 
 //-----------------------------------------------------------------------------
 // Tables
@@ -3814,13 +3873,59 @@ static LPCTSTR szDiabdatMPQ = _T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
 
 static const TEST_EXTRA_ONEFILE  LfBliz = {ListFile, _T("ListFile_Blizzard.txt")};
 static const TEST_EXTRA_ONEFILE  LfWotI = {ListFile, _T("ListFile_WarOfTheImmortals.txt")};
+static const TEST_EXTRA_ONEFILE  LfBad1 = {ListFile, _T("ListFile_UTF8_Bad.txt")};
 
 static const BYTE szMpqFileNameUTF8[] = {0x4D, 0x50, 0x51, 0x5F, 0x32, 0x30, 0x32, 0x34, 0x5F, 0x76, 0x31, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x77, 0x33, 0x78, 0x00};
 static const BYTE szLstFileNameUTF8[] = {0x4C, 0x69, 0x73, 0x74, 0x46, 0x69, 0x6C, 0x65, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x74, 0x78, 0x74, 0x00};
-static const TEST_EXTRA_UTF8     MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
 
-static const TEST_EXTRA_TWOFILES TwoFilesD1 = {TwoFiles, "music\\dintro.wav", "File00000023.xxx"};
-static const TEST_EXTRA_TWOFILES TwoFilesD2 = {TwoFiles, "waitingroombkgd.dc6"};
+static const BYTE FileNameInvalidUTF8[] =
+{
+//  Hexadecimal                    Binary                                   UTF-16      String
+//  ----                           ---------------------------------        ------      ------
+    0x7c,                   // --> 01111100                             --> 0x007c      %u[7cb7]
+    0xb7,                   // --> 10110111(bad)                        --> 0xfffd
+    0xc9, 0xb7,             // --> 11001001 10110111                    --> 0x0277      \x0277
+    0xc9, /* ca */          // --> 11001001 11001010(bad)               --> 0xfffd      %u[c9cac0bde7]
+    0xca, /* c0 */          // --> 11001010 11000000(bad)               --> 0xfffd
+    0xc0, /* bd */          // --> 11000000 10111101(bad)               --> 0x003d(bad)
+    0xbd,                   // --> 10111101(bad)                        --> 0xfffd
+    0xe7, /* c4 */          // --> 11100111 11000100(bad)               --> 0xfffd
+    0xc4, 0xa7,             // --> 11000100 10100111                    --> 0x0127      \x0127
+    0xca, /* de */          // --> 11001010 11011110(bad)               --> 0xfffd      %ca
+    0xde, 0xbb,             // --> 11011110 10111011                    --> 0x07bb      \x07bb
+    0xb6,                   // --> 10110110(bad)                        --> 0xfffd      %b6
+    0xd3, 0xad,             // --> 11010011 10101101                    --> 0x04ed      \x04ed
+    0xc4, /* fa */          // --> 11000100 11111010(bad)               --> 0xfffd      %u[c4fa]
+    0xfa, /* 5f */          // --> 11111010 01011111(bad)               --> 0xfffd
+    0x5f,                   // --> 01011111                             --> 0x005f      _
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd      %u[a1eea1f0a1ef]
+    0xee, /* a1 f0 */       // --> 11101110 10100001 11110000(bad)      --> 0xfffd
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd
+    0xf0, /* a1 ef */       // --> 11110000 10100001 11101111(bad)      --> 0xfffd
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd
+    0xef, /* 5f */          // --> 11101111 01011111(bad)               --> 0xfffd
+    0x5f,                   // --> 01011111                             --> 0x005f      _
+    0xf0, /* 80 80 80 */    // --> 11110000 10000000 10000000 10000000  --> 0x0000(bad) %u[f0808080]
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0xe9, 0xa3, 0x9e,       // --> 11101001 10100011 10011110           --> 0x98de      \x98de
+    0xe4, 0xb8, 0x96,       // --> 11100100 10111000 10010110           --> 0x4e16      \x4e16
+    0xe7, 0x95, 0x8c,       // --> 11100111 10010101 10001100           --> 0x754c      \x754c
+    0xe9, 0xad, 0x94,       // --> 11101001 10101101 10010100           --> 0x9b54      \x9b54
+    0xe5, 0x85, 0xbd,       // --> 11100101 10000101 10111101           --> 0x517d      \x517d
+    0xe6, 0xac, 0xa2,       // --> 11100110 10101100 10100010           --> 0x6b22      \x6b22
+    0xe8, 0xbf, 0x8e,       // --> 11101000 10111111 10001110           --> 0x8fce      \x8fce
+    0xe6, 0x82, 0xa8,       // --> 11100110 10000010 10101000           --> 0x60a8      \x60a8
+    0x2e,                   // --> 00101110                             --> 0x002e      \x002e
+    0x6d, 0x64, 0x78,       // --> 01101101 01100100 01111000           --> ".mdx"
+    0x00                    // --> 00000000                             --> EOS
+};
+
+static const TEST_EXTRA_UTF8 MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
+
+static const TEST_EXTRA_TWOFILES TwoFilesD1  = {TwoFiles, "music\\dintro.wav", "File00000023.xxx"};
+static const TEST_EXTRA_TWOFILES TwoFilesD2  = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3X = {TwoFiles, "BlueCrystal.mdx"};
 
@@ -4046,6 +4151,8 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "a8d91fc4e52d7c21ff7feb498c74781a",  2004},               // Corrupt sector checksum table in file #A0
     {_T("MPQ_2023_v4_1F644C5A.SC2Replay"),                      NULL, "b225828ffbf5037553e6a1290187caab",    17},               // Corrupt patch info of the "(attributes)" file
     {_T("<Chinese MPQ name>"),                                  NULL, "67faeffd0c0aece205ac8b7282d8ad8e",  4697, &MpqUtf8},     // Chinese name of the MPQ
+    {_T("MPQ_2024_v1_BadUtf8_5.0.2.w3x"),                       NULL, "be34f9862758f021a1c6c77df3cd4f05",  6393, &LfBad1},      // Bad UTF-8 sequences in file names
+    
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4224,6 +4331,9 @@ int _tmain(int argc, TCHAR * argv[])
     // Placeholder function for various testing purposes
     Test_PlayingSpace();
 
+    // Test the UTF-8 conversions
+    TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
+
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
@@ -4235,10 +4345,9 @@ int _tmain(int argc, TCHAR * argv[])
 
 #ifdef TEST_LOCAL_LISTFILE      // Tests on a local listfile
     if(dwErrCode == ERROR_SUCCESS)
-    {
-        TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
+        dwErrCode = TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
+    if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOnLocalListFile(_T("listfile-test.txt"));
-    }
 #endif  // TEST_LOCAL_LISTFILE
 
 #ifdef TEST_STREAM_OPERATIONS   // Test file stream operations
