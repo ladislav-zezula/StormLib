@@ -214,6 +214,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile=".\src\DllMain.def"
@@ -291,6 +292,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				OutputFile="$(OutDir)\StormLib.dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile=".\src\DllMain.def"
