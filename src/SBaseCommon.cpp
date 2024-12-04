@@ -1968,3 +1968,29 @@ void ConvertTMPQHeader(void *header, uint16_t version)
 }
 
 #endif  // STORMLIB_LITTLE_ENDIAN
+
+//-----------------------------------------------------------------------------
+// Debug support
+
+/*
+#include <strsafe.h>
+
+#if defined(STORMLIB_WINDOWS) && defined(_DEBUG)
+void SFileLog(const char * format, ...)
+{
+    va_list argList;
+    char * szBuffer;
+    size_t nLength = 0x1000;
+
+    if((szBuffer = STORM_ALLOC(char, 0x1000)) != NULL)
+    {
+        va_start(argList, format);
+        StringCchVPrintfA(szBuffer, nLength, format, argList);
+        va_end(argList);
+
+        OutputDebugStringA(szBuffer);
+        STORM_FREE(szBuffer);
+    }
+}
+#endif
+*/

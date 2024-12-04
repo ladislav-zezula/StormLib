@@ -352,7 +352,9 @@ static DWORD DoMPQSearch(TMPQSearch * hs, SFILE_FIND_DATA * lpFindFileData)
         dwErrCode = (ha->pHashTable != NULL) ? DoMPQSearch_HashTable(hs, lpFindFileData, ha)
                                              : DoMPQSearch_FileTable(hs, lpFindFileData, ha);
         if(dwErrCode == ERROR_SUCCESS)
+        {
             return dwErrCode;
+        }
 
         // If there is no more patches in the chain, stop it.
         // This also keeps hs->ha non-NULL, which is required

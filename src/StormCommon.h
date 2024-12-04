@@ -513,5 +513,13 @@ void DumpFileTable(TFileEntry * pFileTable, DWORD dwFileTableSize);
 
 #endif
 
+/*
+#ifdef _DEBUG
+void SFileLog(const char * format, ...);
+#else
+inline void SFileLog(...) {}
+#endif
+*/
+
 #endif // __STORMCOMMON_H__
 

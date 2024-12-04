@@ -102,11 +102,11 @@ extern "C" {
 //  Z - S for static-linked CRT library, D for multithreaded DLL CRT library
 //
 
-#if defined(__STORMLIB_SELF__) && !defined(STORMLIB_NO_AUTO_LINK)
-#define STORMLIB_NO_AUTO_LINK // Define this if you don't want to link using pragmas when using msvc
+#if defined(__STORMLIB_SELF__) && !defined(__STORMLIB_NO_STATIC_LINK__)
+#define __STORMLIB_NO_STATIC_LINK__ // Define this if you don't want to link using pragmas when using msvc
 #endif
 
-#if defined(_MSC_VER) && !defined(STORMLIB_NO_AUTO_LINK)
+#if defined(_MSC_VER) && !defined(__STORMLIB_NO_STATIC_LINK__)
   #ifndef WDK_BUILD
     #ifdef _DEBUG                                 // DEBUG VERSIONS
       #ifndef _UNICODE
@@ -163,6 +163,7 @@ extern "C" {
 #define ERROR_UNKNOWN_FILE_NAMES         10007  // A name of at least one file is unknown
 #define ERROR_CANT_FIND_PATCH_PREFIX     10008  // StormLib was unable to find patch prefix for the patches
 #define ERROR_FAKE_MPQ_HEADER            10009  // The header at this position is fake header
+#define ERROR_FILE_DELETED               10010  // The file is present but contains delete marker
 
 // Values for SFileCreateArchive
 #define HASH_TABLE_SIZE_MIN         0x00000004  // Verified: If there is 1 file, hash table size is 4

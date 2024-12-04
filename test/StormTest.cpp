@@ -106,7 +106,7 @@ typedef struct _TEST_EXTRA_HASHVAL
 
 typedef struct _TEST_EXTRA_HASHVALS
 {
-    EXTRA_TYPE Type;                        // Must be PatchList
+    EXTRA_TYPE Type;                        // Must be HashValues
     TEST_EXTRA_HASHVAL Items[2];
 } TEST_EXTRA_HASHVALS, *PTEST_EXTRA_HASHVALS;
 
@@ -573,16 +573,16 @@ static void CreateFullPathName(char * szBuffer, size_t cchBuffer, LPCTSTR szSubD
 static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR szFileHash)
 {
     TFileStream * pStream;
-    unsigned char file_hash[SHA256_DIGEST_SIZE];
-    LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
     hash_state sha256_state;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
-    LPCSTR szHashingFormat = "Hashing %s " fmt_X_of_Y_a;
+    LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
+    LPCTSTR szHashingFormat = _T("Hashing %s ") fmt_X_of_Y_t;
     LPBYTE pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
     DWORD dwErrCode = ERROR_SUCCESS;
+    BYTE file_hash[SHA256_DIGEST_SIZE];
 
     // Notify the user
     pLogger->PrintProgress(_T("Hashing %s ..."), szShortPlainName);
@@ -1038,7 +1038,10 @@ static DWORD GetFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     }
     else
     {
-        pLogger->PrintError("Open failed: %s", szFileName);
+        if(GetLastError() != ERROR_FILE_DELETED)
+        {
+            pLogger->PrintError("Open failed: %s", szFileName);
+        }
     }
 
     return nPatchCount;
@@ -1049,7 +1052,7 @@ static DWORD VerifyFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFi
     DWORD dwPatchCount = 0;
 
     // Retrieve the patch count
-    pLogger->PrintProgress(_T("Verifying patch count for %s ..."), szFileName);
+    pLogger->PrintProgress("Verifying patch count for %s ...", szFileName);
     dwPatchCount = GetFilePatchCount(pLogger, hMpq, szFileName);
 
     // Check if there are any patches at all
@@ -1442,6 +1445,7 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
 
     // Make sure that we open the proper locale file
     SFileSetLocale(lcFileLocale);
+    *ppFileData = NULL;
 
     // Open the file from MPQ
     if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
@@ -1510,7 +1514,7 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
     }
     else
     {
-        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0)
+        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0 && GetLastError() != ERROR_FILE_DELETED)
         {
             dwErrCode = Logger.PrintError("Open failed: %s", szFileName);
         }
@@ -3859,7 +3863,28 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 }
 
 static void Test_PlayingSpace()
-{}
+{
+/*
+    HANDLE hFile = NULL;
+    HANDLE hMpq = NULL;
+
+    if(SFileOpenArchive(_T("\\Ladik\\Incoming\\texture.MPQ"), 0, STREAM_FLAG_READ_ONLY, &hMpq))
+    {
+        if(SFileOpenPatchArchive(hMpq, _T("\\Ladik\\Incoming\\patch.mpq"), NULL, 0))
+        {
+            if(SFileOpenFileEx(hMpq, "Creature\\GnomeSpidertank\\FlameLickSmallBlue.blp", 0, &hFile))
+            {
+                DWORD dwBytesRead = 0;
+                BYTE Buffer[1024];
+
+                SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+                SFileCloseFile(hFile);
+            }
+        }
+        SFileCloseArchive(hMpq);
+    }
+*/
+}
 
 //-----------------------------------------------------------------------------
 // Tables
@@ -3945,6 +3970,15 @@ static const TEST_EXTRA_PATCHES PatchSC1 =
     "music\\terran1.wav",
     0
 };
+
+static const TEST_EXTRA_PATCHES PatchBETA =
+{
+    PatchList,
+    _T("wow-08-beta-patch.mpq\0"),
+    "Creature\\GnomeSpidertank\\FlameLickSmallBlue.blp",
+    0
+};
+
 
 static const TEST_EXTRA_PATCHES Patch13286 =
 {
@@ -4201,6 +4235,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
 
     // Patched MPQs
     {_T("MPQ_1998_v1_StarCraft.mpq"),                           NULL, "5ecef2f41c5fd44c264e269416de9495",   1943, &PatchSC1},   // Patched MPQ from StarCraft I
+    {_T("MPQ_2005_v1_texture.MPQ"),                             NULL, "f95f44bfd8e6dde30508bfec2d4cb842",  45533, &PatchBETA},  // WoW BETA:  Patched "texture.MPQ"
     {_T("MPQ_2012_v4_OldWorld.MPQ"),                            NULL, "07643ec62864b4dd4fc8f8a6a16ce006",  71439, &Patch13286}, // WoW 13286: Patched "OldWorld.MPQ"
     {_T("MPQ_2013_v4_world.MPQ"),                               NULL, "af9baeceab20139bbf94d03f99170ae0",  48930, &Patch15050}, // WoW 15050: Patched "world.MPQ"
     {_T("MPQ_2013_v4_locale-enGB.MPQ"),                         NULL, "d39e743aaf6dad51d643d65e6e564804",  14349, &Patch16965}, // WoW 16965: Patched "locale-enGB.MPQ"

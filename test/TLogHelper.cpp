@@ -29,6 +29,7 @@
 #endif
 
 #define fmt_X_of_Y_a  "(" fmt_I64u_a " of " fmt_I64u_a ")"
+#define fmt_X_of_Y_t  _T(fmt_X_of_Y_a)
 
 #ifdef __CASCLIB_SELF__
 #define TEST_MIN CASCLIB_MIN

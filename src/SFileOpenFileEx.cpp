@@ -155,6 +155,14 @@ bool OpenPatchedFile(HANDLE hMpq, const char * szFileName, HANDLE * PtrFile)
                     hf = hfPatch;
                 }
             }
+
+            // If the opened file has the delete marker, we don't open the file
+            if(hfBase && hf && hf->pFileEntry->dwFlags & MPQ_FILE_DELETE_MARKER)
+            {
+                SFileCloseFile((HANDLE)(hfBase));
+                SetLastError(ERROR_FILE_DELETED);
+                hfBase = NULL;
+            }
         }
     }
     else
