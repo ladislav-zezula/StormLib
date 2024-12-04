@@ -102,6 +102,7 @@ TestReadingMpq (MPx_2022_v1_Music.mpk) succeeded.
 TestReadingMpq (MPx_2022_v1_Scp.mpk) succeeded.
 TestReadingMpq (MPx_2022_v1_UI.mpk) succeeded.
 TestReadingMpq (MPQ_1998_v1_StarCraft.mpq) succeeded.
+TestReadingMpq (MPQ_2005_v1_texture.MPQ) succeeded.
 TestReadingMpq (MPQ_2012_v4_OldWorld.MPQ) succeeded.
 TestReadingMpq (MPQ_2013_v4_world.MPQ) succeeded.
 TestReadingMpq (MPQ_2013_v4_locale-enGB.MPQ) succeeded.
@@ -141,12 +142,12 @@ TestModifyMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestVerifyHash succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
-CreateNewMpq (StormLibTest_─îesk├Ż.mpq) succeeded.
-CreateNewMpq (StormLibTest_đáĐâĐüĐüđ║đŞđ╣.mpq) succeeded.
-CreateNewMpq (StormLibTest_╬Á╬╗╬╗╬Ě╬Ż╬╣╬║╬Č.mpq) succeeded.
-CreateNewMpq (StormLibTest_ŠŚąŠťČŔ¬×.mpq) succeeded.
-CreateNewMpq (StormLibTest_š«ÇńŻôńŞşŠľç.mpq) succeeded.
-CreateNewMpq (StormLibTest_ěž┘äě╣ě╣ě▒ěĘ┘Őěę.mpq) succeeded.
+CreateNewMpq (StormLibTest_Český.mpq) succeeded.     .
+CreateNewMpq (StormLibTest_Русский.mpq) succeeded. ...
+CreateNewMpq (StormLibTest_ελληνικά.mpq) succeeded.
+CreateNewMpq (StormLibTest_日本語.mpq) succeeded.   ..
+CreateNewMpq (StormLibTest_简体中文.mpq) succeeded....
+CreateNewMpq (StormLibTest_الععربية.mpq) succeeded....
 CreateNewMpq (StormLibTest_NonStdNames.mpq) succeeded.
 CreateNewMpq (StormLibTest_MpqEditorTest.mpq) succeeded.
 TestCreateGaps (StormLibTest_GapsTest.mpq) succeeded.

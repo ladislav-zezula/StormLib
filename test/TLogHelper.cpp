@@ -1,4 +1,4 @@
-/*****************************************************************************/
+﻿/*****************************************************************************/
 /* TLogHelper.cpp                         Copyright (c) Ladislav Zezula 2013 */
 /*---------------------------------------------------------------------------*/
 /* Helper class for reporting StormLib tests                                 */
@@ -187,6 +187,11 @@ class TLogHelper
         TickCount = GetTickCount();
 #endif
 
+#ifdef STORMLIB_WINDOWS
+        SetConsoleOutputCP(CP_UTF8);    // Set the UTF-8 code page to handle national-specific names
+        SetConsoleCP(CP_UTF8);
+#endif
+
         // Remember the startup time
         SetStartTime();
 
@@ -208,7 +213,7 @@ class TLogHelper
             if(nLength < sizeof(szMainTitleT))
                 szMainTitleT[nLength++] = 0;
 
-            printf("%s\n", szMainTitleT);
+            printf_console("%s\n", szMainTitleT);
 #endif
 
 #ifdef __STORMLIB_SELF__
@@ -218,11 +223,11 @@ class TLogHelper
             StringCopy(szMainTitleT, _countof(szMainTitleT), szMainTitle);
 
             if(szSubTitle1 != NULL && szSubTitle2 != NULL)
-                nPrevPrinted = _tprintf(_T("\rRunning %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
+                nPrevPrinted = printf_console(_T("\rRunning %s (%s+%s) ..."), szMainTitleT, szSubTitle1, szSubTitle2);
             else if(szSubTitle1 != NULL)
-                nPrevPrinted = _tprintf(_T("\rRunning %s (%s) ..."), szMainTitleT, szSubTitle1);
+                nPrevPrinted = printf_console(_T("\rRunning %s (%s) ..."), szMainTitleT, szSubTitle1);
             else
-                nPrevPrinted = _tprintf(_T("\rRunning %s ..."), szMainTitleT);
+                nPrevPrinted = printf_console(_T("\rRunning %s ..."), szMainTitleT);
 #endif
         }
     }
@@ -240,7 +245,7 @@ class TLogHelper
 #endif
 
 #ifdef __CASCLIB_SELF__
-        printf("\n");
+        printf_console("\n");
 #endif
     }
 
@@ -269,6 +274,57 @@ class TLogHelper
     //
     //  Printing functions
     //
+
+    int printf_console(const char * format, ...)
+    {
+        va_list argList;
+        va_start(argList, format);
+        int nLength = 0;
+
+#ifdef STORMLIB_WINDOWS
+        char * szBuffer;
+        int ccBuffer = 0x1000;
+
+        if((szBuffer = new char[ccBuffer]) != NULL)
+        {
+            // Prepare the string
+            TestStrPrintfV(szBuffer, ccBuffer, format, argList);
+            nLength = (int)strlen(szBuffer);
+
+            // Unlike wprintf, WriteConsole supports UTF-8 much better
+            WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), szBuffer, nLength, NULL, NULL);
+            delete[] szBuffer;
+        }
+#else
+        nLength = vprintf(format, argList);
+#endif
+
+        return nLength;
+    }
+
+#ifdef STORMLIB_WINDOWS
+    int printf_console(const wchar_t * format, ...)
+    {
+        va_list argList;
+        va_start(argList, format);
+        int nLength = 0;
+
+        wchar_t * szBuffer;
+        int ccBuffer = 0x1000;
+
+        if((szBuffer = new wchar_t[ccBuffer]) != NULL)
+        {
+            // Prepare the string
+            TestStrPrintfV(szBuffer, ccBuffer, format, argList);
+            nLength = (int)wcslen(szBuffer);
+
+            // Unlike wprintf, WriteConsole supports UTF-8 much better
+            WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), szBuffer, nLength, NULL, NULL);
+            delete[] szBuffer;
+        }
+        return nLength;
+    }
+#endif
 
     template <typename XCHAR>
     DWORD PrintWithClreol(const XCHAR * szFormat, va_list argList, bool bPrintLastError, bool bPrintEndOfLine)
@@ -341,7 +397,7 @@ class TLogHelper
         }
 
         // Finally print the message
-        printf("%s", szBuffer);
+        printf_console("%s", szBuffer);
         nMessageCounter++;
         return dwErrCode;
     }
@@ -431,7 +487,7 @@ class TLogHelper
             else
             {
                 PrintProgress(" ");
-                printf("\r");
+                printf_console("\r");
             }
         }
 

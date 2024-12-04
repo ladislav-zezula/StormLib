@@ -4350,6 +4350,7 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 #define TEST_REPLACE_FILE
 #define TEST_VERIFY_HASHES
 #define TEST_CREATE_MPQS
+#define TEST_MISC_MPQS
 
 int _tmain(int argc, TCHAR * argv[])
 {
@@ -4485,6 +4486,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
+#ifdef TEST_MISC_MPQS
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
@@ -4532,6 +4534,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Open a MPQ (add custom user data to it)
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_BigArchive(_T("StormLibTest_BigArchive_v4.mpq"));
+#endif  // TEST_MISC_MPQS
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
