@@ -268,7 +268,9 @@ bool WINAPI SFileOpenArchive(
     // Allocate the MPQhandle
     if(dwErrCode == ERROR_SUCCESS)
     {
-        if((ha = STORM_ALLOC(TMPQArchive, 1)) == NULL)
+        if((ha = STORM_ALLOC(TMPQArchive, 1)) != NULL)
+            memset(ha, 0, sizeof(TMPQArchive));
+        else
             dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
     }
 
@@ -290,7 +292,6 @@ bool WINAPI SFileOpenArchive(
         DWORD dwHeaderID;
         bool bSearchComplete = false;
 
-        memset(ha, 0, sizeof(TMPQArchive));
         ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS;
         ha->pfnHashString = HashStringSlash;
         ha->pStream = pStream;
