@@ -3864,26 +3864,21 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-/*
     HANDLE hFile = NULL;
     HANDLE hMpq = NULL;
 
-    if(SFileOpenArchive(_T("\\Ladik\\Incoming\\texture.MPQ"), 0, STREAM_FLAG_READ_ONLY, &hMpq))
+    if(SFileOpenArchive(_T("E:\\DIABDAT.MPQ"), 0, 0, &hMpq))
     {
-        if(SFileOpenPatchArchive(hMpq, _T("\\Ladik\\Incoming\\patch.mpq"), NULL, 0))
+        if(SFileOpenFileEx(hMpq, "d1221a.mpq", 0, &hFile))
         {
-            if(SFileOpenFileEx(hMpq, "Creature\\GnomeSpidertank\\FlameLickSmallBlue.blp", 0, &hFile))
-            {
-                DWORD dwBytesRead = 0;
-                BYTE Buffer[1024];
+            DWORD dwBytesRead = 0;
+            BYTE Buffer[1024];
 
-                SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
-                SFileCloseFile(hFile);
-            }
+            SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+            SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------

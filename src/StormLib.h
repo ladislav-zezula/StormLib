@@ -278,7 +278,7 @@ extern "C" {
 #define MPQ_COMPRESSION_ZLIB              0x02  // ZLIB compression
 #define MPQ_COMPRESSION_PKWARE            0x08  // PKWARE DCL compression
 #define MPQ_COMPRESSION_BZIP2             0x10  // BZIP2 compression (added in Warcraft III)
-#define MPQ_COMPRESSION_SPARSE            0x20  // Sparse compression (added in Starcraft 2)
+#define MPQ_COMPRESSION_SPARSE            0x20  // Run-length (sparse) compression (added in Starcraft 2)
 #define MPQ_COMPRESSION_ADPCM_MONO        0x40  // IMA ADPCM compression (mono)
 #define MPQ_COMPRESSION_ADPCM_STEREO      0x80  // IMA ADPCM compression (stereo)
 #define MPQ_COMPRESSION_LZMA              0x12  // LZMA compression. Added in Starcraft 2. This value is NOT a combination of flags.
