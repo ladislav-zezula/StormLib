@@ -1268,8 +1268,11 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             // Append the length of the patch info, if any
             if(hf->pPatchInfo != NULL)
             {
-                if((RawFilePos + hf->pPatchInfo->dwLength) < RawFilePos)
+                if((RawFilePos + hf->pPatchInfo->dwLength) < RawFilePos) {
+                    STORM_FREE(hf->SectorOffsets);
+                    hf->SectorOffsets = NULL;
                     return ERROR_FILE_CORRUPT;
+                }
                 RawFilePos += hf->pPatchInfo->dwLength;
             }
 
@@ -1355,8 +1358,11 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             if((hf->SectorOffsets[0] & 0xFFFFFFFC) > dwSectorOffsLen)
             {
                 // MPQ protectors put some ridiculous values there. We must limit the extra bytes
-                if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400))
+                if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400)) {
+                    STORM_FREE(hf->SectorOffsets);
+                    hf->SectorOffsets = NULL;
                     return ERROR_FILE_CORRUPT;
+                }
 
                 // Free the old sector offset table
                 dwSectorOffsLen = hf->SectorOffsets[0];
