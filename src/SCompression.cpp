@@ -1050,7 +1050,10 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
 
     // Verify buffer sizes
     if(*pcbOutBuffer < cbInBuffer || cbInBuffer < 1)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
         return 0;
+    }
 
     // If the outputbuffer is as big as input buffer, just copy the block
     if(*pcbOutBuffer == cbInBuffer)
