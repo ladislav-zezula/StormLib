@@ -24,7 +24,7 @@ int WINAPI SCompDecompressX(TMPQArchive * ha, void * pvOutBuffer, int * pcbOutBu
 //  hf            - MPQ File handle.
 //  pbBuffer      - Pointer to target buffer to store sectors.
 //  dwByteOffset  - Position of sector in the file (relative to file begin)
-//  dwBytesToRead - Number of bytes to read. Must be multiplier of sector size.
+//  dwBytesToRead - Number of bytes to read.
 //  pdwBytesRead  - Stored number of bytes loaded
 static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, DWORD dwBytesToRead, LPDWORD pdwBytesRead)
 {
@@ -36,7 +36,7 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
     LPBYTE pbInSector = pbBuffer;
     DWORD dwRawBytesToRead;
     DWORD dwRawSectorOffset = dwByteOffset;
-    DWORD dwSectorsToRead = dwBytesToRead / ha->dwSectorSize;
+    DWORD dwSectorsToRead = ((dwBytesToRead - 1) / ha->dwSectorSize) + 1;
     DWORD dwSectorIndex = dwByteOffset / ha->dwSectorSize;
     DWORD dwSectorsDone = 0;
     DWORD dwBytesRead = 0;
@@ -481,16 +481,16 @@ static DWORD ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     DWORD dwBytesRead;                                  // Number of bytes read (temporary variable)
     DWORD dwErrCode;
 
-    // If the file position is at or beyond end of file, do nothing
-    if(dwFilePos >= hf->dwDataSize)
+    // If not enough bytes in the file remaining, cut them
+    if(dwBytesToRead > (hf->dwDataSize - dwFilePos))
+        dwBytesToRead = (hf->dwDataSize - dwFilePos);
+
+    // If there is nothing to read, we are done
+    if(dwBytesToRead == 0)
     {
         *pdwBytesRead = 0;
         return ERROR_SUCCESS;
     }
-
-    // If not enough bytes in the file remaining, cut them
-    if(dwBytesToRead > (hf->dwDataSize - dwFilePos))
-        dwBytesToRead = (hf->dwDataSize - dwFilePos);
 
     // Compute sector position in the file
     dwFileSectorPos = dwFilePos & ~dwSectorSizeMask;  // Position in the block
@@ -542,49 +542,16 @@ static DWORD ReadMpqFileSectorFile(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
         dwBytesToRead    -= dwToCopy;
     }
 
-    // Load the whole ("middle") sectors only if there is at least one full sector to be read
-    if(dwBytesToRead >= ha->dwSectorSize)
+    // Load the remaing sectors
+    if(dwBytesToRead > 0)
     {
-        DWORD dwBlockBytes = dwBytesToRead & ~dwSectorSizeMask;
-
         // Load all sectors to the output buffer
-        dwErrCode = ReadMpqSectors(hf, pbBuffer, dwFileSectorPos, dwBlockBytes, &dwBytesRead);
+        dwErrCode = ReadMpqSectors(hf, pbBuffer, dwFileSectorPos, dwBytesToRead, &dwBytesRead);
         if(dwErrCode != ERROR_SUCCESS)
             return dwErrCode;
 
         // Update pointers
         dwTotalBytesRead += dwBytesRead;
-        dwFileSectorPos  += dwBytesRead;
-        pbBuffer         += dwBytesRead;
-        dwBytesToRead    -= dwBytesRead;
-    }
-
-    // Read the terminating sector
-    if(dwBytesToRead > 0)
-    {
-        DWORD dwToCopy = ha->dwSectorSize;
-
-        // Is the file sector already loaded ?
-        if(hf->dwSectorOffs != dwFileSectorPos)
-        {
-            // Load one MPQ sector into archive buffer
-            dwErrCode = ReadMpqSectors(hf, hf->pbFileSector, dwFileSectorPos, ha->dwSectorSize, &dwBytesRead);
-            if(dwErrCode != ERROR_SUCCESS)
-                return dwErrCode;
-
-            // Remember that the data loaded to the sector have new file offset
-            hf->dwSectorOffs = dwFileSectorPos;
-        }
-
-        // Check number of bytes read
-        if(dwToCopy > dwBytesToRead)
-            dwToCopy = dwBytesToRead;
-
-        // Copy the data from the cached last sector to the caller's buffer
-        memcpy(pbBuffer, hf->pbFileSector, dwToCopy);
-
-        // Update pointers
-        dwTotalBytesRead += dwToCopy;
     }
 
     // Store total number of bytes read to the caller
