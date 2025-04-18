@@ -155,16 +155,18 @@ typedef struct _WAVE_FILE_HEADER
 //------------------------------------------------------------------------------
 // Local variables
 
-#ifdef STORMLIB_WINDOWS
-#define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
-#endif
+#ifndef WORK_PATH_ROOT
+  #ifdef STORMLIB_WINDOWS
+  #define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
+  #endif
 
-#ifdef STORMLIB_LINUX
-#define WORK_PATH_ROOT "/media/ladik/MPQs"
-#endif
+  #ifdef STORMLIB_LINUX
+  #define WORK_PATH_ROOT "/media/ladik/MPQs"
+  #endif
 
-#ifdef STORMLIB_HAIKU
-#define WORK_PATH_ROOT "~/StormLib/test"
+  #ifdef STORMLIB_HAIKU
+  #define WORK_PATH_ROOT "~/StormLib/test"
+  #endif
 #endif
 
 // Definition of the path separator
