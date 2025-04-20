@@ -2560,12 +2560,7 @@ DWORD LoadAnyHashTable(TMPQArchive * ha)
     // Note that we load the classic hash table even when HET table exists,
     // because if the MPQ gets modified and saved, hash table must be there
     if(pHeader->dwHashTableSize)
-    {
-        // hash-table size must be a power or 2
-        if ((pHeader->dwHashTableSize & (pHeader->dwHashTableSize - 1)) != 0)
-            return ERROR_FILE_CORRUPT;
         ha->pHashTable = LoadHashTable(ha);
-    }
 
     // At least one of the tables must be present
     if(ha->pHetTable == NULL && ha->pHashTable == NULL)

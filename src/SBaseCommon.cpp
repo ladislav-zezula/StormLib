@@ -1026,12 +1026,19 @@ void * LoadMpqTable(
         // and the table is loaded from the current file offset
         if(ByteOffset == SFILE_INVALID_POS)
             FileStream_GetPos(ha->pStream, &ByteOffset);
+        FileStream_GetSize(ha->pStream, &FileSize);
+
+        // Is the sector table within the file?
+        if(ByteOffset >= FileSize)
+        {
+            STORM_FREE(pbMpqTable);
+            return NULL;
+        }
 
         // The hash table and block table can go beyond EOF.
         // Storm.dll reads as much as possible, then fills the missing part with zeros.
         // Abused by Spazzler map protector which sets hash table size to 0x00100000
         // Abused by NP_Protect in MPQs v4 as well
-        FileStream_GetSize(ha->pStream, &FileSize);
         if((ByteOffset + dwBytesToRead) > FileSize)
         {
             // Fill the extra data with zeros

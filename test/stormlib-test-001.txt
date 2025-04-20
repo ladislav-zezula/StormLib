@@ -28,6 +28,8 @@ TestReadingMpq (pocs/MPQ_2024_09_InvalidSectorSize.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2024_10_HuffDecompressError.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2024_10_SparseDecompressError.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2024_11_HiBlockTablePosInvalid.mpq) succeeded.
+TestReadingMpq: Error loading the file (listfile) (error code: 38)
+TestReadingMpq (pocs/MPQ_2025_01_SectorTableBeyondEOF.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 TestReadingMpq (MPQ_1997_v1_patch_rt_SC1B.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_StarDat_SC1B.mpq) succeeded.

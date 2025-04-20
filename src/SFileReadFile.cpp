@@ -73,8 +73,8 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
             // or not, we won't try that again for the given file.
             //
 
-            AllocateSectorChecksums(hf, true);
-            hf->bLoadedSectorCRCs = true;
+            if(AllocateSectorChecksums(hf, true) == ERROR_SUCCESS)
+                hf->bLoadedSectorCRCs = true;
         }
 
         // TODO: If the raw data MD5s are not loaded yet, load them now
