@@ -310,7 +310,7 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
             // deDE\DBFilesClient\MountCapability.dbc  0x93->0x77  0x77     0x77     No
             //
 
-            if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE)
+            if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE && cbInBuffer > sizeof(TPatchInfo))
                 cbInBuffer = cbInBuffer - sizeof(TPatchInfo);
 
             // Is the file compressed by Blizzard's multiple compression ?

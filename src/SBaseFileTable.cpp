@@ -651,7 +651,7 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the block table
             if(BlockTablePos64)
             {
-                if(BlockTablePos64 > FileSize)
+                if(BlockTablePos64 > FileSize || BlockTablePos64 >= MaxOffset)
                     return ERROR_FILE_CORRUPT;
                 pHeader->BlockTableSize64 = MaxOffset - BlockTablePos64;
                 MaxOffset = BlockTablePos64;
@@ -660,7 +660,7 @@ DWORD ConvertMpqHeaderToFormat4(
             // Size of the hash table
             if(HashTablePos64)
             {
-                if(HashTablePos64 > FileSize)
+                if(HashTablePos64 > FileSize || HashTablePos64 >= MaxOffset)
                     return ERROR_FILE_CORRUPT;
                 pHeader->HashTableSize64 = MaxOffset - HashTablePos64;
                 MaxOffset = HashTablePos64;

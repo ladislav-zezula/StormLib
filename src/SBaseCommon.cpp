@@ -1365,14 +1365,17 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             if((hf->SectorOffsets[0] & 0xFFFFFFFC) > dwSectorOffsLen)
             {
                 // MPQ protectors put some ridiculous values there. We must limit the extra bytes
-                if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400)) {
+                if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400))
+                {
                     STORM_FREE(hf->SectorOffsets);
                     hf->SectorOffsets = NULL;
                     return ERROR_FILE_CORRUPT;
                 }
 
+                // The new length of the sector offset must be aligned to DWORD
+                dwSectorOffsLen = (hf->SectorOffsets[0] & 0xFFFFFFFC);
+
                 // Free the old sector offset table
-                dwSectorOffsLen = hf->SectorOffsets[0];
                 STORM_FREE(hf->SectorOffsets);
                 goto __LoadSectorOffsets;
             }

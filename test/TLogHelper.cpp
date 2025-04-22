@@ -17,6 +17,7 @@
 #endif
 
 #ifdef _MSC_VER
+#define fmt_I64u_w L"%I64u"
 #define fmt_I64u_t _T("%I64u")
 #define fmt_I64u_a "%I64u"
 #define fmt_I64X_t _T("%I64X")
@@ -65,25 +66,25 @@ inline DWORD Test_GetLastError()
 #ifdef STORMLIB_WINDOWS
 wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
 {
-    static const wchar_t * szStringFormat = _T("%s");
-    static const wchar_t * szUint64Format = fmt_I64u_t;
+    static const wchar_t * szStringFormat = L"%s";
+    static const wchar_t * szUint64Format = fmt_I64u_w;
 
     // String format
     if(szFormat[0] == '%')
     {
         if(szFormat[1] == 's')
         {
-            _tcscpy(szBuffer, szStringFormat);
+            wcscpy(szBuffer, szStringFormat);
             szFormat += 2;
-            return szBuffer + _tcslen(szStringFormat);
+            return szBuffer + wcslen(szStringFormat);
         }
 
         // Replace %I64u with the proper platform-dependent suffix
         if(szFormat[1] == 'I' && szFormat[2] == '6' && szFormat[3] == '4' && szFormat[4] == 'u')
         {
-            _tcscpy(szBuffer, szUint64Format);
+            wcscpy(szBuffer, szUint64Format);
             szFormat += 5;
-            return szBuffer + _tcslen(szUint64Format);
+            return szBuffer + wcslen(szUint64Format);
         }
     }
 

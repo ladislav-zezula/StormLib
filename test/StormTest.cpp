@@ -3864,9 +3864,54 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
+/*
+    LPCSTR fuzzData = "e:\\MPQ_2025_05_AddFileError.mpq";
 
+    HANDLE SFileOpenArchivevar0;
+    memset(&SFileOpenArchivevar0, 0, (sizeof SFileOpenArchivevar0));
+
+    bool SFileOpenArchiveval1 = SFileOpenArchive(fuzzData, (DWORD)strlen(fuzzData), 0, &SFileOpenArchivevar0);
+    //if(strcmp(argv[1], fuzzData))
+    //{
+    //    fprintf(stderr, "err1");
+    //    exit(0);
+    //}
+    printf("Test");
+    if((size_t)SFileOpenArchiveval1 < 1)
+    {
+        fprintf(stderr, "err2");
+        exit(0);
+    }
+    bool SFileAddWaveval1 = SFileAddWave(SFileOpenArchivevar0, fuzzData, fuzzData, (DWORD)strlen(fuzzData), 1);
+    //if(strcmp(argv[1], fuzzData))
+    //{
+    //    fprintf(stderr, "err3");
+    //    exit(0);
+    //}
+    if((size_t)SFileAddWaveval1 < 1)
+    {
+        fprintf(stderr, "err4");
+        exit(0);
+    }
+    bool SFileRemoveFileval1 = SFileRemoveFile(SFileOpenArchivevar0, fuzzData, (DWORD)_tcslen(fuzzData));
+    //if(strcmp(argv[1], fuzzData))
+    //{
+    //    fprintf(stderr, "err5");
+    //    exit(0);
+    //}
+    if((size_t)SFileRemoveFileval1 < 1)
+    {
+        fprintf(stderr, "err6");
+        exit(0);
+    }
+    DWORD SFileVerifyArchiveval1 = SFileVerifyArchive(SFileOpenArchivevar0);
+    if(SFileVerifyArchiveval1 < 0)
+    {
+        fprintf(stderr, "err7");
+        exit(0);
+    }
+    */
+/*
     if(SFileOpenArchive(_T("E:\\DIABDAT.MPQ"), 0, 0, &hMpq))
     {
         if(SFileOpenFileEx(hMpq, "d1221a.mpq", 0, &hFile))
@@ -3879,6 +3924,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4152,6 +4198,10 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("pocs/MPQ_2024_10_SparseDecompressError.mpq"),          NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2024_11_HiBlockTablePosInvalid.mpq"),         NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2025_01_SectorTableBeyondEOF.mpq"),           NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_02_SectorOffsetSizeNotAligned.mpq"),     NULL, "0cc175b9c0f1b6a831c399e269772661",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_03_InvalidPatchInfo.mpq"),               NULL, "93b885adfe0da089cdf634904fd59f71",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_04_InvalidArchiveSize64.mpq"),           NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_05_AddFileError.mpq"),                   NULL, "ce9b8afed4221a53663d391f10691ba6",     TFLG_WILL_FAIL},
 
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
