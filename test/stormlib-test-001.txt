@@ -122,11 +122,13 @@ TestReadingMpq (MPQ_2013_v4_Mods#Liberty.SC2Mod#enGB.SC2Data) succeeded.
 TestReadingMpq (MPQ_2014_v4_base-Win.MPQ) succeeded.
 TestReadingMpq (MPQ_2014_v4_base-Win.MPQ) succeeded.
 TestReadingMpq (MPQ_1997_v1_Diablo1_STANDARD.SNP) succeeded.
-TestReadingMpq (MPQ_1999_v1_WeakSignature.exe) succeeded.
-TestReadingMpq (MPQ_2003_v1_WeakSignatureEmpty.exe) succeeded.
-TestReadingMpq (MPQ_2002_v1_StrongSignature.w3m) succeeded.
 TestReadingMpq (MPQ_1998_v1_StarDat.mpq) succeeded.
 TestReadingMpq (MPQ_1999_v1_WeakSignature.exe) succeeded.
+TestReadingMpq (MPQ_1999_v1_WeakSignature.exe) succeeded.
+TestReadingMpq (MPQ_2002_v1_StrongSignature.w3m) succeeded.
+TestReadingMpq (MPQ_2003_v1_WeakSignatureEmpty.exe) succeeded.
+TestReadingMpq (MPQ_2007_v2_StrongSignature1.exe) succeeded.
+TestReadingMpq (MPQ_2007_v2_StrongSignature2.MPQ) succeeded.
 TestReadingMpq (flat-file://streaming/model.MPQ.0) succeeded.
 TestReadingMpq (MPQ_2013_vX_Battle.net.MPQ) succeeded.
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
@@ -152,7 +154,7 @@ CreateNewMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
 CreateNewMpq (StormLibTest_Český.mpq) succeeded.     .
 CreateNewMpq (StormLibTest_Русский.mpq) succeeded. ...
-CreateNewMpq (StormLibTest_ελληνικά.mpq) succeeded.
+CreateNewMpq (StormLibTest_ελληνικά.mpq) succeeded....
 CreateNewMpq (StormLibTest_日本語.mpq) succeeded.   ..
 CreateNewMpq (StormLibTest_简体中文.mpq) succeeded....
 CreateNewMpq (StormLibTest_الععربية.mpq) succeeded....
