@@ -586,6 +586,9 @@ DWORD ConvertMpqHeaderToFormat4(
             pHeader->BlockTableSize64 = (pHeader->dwBlockTableSize * sizeof(TMPQBlock));
             BlockTablePos64 = MAKE_OFFSET64(pHeader->wBlockTablePosHi, pHeader->dwBlockTablePos);
 
+            // Supply the 64-bit archive size for signature verification
+            pHeader->ArchiveSize64 = pHeader->dwArchiveSize;
+
             // We require the block table to follow hash table
             if(BlockTablePos64 >= HashTablePos64)
             {
@@ -600,7 +603,6 @@ DWORD ConvertMpqHeaderToFormat4(
             }
             else
             {
-                pHeader->ArchiveSize64 = pHeader->dwArchiveSize;
                 ha->dwFlags |= MPQ_FLAG_MALFORMED;
             }
 

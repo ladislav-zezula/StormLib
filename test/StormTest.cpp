@@ -3864,6 +3864,15 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
+    LPCTSTR szMpqName = _T("e:\\Ladik\\Incoming\\wow-final.MPQ");
+    HANDLE hMpq = NULL;
+
+    if(SFileOpenArchive(szMpqName, 0, 0, &hMpq))
+    {
+        SFileVerifyArchive(hMpq);
+        SFileCloseArchive(hMpq);
+    }
+
 /*
     LPCSTR fuzzData = "e:\\MPQ_2025_05_AddFileError.mpq";
 
@@ -3931,9 +3940,12 @@ static void Test_PlayingSpace()
 // Tables
 
 static LPCTSTR szSigned1 = _T("STANDARD.SNP");
-static LPCTSTR szSigned2 = _T("War2Patch_202.exe");
-static LPCTSTR szSigned3 = _T("WoW-1.2.3.4211-enUS-patch.exe");
+static LPCTSTR szSigned2 = _T("StarDat.mpq");
+static LPCTSTR szSigned3 = _T("War2Patch_202.exe");
 static LPCTSTR szSigned4 = _T("(10)DustwallowKeys.w3m");
+static LPCTSTR szSigned5 = _T("WoW-1.2.3.4211-enUS-patch.exe");
+static LPCTSTR szSigned6 = _T("WoW-3.0.1.8337-to-3.0.1.8392-enGB-patch.exe");
+static LPCTSTR szSigned7 = _T("wow-final.MPQ");
 
 static LPCTSTR szDiabdatMPQ = _T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
 
@@ -4295,11 +4307,13 @@ static const TEST_INFO1 Test_OpenMpqs[] =
 
     // Signed archives
     {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),               szSigned1, "5ef18ef9a26b5704d8d46a344d976c89",      2 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned2, "c1084033d0bd5f7e2b9b78b600c0bba8",     24 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned3, "97580f9f6d98ffc50191c2f07773e818",  12259 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_1998_v1_StarDat.mpq"),                        szSigned2, "2530cb937565fd41b1dc0443697096a2",   2925 | TFLG_SIGN_ARCHIVE | TFLG_SIGCHECK_AFTER},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "c1084033d0bd5f7e2b9b78b600c0bba8",     24 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "807fe2e4d38eccf5ee6bc88f5ee5940d",     25 | TFLG_SIGCHECK_BEFORE | TFLG_MODIFY | TFLG_SIGCHECK_AFTER},
     {_T("MPQ_2002_v1_StrongSignature.w3m"),                szSigned4, "7b725d87e07a2173c42fe2314b95fa6c",     17 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_1998_v1_StarDat.mpq"),    _T("MPQ_1998_v1_StarDat.mpq"), "2530cb937565fd41b1dc0443697096a2",   2925 | TFLG_SIGN_ARCHIVE | TFLG_SIGCHECK_AFTER},
-    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned2, "807fe2e4d38eccf5ee6bc88f5ee5940d",     25 | TFLG_SIGCHECK_BEFORE | TFLG_MODIFY | TFLG_SIGCHECK_AFTER},
+    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned5, "97580f9f6d98ffc50191c2f07773e818",  12259 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature1.exe"),               szSigned6, "e82bc35366d5f1c588143e5bd35919c0",     23 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature2.MPQ"),               szSigned7, "53cedaf7ba8c67b2e2ca95d5eb2b9380",   1622 | TFLG_SIGCHECK_BEFORE},
 
     // Multi-file archive with wrong prefix to see how StormLib deals with it
     {_T("flat-file://streaming/model.MPQ.0"),              _T("flat-file://model.MPQ.0"),           NULL,      0 | TFLG_WILL_FAIL},
