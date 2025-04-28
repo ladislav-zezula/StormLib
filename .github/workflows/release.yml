@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  deb:
+    if: true
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apt-get -y update && apt-get install -y build-essential cmake
+
+      - name: Cmake
+        run: cmake -B build -D BUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+      - name: Build
+        run: cmake --build build --config $BUILD_TYPE
+
+      - name: Package
+        id: package
+        working-directory: build
+        run: |
+          cpack -G "DEB" -D CPACK_PACKAGE_FILE_NAME=libstorm-dev_${{ github.ref_name }}_amd64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          overwrite: true
+          name: libstorm-dev_${{ github.ref_name }}_amd64.deb
+          path: build/libstorm-dev_${{ github.ref_name }}_amd64.deb
+
+  rpm:
+    if: true
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: dnf -y install cmake gcc gcc-c++ rpm-build
+
+      - name: Cmake
+        run: cmake -B build -D BUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+      - name: Build
+        run: cmake --build build --config $BUILD_TYPE
+
+      - name: Package
+        working-directory: build
+        run: cpack -G "RPM" -D CPACK_PACKAGE_FILE_NAME=libstorm-devel-${{ github.ref_name }}.x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          overwrite: true
+          name: libstorm-devel-${{ github.ref_name }}.x86_64.rpm
+          path: build/libstorm-devel-${{ github.ref_name }}.x86_64.rpm
+
+  build_dll:
+    if: true
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [ amd64, x86 ]
+        build_type: [ Release ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Configure CMake for amd64
+        if: ${{ matrix.arch == 'amd64' }}
+        shell: cmd
+        run: cmake -B build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Configure CMake for x86
+        if: ${{ matrix.arch == 'x86' }}
+        shell: cmd
+        run: cmake -B build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -A Win32
+
+      - name: Build
+        shell: cmd
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Check PE
+        shell: bash
+        working-directory: ./build/Release
+        run: |
+          file "stormlib.dll"
+          if [[ "${{ matrix.arch }}" == "x86" ]]; then
+            file "stormlib.dll" | grep -E "Intel 80386|Intel i386"
+          else
+            file "stormlib.dll" | grep "x86-64"
+          fi
+
+      - name: Install to staging area
+        shell: cmd
+        run: cmake --install build --prefix build/staging --config ${{ matrix.build_type }}
+
+      - name: Create Archive
+        shell: pwsh
+        working-directory: ./build/staging
+        run: |
+          $zipName = "stormlib_${{ github.ref_name }}_${{ matrix.arch }}_dll.zip"
+          Compress-Archive -Path bin/* -DestinationPath $zipName
+          Compress-Archive -Path "lib/*" -DestinationPath $zipName -Update
+          Compress-Archive -Path include -DestinationPath $zipName -Update
+
+      - uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          overwrite: true
+          name: stormlib_${{ github.ref_name }}_${{ matrix.arch }}_dll.zip
+          path: build/staging/stormlib_${{ github.ref_name }}_${{ matrix.arch }}_dll.zip
+
+  release:
+    needs: [deb, rpm, build_dll]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download deb
+        uses: actions/download-artifact@v4
+        with:
+          name: libstorm-dev_${{ github.ref_name }}_amd64.deb
+
+      - name: Download rpm
+        uses: actions/download-artifact@v4
+        with:
+          name: libstorm-devel-${{ github.ref_name }}.x86_64.rpm
+
+      - name: Download dll amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: stormlib_${{ github.ref_name }}_amd64_dll.zip
+
+      - name: Download dll x86
+        uses: actions/download-artifact@v4
+        with:
+          name: stormlib_${{ github.ref_name }}_x86_dll.zip
+
+      - name: Generate SHA256 checksums
+        run: |
+          for file in *.zip *.deb *.rpm; do
+            sha256sum "$file" > "$file.sha256"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            libstorm-dev_${{ github.ref_name }}_amd64.deb
+            libstorm-dev_${{ github.ref_name }}_amd64.deb.sha256
+            libstorm-devel-${{ github.ref_name }}.x86_64.rpm
+            libstorm-devel-${{ github.ref_name }}.x86_64.rpm.sha256
+            stormlib_${{ github.ref_name }}_amd64_dll.zip
+            stormlib_${{ github.ref_name }}_amd64_dll.zip.sha256
+            stormlib_${{ github.ref_name }}_x86_dll.zip
+            stormlib_${{ github.ref_name }}_x86_dll.zip.sha256
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

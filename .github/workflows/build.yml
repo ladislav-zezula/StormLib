@@ -1,0 +1,87 @@
+name: CMake
+
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  debian-bookworm:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+
+    strategy:
+      matrix:
+        storm_use_bundled_libraries: [ ON, OFF ]
+        with_libtomcrypt: [ ON, OFF ]
+        build_shared_libs: [ ON, OFF ]
+        unicode: [ ON, OFF ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apt-get -y update && apt-get install -y build-essential cmake
+
+      - name: Conditionally install libtomcrypt-dev
+        if: matrix.with_libtomcrypt == 'ON'
+        run: apt-get install -y libtomcrypt-dev pkg-config
+
+      - name: CMake Configuration
+        run: |
+          cmake -B build \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D STORM_USE_BUNDLED_LIBRARIES=${{ matrix.storm_use_bundled_libraries }} \
+            -D WITH_LIBTOMCRYPT=${{ matrix.with_libtomcrypt }} \
+            -D BUILD_SHARED_LIBS=${{ matrix.build_shared_libs }} \
+            -D STORM_UNICODE=${{ matrix.unicode }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  fedora-latest:
+    if: true
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: dnf -y install cmake gcc gcc-c++
+
+      - name: Cmake
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  windows-latest-x64:
+    if: true
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x64
+
+      - name: Cmake
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Debug
+        shell: bash
+        run: ls -la build
+
+      - name: Check PE
+        shell: bash
+        working-directory: ./build/Release
+        run: |
+          file "stormlib.dll"
+          file "stormlib.dll" |grep "x86-64"

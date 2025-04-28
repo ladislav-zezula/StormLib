@@ -21,6 +21,23 @@ Note that you can also build the library using newer toolset, such as v143. To d
 4. Choose "Rebuild"
 5. The result libraries are in `.\bin\Win32` and `.\bin\x64`
 
+### Windows (any Visual Studio version with CMake)
+You can open the appropriate Visual Studio cmd prompt or launch regular cmd and load the necessary environment as specified below.  
+Change your VS version as needed.
+
+amd64
+```
+"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat" x64
+cmake -G "Visual Studio 17 2022" -B build_amd64 -D BUILD_SHARED_LIBS=ON
+cmake --build build --config Release
+```
+
+x86
+``` 
+"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat" x86
+cmake -G "Visual Studio 17 2022" -B build_x86 -D BUILD_SHARED_LIBS=ON
+```
+
 ### Windows (Test Project)
 1. Include the main StormLib header: `#include <StormLib.h>`
 2. Set the correct library directory for StormLibXYZ.lib:
@@ -30,13 +47,32 @@ Note that you can also build the library using newer toolset, such as v143. To d
 3. Rebuild
 
 ### Linux
-1. Download latest release
-2. Install StormLib:
 ```
-$ cd <path-to-StormLib>
-$ cmake CMakeLists.txt
-$ make
-$ make install
+git clone https://github.com/ladislav-zezula/StormLib.git
+cd StormLib && git checkout <latest-release-tag>
+cmake -B build -D BUILD_SHARED_LIBS=ON
+cmake --build build --config Release
+sudo cmake --install build
 ```
-3. Include StormLib in your project: `#include <StormLib.h>`
-4. Make sure you compile your project with `-lstorm -lz -lbz2`
+
+Include StormLib in your project: `#include <StormLib.h>`  
+Make sure you compile your project with `-lstorm -lz -lbz2`
+
+To produce deb/rpm packages:
+```
+cd build
+cpack -G "DEB" -D CPACK_PACKAGE_FILE_NAME=libstorm-dev_v9.30_amd64
+cpack -G "RPM" -D CPACK_PACKAGE_FILE_NAME=libstorm-devel-v9.30.x86_64
+``` 
+
+### List of all CMake options
+
+| Option Name                   | Description                                                       | Default |
+|-------------------------------|-------------------------------------------------------------------|---------|
+| `BUILD_SHARED_LIBS`           | Compile shared libraries                                          | OFF     |
+| `STORM_UNICODE`               | Unicode or ANSI support                                           | OFF     |
+| `STORM_SKIP_INSTALL`          | Skip installing files                                             | OFF     |
+| `STORM_USE_BUNDLED_LIBRARIES` | Force use of bundled dependencies instead of system libraries     | OFF     |
+| `WITH_LIBTOMCRYPT`            | Use system LibTomCrypt library (non-Windows only)                 | OFF     |
+| `STORM_BUILD_TESTS`           | Compile StormLib test application                                 | OFF     |
+| `STORMTEST_USE_OLD_PATHS`     | Uses hardcoded paths for test files, OFF uses `build_folder/work` | ON      |
