@@ -443,7 +443,7 @@ DWORD SFileAddFile_Init(
     // Allocate the TMPQFile entry for newly added file
     hf = CreateWritableHandle(ha, dwFileSize);
     if(hf == NULL)
-        return false;
+        return GetLastError();
 
     // Allocate file entry in the MPQ
     if(dwErrCode == ERROR_SUCCESS)
