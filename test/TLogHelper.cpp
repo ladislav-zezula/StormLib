@@ -332,7 +332,6 @@ class TLogHelper
     {
         char * szBufferPtr;
         char * szBufferEnd;
-        size_t nNewPrinted;
         size_t nLength = 0;
         DWORD dwErrCode = Test_GetLastError();
         XCHAR szMessage[0x200];
@@ -366,11 +365,8 @@ class TLogHelper
             szBufferPtr += nLength;
         }
 
-        // Remember how much did we print
-        nNewPrinted = (szBufferPtr - szBuffer);
-
         // Shall we pad the string?
-        if((nLength = (szBufferPtr - szBuffer - 1)) < nPrevPrinted)
+        if((nLength = (szBufferPtr - szBuffer)) < nPrevPrinted)
         {
             size_t nPadding = nPrevPrinted - nLength;
 
@@ -381,20 +377,19 @@ class TLogHelper
             szBufferPtr += nPadding;
         }
 
+        // Remember how much did we print
+        nPrevPrinted = (szBufferPtr - szBuffer);
+
         // Shall we add new line?
-        if((bPrintEndOfLine != false) && (szBufferPtr < szBufferEnd))
+        if((bPrintEndOfLine) && (szBufferPtr < szBufferEnd))
             *szBufferPtr++ = '\n';
         *szBufferPtr = 0;
 
         // Remember if we printed a message
-        if(bPrintEndOfLine != false)
+        if(bPrintEndOfLine)
         {
             bMessagePrinted = true;
             nPrevPrinted = 0;
-        }
-        else
-        {
-            nPrevPrinted = nNewPrinted;
         }
 
         // Finally print the message

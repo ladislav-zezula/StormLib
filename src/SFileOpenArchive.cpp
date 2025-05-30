@@ -22,6 +22,31 @@
 //-----------------------------------------------------------------------------
 // Local functions
 
+#ifndef IMAGE_DOS_SIGNATURE
+
+#define IMAGE_DOS_SIGNATURE                 0x5A4D      // MZ
+#define IMAGE_FILE_DLL                      0x2000  // File is a DLL.
+
+typedef struct _IMAGE_DOS_HEADER
+{
+    USHORT e_magic;
+    USHORT dummy[0x1B];
+    DWORD  e_lfanew;
+} IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
+
+typedef struct _IMAGE_FILE_HEADER
+{
+    USHORT  Machine;
+    USHORT  NumberOfSections;
+    DWORD   TimeDateStamp;
+    DWORD   PointerToSymbolTable;
+    DWORD   NumberOfSymbols;
+    USHORT  SizeOfOptionalHeader;
+    USHORT  Characteristics;
+} IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
+#endif
+
+
 static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHeaderBuffer)
 {
     LPDWORD HeaderInt32 = (LPDWORD)pbHeaderBuffer;
@@ -64,11 +89,26 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
 
     // MIX files are DLL files that contain MPQ in overlay.
     // Only Warcraft III is able to load them, so we consider them Warcraft III maps
-    if(cbHeaderBuffer > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
+    // Do not include EXE files, because they may be World of Warcraft patches
+    if(cbHeaderBuffer > sizeof(IMAGE_DOS_HEADER))
     {
-        // Check the value of IMAGE_DOS_HEADER::e_lfanew at offset 0x3C
-        if(0 < HeaderInt32[0x0F] && HeaderInt32[0x0F] < 0x10000)
-            return MapTypeWarcraft3;
+        PIMAGE_FILE_HEADER pFileHeader;
+        PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)(pbHeaderBuffer);
+        size_t dwMaxAllowedSize = cbHeaderBuffer - sizeof(DWORD) - sizeof(IMAGE_FILE_HEADER);
+
+        // Verify the header of EXE/DLL files
+        if((pDosHeader->e_magic == IMAGE_DOS_SIGNATURE) && (0 < pDosHeader->e_lfanew && pDosHeader->e_lfanew < 0x10000))
+        {
+            // Is the file an EXE?
+            if((size_t)pDosHeader->e_lfanew <= dwMaxAllowedSize)
+            {
+                pFileHeader = (PIMAGE_FILE_HEADER)(pbHeaderBuffer + pDosHeader->e_lfanew + sizeof(DWORD));
+                if(pFileHeader->Characteristics & IMAGE_FILE_DLL)
+                {
+                    return MapTypeWarcraft3;
+                }
+            }
+        }
     }
 
     // No special map type recognized

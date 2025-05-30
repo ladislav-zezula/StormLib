@@ -3866,51 +3866,12 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-    HANDLE SFileOpenArchivevar0 = NULL;
-    LPCSTR fuzzData = "c:\\segv";
+    HANDLE hMpq;
+    HANDLE hFile;
 
-    for(DWORD i = 0; i < 1000; i++)
+    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\WoW-1.11.2.5464-to-1.12.0.5595-enUS-patch.exe"), 0, 0, &hMpq))
     {
-        char NewName[128];
-
-        sprintf(NewName, "c:\\segv%04u", i);
-        CopyFileA(fuzzData, NewName, FALSE);
-        SFileOpenArchivevar0 = NULL;
-
-        bool SFileOpenArchiveval1 = SFileOpenArchive(NewName, i, 0, &SFileOpenArchivevar0);
-        if(!SFileOpenArchiveval1)
-        {
-            fprintf(stderr, "err2");
-            exit(0);
-        }
-
-        bool SFileAddWaveval1 = SFileAddWave(SFileOpenArchivevar0, fuzzData, fuzzData, i, 1);
-        if(!SFileAddWaveval1)
-        {
-            SFileCloseArchive(SFileOpenArchivevar0);
-            fprintf(stderr, "err4");
-            exit(0);
-        }
-    }
-
-    bool SFileRemoveFileval1 = SFileRemoveFile(SFileOpenArchivevar0, fuzzData, (DWORD)_tcslen(fuzzData));
-    if(!SFileRemoveFileval1)
-    {
-        fprintf(stderr, "err6");
-        exit(0);
-    }
-
-    DWORD SFileVerifyArchiveval1 = SFileVerifyArchive(SFileOpenArchivevar0);
-    if(!SFileVerifyArchiveval1)
-    {
-        fprintf(stderr, "err7");
-        exit(0);
-    }
-
-/*
-    if(SFileOpenArchive(_T("E:\\DIABDAT.MPQ"), 0, 0, &hMpq))
-    {
-        if(SFileOpenFileEx(hMpq, "d1221a.mpq", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "AccountLogin.xml", 0, &hFile))
         {
             DWORD dwBytesRead = 0;
             BYTE Buffer[1024];
@@ -3920,7 +3881,6 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------
@@ -3931,8 +3891,9 @@ static LPCTSTR szSigned2 = _T("StarDat.mpq");
 static LPCTSTR szSigned3 = _T("War2Patch_202.exe");
 static LPCTSTR szSigned4 = _T("(10)DustwallowKeys.w3m");
 static LPCTSTR szSigned5 = _T("WoW-1.2.3.4211-enUS-patch.exe");
-static LPCTSTR szSigned6 = _T("WoW-3.0.1.8337-to-3.0.1.8392-enGB-patch.exe");
-static LPCTSTR szSigned7 = _T("wow-final.MPQ");
+static LPCTSTR szSigned6 = _T("WoW-1.11.2.5464-to-1.12.0.5595-enUS-patch.exe");
+static LPCTSTR szSigned7 = _T("WoW-3.0.1.8337-to-3.0.1.8392-enGB-patch.exe");
+static LPCTSTR szSigned8 = _T("wow-final.MPQ");
 
 static LPCTSTR szDiabdatMPQ = _T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
 
@@ -4298,9 +4259,10 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "c1084033d0bd5f7e2b9b78b600c0bba8",     24 | TFLG_SIGCHECK_BEFORE},
     {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "807fe2e4d38eccf5ee6bc88f5ee5940d",     25 | TFLG_SIGCHECK_BEFORE | TFLG_MODIFY | TFLG_SIGCHECK_AFTER},
     {_T("MPQ_2002_v1_StrongSignature.w3m"),                szSigned4, "7b725d87e07a2173c42fe2314b95fa6c",     17 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned5, "97580f9f6d98ffc50191c2f07773e818",  12259 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_2007_v2_StrongSignature1.exe"),               szSigned6, "e82bc35366d5f1c588143e5bd35919c0",     23 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_2007_v2_StrongSignature2.MPQ"),               szSigned7, "53cedaf7ba8c67b2e2ca95d5eb2b9380",   1622 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned5, "1e24a80dafa5285a0aee9470263e5b7c",  12259 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2006_v1_WoW-1.11.2.5464-patch.exe_"),         szSigned6, "6d1ccbfc344b6a2bc4ddf14867e45fea",    952 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature1.exe"),               szSigned7, "c553320a2f841ccb86c0643f58d8488a",     23 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature2.MPQ"),               szSigned8, "53cedaf7ba8c67b2e2ca95d5eb2b9380",   1622 | TFLG_SIGCHECK_BEFORE},
 
     // Multi-file archive with wrong prefix to see how StormLib deals with it
     {_T("flat-file://streaming/model.MPQ.0"),              _T("flat-file://model.MPQ.0"),           NULL,      0 | TFLG_WILL_FAIL},
@@ -4387,17 +4349,17 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 //-----------------------------------------------------------------------------
 // Main
 
-#define TEST_COMMAND_LINE
-#define TEST_LOCAL_LISTFILE
-#define TEST_STREAM_OPERATIONS
-#define TEST_MASTER_MIRROR
-#define TEST_OPEN_MPQ
-#define TEST_REOPEN_MPQ
-#define TEST_VERIFY_SIGNATURE
-#define TEST_REPLACE_FILE
-#define TEST_VERIFY_HASHES
+//#define TEST_COMMAND_LINE
+//#define TEST_LOCAL_LISTFILE
+//#define TEST_STREAM_OPERATIONS
+//#define TEST_MASTER_MIRROR
+//#define TEST_OPEN_MPQ
+//#define TEST_REOPEN_MPQ
+//#define TEST_VERIFY_SIGNATURE
+//#define TEST_REPLACE_FILE
+//#define TEST_VERIFY_HASHES
 #define TEST_CREATE_MPQS
-#define TEST_MISC_MPQS
+//#define TEST_MISC_MPQS
 
 int _tmain(int argc, TCHAR * argv[])
 {
