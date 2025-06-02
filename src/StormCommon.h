@@ -277,6 +277,12 @@ void StringCat(TCHAR * szTarget, size_t cchTargetMax, const char * szSource);
 #endif
 
 //-----------------------------------------------------------------------------
+// UTF-8 support
+
+DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWORD & dwCodePoint, size_t & ccBytesEaten);
+size_t UTF8_EncodeCodePoint(DWORD dwCodePoint, LPBYTE Utf8Buffer);
+
+//-----------------------------------------------------------------------------
 // Encryption and decryption functions
 
 #define MPQ_HASH_TABLE_INDEX    0x000

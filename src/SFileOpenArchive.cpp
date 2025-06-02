@@ -30,7 +30,7 @@
 typedef struct _IMAGE_DOS_HEADER
 {
     USHORT e_magic;
-    USHORT dummy[0x1B];
+    USHORT dummy[0x1D];
     DWORD  e_lfanew;
 } IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
 

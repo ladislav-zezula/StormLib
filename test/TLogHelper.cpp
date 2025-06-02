@@ -43,6 +43,58 @@
 //-----------------------------------------------------------------------------
 // Local functions
 
+template <typename XCHAR>
+XCHAR * StringEnd(XCHAR * sz)
+{
+    while(sz[0] != 0)
+        sz++;
+    return sz;
+}
+
+// ANSI version of the function - expects UTF-8 encoding
+size_t ConsoleLength(const char * ptr, const char * end)
+{
+    size_t ccBytesEaten;
+    size_t nLength = 0;
+    DWORD dwErrCode;
+
+    while(ptr < end)
+    {
+        DWORD dwCodePoint = 0;
+
+        // Decode a single UTF-8 character
+        dwErrCode = UTF8_DecodeCodePoint((BYTE *)(ptr), (BYTE *)(end), dwCodePoint, ccBytesEaten);
+        if(dwErrCode != ERROR_SUCCESS && dwErrCode != ERROR_NO_UNICODE_TRANSLATION)
+            break;
+
+        // Chinese chars occupy 1 extra char slot on console
+        if(0x5000 <= ptr[0] && ptr[0] <= 0xA000)
+            nLength++;
+        ptr += ccBytesEaten;
+        nLength++;
+    }
+    return nLength;
+}
+
+#ifdef TEST_PLATFORM_WINDOWS
+size_t ConsoleLength(const wchar_t * ptr, const wchar_t * end)
+{
+    size_t nLength = 0;
+
+    while(ptr < end)
+    {
+        DWORD dwCodePoint = ptr[0];
+
+        // Chinese chars occupy more space
+        if(0x5000 <= dwCodePoint && dwCodePoint <= 0xA000)
+            nLength++;
+        ptr += 1;
+        nLength++;
+    }
+    return nLength;
+}
+#endif
+
 inline DWORD TestInterlockedIncrement(DWORD * PtrValue)
 {
 #ifdef TEST_PLATFORM_WINDOWS
@@ -63,7 +115,7 @@ inline DWORD Test_GetLastError()
 #endif
 }
 
-#ifdef STORMLIB_WINDOWS
+#ifdef TEST_PLATFORM_WINDOWS
 wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
 {
     static const wchar_t * szStringFormat = L"%s";
@@ -92,7 +144,7 @@ wchar_t * CopyFormatCharacter(wchar_t * szBuffer, const wchar_t *& szFormat)
     *szBuffer++ = *szFormat++;
     return szBuffer;
 }
-#endif  // STORMLIB_WINDOWS
+#endif  // TEST_PLATFORM_WINDOWS
 
 char * CopyFormatCharacter(char * szBuffer, const char *& szFormat)
 {
@@ -186,9 +238,7 @@ class TLogHelper
 #ifdef TEST_PLATFORM_WINDOWS
         InitializeCriticalSection(&Locker);
         TickCount = GetTickCount();
-#endif
 
-#ifdef STORMLIB_WINDOWS
         SetConsoleOutputCP(CP_UTF8);    // Set the UTF-8 code page to handle national-specific names
         SetConsoleCP(CP_UTF8);
 #endif
@@ -282,7 +332,7 @@ class TLogHelper
         va_start(argList, format);
         int nLength = 0;
 
-#ifdef STORMLIB_WINDOWS
+#ifdef TEST_PLATFORM_WINDOWS
         char * szBuffer;
         int ccBuffer = 0x1000;
 
@@ -303,7 +353,7 @@ class TLogHelper
         return nLength;
     }
 
-#ifdef STORMLIB_WINDOWS
+#ifdef TEST_PLATFORM_WINDOWS
     int printf_console(const wchar_t * format, ...)
     {
         va_list argList;
@@ -330,18 +380,19 @@ class TLogHelper
     template <typename XCHAR>
     DWORD PrintWithClreol(const XCHAR * szFormat, va_list argList, bool bPrintLastError, bool bPrintEndOfLine)
     {
-        char * szBufferPtr;
-        char * szBufferEnd;
+        XCHAR * szBufferPtr;
+        XCHAR * szBufferEnd;
         size_t nLength = 0;
         DWORD dwErrCode = Test_GetLastError();
-        XCHAR szMessage[0x200];
-        char szBuffer[0x200];
+        XCHAR szPercentS[] = {'%', 's', 0};
+        XCHAR szMessage[0x200] = {0};
+        XCHAR szBuffer[0x200] = {0};
         bool bPrintPrefix = TEST_PRINT_PREFIX;
 
         // Always start the buffer with '\r'
         szBufferEnd = szBuffer + _countof(szBuffer);
-        szBufferPtr = szBuffer;
-        *szBufferPtr++ = '\r';
+        szBufferPtr = szBuffer + 1;
+        szBuffer[0] = '\r';
 
         // Print the prefix, if needed
         if(szMainTitle != NULL && bPrintPrefix)
@@ -356,45 +407,41 @@ class TLogHelper
         // Construct the message
         TestStrPrintfV(szMessage, _countof(szMessage), szFormat, argList);
         StringCopy(szBufferPtr, (szBufferEnd - szBufferPtr), szMessage);
-        szBufferPtr = szBufferPtr + strlen(szBufferPtr);
+        szBufferPtr = StringEnd(szBufferPtr);
 
         // Append the last error
         if(bPrintLastError)
         {
-            nLength = TestStrPrintf(szBufferPtr, (szBufferEnd - szBufferPtr), " (error code: %u)", dwErrCode);
+            XCHAR szErrMsg[] = {' ', '(', 'e', 'r', 'r', 'o', 'r', ' ', 'c', 'o', 'd', 'e', ':', ' ', '%', 'u', ')', 0, 0};
+            nLength = TestStrPrintf(szBufferPtr, (szBufferEnd - szBufferPtr), szErrMsg, dwErrCode);
             szBufferPtr += nLength;
         }
 
-        // Shall we pad the string?
-        if((nLength = (szBufferPtr - szBuffer)) < nPrevPrinted)
-        {
-            size_t nPadding = nPrevPrinted - nLength;
-
-            if((size_t)(nLength + nPadding) > (size_t)(szBufferEnd - szBufferPtr))
-                nPadding = (szBufferEnd - szBufferPtr);
-
-            memset(szBufferPtr, ' ', nPadding);
-            szBufferPtr += nPadding;
-        }
+        // Pad the string with zeros, if needed
+        while(szBufferPtr < (szBuffer + nPrevPrinted))
+            *szBufferPtr++ = ' ';
 
         // Remember how much did we print
-        nPrevPrinted = (szBufferPtr - szBuffer);
+        nPrevPrinted = ConsoleLength(szBuffer, szBufferPtr);
 
-        // Shall we add new line?
-        if((bPrintEndOfLine) && (szBufferPtr < szBufferEnd))
-            *szBufferPtr++ = '\n';
+        // Always add one extra space *AFTER* calculating length
+        if(szBufferPtr < szBufferEnd)
+            *szBufferPtr++ = ' ';
         *szBufferPtr = 0;
 
-        // Remember if we printed a message
+        // Print the message to the console
+        printf_console(szPercentS, szBuffer);
+        nMessageCounter++;
+
+        // If we shall print the newline, do it
         if(bPrintEndOfLine)
         {
             bMessagePrinted = true;
             nPrevPrinted = 0;
+            printf("\n");
         }
 
         // Finally print the message
-        printf_console("%s", szBuffer);
-        nMessageCounter++;
         return dwErrCode;
     }
 
@@ -614,7 +661,7 @@ class TLogHelper
     const TCHAR * szSubTitle1;                      // Title of the text (can be name of the tested file)
     const TCHAR * szSubTitle2;                      // Title of the text (can be name of the tested file)
     size_t nMessageCounter;
-    size_t nPrevPrinted;                            // Length of the previously printed message
+    size_t nPrevPrinted;
     time_t dwPrevTickCount;
     bool bMessagePrinted;
 };

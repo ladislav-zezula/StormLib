@@ -55,7 +55,6 @@ TestReadingMpq: Warning: CRC32 error on (listfile)
 TestReadingMpq: Warning: CRC32 error on (listfile)
 TestReadingMpq: Warning: CRC32 error on File00000003.xxx
 TestReadingMpq (MPQ_2014_v1_AttributesOneEntryLess.w3x) succeeded.
-TestReadingMpq (MPQ_2020_v1_AHF04patch.mix) succeeded.
 TestReadingMpq (MPQ_2010_v3_expansion-locale-frFR.MPQ) succeeded.
 TestReadingMpq (mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE) succeeded.
 TestReadingMpq (part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part) succeeded.
@@ -69,7 +68,7 @@ TestReadingMpq (MPQ_2023_v4_UTF8.s2ma) succeeded.
 TestReadingMpq (MPQ_2023_v1_GreenTD.w3x) succeeded.
 TestReadingMpq (MPQ_2023_v4_1F644C5A.SC2Replay) succeeded.
 TestReadingMpq (<Chinese MPQ name>) succeeded.
-TestReadingMpq (MPQ_2024_v1_BadUtf8_5.0.2.w3x) succeeded.
+TestReadingMpq (MPQ_2024_v1_BadUtf8_5.0.2.w3x) succeeded.        ... ..
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_InvalidMpqFormat.w3x) succeeded.
 TestReadingMpq (MPQ_2002_v1_ProtectedMap_Spazzler.w3x) succeeded.
@@ -101,9 +100,10 @@ TestReadingMpq (MPQ_2022_v1_Sniper.scx) succeeded.
 TestReadingMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.
 TestReadingMpq (MPQ_2023_v1_Lusin2Rpg1.28.w3x) succeeded.
 TestReadingMpq (MPQ_2024_v1_300TK2.09p.w3x) succeeded.
-TestReadingMpq (MPQ_2020_v1_HS0.1.asi) succeeded.
-TestReadingMpq (MPQ_2022_v1_hs0.8.asi) succeeded.
-TestReadingMpq (MPQ_2022_v1_MoeMoeMod.asi) succeeded.
+TestReadingMpq (mix-mpq/AHF04patch.mix) succeeded.
+TestReadingMpq (mix-mpq/hs0.1.asi) succeeded.
+TestReadingMpq (mix-mpq/hs0.8.asi) succeeded.
+TestReadingMpq (mix-mpq/MoeMoeMod.asi) succeeded.
 TestReadingMpq (MPx_2013_v1_LongwuOnline.mpk) succeeded.
 TestReadingMpq (MPx_2013_v1_WarOfTheImmortals.sqp) succeeded.
 TestReadingMpq (MPx_2022_v1_Music.mpk) succeeded.
@@ -155,12 +155,12 @@ TestModifyMpq (MPQ_2023_v1_StarcraftMap.scm) succeeded.
 TestVerifyHash succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v2.mpq) succeeded.
 CreateNewMpq (StormLibTest_EmptyMpq_v4.mpq) succeeded.
-CreateNewMpq (StormLibTest_Český.mpq) succeeded.    ..
-CreateNewMpq (StormLibTest_Русский.mpq) succeeded. ...
+CreateNewMpq (StormLibTest_Český.mpq) succeeded.
+CreateNewMpq (StormLibTest_Русский.mpq) succeeded.
 CreateNewMpq (StormLibTest_ελληνικά.mpq) succeeded.
-CreateNewMpq (StormLibTest_日本語.mpq) succeeded.  ...
-CreateNewMpq (StormLibTest_简体中文.mpq) succeeded....
-CreateNewMpq (StormLibTest_الععربية.mpq) succeeded....
+CreateNewMpq (StormLibTest_日本語.mpq) succeeded.
+CreateNewMpq (StormLibTest_简体中文.mpq) succeeded.
+CreateNewMpq (StormLibTest_الععربية.mpq) succeeded.
 CreateNewMpq (StormLibTest_NonStdNames.mpq) succeeded.
 CreateNewMpq (StormLibTest_MpqEditorTest.mpq) succeeded.
 TestCreateGaps (StormLibTest_GapsTest.mpq) succeeded.

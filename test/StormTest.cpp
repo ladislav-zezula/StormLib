@@ -3866,6 +3866,7 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
+/*
     HANDLE hMpq;
     HANDLE hFile;
 
@@ -3881,6 +3882,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4178,7 +4180,6 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2002_v1_BlockTableCut.MPQ"),                       NULL, "a9499ab74d939303d8cda7c397c36275",   287},               // Truncated archive
     {_T("MPQ_2010_v2_HasUserData.s2ma"),                        NULL, "feff9e2c86db716b6ff5ffc906181200",    52},               // MPQ that actually has user data
     {_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"),              NULL, "90451b7052eb0f1d6f4bf69b2daff7f5",   116},               // Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    {_T("MPQ_2020_v1_AHF04patch.mix"),                          NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),               NULL, "0c8fc921466f07421a281a05fad08b01",    53},               // MPQ archive v 3.0 (the only one I know)
     {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),           NULL, "10e4dcdbe95b7ad731c563ec6b71bc16",    82},               // Encrypted archive from Starcraft II installer
     {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),NULL, "d41d8cd98f00b204e9800998ecf8427e", 14263},               // Partial MPQ with compressed hash table
@@ -4189,10 +4190,10 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2023_v1_Volcanis.scm"),                            NULL, "522c89ca96d6736427b01f7c80dd626f",     3},               // Map modified with unusual file compression: ZLIB+Huffman
     {_T("MPQ_2023_v4_UTF8.s2ma"),                               NULL, "97b7a686650f3307d135e1d1b017a36a",    67},               // Map contaning files with Chinese names (UTF8-encoded)
     {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "a8d91fc4e52d7c21ff7feb498c74781a",  2004},               // Corrupt sector checksum table in file #A0
+
     {_T("MPQ_2023_v4_1F644C5A.SC2Replay"),                      NULL, "b225828ffbf5037553e6a1290187caab",    17},               // Corrupt patch info of the "(attributes)" file
     {_T("<Chinese MPQ name>"),                                  NULL, "67faeffd0c0aece205ac8b7282d8ad8e",  4697, &MpqUtf8},     // Chinese name of the MPQ
     {_T("MPQ_2024_v1_BadUtf8_5.0.2.w3x"),                       NULL, "be34f9862758f021a1c6c77df3cd4f05",  6393, &LfBad1},      // Bad UTF-8 sequences in file names
-    
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4228,9 +4229,10 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2024_v1_300TK2.09p.w3x"),                          NULL, "e442e3d2e7d457b9ba544544013b791f", 32588},               // Fake MPQ User data, fake MPQ header at offset 0x200
 
     // ASI plugins
-    {_T("MPQ_2020_v1_HS0.1.asi"),                               NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
-    {_T("MPQ_2022_v1_hs0.8.asi"),                               NULL, "6a40f733428001805bfe6e107ca9aec1", 11352},               // Items in hash table have platform = 0xFF
-    {_T("MPQ_2022_v1_MoeMoeMod.asi"),                           NULL, "89b923c7cde06de48815844a5bbb0ec4",  2578},
+    {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
+    {_T("mix-mpq/hs0.1.asi"),                                   NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
+    {_T("mix-mpq/hs0.8.asi"),                                   NULL, "6a40f733428001805bfe6e107ca9aec1", 11352},               // Items in hash table have platform = 0xFF
+    {_T("mix-mpq/MoeMoeMod.asi"),                               NULL, "89b923c7cde06de48815844a5bbb0ec4",  2578},
 
     // MPQ modifications from Chinese games
     {_T("MPx_2013_v1_LongwuOnline.mpk"),                        NULL, "548f7db88284097f7e94c95a08c5bc24",   469},               // MPK archive from Longwu online
@@ -4349,17 +4351,17 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 //-----------------------------------------------------------------------------
 // Main
 
-//#define TEST_COMMAND_LINE
-//#define TEST_LOCAL_LISTFILE
-//#define TEST_STREAM_OPERATIONS
-//#define TEST_MASTER_MIRROR
-//#define TEST_OPEN_MPQ
-//#define TEST_REOPEN_MPQ
-//#define TEST_VERIFY_SIGNATURE
-//#define TEST_REPLACE_FILE
-//#define TEST_VERIFY_HASHES
+#define TEST_COMMAND_LINE
+#define TEST_LOCAL_LISTFILE
+#define TEST_STREAM_OPERATIONS
+#define TEST_MASTER_MIRROR
+#define TEST_OPEN_MPQ
+#define TEST_REOPEN_MPQ
+#define TEST_VERIFY_SIGNATURE
+#define TEST_REPLACE_FILE
+#define TEST_VERIFY_HASHES
 #define TEST_CREATE_MPQS
-//#define TEST_MISC_MPQS
+#define TEST_MISC_MPQS
 
 int _tmain(int argc, TCHAR * argv[])
 {

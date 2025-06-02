@@ -92,7 +92,7 @@ static DWORD UTF8_DecodeSequence(const BYTE * pbString, BYTE BitsMask, size_t cc
 }
 
 // https://en.wikipedia.org/wiki/UTF-8
-static DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWORD & dwCodePoint, size_t & ccBytesEaten)
+DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWORD & dwCodePoint, size_t & ccBytesEaten)
 {
     // Reset the number of bytes eaten
     dwCodePoint = SFILE_UTF8_INVALID_CHARACTER;
@@ -165,7 +165,7 @@ static size_t UTF8_EncodeSequence(DWORD dwCodePoint, BYTE LeadingByte, DWORD dwF
     return dwFollowByteCount + 1;
 }
 
-static size_t UTF8_EncodeCodePoint(DWORD dwCodePoint, LPBYTE Utf8Buffer)
+size_t UTF8_EncodeCodePoint(DWORD dwCodePoint, LPBYTE Utf8Buffer)
 {
     // 0x00 - 0x7F, 1 byte
     if(dwCodePoint < 0x80)
