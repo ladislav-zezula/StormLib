@@ -1436,9 +1436,12 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
     DWORD dwBytesRead;
     DWORD dwCrc32 = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szSafeName[1024];
 
-    // Do nothing if the file name is invalid
-    Logger.PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
+    // Print the file name to the console.
+    // Prevent bad UTF-8 sequences to go through
+    SMemUTF8ToFileName(szSafeName, _countof(szSafeName), szFileName, NULL, 0, NULL);
+    Logger.PrintProgress(_T("Loading file %s ..."), GetShortPlainName(szSafeName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
     //if(!_stricmp(szFileName, "(signature)"))

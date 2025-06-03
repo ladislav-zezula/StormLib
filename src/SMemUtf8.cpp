@@ -40,6 +40,8 @@ const unsigned char SMemCharToByte[0x80] =
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF  // 0x70
 };
 
+static TCHAR szInvalidCharPrefix[] = _T("%u[");
+
 //-----------------------------------------------------------------------------
 // Local functions
 
@@ -217,7 +219,7 @@ static size_t UTF8_FlushInvalidChars(LPTSTR szBuffer, size_t ccBuffer, size_t nO
         // Space for 4 characters needed
         if(szBuffer != NULL && (nOutLength + nLengthNeeded) <= ccBuffer)
         {
-            memcpy(szBuffer + nOutLength, _T("%u["), 6);
+            memcpy(szBuffer + nOutLength, szInvalidCharPrefix, sizeof(szInvalidCharPrefix) - sizeof(TCHAR));
 
             SMemBinToStr(szBuffer + nOutLength + 3, ccBuffer - 3, InvalidChars, nInvalidChars);
 
