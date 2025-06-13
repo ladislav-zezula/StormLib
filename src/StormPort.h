@@ -54,7 +54,9 @@
   #include <stdio.h>
 
   // Suppress definitions of `min` and `max` macros by <windows.h>:
+  #ifndef NOMINMAX
   #define NOMINMAX 1
+  #endif
   #include <windows.h>
   #include <wininet.h>
 
