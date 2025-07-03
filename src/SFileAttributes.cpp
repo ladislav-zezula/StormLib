@@ -392,7 +392,7 @@ DWORD SAttrLoadAttributes(TMPQArchive * ha)
 
                 // Load the entire file to memory
                 if(!SFileReadFile(hFile, pbAttrFile, cbAttrFile, &dwBytesRead, NULL))
-                    ha->dwFlags |= (GetLastError() == ERROR_FILE_CORRUPT) ? MPQ_FLAG_MALFORMED : 0;
+                    ha->dwFlags |= (SErrGetLastError() == ERROR_FILE_CORRUPT) ? MPQ_FLAG_MALFORMED : 0;
 
                 // Parse the (attributes)
                 if(dwBytesRead == cbAttrFile)
@@ -478,7 +478,7 @@ DWORD WINAPI SFileGetAttributes(HANDLE hMpq)
     // Verify the parameters
     if(!IsValidMpqHandle(hMpq))
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return SFILE_INVALID_ATTRIBUTES;
     }
 
@@ -492,14 +492,14 @@ bool WINAPI SFileSetAttributes(HANDLE hMpq, DWORD dwFlags)
     // Verify the parameters
     if(!IsValidMpqHandle(hMpq))
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // Not allowed when the archive is read-only
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
     {
-        SetLastError(ERROR_ACCESS_DENIED);
+        SErrSetLastError(ERROR_ACCESS_DENIED);
         return false;
     }
 
@@ -523,14 +523,14 @@ bool WINAPI SFileUpdateFileAttributes(HANDLE hMpq, const char * szFileName)
     // Verify the parameters
     if(!IsValidMpqHandle(ha))
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // Not allowed when the archive is read-only
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
     {
-        SetLastError(ERROR_ACCESS_DENIED);
+        SErrSetLastError(ERROR_ACCESS_DENIED);
         return false;
     }
 

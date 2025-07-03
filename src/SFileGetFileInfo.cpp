@@ -44,7 +44,7 @@ static DWORD GetMpqFileCount(TMPQArchive * ha)
 
 static bool GetInfo_ReturnError(DWORD dwErrCode)
 {
-    SetLastError(dwErrCode);
+    SErrSetLastError(dwErrCode);
     return false;
 }
 
@@ -411,12 +411,12 @@ bool WINAPI SFileGetFileInfo(
         case SFileInfoNameHash1:
             if(hf->pHashEntry == NULL)
                 return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
-            return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwName1, sizeof(DWORD), pcbLengthNeeded);
+            return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwHashCheck1, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoNameHash2:
             if(hf->pHashEntry == NULL)
                 return GetInfo_ReturnError(ERROR_INVALID_PARAMETER);
-            return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwName2, sizeof(DWORD), pcbLengthNeeded);
+            return GetInfo(pvFileInfo, cbFileInfo, &hf->pHashEntry->dwHashCheck2, sizeof(DWORD), pcbLengthNeeded);
 
         case SFileInfoNameHash3:
             return GetInfo(pvFileInfo, cbFileInfo, &pFileEntry->FileNameHash, sizeof(ULONGLONG), pcbLengthNeeded);
@@ -483,7 +483,7 @@ bool WINAPI SFileFreeFileInfo(void * pvFileInfo, SFileInfoClass InfoClass)
             break;
     }
 
-    SetLastError(ERROR_INVALID_PARAMETER);
+    SErrSetLastError(ERROR_INVALID_PARAMETER);
     return false;
 }
 
@@ -621,7 +621,7 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
     }
 
     if(dwErrCode != ERROR_SUCCESS)
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
     return (dwErrCode == ERROR_SUCCESS);
 }
 

@@ -1031,7 +1031,7 @@ static DWORD BuildFileTableFromBlockTable(
                 pHash->dwBlockIndex = dwNewIndex;
 
                 // Dump the relocation entry
-//              printf("Relocating hash entry %08X-%08X: %08X -> %08X\n", pHash->dwName1, pHash->dwName2, dwBlockIndex, dwNewIndex);
+//              printf("Relocating hash entry %08X-%08X: %08X -> %08X\n", pHash->dwHashCheck1, pHash->dwHashCheck2, dwBlockIndex, dwNewIndex);
             }
 
             // Get the pointer to the file entry and the block entry
@@ -1293,7 +1293,7 @@ static DWORD SaveMpqTable(
     BSWAP_ARRAY32_UNSIGNED(pMpqTable, Size);
     FileOffset = ha->MpqPos + ByteOffset;
     if(!FileStream_Write(ha->pStream, &FileOffset, pMpqTable, (DWORD)Size))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     // Free the compressed table, if any
     if(pCompressed != NULL)
@@ -1364,7 +1364,7 @@ static DWORD SaveExtTable(
     if(FileStream_Write(ha->pStream, &FileOffset, pExtTable, dwTableSize))
         cbTotalSize += dwTableSize;
     else
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     // We have to write raw data MD5
     if(dwErrCode == ERROR_SUCCESS && ha->pHeader->dwRawChunkSize != 0)
@@ -2224,11 +2224,11 @@ DWORD RenameFileEntry(
         lcFileLocale = SFILE_MAKE_LCID(pHashEntry->Locale, pHashEntry->Platform);
 
         // Mark the hash table entry as deleted
-        pHashEntry->dwName1      = 0xFFFFFFFF;
-        pHashEntry->dwName2      = 0xFFFFFFFF;
+        pHashEntry->dwHashCheck1 = 0xFFFFFFFF;
+        pHashEntry->dwHashCheck2 = 0xFFFFFFFF;
         pHashEntry->Locale       = 0xFFFF;
         pHashEntry->Platform     = 0xFF;
-        pHashEntry->Reserved     = 0xFF;
+        pHashEntry->Flags        = 0xFF;
         pHashEntry->dwBlockIndex = HASH_ENTRY_DELETED;
     }
 
@@ -2265,11 +2265,11 @@ DWORD DeleteFileEntry(TMPQArchive * ha, TMPQFile * hf)
             return ERROR_NOT_SUPPORTED;
 
         // Mark the hash table entry as deleted
-        pHashEntry->dwName1      = 0xFFFFFFFF;
-        pHashEntry->dwName2      = 0xFFFFFFFF;
+        pHashEntry->dwHashCheck1 = 0xFFFFFFFF;
+        pHashEntry->dwHashCheck2 = 0xFFFFFFFF;
         pHashEntry->Locale       = 0xFFFF;
         pHashEntry->Platform     = 0xFF;
-        pHashEntry->Reserved     = 0xFF;
+        pHashEntry->Flags        = 0xFF;
         pHashEntry->dwBlockIndex = HASH_ENTRY_DELETED;
     }
 
@@ -2618,7 +2618,7 @@ static DWORD BuildFileTable_Classic(TMPQArchive * ha)
             // Load the hi-block table. It is not encrypted, nor compressed
             ByteOffset = ha->MpqPos + pHeader->HiBlockTablePos64;
             if(!FileStream_Read(ha->pStream, &ByteOffset, pHiBlockTable, dwTableSize))
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
 
             // Now merge the hi-block table to the file table
             if(dwErrCode == ERROR_SUCCESS)
@@ -3141,7 +3141,7 @@ DWORD SaveMPQTables(TMPQArchive * ha)
         BSWAP_ARRAY16_UNSIGNED(pHiBlockTable, HiBlockTableSize64);
 
         if(!FileStream_Write(ha->pStream, &ByteOffset, pHiBlockTable, (DWORD)HiBlockTableSize64))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
         TablePos += HiBlockTableSize64;
     }
 
@@ -3151,7 +3151,7 @@ DWORD SaveMPQTables(TMPQArchive * ha)
         ULONGLONG FileSize = ha->MpqPos + TablePos;
 
         if(!FileStream_SetSize(ha->pStream, FileSize))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Write the MPQ header
@@ -3174,7 +3174,7 @@ DWORD SaveMPQTables(TMPQArchive * ha)
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_3);
         BSWAP_TMPQHEADER(&SaveMpqHeader, MPQ_FORMAT_VERSION_4);
         if(!FileStream_Write(ha->pStream, &ha->MpqPos, &SaveMpqHeader, pHeader->dwHeaderSize))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Clear the changed flag

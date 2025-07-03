@@ -736,7 +736,7 @@ TMPQFile * IsValidFileHandle(HANDLE hFile)
 // Hash table and block table manipulation
 
 // Attempts to search a free hash entry, or an entry whose names and locale matches
-TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1, DWORD dwName2, LCID lcFileLocale)
+TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwHashCheck1, DWORD dwHashCheck2, LCID lcFileLocale)
 {
     TMPQHash * pDeletedEntry = NULL;            // If a deleted entry was found in the continuous hash range
     TMPQHash * pFreeEntry = NULL;               // If a free entry was found in the continuous hash range
@@ -757,7 +757,7 @@ TMPQHash * FindFreeHashEntry(TMPQArchive * ha, DWORD dwStartIndex, DWORD dwName1
         TMPQHash * pHash = ha->pHashTable + dwIndex;
 
         // If we found a matching entry, return that one
-        if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && pHash->Locale == Locale)
+        if(pHash->dwHashCheck1 == dwHashCheck1 && pHash->dwHashCheck2 == dwHashCheck2 && pHash->Locale == Locale)
             return pHash;
 
         // If we found a deleted entry, remember it but keep searching
@@ -788,8 +788,8 @@ TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName)
 {
     DWORD dwHashIndexMask = HASH_INDEX_MASK(ha);
     DWORD dwStartIndex = ha->pfnHashString(szFileName, MPQ_HASH_TABLE_INDEX);
-    DWORD dwName1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
-    DWORD dwName2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
+    DWORD dwHashCheck1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
+    DWORD dwHashCheck2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
     DWORD dwIndex;
 
     // Set the initial index
@@ -801,7 +801,7 @@ TMPQHash * GetFirstHashEntry(TMPQArchive * ha, const char * szFileName)
         TMPQHash * pHash = ha->pHashTable + dwIndex;
 
         // If the entry matches, we found it.
-        if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
+        if(pHash->dwHashCheck1 == dwHashCheck1 && pHash->dwHashCheck2 == dwHashCheck2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
             return pHash;
 
         // If that hash entry is a free entry, it means we haven't found the file
@@ -820,8 +820,8 @@ TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * 
 {
     DWORD dwHashIndexMask = HASH_INDEX_MASK(ha);
     DWORD dwStartIndex = (DWORD)(pFirstHash - ha->pHashTable);
-    DWORD dwName1 = pHash->dwName1;
-    DWORD dwName2 = pHash->dwName2;
+    DWORD dwHashCheck1 = pHash->dwHashCheck1;
+    DWORD dwHashCheck2 = pHash->dwHashCheck2;
     DWORD dwIndex = (DWORD)(pHash - ha->pHashTable);
 
     // Now go for any next entry that follows the pHash,
@@ -836,7 +836,7 @@ TMPQHash * GetNextHashEntry(TMPQArchive * ha, TMPQHash * pFirstHash, TMPQHash * 
         pHash = ha->pHashTable + dwIndex;
 
         // If the entry matches, we found it.
-        if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
+        if(pHash->dwHashCheck1 == dwHashCheck1 && pHash->dwHashCheck2 == dwHashCheck2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
             return pHash;
 
         // If that hash entry is a free entry, it means we haven't found the file
@@ -853,19 +853,19 @@ TMPQHash * AllocateHashEntry(
 {
     TMPQHash * pHash;
     DWORD dwStartIndex = ha->pfnHashString(pFileEntry->szFileName, MPQ_HASH_TABLE_INDEX);
-    DWORD dwName1 = ha->pfnHashString(pFileEntry->szFileName, MPQ_HASH_NAME_A);
-    DWORD dwName2 = ha->pfnHashString(pFileEntry->szFileName, MPQ_HASH_NAME_B);
+    DWORD dwHashCheck1 = ha->pfnHashString(pFileEntry->szFileName, MPQ_HASH_NAME_A);
+    DWORD dwHashCheck2 = ha->pfnHashString(pFileEntry->szFileName, MPQ_HASH_NAME_B);
 
     // Attempt to find a free hash entry
-    pHash = FindFreeHashEntry(ha, dwStartIndex, dwName1, dwName2, lcFileLocale);
+    pHash = FindFreeHashEntry(ha, dwStartIndex, dwHashCheck1, dwHashCheck2, lcFileLocale);
     if(pHash != NULL)
     {
         // Fill the free hash entry
-        pHash->dwName1      = dwName1;
-        pHash->dwName2      = dwName2;
+        pHash->dwHashCheck1 = dwHashCheck1;
+        pHash->dwHashCheck2 = dwHashCheck2;
         pHash->Locale       = SFILE_LOCALE(lcFileLocale);
         pHash->Platform     = SFILE_PLATFORM(lcFileLocale);
-        pHash->Reserved     = 0;
+        pHash->Flags        = 0;
         pHash->dwBlockIndex = (DWORD)(pFileEntry - ha->pFileTable);
     }
 
@@ -965,7 +965,7 @@ TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize)
                   (ha->dwFileTableSize * sizeof(TMPQBlock));
         if((TempPos >> 32) != 0)
         {
-            SetLastError(ERROR_DISK_FULL);
+            SErrSetLastError(ERROR_DISK_FULL);
             return NULL;
         }
     }
@@ -974,7 +974,7 @@ TMPQFile * CreateWritableHandle(TMPQArchive * ha, DWORD dwFileSize)
     hf = CreateFileHandle(ha, NULL);
     if(hf == NULL)
     {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        SErrSetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return NULL;
     }
 
@@ -1063,7 +1063,7 @@ void * LoadMpqTable(
         }
         else
         {
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
         }
 
         if(dwErrCode == ERROR_SUCCESS)
@@ -1083,7 +1083,7 @@ void * LoadMpqTable(
                 int cbInBuffer = (int)dwCompressedSize;
 
                 if(!SCompDecompress2(pbMpqTable, &cbOutBuffer, pbCompressed, cbInBuffer))
-                    dwErrCode = GetLastError();
+                    dwErrCode = SErrGetLastError();
             }
 
             // Make sure that the table is properly byte-swapped
@@ -1179,7 +1179,7 @@ __AllocateAndLoadPatchInfo:
         if(!FileStream_Read(ha->pStream, &hf->RawFilePos, pPatchInfo, dwLength))
         {
             STORM_FREE(pPatchInfo);
-            return GetLastError();
+            return SErrGetLastError();
         }
 
         // Perform necessary swapping
@@ -1289,7 +1289,7 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
                 // Free the sector offsets
                 STORM_FREE(hf->SectorOffsets);
                 hf->SectorOffsets = NULL;
-                return GetLastError();
+                return SErrGetLastError();
             }
 
             // Swap the sector positions
@@ -1479,7 +1479,7 @@ DWORD WritePatchInfo(TMPQFile * hf)
 
     BSWAP_ARRAY32_UNSIGNED(pPatchInfo, 3 * sizeof(DWORD));
     if(!FileStream_Write(ha->pStream, &hf->RawFilePos, pPatchInfo, sizeof(TPatchInfo)))
-        return GetLastError();
+        return SErrGetLastError();
 
     return ERROR_SUCCESS;
 }
@@ -1508,7 +1508,7 @@ DWORD WriteSectorOffsets(TMPQFile * hf)
 
     // Write sector offsets to the archive
     if(!FileStream_Write(ha->pStream, &RawFilePos, hf->SectorOffsets, dwSectorOffsLen))
-        return GetLastError();
+        return SErrGetLastError();
 
     // Not necessary, as the sector checksums
     // are going to be freed when this is done.
@@ -1561,7 +1561,7 @@ DWORD WriteSectorChecksums(TMPQFile * hf)
     if(hf->pPatchInfo != NULL)
         RawFilePos += hf->pPatchInfo->dwLength;
     if(!FileStream_Write(ha->pStream, &RawFilePos, pbCompressed, dwCompressedSize))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     // Not necessary, as the sector checksums
     // are going to be freed when this is done.
@@ -1612,7 +1612,7 @@ DWORD WriteMemDataMD5(
     // Write the array od MD5's to the file
     RawDataOffs += dwRawDataSize;
     if(!FileStream_Write(pStream, &RawDataOffs, md5_array, dwMd5ArraySize))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     // Give the caller the size of the MD5 array
     if(pcbTotalSize != NULL)
@@ -1660,7 +1660,7 @@ DWORD WriteMpqDataMD5(
         // Read the chunk
         if(!FileStream_Read(pStream, &RawDataOffs, pbFileChunk, dwToRead))
         {
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
             break;
         }
 
@@ -1677,7 +1677,7 @@ DWORD WriteMpqDataMD5(
     if(dwErrCode == ERROR_SUCCESS)
     {
         if(!FileStream_Write(pStream, NULL, md5_array, dwMd5ArraySize))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Free buffers and exit

@@ -678,7 +678,7 @@ int WINAPI SCompImplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     // Check for valid parameters
     if(!pcbOutBuffer || *pcbOutBuffer < cbInBuffer || !pvOutBuffer || !pvInBuffer)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return 0;
     }
 
@@ -710,7 +710,7 @@ int WINAPI SCompExplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     // Check for valid parameters
     if(!pcbOutBuffer || *pcbOutBuffer < cbInBuffer || !pvOutBuffer || !pvInBuffer)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return 0;
     }
 
@@ -729,7 +729,7 @@ int WINAPI SCompExplode(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffe
     // Perform decompression
     if(!Decompress_PKLIB(pvOutBuffer, &cbOutBuffer, pvInBuffer, cbInBuffer))
     {
-        SetLastError(ERROR_FILE_CORRUPT);
+        SErrSetLastError(ERROR_FILE_CORRUPT);
         return 0;
     }
 
@@ -781,7 +781,7 @@ int WINAPI SCompCompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuff
     // Check for valid parameters
     if(!pcbOutBuffer || *pcbOutBuffer < cbInBuffer || !pvOutBuffer || !pvInBuffer)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return 0;
     }
 
@@ -817,7 +817,7 @@ int WINAPI SCompCompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuff
         // If at least one of the compressions remaing unknown, return an error
         if(uCompressionMask != 0)
         {
-            SetLastError(ERROR_NOT_SUPPORTED);
+            SErrSetLastError(ERROR_NOT_SUPPORTED);
             return 0;
         }
     }
@@ -831,7 +831,7 @@ int WINAPI SCompCompress(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuff
             pbWorkBuffer = STORM_ALLOC(unsigned char, *pcbOutBuffer);
             if(pbWorkBuffer == NULL)
             {
-                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+                SErrSetLastError(ERROR_NOT_ENOUGH_MEMORY);
                 return 0;
             }
         }
@@ -980,7 +980,7 @@ static int SCompDecompressInternal(
     // If at least one of the compressions remaing unknown, return an error
     if(nCompressCount == 0 || uCompressionMask2 != 0)
     {
-        SetLastError(ERROR_NOT_SUPPORTED);
+        SErrSetLastError(ERROR_NOT_SUPPORTED);
         return 0;
     }
 
@@ -990,7 +990,7 @@ static int SCompDecompressInternal(
         pbWorkBuffer = STORM_ALLOC(unsigned char, cbOutBuffer);
         if(pbWorkBuffer == NULL)
         {
-            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            SErrSetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return 0;
         }
     }
@@ -1013,7 +1013,7 @@ static int SCompDecompressInternal(
             nResult = table[i].Decompress(pbOutput, &cbOutBuffer, pbInput, cbInLength);
             if(nResult == 0 || cbOutBuffer == 0)
             {
-                SetLastError(ERROR_FILE_CORRUPT);
+                SErrSetLastError(ERROR_FILE_CORRUPT);
                 nResult = 0;
                 break;
             }
@@ -1051,7 +1051,7 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
     // Verify buffer sizes
     if(*pcbOutBuffer < cbInBuffer || cbInBuffer < 1)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return 0;
     }
 
@@ -1117,7 +1117,7 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
             break;
 
         default:
-            SetLastError(ERROR_FILE_CORRUPT);
+            SErrSetLastError(ERROR_FILE_CORRUPT);
             return 0;
     }
 
@@ -1127,7 +1127,7 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
         pbWorkBuffer = STORM_ALLOC(unsigned char, *pcbOutBuffer);
         if(pbWorkBuffer == NULL)
         {
-            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            SErrSetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return 0;
         }
     }
@@ -1151,7 +1151,7 @@ int WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInB
         STORM_FREE(pbWorkBuffer);
 
     if(nResult == 0)
-        SetLastError(ERROR_FILE_CORRUPT);
+        SErrSetLastError(ERROR_FILE_CORRUPT);
     return nResult;
 }
 

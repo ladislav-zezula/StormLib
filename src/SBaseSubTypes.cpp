@@ -65,10 +65,10 @@ typedef struct _TSQPHash
     DWORD dwBlockIndex;
 
     // The hash of the file path, using method A.
-    DWORD dwName1;
+    DWORD dwHashCheck1;
 
     // The hash of the file path, using method B.
-    DWORD dwName2;
+    DWORD dwHashCheck2;
 
 } TSQPHash;
 
@@ -213,12 +213,12 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
                     dwErrCode = ERROR_FILE_CORRUPT;
 
                 // Copy the entry to the MPQ hash entry
-                pMpqHash->dwName1  = TempEntry.dwName1;
-                pMpqHash->dwName2  = TempEntry.dwName2;
+                pMpqHash->dwHashCheck1 = TempEntry.dwHashCheck1;
+                pMpqHash->dwHashCheck2 = TempEntry.dwHashCheck2;
                 pMpqHash->dwBlockIndex = MPQ_BLOCK_INDEX(&TempEntry);
                 pMpqHash->Locale = 0;
                 pMpqHash->Platform = 0;
-                pMpqHash->Reserved = 0;
+                pMpqHash->Flags = 0;
             }
         }
 
@@ -320,13 +320,13 @@ typedef struct _TMPKHeader
 typedef struct _TMPKHash
 {
     // The hash of the file path, using method A.
-    DWORD dwName1;
+    DWORD dwHashCheck1;
 
     // The hash of the file path, using method B.
-    DWORD dwName2;
+    DWORD dwHashCheck2;
 
     // The hash of the file path, using method C.
-    DWORD dwName3;
+    DWORD dwHashCheck3;
 
     // If the hash table entry is valid, this is the index into the block table of the file.
     // Otherwise, one of the following two values:
@@ -590,16 +590,16 @@ TMPQHash * LoadMpkHashTable(TMPQArchive * ha)
             {
                 // Finds the free hash entry in the hash table
                 // We don't expect any errors here, because we are putting files to empty hash table
-                pHash = FindFreeHashEntry(pHashTable, pHeader->dwHashTableSize, pMpkHash[i].dwName1);
+                pHash = FindFreeHashEntry(pHashTable, pHeader->dwHashTableSize, pMpkHash[i].dwHashCheck1);
                 assert(pHash->dwBlockIndex == HASH_ENTRY_FREE);
 
                 // Copy the MPK hash entry to the hash table
                 pHash->dwBlockIndex = pMpkHash[i].dwBlockIndex;
                 pHash->Locale = 0;
                 pHash->Platform = 0;
-                pHash->Reserved = 0;
-                pHash->dwName1 = pMpkHash[i].dwName2;
-                pHash->dwName2 = pMpkHash[i].dwName3;
+                pHash->Flags = 0;
+                pHash->dwHashCheck1 = pMpkHash[i].dwHashCheck2;
+                pHash->dwHashCheck2 = pMpkHash[i].dwHashCheck3;
             }
         }
 

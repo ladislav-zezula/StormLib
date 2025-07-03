@@ -203,7 +203,7 @@ static TListFileCache * CreateListFileCache(
     }
 
     // This combination should never happen
-    SetLastError(ERROR_INVALID_PARAMETER);
+    SErrSetLastError(ERROR_INVALID_PARAMETER);
     assert(false);
     return NULL;
 }
@@ -411,8 +411,8 @@ static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szF
     TFileEntry * pFileEntry;
     TMPQHash * pHashEnd;
     TMPQHash * pHash;
-    DWORD dwName1;
-    DWORD dwName2;
+    DWORD dwHashCheck1;
+    DWORD dwHashCheck2;
 
     // If we have HET table, use that one
     if(ha->pHetTable != NULL)
@@ -432,8 +432,8 @@ static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szF
     {
         // Get the end of the hash table and both names
         pHashEnd = ha->pHashTable + ha->pHeader->dwHashTableSize;
-        dwName1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
-        dwName2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
+        dwHashCheck1 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_A);
+        dwHashCheck2 = ha->pfnHashString(szFileName, MPQ_HASH_NAME_B);
 
         // Some protectors set very high hash table size (0x00400000 items or more)
         // in order to make this process very slow. We will ignore items
@@ -445,7 +445,7 @@ static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szF
         // Go through the hash table and put the name in each item that has the same name pair
         for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
         {
-            if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
+            if(pHash->dwHashCheck1 == dwHashCheck1 && pHash->dwHashCheck2 == dwHashCheck2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
             {
                 // Allocate file name for the file entry
                 AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
@@ -649,7 +649,7 @@ static bool DoListFileSearch(TListFileCache * pCache, SFILE_FIND_DATA * lpFindFi
 
     // No more files
     memset(lpFindFileData, 0, sizeof(SFILE_FIND_DATA));
-    SetLastError(ERROR_NO_MORE_FILES);
+    SErrSetLastError(ERROR_NO_MORE_FILES);
     return false;
 }
 
@@ -726,7 +726,7 @@ HANDLE WINAPI SListFileFindFirstFile(HANDLE hMpq, const TCHAR * szListFile, cons
         if(!DoListFileSearch(pCache, lpFindFileData))
         {
             memset(lpFindFileData, 0, sizeof(SFILE_FIND_DATA));
-            SetLastError(ERROR_NO_MORE_FILES);
+            SErrSetLastError(ERROR_NO_MORE_FILES);
             FreeListFileCache(pCache);
             pCache = NULL;
         }

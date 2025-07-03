@@ -68,7 +68,7 @@ static DWORD WriteNakedMPQHeader(TMPQArchive * ha)
     BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_3);
     BSWAP_TMPQHEADER(&Header, MPQ_FORMAT_VERSION_4);
     if(!FileStream_Write(ha->pStream, &ha->MpqPos, &Header, dwBytesToWrite))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     return dwErrCode;
 }
@@ -121,7 +121,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     // Check the parameters, if they are valid
     if(szMpqName == NULL || *szMpqName == 0 || pCreateInfo == NULL || phMpq == NULL)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
@@ -133,7 +133,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
        (pCreateInfo->dwSectorSize & (pCreateInfo->dwSectorSize - 1))                   ||
        (pCreateInfo->dwRawChunkSize & (pCreateInfo->dwRawChunkSize - 1)))
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
@@ -145,7 +145,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     if(SFileOpenArchive(szMpqName, 0, STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE | MPQ_OPEN_NO_ATTRIBUTES | MPQ_OPEN_NO_LISTFILE, &hMpq))
     {
         SFileCloseArchive(hMpq);
-        SetLastError(ERROR_ALREADY_EXISTS);
+        SErrSetLastError(ERROR_ALREADY_EXISTS);
         return false;
     }
 
@@ -191,7 +191,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     FileStream_GetSize(pStream, &MpqPos);
     MpqPos = (MpqPos + 0x1FF) & (ULONGLONG)0xFFFFFFFFFFFFFE00ULL;
     if(!FileStream_SetSize(pStream, MpqPos))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
 #ifdef _DEBUG
     // Debug code, used for testing StormLib
@@ -275,7 +275,7 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
     {
         FileStream_Close(pStream);
         FreeArchiveHandle(ha);
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
         ha = NULL;
     }
 

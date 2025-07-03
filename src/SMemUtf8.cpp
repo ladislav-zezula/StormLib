@@ -551,3 +551,32 @@ DWORD WINAPI SMemFileNameToUTF8(
         pOutLength[0] = nOutLength;
     return dwErrCode;
 }
+
+//-----------------------------------------------------------------------------
+// (Set/Get)LastError wrapper
+
+#ifndef STORMLIB_WINDOWS
+#ifndef STORMLIB_WIIU
+static thread_local DWORD dwLastError = ERROR_SUCCESS;
+#else
+static DWORD dwLastError = ERROR_SUCCESS;
+#endif
+#endif
+
+void SErrSetLastError(DWORD dwErrCode)
+{
+#ifdef STORMLIB_WINDOWS
+    SetLastError(dwErrCode);
+#else
+    dwLastError = dwErrCode;
+#endif
+}
+
+DWORD SErrGetLastError()
+{
+#ifdef STORMLIB_WINDOWS
+    return GetLastError();
+#else
+    return dwLastError;
+#endif
+}

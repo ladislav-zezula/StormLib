@@ -9,7 +9,7 @@
 
 static WRes GetError()
 {
-  DWORD res = GetLastError();
+  DWORD res = SErrGetLastError();
   return (res) ? (WRes)(res) : 1;
 }
 
