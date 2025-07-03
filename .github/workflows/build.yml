@@ -85,3 +85,31 @@ jobs:
         run: |
           file "stormlib.dll"
           file "stormlib.dll" |grep "x86-64"
+
+  windows-latest-x86:
+    if: true
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x86
+
+      - name: Cmake
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Debug
+        shell: bash
+        run: ls -la build
+
+      - name: Check PE
+        shell: bash
+        working-directory: ./build/Release
+        run: |
+          file "stormlib.dll"
+          file "stormlib.dll" |grep "x86-64"
