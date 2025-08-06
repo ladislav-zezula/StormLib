@@ -1155,11 +1155,11 @@ bool WINAPI SFileOpenPatchArchive(
         }
         else
         {
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
         }
     }
 
-    SetLastError(dwErrCode);
+    SErrSetLastError(dwErrCode);
     return false;
 }
 

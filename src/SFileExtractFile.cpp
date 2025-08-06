@@ -22,7 +22,7 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
     if(dwErrCode == ERROR_SUCCESS)
     {
         if(!SFileOpenFileEx(hMpq, szToExtract, dwSearchScope, &hMpqFile))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Create the local file
@@ -30,7 +30,7 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
     {
         pLocalFile = FileStream_CreateFile(szExtracted, 0);
         if(pLocalFile == NULL)
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Copy the file's content
@@ -42,7 +42,7 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
         // dwTransferred is only set to nonzero if something has been read.
         // dwErrCode can be ERROR_SUCCESS or ERROR_HANDLE_EOF
         if(!SFileReadFile(hMpqFile, szBuffer, sizeof(szBuffer), &dwTransferred, NULL))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
         if(dwErrCode == ERROR_HANDLE_EOF)
             dwErrCode = ERROR_SUCCESS;
         if(dwTransferred == 0)
@@ -50,7 +50,7 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
 
         // If something has been actually read, write it
         if(!FileStream_Write(pLocalFile, NULL, szBuffer, dwTransferred))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Close the files
@@ -59,6 +59,6 @@ bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const TCHAR 
     if(pLocalFile != NULL)
         FileStream_Close(pLocalFile);
     if(dwErrCode != ERROR_SUCCESS)
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
     return (dwErrCode == ERROR_SUCCESS);
 }

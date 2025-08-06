@@ -224,7 +224,7 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
     }
     else
     {
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
     }
 
     // Free all used buffers
@@ -280,7 +280,7 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
         if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, cbRawData))
         {
             STORM_FREE(pbCompressed);
-            return GetLastError();
+            return SErrGetLastError();
         }
 
         // If the file is encrypted, we have to decrypt the data first
@@ -411,7 +411,7 @@ static DWORD ReadMpkFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
         if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, pFileEntry->dwCmpSize))
         {
             STORM_FREE(pbCompressed);
-            return GetLastError();
+            return SErrGetLastError();
         }
 
         // If the file is encrypted, we have to decrypt the data first
@@ -666,7 +666,7 @@ static DWORD ReadMpqFileLocalFile(TMPQFile * hf, void * pvBuffer, DWORD dwFilePo
     if(!FileStream_Read(hf->pStream, &FilePosition1, pvBuffer, dwToRead))
     {
         // If not all bytes have been read, then return the number of bytes read
-        if((dwErrCode = GetLastError()) == ERROR_HANDLE_EOF)
+        if((dwErrCode = SErrGetLastError()) == ERROR_HANDLE_EOF)
         {
             FileStream_GetPos(hf->pStream, &FilePosition2);
             dwBytesRead = (DWORD)(FilePosition2 - FilePosition1);
@@ -699,13 +699,13 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
     // Check valid parameters
     if((hf = IsValidFileHandle(hFile)) == NULL)
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 
     if(pvBuffer == NULL)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
@@ -715,7 +715,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
         dwErrCode = AllocatePatchInfo(hf, true);
         if(dwErrCode != ERROR_SUCCESS || hf->pPatchInfo == NULL)
         {
-            SetLastError(dwErrCode);
+            SErrSetLastError(dwErrCode);
             return false;
         }
     }
@@ -768,7 +768,7 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
 
     // If something failed, set the last error value
     if(dwErrCode != ERROR_SUCCESS)
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
     return (dwErrCode == ERROR_SUCCESS);
 }
 
@@ -818,7 +818,7 @@ DWORD WINAPI SFileGetFileSize(HANDLE hFile, LPDWORD pdwFileSizeHigh)
         return (DWORD)FileSize;
     }
 
-    SetLastError(ERROR_INVALID_HANDLE);
+    SErrSetLastError(ERROR_INVALID_HANDLE);
     return SFILE_INVALID_SIZE;
 }
 
@@ -833,7 +833,7 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
     // If the hFile is not a valid file handle, return an error.
     if(!IsValidFileHandle(hFile))
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return SFILE_INVALID_POS;
     }
 
@@ -881,7 +881,7 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
             break;
 
         default:
-            SetLastError(ERROR_INVALID_PARAMETER);
+            SErrSetLastError(ERROR_INVALID_PARAMETER);
             return SFILE_INVALID_POS;
     }
 
@@ -893,7 +893,7 @@ DWORD WINAPI SFileSetFilePointer(HANDLE hFile, LONG lFilePos, LONG * plFilePosHi
     {
         if(NewPosition > FileSize) // Position is negative
         {
-            SetLastError(ERROR_NEGATIVE_SEEK);
+            SErrSetLastError(ERROR_NEGATIVE_SEEK);
             return SFILE_INVALID_POS;
         }
     }

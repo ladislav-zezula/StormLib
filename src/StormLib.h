@@ -631,10 +631,10 @@ typedef struct _TMPQHeader
 typedef struct _TMPQHash
 {
     // The hash of the file path, using method A.
-    DWORD dwName1;
+    DWORD dwHashCheck1;
 
     // The hash of the file path, using method B.
-    DWORD dwName2;
+    DWORD dwHashCheck2;
 
 #ifdef STORMLIB_LITTLE_ENDIAN
 
@@ -645,11 +645,11 @@ typedef struct _TMPQHash
     // The platform the file is used for. 0 indicates the default platform.
     // No other values have been observed.
     BYTE   Platform;
-    BYTE   Reserved;
+    BYTE   Flags;
 
 #else
 
-    BYTE   Reserved;
+    BYTE   Flags;
     BYTE   Platform;
     USHORT Locale;
 
@@ -1158,14 +1158,10 @@ DWORD  WINAPI SMemFileNameToUTF8(
     size_t * pOutLength);           // Pointer to a variable that receives the needed length in bytes (optional)
 
 //-----------------------------------------------------------------------------
-// Non-Windows support for SetLastError/GetLastError
+// Stormlib-specific support for SetLastError/GetLastError
 
-#ifndef STORMLIB_WINDOWS
-
-void  SetLastError(DWORD dwErrCode);
-DWORD GetLastError();
-
-#endif
+void  SErrSetLastError(DWORD dwErrCode);
+DWORD SErrGetLastError();
 
 //-----------------------------------------------------------------------------
 // Functions from Storm.dll. They use slightly different names for keeping

@@ -411,7 +411,7 @@ static DWORD VerifyRawMpqData(
     {
         // Read the array of MD5
         if(!FileStream_Read(ha->pStream, &DataOffset, pbMD5Array2, dwMD5Size))
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Compare the array of MD5
@@ -631,7 +631,7 @@ static DWORD VerifyFile(
             SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
             if(dwBytesRead == 0)
             {
-                if(GetLastError() == ERROR_CHECKSUM_ERROR)
+                if(SErrGetLastError() == ERROR_CHECKSUM_ERROR)
                     dwVerifyResult |= VERIFY_FILE_SECTOR_CRC_ERROR;
                 break;
             }
@@ -868,7 +868,7 @@ DWORD SSignFileFinish(TMPQArchive * ha)
 
     // Write the signature to the MPQ. Don't use SFile* functions, but write the hash directly
     if(!FileStream_Write(ha->pStream, &si.BeginExclude, WeakSignature, MPQ_SIGNATURE_FILE_SIZE))
-        return GetLastError();
+        return SErrGetLastError();
 
     return ERROR_SUCCESS;
 }
@@ -895,7 +895,7 @@ bool WINAPI SFileGetFileChecksums(HANDLE hMpq, const char * szFileName, LPDWORD 
     // If verification failed, return zero
     if(dwVerifyResult & VERIFY_FILE_ERROR_MASK)
     {
-        SetLastError(ERROR_FILE_CORRUPT);
+        SErrSetLastError(ERROR_FILE_CORRUPT);
         return false;
     }
 
@@ -1026,21 +1026,21 @@ bool WINAPI SFileSignArchive(HANDLE hMpq, DWORD dwSignatureType)
     ha = IsValidMpqHandle(hMpq);
     if(ha == NULL)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // We only support weak signature, and only for MPQs version 1.0
     if(dwSignatureType != SIGNATURE_TYPE_WEAK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
     // The archive must not be malformed and must not be read-only
     if(ha->dwFlags & (MPQ_FLAG_READ_ONLY | MPQ_FLAG_MALFORMED))
     {
-        SetLastError(ERROR_ACCESS_DENIED);
+        SErrSetLastError(ERROR_ACCESS_DENIED);
         return false;
     }
 

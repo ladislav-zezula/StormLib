@@ -444,7 +444,7 @@ HANDLE WINAPI SFileFindFirstFile(HANDLE hMpq, const char * szMask, SFILE_FIND_DA
     if(dwErrCode != ERROR_SUCCESS)
     {
         FreeMPQSearch(hs);
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
     }
 
     // Return the result value
@@ -466,7 +466,7 @@ bool WINAPI SFileFindNextFile(HANDLE hFind, SFILE_FIND_DATA * lpFindFileData)
         dwErrCode = DoMPQSearch(hs, lpFindFileData);
 
     if(dwErrCode != ERROR_SUCCESS)
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
     return (dwErrCode == ERROR_SUCCESS);
 }
 
@@ -477,7 +477,7 @@ bool WINAPI SFileFindClose(HANDLE hFind)
     // Check the parameters
     if(hs == NULL)
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 

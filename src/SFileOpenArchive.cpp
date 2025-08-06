@@ -217,7 +217,7 @@ bool WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers)
     // Check structure minimum size
     if(pMarkers == NULL || pMarkers->dwSize < SFILE_MARKERS_MIN_SIZE)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
@@ -281,7 +281,7 @@ bool WINAPI SFileOpenArchive(
     // Verify the parameters
     if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
 
@@ -367,7 +367,7 @@ bool WINAPI SFileOpenArchive(
             // Read the eventual MPQ header
             if(!FileStream_Read(ha->pStream, &ByteOffset, pbHeaderBuffer, dwBytesAvailable))
             {
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
                 break;
             }
 
@@ -408,7 +408,7 @@ bool WINAPI SFileOpenArchive(
                             // Read the eventual MPQ header from the position where the user data points
                             if(!FileStream_Read(ha->pStream, &TempByteOffset, ha->HeaderData, sizeof(ha->HeaderData)))
                             {
-                                dwErrCode = GetLastError();
+                                dwErrCode = SErrGetLastError();
                                 break;
                             }
 
@@ -614,7 +614,7 @@ bool WINAPI SFileOpenArchive(
     {
         FileStream_Close(pStream);
         FreeArchiveHandle(ha);
-        SetLastError(dwErrCode);
+        SErrSetLastError(dwErrCode);
         ha = NULL;
     }
 
@@ -639,7 +639,7 @@ bool WINAPI SFileSetDownloadCallback(HANDLE hMpq, SFILE_DOWNLOAD_CALLBACK Downlo
     // Do nothing if 'hMpq' is bad parameter
     if(!IsValidMpqHandle(hMpq))
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 
@@ -664,7 +664,7 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
     // Do nothing if 'hMpq' is bad parameter
     if((ha = IsValidMpqHandle(hMpq)) == NULL)
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 
@@ -730,7 +730,7 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
 
     // Return the error
     if(dwResultError != ERROR_SUCCESS)
-        SetLastError(dwResultError);
+        SErrSetLastError(dwResultError);
     return (dwResultError == ERROR_SUCCESS);
 }
 
@@ -746,7 +746,7 @@ bool WINAPI SFileCloseArchive(HANDLE hMpq)
     // Only if the handle is valid
     if(ha == NULL)
     {
-        SetLastError(ERROR_INVALID_HANDLE);
+        SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 

@@ -614,7 +614,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
                 cbBytesToRead = ((FileSize - ByteOffset) > cbFileBlock) ? cbFileBlock : (DWORD)(FileSize - ByteOffset);
                 if(!FileStream_Read(pStream, &ByteOffset, pbFileBlock, cbBytesToRead))
                 {
-                    dwErrCode = GetLastError();
+                    dwErrCode = SErrGetLastError();
                     break;
                 }
 
@@ -858,7 +858,7 @@ static DWORD ForEachFile_VerifyFileHash(LPCTSTR szFullPath, void * lpContext)
                 StringCopy(szHashTextA, _countof(szHashTextA), szHashText);
                 if(_strnicmp(szHashTextA, GetFileText(pFileData), (SHA256_DIGEST_SIZE * 2)))
                 {
-                    SetLastError(dwErrCode = ERROR_FILE_CORRUPT);
+                    SErrSetLastError(dwErrCode = ERROR_FILE_CORRUPT);
                     pLogger->PrintError(_T("File hash check failed: %s"), szFullPath);
                 }
             }
@@ -1040,13 +1040,32 @@ static DWORD GetFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     }
     else
     {
-        if(GetLastError() != ERROR_FILE_DELETED)
+        if(SErrGetLastError() != ERROR_FILE_DELETED)
         {
             pLogger->PrintError("Open failed: %s", szFileName);
         }
     }
 
     return nPatchCount;
+}
+
+static DWORD SetLocaleForFileOperations(HANDLE hMpq, LPCSTR szFileName, LCID lcLocale)
+{
+    HANDLE hFile = NULL;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
+    {
+        if(!SFileSetFileLocale(hFile, lcLocale))
+            dwErrCode = SErrGetLastError();
+        SFileSetLocale(lcLocale);
+        SFileCloseFile(hFile);
+    }
+    else
+    {
+        dwErrCode = SErrGetLastError();
+    }
+    return dwErrCode;
 }
 
 static DWORD VerifyFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, DWORD dwExpectedPatchCount)
@@ -1163,7 +1182,7 @@ static DWORD WriteMpqUserDataHeader(
     UserData.dwHeaderOffs = (dwByteCount + sizeof(TMPQUserData));
     UserData.cbUserDataHeader = dwByteCount / 2;
     if(!FileStream_Write(pStream, &ByteOffset, &UserData, sizeof(TMPQUserData)))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
     return dwErrCode;
 }
 
@@ -1197,7 +1216,7 @@ static DWORD WriteFileData(
             // Write the data
             if(!FileStream_Write(pStream, &ByteOffset, pbDataBuffer, cbToWrite))
             {
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
                 break;
             }
 
@@ -1235,14 +1254,14 @@ static DWORD CopyFileData(
             BytesToRead = ((EndOffset - ByteOffset) > BlockLength) ? BlockLength : (DWORD)(EndOffset - ByteOffset);
             if(!FileStream_Read(pStream1, &ByteOffset, pbCopyBuffer, BytesToRead))
             {
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
                 break;
             }
 
             // Write to the destination file
             if(!FileStream_Write(pStream2, NULL, pbCopyBuffer, BytesToRead))
             {
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
                 break;
             }
 
@@ -1519,7 +1538,7 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
     }
     else
     {
-        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0 && GetLastError() != ERROR_FILE_DELETED)
+        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0 && SErrGetLastError() != ERROR_FILE_DELETED)
         {
             dwErrCode = Logger.PrintError("Open failed: %s", szFileName);
         }
@@ -1663,7 +1682,7 @@ static DWORD SearchArchive(
     hFind = SFileFindFirstFile(hMpq, "*", &sf, szListFile);
     if(hFind == NULL)
     {
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
         dwErrCode = (dwErrCode == ERROR_NO_MORE_FILES) ? ERROR_SUCCESS : dwErrCode;
         return dwErrCode;
     }
@@ -1866,11 +1885,11 @@ static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD
     pLogger->PrintProgress(_T("Opening archive %s ..."), GetShortPlainName(szFullPath));
     if(!SFileOpenArchive(szFullPath, 0, dwOpenFlags, &hMpq))
     {
-        switch(dwErrCode = GetLastError())
+        switch(dwErrCode = SErrGetLastError())
         {
 //          case ERROR_BAD_FORMAT:  // If the error is ERROR_BAD_FORMAT, try to open with MPQ_OPEN_FORCE_MPQ_V1
 //              bReopenResult = SFileOpenArchive(szMpqName, 0, dwFlags | MPQ_OPEN_FORCE_MPQ_V1, &hMpq);
-//              dwErrCode = (bReopenResult == false) ? GetLastError() : ERROR_SUCCESS;
+//              dwErrCode = (bReopenResult == false) ? SErrGetLastError() : ERROR_SUCCESS;
 //              break;
 
             case ERROR_AVI_FILE:        // Ignore the error if it's an AVI file or if the file is incomplete
@@ -1960,7 +1979,7 @@ static DWORD AddFileToMpq(
     }
     else
     {
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
     }
 
     // Check the expected error code
@@ -2006,7 +2025,7 @@ static DWORD AddLocalFileToMpq(
     {
         if(bMustSucceed)
             return pLogger->PrintError("Failed to add the file %s", szArchivedName);
-        return GetLastError();
+        return SErrGetLastError();
     }
 
     // Verify the file unless it was lossy compression
@@ -2033,7 +2052,7 @@ static DWORD RemoveMpqFile(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName,
 
     // Perform the deletion
     if(!SFileRemoveFile(hMpq, szFileName, 0))
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     if(dwErrCode != dwExpectedError)
         return pLogger->PrintError("Unexpected result from SFileRemoveFile(%s)", szFileName);
@@ -2059,7 +2078,7 @@ static void TestGetFileInfo(
     // Call the get file info
     bResult = SFileGetFileInfo(hMpqOrFile, InfoClass, pvFileInfo, cbFileInfo, pcbLengthNeeded);
     if(!bResult)
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
 
     // Check the expected results
     if(bResult != bExpectedResult)
@@ -2758,7 +2777,7 @@ static DWORD TestOpenArchive(
 
     // Reset error code, if the failure is expected
     if((dwErrCode != ERROR_SUCCESS || hMpq == NULL) && (dwFlags & TFLG_WILL_FAIL))
-        SetLastError(dwErrCode = ERROR_SUCCESS);
+        SErrSetLastError(dwErrCode = ERROR_SUCCESS);
 
     // Cleanup and exit
     if(hMpq != NULL)
@@ -3057,6 +3076,61 @@ static DWORD TestCreateArchive(const TEST_INFO2 & TestInfo)
     return TestCreateArchive(szPlainNameT, TestInfo.szName2, TestInfo.dwFlags);
 }
 
+static DWORD TestRenameFile(LPCTSTR szPlainName)
+{
+    TLogHelper Logger("TestRenameFile", szPlainName);
+    LPCSTR szSourceFile = "war3map.mmp";
+    LPCSTR szTargetFile = "war3map.wts";
+    HANDLE hMpq = NULL;
+    DWORD dwErrCode;
+    DWORD dwFailed = 0;
+    LCID LCID_RURU = 0x0419;
+    LCID LCID_ESES = 0x040A;
+
+    // Create copy of the archive and open it
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Try to rename an existing file to "war3map.wts".
+        // This must fail because the file already exists.
+        if(SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Now change locale of an existing file to Russian
+        if(SetLocaleForFileOperations(hMpq, szSourceFile, LCID_RURU) != ERROR_SUCCESS)
+            dwFailed++;
+
+        // The rename should work now
+        if(!SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Changing the file locale to Neutral should fail now,
+        // because such file already exists
+        if(SetLocaleForFileOperations(hMpq, szTargetFile, 0) != ERROR_ALREADY_EXISTS)
+            dwFailed++;
+
+        // Pick another source file
+        szSourceFile = "war3map.shd";
+
+        // Change the file locale to Spain
+        if(SetLocaleForFileOperations(hMpq, szSourceFile, LCID_ESES) != ERROR_SUCCESS)
+            dwFailed++;
+
+        // This rename should also work, because there is no target file with Spanish locale
+        if(!SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Evaluate the result
+        if(dwFailed != 0)
+            dwErrCode = ERROR_CAN_NOT_COMPLETE;
+        SFileCloseArchive(hMpq);
+    }
+
+    // Restore the original file locale
+    SFileSetLocale(LANG_NEUTRAL);
+    return dwErrCode;
+}
+
 static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
 {
     TLogHelper Logger("TestCreateGaps", szPlainName);
@@ -3092,7 +3166,7 @@ static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
                 SFileCloseFile(hFile);
             }
             else
-                dwErrCode = GetLastError();
+                dwErrCode = SErrGetLastError();
         }
     }
 
@@ -3111,7 +3185,7 @@ static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
             SFileCloseFile(hFile);
         }
         else
-            dwErrCode = GetLastError();
+            dwErrCode = SErrGetLastError();
     }
 
     // Now check the positions
@@ -3322,6 +3396,7 @@ static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
     // Create paths for local file to be added
     CreateFullPathName(szFileName1, _countof(szFileName1), szDataFileDir, _T("new-file.exe"));
     CreateFullPathName(szFileName2, _countof(szFileName2), szDataFileDir, _T("new-file.bin"));
+    SFileSetLocale(LANG_NEUTRAL);
 
     // Create an empty file that will serve as holder for the MPQ
     dwErrCode = CreateEmptyFile(&Logger, szPlainName, 0x100000, szFullPath);
@@ -3869,23 +3944,25 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-/*
     HANDLE hMpq;
     HANDLE hFile;
+    LPBYTE pbData;
+    DWORD dwFileSize = 529298;
+    DWORD dwBytesRead = 0;
 
-    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\WoW-1.11.2.5464-to-1.12.0.5595-enUS-patch.exe"), 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("c:\\War3.mpq"), 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "AccountLogin.xml", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "(listfile)", 0, &hFile))
         {
-            DWORD dwBytesRead = 0;
-            BYTE Buffer[1024];
-
-            SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
+            if((pbData = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
+            {
+                SFileReadFile(hFile, pbData, dwFileSize, &dwBytesRead, NULL);
+                STORM_FREE(pbData);
+            }
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4501,6 +4578,11 @@ int _tmain(int argc, TCHAR * argv[])
 #endif
 
 #ifdef TEST_MISC_MPQS
+
+    // Test creating of an archive the same way like MPQ Editor does
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestRenameFile(_T("MPQ_2002_v1_StrongSignature.w3m"));
+
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
