@@ -20,10 +20,10 @@ echo.
 :BUILD_BINARY_64
 echo Building %BINARY_NAME%.lib (64-bit) ...
 set DDKBUILDENV=
-call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre x64 WLH
+call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre x64 wnet
 cd /d %PROJECT_DIR%
 build.exe -czgw
-del buildfre_wlh_amd64.log
+del buildfre_wnet_amd64.log
 echo.
 
 :BUILD_BINARY_32
@@ -42,8 +42,8 @@ if not exist ..\aaa\lib32 md ..\aaa\lib32
 if not exist ..\aaa\lib64 md ..\aaa\lib64
 copy /Y .\src\StormLib.h  ..\aaa\inc >nul
 copy /Y .\src\StormPort.h ..\aaa\inc >nul
-copy /Y .\objfre_wlh_amd64\amd64\%BINARY_NAME%.lib ..\aaa\lib64\%BINARY_NAME%.lib >nul
-copy /Y .\objfre_w2k_x86\i386\%BINARY_NAME%.lib    ..\aaa\lib32\%BINARY_NAME%.lib >nul
+copy /Y .\objfre_wnet_amd64\amd64\%BINARY_NAME%.lib ..\aaa\lib64\%BINARY_NAME%.lib >nul
+copy /Y .\objfre_w2k_x86\i386\%BINARY_NAME%.lib     ..\aaa\lib32\%BINARY_NAME%.lib >nul
 
 :CLEANUP
 if exist sources-cpp.cpp del sources-cpp.cpp

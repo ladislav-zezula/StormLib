@@ -1049,6 +1049,25 @@ static DWORD GetFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     return nPatchCount;
 }
 
+static DWORD SetLocaleForFileOperations(HANDLE hMpq, LPCSTR szFileName, LCID lcLocale)
+{
+    HANDLE hFile = NULL;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
+    {
+        if(!SFileSetFileLocale(hFile, lcLocale))
+            dwErrCode = SErrGetLastError();
+        SFileSetLocale(lcLocale);
+        SFileCloseFile(hFile);
+    }
+    else
+    {
+        dwErrCode = SErrGetLastError();
+    }
+    return dwErrCode;
+}
+
 static DWORD VerifyFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, DWORD dwExpectedPatchCount)
 {
     DWORD dwPatchCount = 0;
@@ -3057,6 +3076,61 @@ static DWORD TestCreateArchive(const TEST_INFO2 & TestInfo)
     return TestCreateArchive(szPlainNameT, TestInfo.szName2, TestInfo.dwFlags);
 }
 
+static DWORD TestRenameFile(LPCTSTR szPlainName)
+{
+    TLogHelper Logger("TestRenameFile", szPlainName);
+    LPCSTR szSourceFile = "war3map.mmp";
+    LPCSTR szTargetFile = "war3map.wts";
+    HANDLE hMpq = NULL;
+    DWORD dwErrCode;
+    DWORD dwFailed = 0;
+    LCID LCID_RURU = 0x0419;
+    LCID LCID_ESES = 0x040A;
+
+    // Create copy of the archive and open it
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, szPlainName, szPlainName, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Try to rename an existing file to "war3map.wts".
+        // This must fail because the file already exists.
+        if(SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Now change locale of an existing file to Russian
+        if(SetLocaleForFileOperations(hMpq, szSourceFile, LCID_RURU) != ERROR_SUCCESS)
+            dwFailed++;
+
+        // The rename should work now
+        if(!SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Changing the file locale to Neutral should fail now,
+        // because such file already exists
+        if(SetLocaleForFileOperations(hMpq, szTargetFile, 0) != ERROR_ALREADY_EXISTS)
+            dwFailed++;
+
+        // Pick another source file
+        szSourceFile = "war3map.shd";
+
+        // Change the file locale to Spain
+        if(SetLocaleForFileOperations(hMpq, szSourceFile, LCID_ESES) != ERROR_SUCCESS)
+            dwFailed++;
+
+        // This rename should also work, because there is no target file with Spanish locale
+        if(!SFileRenameFile(hMpq, szSourceFile, szTargetFile))
+            dwFailed++;
+
+        // Evaluate the result
+        if(dwFailed != 0)
+            dwErrCode = ERROR_CAN_NOT_COMPLETE;
+        SFileCloseArchive(hMpq);
+    }
+
+    // Restore the original file locale
+    SFileSetLocale(LANG_NEUTRAL);
+    return dwErrCode;
+}
+
 static DWORD TestCreateArchive_TestGaps(LPCTSTR szPlainName)
 {
     TLogHelper Logger("TestCreateGaps", szPlainName);
@@ -3322,6 +3396,7 @@ static DWORD TestCreateArchive_FileFlagTest(LPCTSTR szPlainName)
     // Create paths for local file to be added
     CreateFullPathName(szFileName1, _countof(szFileName1), szDataFileDir, _T("new-file.exe"));
     CreateFullPathName(szFileName2, _countof(szFileName2), szDataFileDir, _T("new-file.bin"));
+    SFileSetLocale(LANG_NEUTRAL);
 
     // Create an empty file that will serve as holder for the MPQ
     dwErrCode = CreateEmptyFile(&Logger, szPlainName, 0x100000, szFullPath);
@@ -4503,6 +4578,11 @@ int _tmain(int argc, TCHAR * argv[])
 #endif
 
 #ifdef TEST_MISC_MPQS
+
+    // Test creating of an archive the same way like MPQ Editor does
+    if(dwErrCode == ERROR_SUCCESS)
+        dwErrCode = TestRenameFile(_T("MPQ_2002_v1_StrongSignature.w3m"));
+
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));

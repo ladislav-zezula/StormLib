@@ -163,6 +163,7 @@ CreateNewMpq (StormLibTest_简体中文.mpq) succeeded.
 CreateNewMpq (StormLibTest_الععربية.mpq) succeeded.
 CreateNewMpq (StormLibTest_NonStdNames.mpq) succeeded.
 CreateNewMpq (StormLibTest_MpqEditorTest.mpq) succeeded.
+TestRenameFile (MPQ_2002_v1_StrongSignature.w3m) succeeded.
 TestCreateGaps (StormLibTest_GapsTest.mpq) succeeded.
 TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.
 TestCreateFull (StormLibTest_FileTableFull.mpq) succeeded.

@@ -25,9 +25,13 @@ if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Enterprise\VC\Auxilia
 if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_20xx=%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"    set VCVARS_20xx=%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
 
-:: Build all libraries using Visual Studio 2008 and 202x
+:: Build all libraries using Visual Studio 2008
+rmdir /S /Q .\bin\%LIB_NAME%
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x86 %LIB_NAME%_vs08.sln vs2008
 if not "x%VCVARS_2008%" == "x" call :BuildLibs "%VCVARS_2008%" x64 %LIB_NAME%_vs08.sln vs2008
+
+:: Build all libraries using Visual Studio 2017+
+rmdir /S /Q .\bin\%LIB_NAME%
 if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x86 %LIB_NAME%.sln
 if not "x%VCVARS_20xx%" == "x" call :BuildLibs "%VCVARS_20xx%" x64 %LIB_NAME%.sln
 goto:eof
@@ -92,7 +96,7 @@ devenv.com %1 /project "%LIB_NAME%" /rebuild "%5|%2"
 if not exist ..\aaa goto:eof
 if not exist ..\aaa\inc md ..\aaa\inc
 if not exist ..\aaa\%3  md ..\aaa\%3
-copy /Y /D .\src\StormLib.h            ..\aaa\inc >nul
-copy /Y /D .\src\StormPort.h           ..\aaa\inc >nul  
-copy /Y /D .\bin\StormLib\%2\%5\%4.lib ..\aaa\%3\%4.lib >nul
-copy /Y /D .\bin\StormLib\%2\%5\%4.pdb ..\aaa\%3\%4.pdb >nul
+copy /Y .\src\StormLib.h              ..\aaa\inc >nul
+copy /Y .\src\StormPort.h             ..\aaa\inc >nul  
+copy /Y .\bin\%LIB_NAME%\%2\%5\%4.lib ..\aaa\%3\%4.lib >nul
+copy /Y .\bin\%LIB_NAME%\%2\%5\%4.pdb ..\aaa\%3\%4.pdb >nul

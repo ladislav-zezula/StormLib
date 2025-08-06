@@ -1163,8 +1163,11 @@ bool WINAPI SFileRemoveFile(HANDLE hMpq, const char * szFileName, DWORD dwSearch
 bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * szNewFileName)
 {
     TMPQArchive * ha = IsValidMpqHandle(hMpq);
+    TFileEntry * pFileEntry;
     TMPQFile * hf;
+    DWORD dwHashIndex = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
+    LCID lcFileLocale = 0;
 
     // Test the valid parameters
     if(ha == NULL)
@@ -1181,11 +1184,25 @@ bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * s
             dwErrCode = ERROR_ACCESS_DENIED;
     }
 
-    // Open the new file. If exists, we don't allow rename operation
+    // Retrieve the locale of the existing file
+    // Could be the preferred one or neutral one
+    if(dwErrCode == ERROR_SUCCESS && ha->pHashTable != NULL)
+    {
+        if((pFileEntry = GetFileEntryLocale(ha, szFileName, g_lcFileLocale, &dwHashIndex)) != NULL)
+        {
+            lcFileLocale = ha->pHashTable[dwHashIndex].Locale;
+        }
+        else
+            dwErrCode = ERROR_FILE_NOT_FOUND;
+    }
+
+    // The target file entry must not be there
     if(dwErrCode == ERROR_SUCCESS)
     {
-        if(GetFileEntryLocale(ha, szNewFileName, g_lcFileLocale) != NULL)
+        if(GetFileEntryExact(ha, szNewFileName, lcFileLocale) != NULL)
+        {
             dwErrCode = ERROR_ALREADY_EXISTS;
+        }
     }
 
     // Open the file from the MPQ
@@ -1195,9 +1212,9 @@ bool WINAPI SFileRenameFile(HANDLE hMpq, const char * szFileName, const char * s
         if(SFileOpenFileEx(hMpq, szFileName, SFILE_OPEN_BASE_FILE, (HANDLE *)&hf))
         {
             ULONGLONG RawDataOffs;
-            TFileEntry * pFileEntry = hf->pFileEntry;
 
             // Invalidate the entries for internal files
+            pFileEntry = hf->pFileEntry;
             InvalidateInternalFiles(ha);
 
             // Rename the file entry in the table
@@ -1266,15 +1283,21 @@ bool WINAPI SFileSetFileLocale(HANDLE hFile, LCID lcNewLocale)
     TFileEntry * pFileEntry;
     TMPQFile * hf = IsValidFileHandle(hFile);
 
-    // Invalid handle => do nothing
+    // Invalid file handle => return error
     if(hf == NULL)
     {
         SErrSetLastError(ERROR_INVALID_HANDLE);
         return false;
     }
 
+    // Invalid archive handle => return error
+    if((ha = IsValidMpqHandle(hf->ha)) == NULL)
+    {
+        SErrSetLastError(ERROR_INVALID_HANDLE);
+        return false;
+    }
+
     // Do not allow to rename files in MPQ open for read only
-    ha = hf->ha;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
     {
         SErrSetLastError(ERROR_ACCESS_DENIED);
