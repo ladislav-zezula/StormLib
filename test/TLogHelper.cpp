@@ -108,11 +108,7 @@ inline DWORD TestInterlockedIncrement(DWORD * PtrValue)
 
 inline DWORD Test_GetLastError()
 {
-#if defined(CASCLIB_PLATFORM_WINDOWS)
-    return GetCascError();
-#else
-    return GetLastError();
-#endif
+    return SErrGetLastError();
 }
 
 #ifdef TEST_PLATFORM_WINDOWS

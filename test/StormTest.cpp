@@ -355,6 +355,13 @@ const char * GetFileText(PFILE_DATA pFileData)
     return szFileText;
 }
 
+#ifdef STORMLIB_LINUX
+static void alsa_silent_error_handler(const char * file, int line, const char * function, int err, const char * fmt, ...)
+{
+    // Suppress ALSA error output, so do nothing
+}
+#endif
+
 static void PlayWaveSound(PFILE_DATA pFileData)
 {
 #ifdef STORMLIB_WINDOWS
@@ -367,6 +374,10 @@ static void PlayWaveSound(PFILE_DATA pFileData)
     snd_pcm_t *pcm_handle;
     unsigned int bitrate = pHeader->dwSamplesPerSec;
 
+    // Suppress ALSA error printing
+    snd_lib_error_set_handler(alsa_silent_error_handler);
+
+    // Open the default sound device and play the sound
     if(snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0) >= 0)
     {
         snd_pcm_format_t format = (pHeader->wBitsPerSample == 16) ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_S8;
