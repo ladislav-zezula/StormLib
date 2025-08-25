@@ -463,15 +463,17 @@ DWORD WINAPI SFileGetMaxFileCount(HANDLE hMpq)
 bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
 {
     TMPQArchive * ha = (TMPQArchive *)hMpq;
-    DWORD dwNewHashTableSize = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Calculate the hash table size for the new file limit
+    DWORD dwNewHashTableSize = GetNearestPowerOfTwo(dwMaxFileCount);
 
     // Test the valid parameters
     if(!IsValidMpqHandle(hMpq))
         dwErrCode = ERROR_INVALID_HANDLE;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
         dwErrCode = ERROR_ACCESS_DENIED;
-    if(dwMaxFileCount < ha->dwFileTableSize)
+    if(dwNewHashTableSize < ha->dwFileTableSize)
         dwErrCode = ERROR_DISK_FULL;
 
     // ALL file names must be known in order to be able to rebuild hash table
@@ -480,9 +482,6 @@ bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
         dwErrCode = CheckIfAllFilesKnown(ha);
         if(dwErrCode == ERROR_SUCCESS)
         {
-            // Calculate the hash table size for the new file limit
-            dwNewHashTableSize = GetNearestPowerOfTwo(dwMaxFileCount);
-
             // Rebuild both file tables
             dwErrCode = RebuildFileTable(ha, dwNewHashTableSize);
         }
