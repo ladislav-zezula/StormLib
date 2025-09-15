@@ -1019,6 +1019,11 @@ void * LoadMpqTable(
                 return NULL;
             }
         }
+        else
+        {
+            // pocs/MPQ_2025_06_BadHashTableSize.mpq
+            dwCompressedSize = dwTableSize;
+        }
 
         // Get the file offset from which we will read the table
         // Note: According to Storm.dll from Warcraft III (version 2002),

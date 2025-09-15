@@ -3960,8 +3960,8 @@ static void Test_PlayingSpace()
     LPBYTE pbData;
     DWORD dwFileSize = 529298;
     DWORD dwBytesRead = 0;
-
-    if(SFileOpenArchive(_T("c:\\War3.mpq"), 0, 0, &hMpq))
+/*
+    if(SFileOpenArchive(_T("e:\\2.mpq"), 0, 0, &hMpq))
     {
         if(SFileOpenFileEx(hMpq, "(listfile)", 0, &hFile))
         {
@@ -3974,6 +3974,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -4237,7 +4238,7 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
 
-    // PoC's by Gabe Sherman, tinh0.
+    // PoC's by Gabe Sherman, tinh0, Zao Yang
     {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
     {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
     {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",     TFLG_WILL_FAIL},
@@ -4255,6 +4256,8 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("pocs/MPQ_2025_03_InvalidPatchInfo.mpq"),               NULL, "93b885adfe0da089cdf634904fd59f71",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2025_04_InvalidArchiveSize64.mpq"),           NULL, "--------------------------------",     TFLG_WILL_FAIL},
     {_T("pocs/MPQ_2025_05_AddFileError.mpq"),                   NULL, "ce9b8afed4221a53663d391f10691ba6",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_06_BadHashTableSize.mpq"),               NULL, "00000000000000000000000000000000",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_07_BadHetTableSize.mpq"),                NULL, "00000000000000000000000000000000",     TFLG_WILL_FAIL},
 
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1

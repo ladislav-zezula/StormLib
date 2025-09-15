@@ -36,6 +36,8 @@ TestReadingMpq (pocs/MPQ_2025_02_SectorOffsetSizeNotAligned.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2025_03_InvalidPatchInfo.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2025_04_InvalidArchiveSize64.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2025_05_AddFileError.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2025_06_BadHashTableSize.mpq) succeeded.
+TestReadingMpq (pocs/MPQ_2025_07_BadHetTableSize.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
 TestReadingMpq (MPQ_1997_v1_patch_rt_SC1B.mpq) succeeded.
 TestReadingMpq (MPQ_1997_v1_StarDat_SC1B.mpq) succeeded.
