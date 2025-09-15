@@ -292,6 +292,7 @@ extern "C" {
 // Signatures for HET and BET table
 #define HET_TABLE_SIGNATURE         0x1A544548  // 'HET\x1a'
 #define BET_TABLE_SIGNATURE         0x1A544542  // 'BET\x1a'
+#define BET_TABLE_MAX_SIZE          0x00100000  // Maximum acceptable size of HET&BET tables
 
 // Decryption keys for MPQ tables
 #define MPQ_KEY_HASH_TABLE          0xC3AF3770  // Obtained by HashString("(hash table)", MPQ_HASH_FILE_KEY)

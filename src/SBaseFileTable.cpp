@@ -2508,7 +2508,8 @@ TMPQHetTable * LoadHetTable(TMPQArchive * ha)
     TMPQHeader * pHeader = ha->pHeader;
 
     // If the HET table position is not 0, we expect the table to be present
-    if(pHeader->HetTablePos64 && pHeader->HetTableSize64)
+    // Alsom the HET table must have a reasonable size
+    if(pHeader->HetTablePos64 && pHeader->HetTableSize64 && pHeader->HetTableSize64 < BET_TABLE_MAX_SIZE)
     {
         // Attempt to load the HET table (Hash Extended Table)
         pExtTable = LoadExtTable(ha, pHeader->HetTablePos64, (size_t)pHeader->HetTableSize64, HET_TABLE_SIGNATURE, MPQ_KEY_HASH_TABLE);
@@ -2530,7 +2531,7 @@ TMPQBetTable * LoadBetTable(TMPQArchive * ha)
     TMPQHeader * pHeader = ha->pHeader;
 
     // If the BET table position is not 0, we expect the table to be present
-    if(pHeader->BetTablePos64 && pHeader->BetTableSize64)
+    if(pHeader->BetTablePos64 && pHeader->BetTableSize64 && pHeader->BetTableSize64 < BET_TABLE_MAX_SIZE)
     {
         // Attempt to load the HET table (Hash Extended Table)
         pExtTable = LoadExtTable(ha, pHeader->BetTablePos64, (size_t)pHeader->BetTableSize64, BET_TABLE_SIGNATURE, MPQ_KEY_BLOCK_TABLE);
