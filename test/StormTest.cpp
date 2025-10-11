@@ -1,4 +1,4 @@
-/*****************************************************************************/
+﻿/*****************************************************************************/
 /* StormTest.cpp                          Copyright (c) Ladislav Zezula 2003 */
 /*---------------------------------------------------------------------------*/
 /* Test module for StormLib                                                  */
@@ -3955,12 +3955,13 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
+/*
     HANDLE hMpq;
     HANDLE hFile;
     LPBYTE pbData;
     DWORD dwFileSize = 529298;
     DWORD dwBytesRead = 0;
-/*
+
     if(SFileOpenArchive(_T("e:\\2.mpq"), 0, 0, &hMpq))
     {
         if(SFileOpenFileEx(hMpq, "(listfile)", 0, &hFile))

@@ -239,8 +239,8 @@ DWORD SMemStrToBin(const XCHAR * szString, void * pvBinary, size_t cbBinary, siz
             BYTE StringByte0 = (BYTE)szString[0];
             BYTE StringByte1 = (BYTE)szString[1];
 
-            // Each character must be within the range of 0x80
-            if(StringByte0 > 0x80 || StringByte1 > 0x80)
+            // Each character must be within the range of 0x00-0x7F
+            if(StringByte0 >= 0x80 || StringByte1 >= 0x80)
                 return ERROR_INVALID_PARAMETER;
             if(SMemCharToByte[StringByte0] == 0xFF || SMemCharToByte[StringByte1] == 0xFF)
                 return ERROR_INVALID_PARAMETER;
