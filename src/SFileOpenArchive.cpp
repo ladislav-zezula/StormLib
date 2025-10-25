@@ -51,6 +51,7 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
 {
     LPDWORD HeaderInt32 = (LPDWORD)pbHeaderBuffer;
     LPCTSTR szExtension;
+    MTYPE TypeByExtension = MapTypeNotRecognized;
 
     // Don't do any checks if there is not at least 16 bytes
     if(cbHeaderBuffer > 0x10)
@@ -65,16 +66,22 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
         // fake Warcraft III header into the Starcraft II maps
         if((szExtension = _tcsrchr(szFileName, _T('.'))) != NULL)
         {
+            // Check for Starcraft I maps by extension
+            if(!_tcsicmp(szExtension, _T(".scm")) || !_tcsicmp(szExtension, _T(".scx")))
+            {
+                return MapTypeStarcraft;
+            }
+
             // Check for Starcraft II maps by extension
             if(!_tcsicmp(szExtension, _T(".s2ma")) || !_tcsicmp(szExtension, _T(".SC2Map")) || !_tcsicmp(szExtension, _T(".SC2Mod")))
             {
                 return MapTypeStarcraft2;
             }
 
-            // Check for Starcraft I maps by extension
-            if(!_tcsicmp(szExtension, _T(".scm")) || !_tcsicmp(szExtension, _T(".scx")))
+            // Check for Warcraft III maps by extension
+            if(!_tcsicmp(szExtension, _T(".w3m")) || !_tcsicmp(szExtension, _T(".w3x")))
             {
-                return MapTypeStarcraft;
+                TypeByExtension = MapTypeWarcraft3;
             }
         }
 
@@ -112,7 +119,7 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
     }
 
     // No special map type recognized
-    return MapTypeNotRecognized;
+    return TypeByExtension;
 }
 
 static bool IsStarcraftBetaArchive(TMPQHeader * pHeader)

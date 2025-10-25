@@ -3955,14 +3955,14 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-/*
+
     HANDLE hMpq;
     HANDLE hFile;
     LPBYTE pbData;
     DWORD dwFileSize = 529298;
     DWORD dwBytesRead = 0;
 
-    if(SFileOpenArchive(_T("e:\\2.mpq"), 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("e:\\Legion_TD_11_2d-BETA_2_TeamOZE.w3x"), 0, 0, &hMpq))
     {
         if(SFileOpenFileEx(hMpq, "(listfile)", 0, &hFile))
         {
@@ -3975,7 +3975,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
-*/
+
 }
 
 //-----------------------------------------------------------------------------
