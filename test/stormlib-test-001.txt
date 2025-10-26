@@ -102,6 +102,7 @@ TestReadingMpq (MPQ_2022_v1_Sniper.scx) succeeded.
 TestReadingMpq (MPQ_2022_v1_OcOc_Bound_2.scx) succeeded.
 TestReadingMpq (MPQ_2023_v1_Lusin2Rpg1.28.w3x) succeeded.
 TestReadingMpq (MPQ_2024_v1_300TK2.09p.w3x) succeeded.
+TestReadingMpq (MPQ_2025_v1_Legion_TD_11_2d-BETA_2_TeamOZE.w3x) succeeded.
 TestReadingMpq (mix-mpq/AHF04patch.mix) succeeded.
 TestReadingMpq (mix-mpq/hs0.1.asi) succeeded.
 TestReadingMpq (mix-mpq/hs0.8.asi) succeeded.
