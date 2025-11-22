@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /* StormLib.h                        Copyright (c) Ladislav Zezula 1999-2025 */
 /*---------------------------------------------------------------------------*/
-/* StormLib library v 9.30                                                   */
+/* StormLib library v 9.31                                                   */
 /*                                                                           */
 /* Author : Ladislav Zezula                                                  */
 /* E-mail : ladik@zezula.net                                                 */
@@ -144,8 +144,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x091E  // Current version of StormLib
-#define STORMLIB_VERSION_STRING         "9.30"  // Current version of StormLib as string
+#define STORMLIB_VERSION                0x091F  // Current version of StormLib
+#define STORMLIB_VERSION_STRING         "9.31"  // Current version of StormLib as string
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
