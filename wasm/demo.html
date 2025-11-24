@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>StormLib WASM Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 16px; }
+    section { border: 1px solid #ccc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+    h2 { margin-top: 0; }
+    .log { border: 1px solid #ddd; padding: 8px; height: 140px; overflow: auto; background: #fafafa; }
+    label { display: block; margin: 8px 0 4px; }
+    input[type="text"] { width: 100%; }
+    button { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>StormLib WASM Demo</h1>
+  <p><strong>Tip:</strong> Two ways to load this demo:<br>
+  1) Serve over HTTP (recommended): <code>python -m http.server 8000</code> from repo root, then open <code>http://localhost:8000/wasm/demo.html</code>.<br>
+  2) Local file with CORS disabled: <code>chromium --disable-web-security --user-data-dir=/tmp/chrome-storm wasm/demo.html</code>.</p>
+
+  <section>
+    <h2>Load MPQ</h2>
+    <label>MPQ file: <input type="file" id="mpqInput"></label>
+    <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="flex:1 1 260px;">
+        <label>Internal file to extract:
+          <input type="text" id="extractName" placeholder="e.g. some/file.txt">
+        </label>
+      </div>
+      <div style="flex:1 1 260px;">
+        <label>Files in archive:</label>
+        <select id="fileList" size="8" style="width:100%; min-width:240px;"></select>
+      </div>
+    </div>
+    <button id="extractBtn" disabled>Extract to download</button>
+    <div><a id="downloadLink" href="#" style="display:none;">Download extracted file</a></div>
+  </section>
+
+  <section>
+    <h2>Create MPQ from File</h2>
+    <label>File to add: <input type="file" id="addFile"></label>
+    <label>Store as name: <input type="text" id="addName" placeholder="path/in/archive.ext"></label>
+    <button id="createBtn">Create MPQ and download</button>
+  </section>
+
+  <section>
+    <h2>Log</h2>
+    <div class="log" id="log"></div>
+  </section>
+
+  <script src="./dist/storm.js"></script>
+  <script>
+    const DEFAULT_ARCHIVE_FLAGS = 0x03000000 | 0x00100000 | 0x00200000; // V4 + listfile + attributes
+    const DEFAULT_FILE_FLAGS = 0x00000200 | 0x80000000; // compress + replace existing
+    const DEFAULT_COMPRESSION = 0x02; // zlib
+    const logEl = document.getElementById('log');
+
+    function log(msg) {
+      const p = document.createElement('div');
+      p.textContent = msg;
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function initStorm() {
+      const Module = await createModule({
+        locateFile: (p) => './dist/' + p,
+      });
+
+      Module.FS.mkdirTree('/work');
+
+      const openArchive = Module.cwrap('storm_open_archive', 'number', ['string', 'number', 'number']);
+      const closeArchive = Module.cwrap('storm_close_archive', 'number', ['number']);
+      const hasFile = Module.cwrap('storm_has_file', 'number', ['number', 'string']);
+      const openFile = Module.cwrap('storm_open_file', 'number', ['number', 'string']);
+      const closeFile = Module.cwrap('storm_close_file', 'number', ['number']);
+      const getFileSize = Module.cwrap('storm_get_file_size', 'bigint', ['number']);
+      const readFileChunk = Module.cwrap('storm_read_file', 'number', ['number', 'number', 'number']);
+      const createArchive = Module.cwrap('storm_create_archive', 'number', ['string', 'number', 'number']);
+      const addFileFromMemory = Module.cwrap('storm_add_file_from_memory', 'number', ['number', 'string', 'number', 'number', 'number', 'number']);
+      const lastError = Module.cwrap('storm_last_error', 'number', []);
+      const findFirst = Module.cwrap('storm_find_first', 'number', ['number', 'string']);
+      const findNext = Module.cwrap('storm_find_next', 'number', ['number']);
+      const findName = Module.cwrap('storm_find_name', 'number', ['number']);
+      const findSize = Module.cwrap('storm_find_size', 'number', ['number']);
+      const findClose = Module.cwrap('storm_find_close', 'number', ['number']);
+
+      const ensureHandle = (value, action) => {
+        if (!value) {
+          throw new Error(`${action} failed (err=${lastError()})`);
+        }
+        return value;
+      };
+
+      const readWholeFile = (fileHandle) => {
+        const sizeBig = getFileSize(fileHandle);
+        if (sizeBig < 0n) throw new Error(`get_file_size failed (err=${lastError()})`);
+        if (sizeBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('file too large');
+        const size = Number(sizeBig);
+        const ptr = Module._malloc(Math.max(size, 1));
+        const bytesRead = readFileChunk(fileHandle, ptr, size);
+        if (bytesRead < 0) {
+          Module._free(ptr);
+          throw new Error(`read failed (err=${lastError()})`);
+        }
+        const out = Module.HEAPU8.slice(ptr, ptr + bytesRead);
+        Module._free(ptr);
+        return out;
+      };
+
+      function openArchiveFromBuffer(name, buffer) {
+        Module.FS.writeFile(name, new Uint8Array(buffer));
+        const h = ensureHandle(openArchive(name, 0, 0), 'open archive');
+        return h;
+      }
+
+      function extractFile(archiveHandle, name) {
+        if (!hasFile(archiveHandle, name)) throw new Error('file not found in archive');
+        const fileHandle = ensureHandle(openFile(archiveHandle, name), 'open file');
+        try {
+          return readWholeFile(fileHandle);
+        } finally {
+          closeFile(fileHandle);
+        }
+      }
+
+      function createArchiveAndAdd(name, fileBuffer, storedName) {
+        const h = ensureHandle(createArchive(name, DEFAULT_ARCHIVE_FLAGS, 16), 'create archive');
+        const ptr = Module._malloc(Math.max(fileBuffer.length, 1));
+        Module.HEAPU8.set(fileBuffer, ptr);
+        const ok = addFileFromMemory(h, storedName, ptr, fileBuffer.length, DEFAULT_FILE_FLAGS, DEFAULT_COMPRESSION);
+        Module._free(ptr);
+        if (!ok) throw new Error(`add file failed (err=${lastError()})`);
+        closeArchive(h);
+        return Module.FS.readFile(name);
+      }
+
+      function listFiles(archiveHandle, mask = '*') {
+        const ctx = findFirst(archiveHandle, mask);
+        if (!ctx) return [];
+        const results = [];
+        try {
+          let keepGoing = true;
+          while (keepGoing) {
+            const ptr = findName(ctx);
+            if (ptr) {
+              const name = Module.UTF8ToString(ptr);
+              results.push({ name, size: findSize(ctx) });
+            }
+            keepGoing = !!findNext(ctx);
+          }
+        } finally {
+          findClose(ctx);
+        }
+        return results;
+      }
+
+      return { openArchiveFromBuffer, closeArchive: (h) => !!closeArchive(h), extractFile, createArchiveAndAdd, listFiles };
+    }
+
+    let storm;
+    let currentArchive;
+    let currentFiles = [];
+    initStorm().then((s) => {
+      storm = s;
+      document.getElementById('extractBtn').disabled = false;
+      log('WASM ready');
+    }).catch((e) => log('Init failed: ' + e));
+
+    document.getElementById('mpqInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !storm) return;
+      log('Loading MPQ: ' + file.name);
+      const buf = await file.arrayBuffer();
+      if (currentArchive) {
+        storm.closeArchive(currentArchive);
+        currentArchive = null;
+      }
+      currentArchive = storm.openArchiveFromBuffer('/work/upload.mpq', buf);
+      log('Archive loaded');
+      populateFileList();
+    });
+
+    document.getElementById('extractBtn').addEventListener('click', () => {
+      if (!storm || !currentArchive) { log('Load an MPQ first'); return; }
+      const name = document.getElementById('extractName').value.trim();
+      if (!name) { log('Enter a file name inside the archive'); return; }
+      try {
+        const data = storm.extractFile(currentArchive, name);
+        const blob = new Blob([data]);
+        const url = URL.createObjectURL(blob);
+        const link = document.getElementById('downloadLink');
+        link.href = url;
+        link.download = name.split('/').pop() || 'file.bin';
+        link.style.display = 'inline';
+        link.textContent = 'Download ' + link.download;
+        log('Extracted ' + name + ' (' + data.length + ' bytes)');
+      } catch (err) {
+        log('Error: ' + err.message);
+      }
+    });
+
+    document.getElementById('createBtn').addEventListener('click', async () => {
+      if (!storm) { log('WASM not ready'); return; }
+      const fileInput = document.getElementById('addFile');
+      const storedName = document.getElementById('addName').value.trim();
+      const file = fileInput.files[0];
+      if (!file || !storedName) { log('Pick a file and stored name'); return; }
+      const buf = new Uint8Array(await file.arrayBuffer());
+      try {
+        const bytes = storm.createArchiveAndAdd('/work/out.mpq', buf, storedName);
+        const blob = new Blob([bytes]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'out.mpq';
+        a.textContent = 'Download out.mpq';
+        a.style.display = 'inline-block';
+        a.style.marginTop = '8px';
+        document.body.appendChild(a);
+        log('Created MPQ with ' + storedName + ' (' + buf.length + ' bytes)');
+      } catch (err) {
+        log('Error: ' + err.message);
+      }
+    });
+
+    function populateFileList() {
+      const select = document.getElementById('fileList');
+      select.innerHTML = '';
+      currentFiles = storm.listFiles(currentArchive);
+      currentFiles.forEach((f) => {
+        const opt = document.createElement('option');
+        opt.value = f.name;
+        opt.textContent = `${f.name} (${f.size} bytes)`;
+        select.appendChild(opt);
+      });
+      select.onchange = () => {
+        const val = select.value;
+        if (val) {
+          document.getElementById('extractName').value = val;
+        }
+      };
+      if (currentFiles.length > 0) {
+        document.getElementById('extractName').value = currentFiles[0].name;
+      }
+    }
+  </script>
+</body>
+</html>
