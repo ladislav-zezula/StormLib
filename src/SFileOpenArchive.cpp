@@ -547,7 +547,10 @@ bool WINAPI SFileOpenArchive(
                 ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS_W3X;
                 ha->dwFlags |= MPQ_FLAG_WAR3_MAP;
                 break;
-            default:
+            case MapTypeNotChecked:
+            case MapTypeNotRecognized:
+            case MapTypeAviFile:
+            case MapTypeStarcraft2:
                 // silence -Wswitch-enum
                 break;
         }
