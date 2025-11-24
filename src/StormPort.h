@@ -28,7 +28,15 @@
 #define __STORMPORT_H__
 
 #ifndef __cplusplus
-  #include <stdbool.h>
+  #if defined(_MSC_VER) && _MSC_VER < 1800
+    /* Pre-VS2013 MSVC: no <stdbool.h> */
+    #define bool  char
+    #define true  1
+    #define false 0
+  #else
+    /* C99+ */
+    #include <stdbool.h>
+  #endif
 #endif
 
 //-----------------------------------------------------------------------------
