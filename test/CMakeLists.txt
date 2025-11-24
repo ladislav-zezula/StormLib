@@ -14,7 +14,7 @@ endif()
 
 find_package(ALSA REQUIRED)
 add_executable(StormLib_test ${TEST_SRC_FILES})
-target_link_libraries(StormLib_test storm ${ALSA_LIBRARIES})
+target_link_libraries(StormLib_test storm ALSA::ALSA)
 install(TARGETS StormLib_test RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_test(NAME StormLib_test COMMAND StormLib_test)
