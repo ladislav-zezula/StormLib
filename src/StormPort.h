@@ -27,12 +27,9 @@
 #ifndef __STORMPORT_H__
 #define __STORMPORT_H__
 
-// This is probably no longer needed. If someone uses a platform which doesn't support 'bool' natively, let me know.
-//#ifndef __cplusplus
-//  #define bool char
-//  #define true 1
-//  #define false 0
-//#endif
+#if !defined(__cplusplus) && !defined(_MSC_VER)
+  #include <stdbool.h>
+#endif
 
 //-----------------------------------------------------------------------------
 // Defines for Windows
