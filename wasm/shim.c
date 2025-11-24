@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../src/StormLib.h"
 
 #ifdef __cplusplus
@@ -68,6 +69,33 @@ uintptr_t storm_create_archive(const char * path, uint32_t create_flags, uint32_
     HANDLE hArchive = NULL;
 
     if(!SFileCreateArchive(path, create_flags, max_file_count, &hArchive))
+        return 0;
+    return (uintptr_t)hArchive;
+}
+
+uintptr_t storm_create_archive2(const char * path,
+                                uint32_t mpq_version,
+                                uint32_t sector_size,
+                                uint32_t listfile_flags,
+                                uint32_t attr_flags_file,
+                                uint32_t attr_flags,
+                                uint32_t max_file_count)
+{
+    SFILE_CREATE_MPQ createInfo;
+    HANDLE hArchive = NULL;
+
+    memset(&createInfo, 0, sizeof(createInfo));
+    createInfo.cbSize = sizeof(createInfo);
+    createInfo.dwMpqVersion = mpq_version;
+    createInfo.dwStreamFlags = STREAM_PROVIDER_FLAT | BASE_PROVIDER_FILE;
+    createInfo.dwSectorSize = sector_size;
+    createInfo.dwFileFlags1 = listfile_flags;
+    createInfo.dwFileFlags2 = attr_flags_file;
+    createInfo.dwAttrFlags = attr_flags;
+    createInfo.dwRawChunkSize = (mpq_version >= MPQ_FORMAT_VERSION_4) ? 0x4000 : 0;
+    createInfo.dwMaxFileCount = max_file_count;
+
+    if(!SFileCreateArchive2(path, &createInfo, &hArchive))
         return 0;
     return (uintptr_t)hArchive;
 }

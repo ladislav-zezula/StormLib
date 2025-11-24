@@ -1,11 +1,10 @@
-// Thin JS wrapper around the Emscripten build to work with Uint8Array buffers.
-const createModule = require('./dist/storm.js');
-const createStormClient = require('./client');
 const path = require('path');
 const fs = require('fs');
+const createModule = require('./dist/storm.js');
+const { makeCreateStormLib } = require('./client.js');
 
-async function createStormLib() {
-  const Module = await createModule({
+const createStormLib = makeCreateStormLib((opts = {}) =>
+  createModule({
     locateFile: (p) => path.join(__dirname, 'dist', p),
     instantiateWasm: (info, receiveInstance) => {
       const wasmPath = path.join(__dirname, 'dist', 'storm.wasm');
@@ -15,8 +14,8 @@ async function createStormLib() {
         return result.exports;
       });
     },
-  });
-  return createStormClient(Module, { workDir: '/work' });
-}
+    ...opts,
+  })
+);
 
 module.exports = createStormLib;

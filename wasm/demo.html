@@ -41,6 +41,7 @@
     <h2>Create MPQ from File</h2>
     <label>File to add: <input type="file" id="addFile"></label>
     <label>Store as name: <input type="text" id="addName" placeholder="path/in/archive.ext"></label>
+    <label><input type="checkbox" id="sc2Compat"> Use StarCraft II compatibility rules</label>
     <button id="createBtn">Create MPQ and download</button>
   </section>
 
@@ -61,18 +62,13 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    async function initStorm() {
-      const Module = await createModule({
-        locateFile: (p) => './dist/' + p,
-      });
-      return createStormClient(Module);
-    }
-
+    const createStormLib = window.makeCreateStormLib(window.createModule);
     let storm;
     let currentArchive;
     let currentFiles = [];
-    initStorm().then((client) => {
-      storm = client;
+
+    createStormLib({ locateFile: (p) => './dist/' + p }).then((s) => {
+      storm = s;
       document.getElementById('extractBtn').disabled = false;
       log('WASM ready');
     }).catch((e) => log('Init failed: ' + e));
@@ -86,8 +82,8 @@
         storm.closeArchive(currentArchive);
         currentArchive = null;
       }
-      const { handle } = storm.openArchiveFromBuffer(buf, { path: '/work/upload.mpq' });
-      currentArchive = handle;
+      const opened = storm.openArchiveFromBuffer(buf, { path: '/work/upload.mpq' });
+      currentArchive = opened.handle || opened;
       log('Archive loaded');
       populateFileList();
     });
@@ -97,7 +93,6 @@
       const name = document.getElementById('extractName').value.trim();
       if (!name) { log('Enter a file name inside the archive'); return; }
       try {
-        if (!storm.hasFile(currentArchive, name)) throw new Error('file not found in archive');
         const data = storm.readFile(currentArchive, name);
         const blob = new Blob([data]);
         const url = URL.createObjectURL(blob);
@@ -112,22 +107,42 @@
       }
     });
 
+    function sc2FileRules(name, length) {
+      const lower = (name || '').toLowerCase();
+      if (length === 0) return { flags: 0x02000000 | 0x80000000, comp: 0 };
+      if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.ogv')) return { flags: 0x80000000, comp: 0 };
+      if (length <= 0x4000) return { flags: 0x00000200 | 0x01000000 | 0x80000000, comp: 0x02 };
+      if (lower.endsWith('.wav')) return { flags: 0x00000200 | 0x80000000, comp: 0x02 };
+      return { flags: 0x00000200 | 0x04000000 | 0x80000000, comp: 0x02 };
+    }
+
     document.getElementById('createBtn').addEventListener('click', async () => {
       if (!storm) { log('WASM not ready'); return; }
       const fileInput = document.getElementById('addFile');
       const storedName = document.getElementById('addName').value.trim();
       const file = fileInput.files[0];
+      const useSc2 = document.getElementById('sc2Compat').checked;
       if (!file || !storedName) { log('Pick a file and stored name'); return; }
       const buf = new Uint8Array(await file.arrayBuffer());
       try {
-        const archivePath = '/work/out.mpq';
-        const archiveHandle = storm.createArchive(archivePath);
-        storm.addFileFromBuffer(archiveHandle, storedName, buf, {
-          fileFlags: storm.constants.DEFAULT_FILE_FLAGS,
-          compression: storm.constants.DEFAULT_COMPRESSION,
-        });
-        storm.closeArchive(archiveHandle);
-        const bytes = storm.readArchiveFile(archivePath);
+        let h;
+        if (useSc2) {
+          h = storm.createArchiveCustom('/work/out.mpq', {
+            mpqVersion: 2,
+            sectorSize: 0x4000,
+            listfileFlags: 0x00000200 | 0x80000000, // compress + replace
+            attrFileFlags: 0x00000200 | 0x80000000,
+            attrFlags: 0x00000001 | 0x00000004, // CRC32 | MD5
+            maxFiles: 16,
+          });
+          const { flags, comp } = sc2FileRules(storedName, buf.length);
+          storm.addFileFromBuffer(h, storedName, buf, { fileFlags: flags, compression: comp });
+        } else {
+          h = storm.createArchive('/work/out.mpq');
+          storm.addFileFromBuffer(h, storedName, buf);
+        }
+        storm.closeArchive(h);
+        const bytes = storm.readArchiveFile('/work/out.mpq');
         const blob = new Blob([bytes]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -137,7 +152,7 @@
         a.style.display = 'inline-block';
         a.style.marginTop = '8px';
         document.body.appendChild(a);
-        log('Created MPQ with ' + storedName + ' (' + buf.length + ' bytes)');
+        log(`Created MPQ with ${storedName} (${buf.length} bytes)${useSc2 ? ' [SC2 rules]' : ''}`);
       } catch (err) {
         log('Error: ' + err.message);
       }
@@ -146,7 +161,7 @@
     function populateFileList() {
       const select = document.getElementById('fileList');
       select.innerHTML = '';
-      currentFiles = storm ? storm.listFiles(currentArchive) : [];
+      currentFiles = storm.listFiles(currentArchive);
       currentFiles.forEach((f) => {
         const opt = document.createElement('option');
         opt.value = f.name;
