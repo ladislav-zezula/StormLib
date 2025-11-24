@@ -3955,7 +3955,7 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-
+/*
     HANDLE hMpq;
     HANDLE hFile;
     LPBYTE pbData;
@@ -3975,7 +3975,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq);
     }
-
+*/
 }
 
 //-----------------------------------------------------------------------------

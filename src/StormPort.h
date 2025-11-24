@@ -27,11 +27,12 @@
 #ifndef __STORMPORT_H__
 #define __STORMPORT_H__
 
-#ifndef __cplusplus
-  #define bool char
-  #define true 1
-  #define false 0
-#endif
+// This is probably no longer needed. If someone uses a platform which doesn't support 'bool' natively, let me know.
+//#ifndef __cplusplus
+//  #define bool char
+//  #define true 1
+//  #define false 0
+//#endif
 
 //-----------------------------------------------------------------------------
 // Defines for Windows
