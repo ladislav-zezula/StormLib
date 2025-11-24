@@ -50,10 +50,8 @@
   </section>
 
   <script src="./dist/storm.js"></script>
+  <script src="./client.js"></script>
   <script>
-    const DEFAULT_ARCHIVE_FLAGS = 0x03000000 | 0x00100000 | 0x00200000; // V4 + listfile + attributes
-    const DEFAULT_FILE_FLAGS = 0x00000200 | 0x80000000; // compress + replace existing
-    const DEFAULT_COMPRESSION = 0x02; // zlib
     const logEl = document.getElementById('log');
 
     function log(msg) {
@@ -67,103 +65,14 @@
       const Module = await createModule({
         locateFile: (p) => './dist/' + p,
       });
-
-      Module.FS.mkdirTree('/work');
-
-      const openArchive = Module.cwrap('storm_open_archive', 'number', ['string', 'number', 'number']);
-      const closeArchive = Module.cwrap('storm_close_archive', 'number', ['number']);
-      const hasFile = Module.cwrap('storm_has_file', 'number', ['number', 'string']);
-      const openFile = Module.cwrap('storm_open_file', 'number', ['number', 'string']);
-      const closeFile = Module.cwrap('storm_close_file', 'number', ['number']);
-      const getFileSize = Module.cwrap('storm_get_file_size', 'bigint', ['number']);
-      const readFileChunk = Module.cwrap('storm_read_file', 'number', ['number', 'number', 'number']);
-      const createArchive = Module.cwrap('storm_create_archive', 'number', ['string', 'number', 'number']);
-      const addFileFromMemory = Module.cwrap('storm_add_file_from_memory', 'number', ['number', 'string', 'number', 'number', 'number', 'number']);
-      const lastError = Module.cwrap('storm_last_error', 'number', []);
-      const findFirst = Module.cwrap('storm_find_first', 'number', ['number', 'string']);
-      const findNext = Module.cwrap('storm_find_next', 'number', ['number']);
-      const findName = Module.cwrap('storm_find_name', 'number', ['number']);
-      const findSize = Module.cwrap('storm_find_size', 'number', ['number']);
-      const findClose = Module.cwrap('storm_find_close', 'number', ['number']);
-
-      const ensureHandle = (value, action) => {
-        if (!value) {
-          throw new Error(`${action} failed (err=${lastError()})`);
-        }
-        return value;
-      };
-
-      const readWholeFile = (fileHandle) => {
-        const sizeBig = getFileSize(fileHandle);
-        if (sizeBig < 0n) throw new Error(`get_file_size failed (err=${lastError()})`);
-        if (sizeBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('file too large');
-        const size = Number(sizeBig);
-        const ptr = Module._malloc(Math.max(size, 1));
-        const bytesRead = readFileChunk(fileHandle, ptr, size);
-        if (bytesRead < 0) {
-          Module._free(ptr);
-          throw new Error(`read failed (err=${lastError()})`);
-        }
-        const out = Module.HEAPU8.slice(ptr, ptr + bytesRead);
-        Module._free(ptr);
-        return out;
-      };
-
-      function openArchiveFromBuffer(name, buffer) {
-        Module.FS.writeFile(name, new Uint8Array(buffer));
-        const h = ensureHandle(openArchive(name, 0, 0), 'open archive');
-        return h;
-      }
-
-      function extractFile(archiveHandle, name) {
-        if (!hasFile(archiveHandle, name)) throw new Error('file not found in archive');
-        const fileHandle = ensureHandle(openFile(archiveHandle, name), 'open file');
-        try {
-          return readWholeFile(fileHandle);
-        } finally {
-          closeFile(fileHandle);
-        }
-      }
-
-      function createArchiveAndAdd(name, fileBuffer, storedName) {
-        const h = ensureHandle(createArchive(name, DEFAULT_ARCHIVE_FLAGS, 16), 'create archive');
-        const ptr = Module._malloc(Math.max(fileBuffer.length, 1));
-        Module.HEAPU8.set(fileBuffer, ptr);
-        const ok = addFileFromMemory(h, storedName, ptr, fileBuffer.length, DEFAULT_FILE_FLAGS, DEFAULT_COMPRESSION);
-        Module._free(ptr);
-        if (!ok) throw new Error(`add file failed (err=${lastError()})`);
-        closeArchive(h);
-        return Module.FS.readFile(name);
-      }
-
-      function listFiles(archiveHandle, mask = '*') {
-        const ctx = findFirst(archiveHandle, mask);
-        if (!ctx) return [];
-        const results = [];
-        try {
-          let keepGoing = true;
-          while (keepGoing) {
-            const ptr = findName(ctx);
-            if (ptr) {
-              const name = Module.UTF8ToString(ptr);
-              results.push({ name, size: findSize(ctx) });
-            }
-            keepGoing = !!findNext(ctx);
-          }
-        } finally {
-          findClose(ctx);
-        }
-        return results;
-      }
-
-      return { openArchiveFromBuffer, closeArchive: (h) => !!closeArchive(h), extractFile, createArchiveAndAdd, listFiles };
+      return createStormClient(Module);
     }
 
     let storm;
     let currentArchive;
     let currentFiles = [];
-    initStorm().then((s) => {
-      storm = s;
+    initStorm().then((client) => {
+      storm = client;
       document.getElementById('extractBtn').disabled = false;
       log('WASM ready');
     }).catch((e) => log('Init failed: ' + e));
@@ -172,12 +81,13 @@
       const file = e.target.files[0];
       if (!file || !storm) return;
       log('Loading MPQ: ' + file.name);
-      const buf = await file.arrayBuffer();
+      const buf = new Uint8Array(await file.arrayBuffer());
       if (currentArchive) {
         storm.closeArchive(currentArchive);
         currentArchive = null;
       }
-      currentArchive = storm.openArchiveFromBuffer('/work/upload.mpq', buf);
+      const { handle } = storm.openArchiveFromBuffer(buf, { path: '/work/upload.mpq' });
+      currentArchive = handle;
       log('Archive loaded');
       populateFileList();
     });
@@ -187,7 +97,8 @@
       const name = document.getElementById('extractName').value.trim();
       if (!name) { log('Enter a file name inside the archive'); return; }
       try {
-        const data = storm.extractFile(currentArchive, name);
+        if (!storm.hasFile(currentArchive, name)) throw new Error('file not found in archive');
+        const data = storm.readFile(currentArchive, name);
         const blob = new Blob([data]);
         const url = URL.createObjectURL(blob);
         const link = document.getElementById('downloadLink');
@@ -209,7 +120,14 @@
       if (!file || !storedName) { log('Pick a file and stored name'); return; }
       const buf = new Uint8Array(await file.arrayBuffer());
       try {
-        const bytes = storm.createArchiveAndAdd('/work/out.mpq', buf, storedName);
+        const archivePath = '/work/out.mpq';
+        const archiveHandle = storm.createArchive(archivePath);
+        storm.addFileFromBuffer(archiveHandle, storedName, buf, {
+          fileFlags: storm.constants.DEFAULT_FILE_FLAGS,
+          compression: storm.constants.DEFAULT_COMPRESSION,
+        });
+        storm.closeArchive(archiveHandle);
+        const bytes = storm.readArchiveFile(archivePath);
         const blob = new Blob([bytes]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -228,7 +146,7 @@
     function populateFileList() {
       const select = document.getElementById('fileList');
       select.innerHTML = '';
-      currentFiles = storm.listFiles(currentArchive);
+      currentFiles = storm ? storm.listFiles(currentArchive) : [];
       currentFiles.forEach((f) => {
         const opt = document.createElement('option');
         opt.value = f.name;
