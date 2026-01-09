@@ -931,7 +931,7 @@ TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry)
         hf->pStream = NULL;
         hf->ha = ha;
 
-        // If the called entered a file entry, we also copy informations from the file entry
+        // If the caller entered a file entry, we also copy informations from the file entry
         if(ha != NULL)
         {
             // Increment number of open files in the archive handle
