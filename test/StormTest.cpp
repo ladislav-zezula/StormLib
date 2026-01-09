@@ -3955,27 +3955,30 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
 
 static void Test_PlayingSpace()
 {
-/*
+    LPCTSTR szMpqName = _T("e:\\Test-UAF.mpq");
     HANDLE hMpq;
     HANDLE hFile;
-    LPBYTE pbData;
-    DWORD dwFileSize = 529298;
-    DWORD dwBytesRead = 0;
+    char nameBuf[260];
 
-    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\31525686D3A39C6B5CA4B2979367B809.w3x"), 0, 0, &hMpq))
+    DeleteFile(szMpqName);
+    if(SFileCreateArchive(szMpqName, 0, 16, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "(listfile)", 0, &hFile))
+        SFileCreateFile(hMpq, "foo", 0ULL, 8, 0, 0, &hFile);
+        SFileCloseArchive(hMpq);
+        SFileCloseFile(hFile);
+    }
+
+    DeleteFile(szMpqName);
+    if(SFileCreateArchive(szMpqName, 0, 16, &hMpq))
+    {
+        if(SFileCreateFile(hMpq, "foo", 0ULL, 8, 0, 0, &hFile))
         {
-            if((pbData = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
-            {
-                SFileReadFile(hFile, pbData, dwFileSize, &dwBytesRead, NULL);
-                STORM_FREE(pbData);
-            }
+            SFileSetMaxFileCount(hMpq, 64);
+            SFileGetFileName(hFile, nameBuf);
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
     }
-*/
 }
 
 //-----------------------------------------------------------------------------

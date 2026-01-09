@@ -932,15 +932,22 @@ TMPQFile * CreateFileHandle(TMPQArchive * ha, TFileEntry * pFileEntry)
         hf->ha = ha;
 
         // If the called entered a file entry, we also copy informations from the file entry
-        if(ha != NULL && pFileEntry != NULL)
+        if(ha != NULL)
         {
-            // Set the raw position and MPQ position
-            hf->RawFilePos = FileOffsetFromMpqOffset(ha, pFileEntry->ByteOffset);
-            hf->MpqFilePos = pFileEntry->ByteOffset;
+            // Increment number of open files in the archive handle
+            ha->dwFileCount++;
 
-            // Set the data size
-            hf->dwDataSize = pFileEntry->dwFileSize;
-            hf->pFileEntry = pFileEntry;
+            // Add the file entry to the handle
+            if(pFileEntry != NULL)
+            {
+                // Set the raw position and MPQ position
+                hf->RawFilePos = FileOffsetFromMpqOffset(ha, pFileEntry->ByteOffset);
+                hf->MpqFilePos = pFileEntry->ByteOffset;
+
+                // Set the data size
+                hf->dwDataSize = pFileEntry->dwFileSize;
+                hf->pFileEntry = pFileEntry;
+            }
         }
     }
 
@@ -1691,75 +1698,6 @@ DWORD WriteMpqDataMD5(
     return dwErrCode;
 }
 
-// Frees the structure for MPQ file
-void FreeFileHandle(TMPQFile *& hf)
-{
-    if(hf != NULL)
-    {
-        // If we have patch file attached to this one, free it first
-        if(hf->hfPatch != NULL)
-            FreeFileHandle(hf->hfPatch);
-
-        // Then free all buffers allocated in the file structure
-        if(hf->pbFileData != NULL)
-            STORM_FREE(hf->pbFileData);
-        if(hf->pPatchInfo != NULL)
-            STORM_FREE(hf->pPatchInfo);
-        if(hf->SectorOffsets != NULL)
-            STORM_FREE(hf->SectorOffsets);
-        if(hf->SectorChksums != NULL)
-            STORM_FREE(hf->SectorChksums);
-        if(hf->hctx != NULL)
-            STORM_FREE(hf->hctx);
-        if(hf->pbFileSector != NULL)
-            STORM_FREE(hf->pbFileSector);
-        if(hf->pStream != NULL)
-            FileStream_Close(hf->pStream);
-        STORM_FREE(hf);
-        hf = NULL;
-    }
-}
-
-// Frees the MPQ archive
-void FreeArchiveHandle(TMPQArchive *& ha)
-{
-    if(ha != NULL)
-    {
-        // First of all, free the patch archive, if any
-        if(ha->haPatch != NULL)
-            FreeArchiveHandle(ha->haPatch);
-
-        // Free the patch prefix, if any
-        if(ha->pPatchPrefix != NULL)
-            STORM_FREE(ha->pPatchPrefix);
-
-        // Close the file stream
-        FileStream_Close(ha->pStream);
-        ha->pStream = NULL;
-
-        // Free the file names from the file table
-        if(ha->pFileTable != NULL)
-        {
-            for(DWORD i = 0; i < ha->dwFileTableSize; i++)
-            {
-                if(ha->pFileTable[i].szFileName != NULL)
-                    STORM_FREE(ha->pFileTable[i].szFileName);
-                ha->pFileTable[i].szFileName = NULL;
-            }
-
-            // Then free all buffers allocated in the archive structure
-            STORM_FREE(ha->pFileTable);
-        }
-
-        if(ha->pHashTable != NULL)
-            STORM_FREE(ha->pHashTable);
-        if(ha->pHetTable != NULL)
-            FreeHetTable(ha->pHetTable);
-        STORM_FREE(ha);
-        ha = NULL;
-    }
-}
-
 bool IsInternalMpqFileName(const char * szFileName)
 {
     if(szFileName != NULL && szFileName[0] == '(')
@@ -1857,6 +1795,123 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
     md5_init(&md5_state);
     md5_process(&md5_state, (unsigned char *)pvDataBlock, cbDataBlock);
     md5_done(&md5_state, md5_hash);
+}
+
+//-----------------------------------------------------------------------------
+// Free the handle structures
+
+static void DeleteArchiveHandle(TMPQArchive * ha)
+{
+    // Sanity check
+    assert(ha->dwFileCount == 0 && ha->dwRefCount == 0);
+
+    // Invalidate the add file callback so it won't be called
+    // when saving (listfile) and (attributes)
+    ha->pfnAddFileCB = NULL;
+    ha->pvAddFileUserData = NULL;
+
+    // Flush all unsaved data to the storage
+    SFileFlushArchive((HANDLE)(ha));
+    assert(ha->dwFileCount == 0 && ha->dwRefCount == 0);
+
+    // First of all, free the patch archive, if any
+    if(ha->haPatch != NULL)
+        DereferenceArchive(ha->haPatch);
+    ha->haPatch = NULL;
+
+    // Free the patch prefix, if any
+    if(ha->pPatchPrefix != NULL)
+        STORM_FREE(ha->pPatchPrefix);
+
+    // Close the file stream
+    FileStream_Close(ha->pStream);
+    ha->pStream = NULL;
+
+    // Free the file names from the file table
+    if(ha->pFileTable != NULL)
+    {
+        for(DWORD i = 0; i < ha->dwFileTableSize; i++)
+        {
+            if(ha->pFileTable[i].szFileName != NULL)
+                STORM_FREE(ha->pFileTable[i].szFileName);
+            ha->pFileTable[i].szFileName = NULL;
+        }
+
+        // Then free all buffers allocated in the archive structure
+        STORM_FREE(ha->pFileTable);
+    }
+
+    if(ha->pHashTable != NULL)
+        STORM_FREE(ha->pHashTable);
+    if(ha->pHetTable != NULL)
+        FreeHetTable(ha->pHetTable);
+    STORM_FREE(ha);
+}
+
+void FreeFileHandle(TMPQFile *& hf)
+{
+    TMPQArchive * ha;
+
+    if(hf != NULL)
+    {
+        // If we have patch file attached to this one, free it first
+        if(hf->hfPatch != NULL)
+            FreeFileHandle(hf->hfPatch);
+
+        // Then free all buffers allocated in the file structure
+        if(hf->pbFileData != NULL)
+            STORM_FREE(hf->pbFileData);
+        if(hf->pPatchInfo != NULL)
+            STORM_FREE(hf->pPatchInfo);
+        if(hf->SectorOffsets != NULL)
+            STORM_FREE(hf->SectorOffsets);
+        if(hf->SectorChksums != NULL)
+            STORM_FREE(hf->SectorChksums);
+        if(hf->hctx != NULL)
+            STORM_FREE(hf->hctx);
+        if(hf->pbFileSector != NULL)
+            STORM_FREE(hf->pbFileSector);
+        if(hf->pStream != NULL)
+            FileStream_Close(hf->pStream);
+
+        // Dereference file count in the archive handle
+        if((ha = hf->ha) != NULL)
+            DereferenceArchiveFiles(ha);
+
+        // Free the file handle
+        STORM_FREE(hf);
+        hf = NULL;
+    }
+}
+
+bool DereferenceArchiveFiles(TMPQArchive * ha)
+{
+    // There must be at least one reference
+    if(ha == NULL || ha->dwFileCount == 0)
+        return false;
+
+    // Decrement the file count
+    ha->dwFileCount--;
+
+    // If we reached zero, free the archive
+    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
+        DeleteArchiveHandle(ha);
+    return true;
+}
+
+bool DereferenceArchive(TMPQArchive * ha)
+{
+    // There must be at least one reference
+    if(ha == NULL || ha->dwRefCount == 0)
+        return false;
+
+    // Decrement the file count
+    ha->dwRefCount--;
+
+    // If we reached zero, free the archive
+    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
+        DeleteArchiveHandle(ha);
+    return true;
 }
 
 //-----------------------------------------------------------------------------

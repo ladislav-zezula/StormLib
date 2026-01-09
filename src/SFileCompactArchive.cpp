@@ -462,19 +462,23 @@ DWORD WINAPI SFileGetMaxFileCount(HANDLE hMpq)
 
 bool WINAPI SFileSetMaxFileCount(HANDLE hMpq, DWORD dwMaxFileCount)
 {
-    TMPQArchive * ha = (TMPQArchive *)hMpq;
+    TMPQArchive * ha;
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Calculate the hash table size for the new file limit
     DWORD dwNewHashTableSize = GetNearestPowerOfTwo(dwMaxFileCount);
 
     // Test the valid parameters
-    if(!IsValidMpqHandle(hMpq))
+    if((ha = IsValidMpqHandle(hMpq)) == NULL)
         dwErrCode = ERROR_INVALID_HANDLE;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
         dwErrCode = ERROR_ACCESS_DENIED;
     if(dwNewHashTableSize < ha->dwFileTableSize)
         dwErrCode = ERROR_DISK_FULL;
+
+    // Are there some files open?
+    if(ha->dwFileCount)
+        dwErrCode = ERROR_ACCESS_DENIED;
 
     // ALL file names must be known in order to be able to rebuild hash table
     if(dwErrCode == ERROR_SUCCESS && ha->pHashTable != NULL)
@@ -536,6 +540,10 @@ bool WINAPI SFileCompactArchive(HANDLE hMpq, const TCHAR * szListFile, bool /* b
     if(!IsValidMpqHandle(hMpq))
         dwErrCode = ERROR_INVALID_HANDLE;
     if(ha->dwFlags & MPQ_FLAG_READ_ONLY)
+        dwErrCode = ERROR_ACCESS_DENIED;
+
+    // Are there some files open?
+    if(ha->dwFileCount)
         dwErrCode = ERROR_ACCESS_DENIED;
 
     // If the MPQ is changed at this moment, we have to flush the archive
