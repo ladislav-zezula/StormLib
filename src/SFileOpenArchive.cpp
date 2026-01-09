@@ -354,6 +354,9 @@ bool WINAPI SFileOpenArchive(
         // Also remember if this MPQ is a patch
         ha->dwFlags |= (dwFlags & MPQ_OPEN_PATCH) ? MPQ_FLAG_PATCH : 0;
 
+        // Set the reference count to 1
+        ha->dwRefCount = 1;
+
         // Limit the header searching to about 130 MB of data
         if(EndOfSearch > 0x08000000)
             EndOfSearch = 0x08000000;
@@ -626,7 +629,7 @@ bool WINAPI SFileOpenArchive(
     if(dwErrCode != ERROR_SUCCESS)
     {
         FileStream_Close(pStream);
-        FreeArchiveHandle(ha);
+        DereferenceArchive(ha);
         SErrSetLastError(dwErrCode);
         ha = NULL;
     }
@@ -695,6 +698,10 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
         // Note that the (signature) file is usually before (listfile) in the file table
         //
 
+        // Up the number of references to prevent it from going away during archive cleanup
+        ha->dwRefCount++;
+
+        // Add the (signature) file
         if(ha->dwFlags & MPQ_FLAG_SIGNATURE_NEW)
         {
             dwErrCode = SSignFileCreate(ha);
@@ -702,6 +709,7 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
                 dwResultError = dwErrCode;
         }
 
+        // Add the (listfile) file
         if(ha->dwFlags & (MPQ_FLAG_LISTFILE_NEW | MPQ_FLAG_LISTFILE_FORCE))
         {
             dwErrCode = SListFileSaveToMpq(ha);
@@ -709,6 +717,7 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
                 dwResultError = dwErrCode;
         }
 
+        // Add the (attributes) file
         if(ha->dwFlags & MPQ_FLAG_ATTRIBUTES_NEW)
         {
             dwErrCode = SAttrFileSaveToMpq(ha);
@@ -737,6 +746,10 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
             }
         }
 
+        // Drop the reference count. Do NOT call DereferenceHandle() to prevent recursion
+        assert(ha->dwRefCount > 0);
+        ha->dwRefCount--;
+
         // We are no longer saving internal MPQ structures
         ha->dwFlags &= ~MPQ_FLAG_SAVING_TABLES;
     }
@@ -754,7 +767,6 @@ bool WINAPI SFileFlushArchive(HANDLE hMpq)
 bool WINAPI SFileCloseArchive(HANDLE hMpq)
 {
     TMPQArchive * ha = IsValidMpqHandle(hMpq);
-    bool bResult = false;
 
     // Only if the handle is valid
     if(ha == NULL)
@@ -763,15 +775,12 @@ bool WINAPI SFileCloseArchive(HANDLE hMpq)
         return false;
     }
 
-    // Invalidate the add file callback so it won't be called
-    // when saving (listfile) and (attributes)
-    ha->pfnAddFileCB = NULL;
-    ha->pvAddFileUserData = NULL;
+    // Dereference the archive
+    if(!DereferenceArchive(ha))
+    {
+        SErrSetLastError(ERROR_ACCESS_DENIED);
+        return false;
+    }
 
-    // Flush all unsaved data to the storage
-    bResult = SFileFlushArchive(hMpq);
-
-    // Free all memory used by MPQ archive
-    FreeArchiveHandle(ha);
-    return bResult;
+    return true;
 }

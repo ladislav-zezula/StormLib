@@ -864,6 +864,9 @@ typedef struct _TMPQArchive
     DWORD          dwFlags;                     // See MPQ_FLAG_XXXXX
     DWORD          dwSubType;                   // See MPQ_SUBTYPE_XXX
 
+    DWORD          dwFileCount;                 // Number of open files
+    DWORD          dwRefCount;                  // Number of references
+
     SFILE_ADDFILE_CALLBACK pfnAddFileCB;        // Callback function for adding files
     void         * pvAddFileUserData;           // User data thats passed to the callback
 

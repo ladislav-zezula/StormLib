@@ -410,8 +410,10 @@ DWORD WriteSectorOffsets(TMPQFile * hf);
 DWORD WriteSectorChecksums(TMPQFile * hf);
 DWORD WriteMemDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, void * pvRawData, DWORD dwRawDataSize, DWORD dwChunkSize, LPDWORD pcbTotalSize);
 DWORD WriteMpqDataMD5(TFileStream * pStream, ULONGLONG RawDataOffs, DWORD dwRawDataSize, DWORD dwChunkSize);
+
+bool DereferenceArchiveFiles(TMPQArchive * ha);
+bool DereferenceArchive(TMPQArchive * ha);
 void FreeFileHandle(TMPQFile *& hf);
-void FreeArchiveHandle(TMPQArchive *& ha);
 
 //-----------------------------------------------------------------------------
 // Patch functions
