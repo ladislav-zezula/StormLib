@@ -3953,32 +3953,40 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
     return ERROR_SUCCESS;
 }
 
-static void Test_PlayingSpace()
+static DWORD TestUseAfterFree(LPCTSTR szPlainName)
 {
-    LPCTSTR szMpqName = _T("e:\\Test-UAF.mpq");
+    TLogHelper Logger("TestUseAfterFree", szPlainName);
     HANDLE hMpq;
     HANDLE hFile;
-    char nameBuf[260];
+    DWORD dwErrCode;
 
-    DeleteFile(szMpqName);
-    if(SFileCreateArchive(szMpqName, 0, 16, &hMpq))
+    // Create new archive
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 32, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SFileCreateFile(hMpq, "foo", 0ULL, 8, 0, 0, &hFile);
         SFileCloseArchive(hMpq);
         SFileCloseFile(hFile);
     }
 
-    DeleteFile(szMpqName);
-    if(SFileCreateArchive(szMpqName, 0, 16, &hMpq))
+    dwErrCode = CreateNewArchive(&Logger, szPlainName, MPQ_CREATE_ARCHIVE_V1 | MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES, 32, &hMpq);
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(SFileCreateFile(hMpq, "foo", 0ULL, 8, 0, 0, &hFile))
         {
+            char nameBuf[260];
+
             SFileSetMaxFileCount(hMpq, 64);
             SFileGetFileName(hFile, nameBuf);
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
     }
+    return dwErrCode;
+}
+
+static void Test_PlayingSpace()
+{
 }
 
 //-----------------------------------------------------------------------------
@@ -4388,7 +4396,7 @@ static const TEST_INFO1 Test_ReopenMpqs[] =
     {_T("MPQ_2016_v1_00000.pak"),                           NULL,     "76c5c4dffee8a9e3568e22216b5f0b94",  2072 | TFLG_COMPACT | TFLG_HAS_LISTFILE},
     {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_COMPACT | TFLG_ADD_USER_DATA | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES},
     {_T("MPQ_2013_v4_expansion1.MPQ"),                      NULL,     "c97d2b4e2561d3eb3a728d72a74d86c2", 15633 | TFLG_COMPACT | TFLG_ADD_USER_DATA | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES},
-
+    
     // Adding a file to MPQ that had size of the file table equal
     // or greater than hash table, but has free entries
     {_T("MPQ_2014_v1_out1.w3x"),                            NULL,     "222e685bd76e1af6d267ea1e0c27371f",    39 | TFLG_MODIFY | TFLG_HAS_LISTFILE},
@@ -4479,6 +4487,9 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Test the UTF-8 conversions
     TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
+
+    // Test the use-after-free scenarios
+    TestUseAfterFree(_T("Test-UAF.mpq"));
 
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
