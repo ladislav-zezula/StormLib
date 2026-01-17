@@ -37,7 +37,7 @@
 /*                      Correctly works if HashTableSize > BlockTableSize    */
 /* 29.12.04  4.70  Lad  Fixed compatibility problem with MPQs from WoW       */
 /* 14.07.05  5.00  Lad  Added the BZLIB compression support                  */
-/*                      Added suport of files stored as single unit          */
+/*                      Added support of files stored as single unit          */
 /* 17.04.06  5.01  Lad  Converted to MS Visual Studio 8.0                    */
 /*                      Fixed issue with protected Warcraft 3 protected maps */
 /* 15.05.06  5.02  Lad  Fixed issue with WoW 1.10+                           */
@@ -92,7 +92,7 @@ extern "C" {
 #endif
 
 //-----------------------------------------------------------------------------
-// Use the apropriate library
+// Use the appropriate library
 //
 // The library type is encoded in the library name as the following
 // StormLibXYZ.lib
@@ -227,7 +227,7 @@ extern "C" {
 #define MPQ_FILE_DELETE_MARKER      0x02000000  // File is a deletion marker. Used in MPQ patches, indicating that the file no longer exists.
 #define MPQ_FILE_SECTOR_CRC         0x04000000  // File has checksums for each sector.
                                                 // Ignored if file is not compressed or imploded.
-#define MPQ_FILE_SIGNATURE          0x10000000  // Present on STANDARD.SNP\(signature). The only occurence ever observed
+#define MPQ_FILE_SIGNATURE          0x10000000  // Present on STANDARD.SNP\(signature). The only occurrence ever observed
 #define MPQ_FILE_EXISTS             0x80000000  // Set if file exists, reset when the file was deleted
 #define MPQ_FILE_REPLACEEXISTING    0x80000000  // Replace when the file exist (SFileAddFile)
 
@@ -425,7 +425,7 @@ typedef enum _SFileInfoClass
     SFileMpqStreamBitmap,                   // Array of bits, each bit means availability of one block (BYTE [])
     SFileMpqUserDataOffset,                 // Offset of the user data header (ULONGLONG)
     SFileMpqUserDataHeader,                 // Raw (unfixed) user data header (TMPQUserData)
-    SFileMpqUserData,                       // MPQ USer data, without the header (BYTE [])
+    SFileMpqUserData,                       // MPQ User data, without the header (BYTE [])
     SFileMpqHeaderOffset,                   // Offset of the MPQ header (ULONGLONG)
     SFileMpqHeaderSize,                     // Fixed size of the MPQ header
     SFileMpqHeader,                         // Raw (unfixed) archive header (TMPQHeader)
@@ -665,7 +665,7 @@ typedef struct _TMPQHash
     DWORD dwBlockIndex;
 } TMPQHash;
 
-// File description block contains informations about the file
+// File description block contains information about the file
 typedef struct _TMPQBlock
 {
     // Offset of the beginning of the file, relative to the beginning of the archive.
@@ -860,7 +860,7 @@ typedef struct _TMPQArchive
     DWORD          dwFileFlags3;                // Flags for (signature)
     DWORD          dwAttrFlags;                 // Flags for the (attributes) file, see MPQ_ATTRIBUTE_XXX
     DWORD          dwValidFileFlags;            // Valid flags for the current MPQ
-    DWORD          dwRealHashTableSize;         // Real size of the hash table, if MPQ_FLAG_HASH_TABLE_CUT is zet in dwFlags
+    DWORD          dwRealHashTableSize;         // Real size of the hash table, if MPQ_FLAG_HASH_TABLE_CUT is set in dwFlags
     DWORD          dwFlags;                     // See MPQ_FLAG_XXXXX
     DWORD          dwSubType;                   // See MPQ_SUBTYPE_XXX
 
@@ -1146,7 +1146,7 @@ int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pv
 
 // Conversion of MPQ file name to file-name-safe string
 DWORD  WINAPI SMemUTF8ToFileName(
-    TCHAR * szBuffer,               // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    TCHAR * szBuffer,               // Pointer to the output buffer. If NULL, the function will calculate the needed length
     size_t ccBuffer,                // Length of the output buffer (must include EOS)
     const void * lpString,          // Pointer to the begin of the string
     const void * lpStringEnd,       // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
@@ -1154,7 +1154,7 @@ DWORD  WINAPI SMemUTF8ToFileName(
     size_t * pOutLength);           // Pointer to a variable that receives the needed length (optional)
 
 DWORD  WINAPI SMemFileNameToUTF8(
-    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calculate the needed length
     size_t ccBuffer,                // Length of the output buffer (must include EOS)
     const TCHAR * szString,         // Pointer to the begin of the string
     const TCHAR * szStringEnd,      // Pointer to the end of string. If NULL, it's assumed to be zero-terminated

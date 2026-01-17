@@ -222,7 +222,7 @@ TMPQHash * LoadSqpHashTable(TMPQArchive * ha)
             }
         }
 
-        // If an error occured, we need to free the hash table
+        // If an error occurred, we need to free the hash table
         if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pSqpHashTable);
@@ -267,7 +267,7 @@ TMPQBlock * LoadSqpBlockTable(TMPQArchive * ha)
             pMpqBlock->dwFlags   = TempEntry.dwFlags;
         }
 
-        // If an error occured, we need to free the hash table
+        // If an error occurred, we need to free the hash table
         if(dwErrCode != ERROR_SUCCESS)
         {
             STORM_FREE(pSqpBlockTable);

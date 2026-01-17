@@ -40,7 +40,7 @@
 // Builds the "hash_to_index" table and "pair_hash_offsets" table.
 // Every element of "hash_to_index" will contain lowest index to the
 // "pair_hash_offsets" table, effectively giving offset of the first
-// occurence of the given PAIR_HASH in the input data.
+// occurrence of the given PAIR_HASH in the input data.
 static void SortBuffer(TCmpStruct * pWork, unsigned char * buffer_begin, unsigned char * buffer_end)
 {
     unsigned short * phash_to_index;
@@ -76,7 +76,7 @@ static void SortBuffer(TCmpStruct * pWork, unsigned char * buffer_begin, unsigne
     }
 
     // Step 3: Convert the table to the array of indexes.
-    // Now, each element contains index to the first occurence of given PAIR_HASH
+    // Now, each element contains index to the first occurrence of given PAIR_HASH
     for(buffer_end--; buffer_end >= buffer_begin; buffer_end--)
     {
         byte_pair_hash = BYTE_PAIR_HASH(buffer_end);
@@ -146,7 +146,7 @@ static void OutputBits(TCmpStruct * pWork, unsigned int nbits, unsigned long bit
 }
 
 // This function searches for a repetition
-// (a previous occurence of the current byte sequence)
+    // (a previous occurrence of the current byte sequence)
 // Returns length of the repetition, and stores the backward distance
 // to pWork structure.
 static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
@@ -154,13 +154,13 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
     unsigned short * phash_to_index;            // Pointer into pWork->phash_to_index table
     unsigned short * phash_offs;                // Pointer to the table containing offsets of each PAIR_HASH
     unsigned char * repetition_limit;           // An eventual repetition must be at position below this pointer
-    unsigned char * prev_repetition;            // Pointer to the previous occurence of the current PAIR_HASH
+    unsigned char * prev_repetition;            // Pointer to the previous occurrence of the current PAIR_HASH
     unsigned char * prev_rep_end;               // End of the previous repetition
     unsigned char * input_data_ptr;
     unsigned short phash_offs_index;            // Index to the table with PAIR_HASH positions
     unsigned short min_phash_offs;              // The lowest allowed hash offset
     unsigned int offs_in_rep;                   // Offset within found repetition
-    unsigned int equal_byte_count;              // Number of bytes that are equal to the previous occurence
+    unsigned int equal_byte_count;              // Number of bytes that are equal to the previous occurrence
     unsigned int rep_length = 1;                // Length of the found repetition
     unsigned int rep_length2;                   // Secondary repetition
     unsigned char pre_last_byte;                // Last but one byte from a repetion
@@ -241,7 +241,7 @@ static unsigned int FindRep(TCmpStruct * pWork, unsigned char * input_data)
         }
 
         // Move forward in the table of PAIR_HASH repetitions.
-        // There might be a more recent occurence of the same repetition.
+        // There might be a more recent occurrence of the same repetition.
         phash_offs_index++;
         phash_offs++;
         prev_repetition = pWork->work_buff + phash_offs[0];
@@ -518,7 +518,7 @@ static void WriteCmpData(TCmpStruct * pWork)
                 // Try to find better repetition 1 byte later.
                 // Example: "ARROCKFORT" "AROCKFORT"
                 // When "input_data" points to the second string, FindRep
-                // returns the occurence of "AR". But there is longer repetition "ROCKFORT",
+                // returns the occurrence of "AR". But there is longer repetition "ROCKFORT",
                 // beginning 1 byte after.
                 save_rep_length = rep_length;
                 save_distance = pWork->distance;
