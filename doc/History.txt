@@ -49,7 +49,7 @@
  - The only operation that is externally allowed to do with internal files
    ("(listfile)", "(attributes)" and "(signature)") is reading. Attempt to modify any of the file
    fails and GetLastError returns ERROR_INTERNAL_FILE
- - Fixed memory leak that has occured when writing more than one sector to the file at once
+ - Fixed memory leak that has occurred when writing more than one sector to the file at once
 
  Version 7.01
 
@@ -77,6 +77,6 @@
  Version 6.20
 
  - Fixed lots of bugs when processing files with same names but different locales
- - Fixed bugs when repeately extracts the same file with MPQ_FILE_SINGLE_UNIT flag
+ - Fixed bugs when repeatedly extracts the same file with MPQ_FILE_SINGLE_UNIT flag
  - Added SFileFlushArchive
  - Fixed issue opening AVI files renamed to MPQ using SFileCreateArchiveEx

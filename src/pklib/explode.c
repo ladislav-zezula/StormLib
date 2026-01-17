@@ -283,7 +283,7 @@ static unsigned int DecodeLit(TDcmpStruct * pWork)
         // The next 8 bits hold the index to the length code table
         length_code = pWork->LengthCodes[pWork->bit_buff & 0xFF];
 
-        // Remove the apropriate number of bits
+        // Remove the appropriate number of bits
         if(WasteBits(pWork, pWork->LenBits[length_code]))
             return 0x306;
 

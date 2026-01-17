@@ -347,7 +347,7 @@ size_t UTF16_IsEncodedCharSequence(LPCTSTR szString, LPCTSTR szStringEnd, LPBYTE
 
 // Conversion of MPQ file name to file-name-safe string
 DWORD WINAPI SMemUTF8ToFileName(
-    LPTSTR szBuffer,                // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    LPTSTR szBuffer,                // Pointer to the output buffer. If NULL, the function will calculate the needed length
     size_t ccBuffer,                // Length of the output buffer (must include EOS)
     const void * lpString,          // Pointer to the begin of the string
     const void * lpStringEnd,       // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
@@ -461,7 +461,7 @@ DWORD WINAPI SMemUTF8ToFileName(
 }
 
 DWORD WINAPI SMemFileNameToUTF8(
-    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calculate the needed length
     size_t ccBuffer,                // Length of the output buffer (must include EOS)
     const TCHAR * szString,         // Pointer to the begin of the string
     const TCHAR * szStringEnd,      // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
