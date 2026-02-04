@@ -602,7 +602,7 @@ bool WINAPI SFileGetFileName(HANDLE hFile, char * szFileName)
                 // Copy the file name to the output buffer, if any
                 if(pFileEntry->szFileName && szFileName)
                 {
-                    strcpy(szFileName, pFileEntry->szFileName);
+                    StringCopy(szFileName, MAX_PATH, pFileEntry->szFileName);
                     dwErrCode = ERROR_SUCCESS;
                 }
             }

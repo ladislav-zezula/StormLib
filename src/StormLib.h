@@ -1074,7 +1074,7 @@ bool   WINAPI SFileCloseFile(HANDLE hFile);
 
 // Retrieving info about a file in the archive
 bool   WINAPI SFileGetFileInfo(HANDLE hMpqOrFile, SFileInfoClass InfoClass, void * pvFileInfo, DWORD cbFileInfo, LPDWORD pcbLengthNeeded);
-bool   WINAPI SFileGetFileName(HANDLE hFile, char * szFileName);
+bool   WINAPI SFileGetFileName(HANDLE hFile, char * szFileName); // szFileName must be at least MAX_PATH chars
 bool   WINAPI SFileFreeFileInfo(void * pvFileInfo, SFileInfoClass InfoClass);
 
 // High-level extract function
