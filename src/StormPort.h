@@ -388,6 +388,18 @@
   #define O_LARGEFILE 0
 #endif
 
+// 64-bit calls are supplied by "normal" calls on musl (like Mac)
+#if defined(__linux__) && !defined(__GLIBC__)
+  #define stat64  stat
+  #define fstat64 fstat
+  #define lseek64 lseek
+  #define ftruncate64 ftruncate
+  #define off64_t off_t
+  #ifndef O_LARGEFILE
+    #define O_LARGEFILE 0
+  #endif
+#endif
+
 // Platform-specific error codes for non-Windows platforms
 #ifndef ERROR_SUCCESS
   #define ERROR_SUCCESS                  0
