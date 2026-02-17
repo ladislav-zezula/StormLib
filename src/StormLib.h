@@ -1140,7 +1140,9 @@ int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pv
 //-----------------------------------------------------------------------------
 // Conversion of UTF-8 (MPQ listfiles) into file name safe strings
 
-#define SFILE_UTF8_ALLOW_INVALID_CHARS  0x01        // If set, then the function will treat invalid chars like like MultiByteToWideChar
+#define SFILE_UTF8_REPLACE_INVALID      0x01        // If set, invalid UTF8 combinations will be replaced by 0xFFFD (like MultiByteToWideChar)
+#define SFILE_UTF8_KEEP_INVALID_FCH     0x02        // If set, filename-invalid chars will be kept unescaped
+
 #define SFILE_UTF8_INVALID_CHARACTER    0xFFFD      // Marker of an invalid character
 #define SFILE_UNICODE_MAX               0x10FFFF    // The highest valid UNICODE char
 

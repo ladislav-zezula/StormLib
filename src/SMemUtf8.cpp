@@ -94,7 +94,7 @@ static DWORD UTF8_DecodeSequence(const BYTE * pbString, BYTE BitsMask, size_t cc
 }
 
 // https://en.wikipedia.org/wiki/UTF-8
-DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWORD & dwCodePoint, size_t & ccBytesEaten)
+DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWORD & dwCodePoint, size_t & ccBytesEaten, DWORD dwFlags)
 {
     // Reset the number of bytes eaten
     dwCodePoint = SFILE_UTF8_INVALID_CHARACTER;
@@ -109,7 +109,7 @@ DWORD UTF8_DecodeCodePoint(const BYTE * pbString, const BYTE * pbStringEnd, DWOR
         if(pbString[0] <= 0x7F)
         {
             // This is the perfect spot to check for filename-unsafe characters
-            if(UTF8_IsBadFileNameCharacter(pbString[0]))
+            if((dwFlags & SFILE_UTF8_KEEP_INVALID_FCH) == 0 && UTF8_IsBadFileNameCharacter(pbString[0]))
                 return ERROR_NO_UNICODE_TRANSLATION;
 
             // Decode the 1-byte sequence
@@ -373,13 +373,13 @@ DWORD WINAPI SMemUTF8ToFileName(
         DWORD dwCodePoint = 0;
 
         // Decode the single UTF-8 char
-        if((dwErrCode = UTF8_DecodeCodePoint(pbString, pbStringEnd, dwCodePoint, ccBytesEaten)) != ERROR_SUCCESS)
+        if((dwErrCode = UTF8_DecodeCodePoint(pbString, pbStringEnd, dwCodePoint, ccBytesEaten, dwFlags)) != ERROR_SUCCESS)
         {
             // Exactly one byte should be eaten on error
             assert(ccBytesEaten == 1);
 
             // If invalid chars are allowed, we replace the result with 0xFFFD
-            if(dwFlags & SFILE_UTF8_ALLOW_INVALID_CHARS)
+            if(dwFlags & SFILE_UTF8_REPLACE_INVALID)
             {
                 // Replace the code point with invalid marker and continue on the next character
                 dwCodePoint = SFILE_UTF8_INVALID_CHARACTER;

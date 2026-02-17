@@ -3937,19 +3937,21 @@ static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szList
     CreateFullPathName(szFullPath, _countof(szFullPath), szListFileDir, szListFile);
 
     // Test all file names in the Chinese listfile
-    hFind = SListFileFindFirstFile(NULL, szFullPath, "*", &sf);
-    if(hFind != NULL)
+    if(szListFile && szListFile[0])
     {
-        while(SListFileFindNextFile(hFind, &sf))
+        hFind = SListFileFindFirstFile(NULL, szFullPath, "*", &sf);
+        if(hFind != NULL)
         {
-            if(!TestUtfConversion(sf.cFileName))
+            while(SListFileFindNextFile(hFind, &sf))
             {
-                return ERROR_INVALID_DATA;
+                if(!TestUtfConversion(sf.cFileName))
+                {
+                    return ERROR_INVALID_DATA;
+                }
             }
+            SListFileFindClose(hFind);
         }
-        SListFileFindClose(hFind);
     }
-
     return ERROR_SUCCESS;
 }
 
@@ -3983,10 +3985,6 @@ static DWORD TestUseAfterFree(LPCTSTR szPlainName)
         SFileCloseArchive(hMpq);
     }
     return dwErrCode;
-}
-
-static void Test_PlayingSpace()
-{
 }
 
 //-----------------------------------------------------------------------------
@@ -4053,6 +4051,8 @@ static const BYTE FileNameInvalidUTF8[] =
     0x6d, 0x64, 0x78,       // --> 01101101 01100100 01111000           --> ".mdx"
     0x00                    // --> 00000000                             --> EOS
 };
+
+static const BYTE FileNameInvalidChar[] = "units/Orc/HealingWard/Rune2.blp";
 
 static const TEST_EXTRA_UTF8 MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
 
@@ -4455,6 +4455,15 @@ static const LPCSTR Test_CreateMpq_Localized[] =
     (LPCSTR)szPlainName_SAU     // (UTF-8) Arabic
 };
 
+static void Test_PlayingSpace()
+{
+    size_t nOutLength = 0;
+    TCHAR szBuffer[128];
+
+    SMemUTF8ToFileName(szBuffer, _countof(szBuffer), FileNameInvalidChar, NULL, SFILE_UTF8_KEEP_INVALID_FCH, &nOutLength);
+    _tprintf(_T("%s\n"), szBuffer);
+}
+
 //-----------------------------------------------------------------------------
 // Main
 
@@ -4487,6 +4496,7 @@ int _tmain(int argc, TCHAR * argv[])
 
     // Test the UTF-8 conversions
     TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
+    TestUtf8Conversions(FileNameInvalidChar, NULL);
 
     // Test the use-after-free scenarios
     TestUseAfterFree(_T("Test-UAF.mpq"));
