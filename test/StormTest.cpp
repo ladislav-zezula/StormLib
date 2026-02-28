@@ -4333,7 +4333,8 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                        NULL, "25cad16a2fb4e883767a1f512fc1dce7",    16},
     {_T("MPQ_2023_v1_Lusin2Rpg1.28.w3x"),                       NULL, "9c21352f06cf763fcf05e8a2691e6194", 10305, &HashVals},
     {_T("MPQ_2024_v1_300TK2.09p.w3x"),                          NULL, "e442e3d2e7d457b9ba544544013b791f", 32588},               // Fake MPQ User data, fake MPQ header at offset 0x200
-    {_T("MPQ_2025_v1_Legion_TD_11_2d-BETA_2_TeamOZE.w3x"),      NULL, "08efaaa11cafe5e8921a6f112b2fa458",   626},               // Fake MPQ User data, fake MPQ header at offset 0x200
+    {_T("MPQ_2025_v1_Legion_TD_11_2d-BETA_2_TeamOZE.w3x"),      NULL, "08efaaa11cafe5e8921a6f112b2fa458",   626},
+    {_T("MPQ_2026_v1_The Art of Defense v4.11 G0A.w3x"),        NULL, "892ec8421b34e35899624fc63b451327",   952},               // Some files have slash characters in their names
 
     // ASI plugins
     {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
