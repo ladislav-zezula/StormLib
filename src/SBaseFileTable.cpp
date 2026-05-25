@@ -482,7 +482,7 @@ DWORD ConvertMpqHeaderToFormat4(
 
     // If version 1.0 is forced, then the format version is forced to be 1.0
     // Reason: Storm.dll in Warcraft III ignores format version value
-    if((MapType == MapTypeWarcraft3) || (dwFlags & MPQ_OPEN_FORCE_MPQ_V1))
+    if((MapType == MapTypeStarcraft) || (MapType == MapTypeWarcraft3) || (dwFlags & MPQ_OPEN_FORCE_MPQ_V1))
         wFormatVersion = MPQ_FORMAT_VERSION_1;
 
     // Don't accept format 3 for Starcraft II maps
@@ -497,11 +497,20 @@ DWORD ConvertMpqHeaderToFormat4(
             // Make sure that the MPQ Header is properly swapped
             BSWAP_TMPQHEADER(pHeader, MPQ_FORMAT_VERSION_1);
 
-            // Check for blatantly wrong MPQ header by the hash table position
+            // Check for blatantly wrong MPQ header by the tables position
             if(((ByteOffset + pHeader->dwHashTablePos) & 0xFFFFFFFF) > FileSize)
                 return ERROR_FAKE_MPQ_HEADER;
             if(((ByteOffset + pHeader->dwBlockTablePos) & 0xFFFFFFFF) > FileSize)
                 return ERROR_FAKE_MPQ_HEADER;
+
+            // Check for blatantly wrong MPQ header by the tables size
+            if(MapType == MapTypeStarcraft)
+            {
+                if((pHeader->dwHashTableSize * sizeof(TMPQHash)) & 0xF0000000)
+                    return ERROR_FAKE_MPQ_HEADER;
+                if((pHeader->dwBlockTableSize * sizeof(TMPQBlock)) & 0xF0000000)
+                    return ERROR_FAKE_MPQ_HEADER;
+            }
 
             // Check for malformed MPQ header version 1.0
             if(pHeader->wFormatVersion != MPQ_FORMAT_VERSION_1 || pHeader->dwHeaderSize != MPQ_HEADER_SIZE_V1)

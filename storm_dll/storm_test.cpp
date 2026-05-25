@@ -125,6 +125,7 @@ int main(int argc, char * argv[])
 
     // Put Storm.dll to the current folder before running this
     //printf("[*] Opening archive '%s' ...\n", szArchiveName);
+    __debugbreak();
     if(StormOpenArchive(szArchiveName, 0, 0, &hMpq))
     {
         LPCSTR * FilesToOpen = DefFilesToOpen;
