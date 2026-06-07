@@ -238,10 +238,9 @@ static void Compress_PKLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBu
     TDataInfo Info;                                      // Data information
     char * work_buf = STORM_ALLOC(char, CMP_BUFFER_SIZE);// Pklib's work buffer
     unsigned int dict_size;                              // Dictionary size
-    unsigned int ctype = CMP_BINARY;                     // Compression type
+    unsigned int ctype = (pCmpType && *pCmpType == DATA_TYPE_TEXT) ? CMP_ASCII : CMP_BINARY; // Compression type
 
     // Keep compilers happy
-    STORMLIB_UNUSED(pCmpType);
     STORMLIB_UNUSED(nCmpLevel);
 
     // Handle no-memory condition
