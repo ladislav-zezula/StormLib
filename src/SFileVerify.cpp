@@ -481,7 +481,10 @@ static DWORD VerifyStrongSignatureWithKey(
 
     // Verify the signature
     if(rsa_verify_simple(reversed_signature, MPQ_STRONG_SIGNATURE_SIZE, padded_digest, MPQ_STRONG_SIGNATURE_SIZE, &result, &key) != CRYPT_OK)
+    {
+        rsa_free(&key);
         return ERROR_VERIFY_FAILED;
+    }
 
     // Free the key and return result
     rsa_free(&key);
