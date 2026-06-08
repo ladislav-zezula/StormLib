@@ -189,7 +189,8 @@ int CompressADPCM(void * pvOutBuffer, int cbOutBuffer, void * pvInBuffer, int cb
     int StepSize;
 
     // Don't compress when buffer size is too small
-    if (2 * ChannelCount + 2 > cbOutBuffer) return 2 * ChannelCount + 2;
+    if(2 * ChannelCount + 2 > cbOutBuffer)
+        return 2 * ChannelCount + 2;
 
     // First byte in the output stream contains zero. The second one contains the compression level
     os.WriteByteSample(0);
