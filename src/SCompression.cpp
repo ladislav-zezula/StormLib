@@ -101,7 +101,14 @@ void Compress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, in
 
     // Keep compilers happy
     STORMLIB_UNUSED(pCmpType);
-    STORMLIB_UNUSED(nCmpLevel);
+
+    int level = Z_DEFAULT_COMPRESSION;  // ZLIB usually decides this is 6 (Compression level used by WoW MPQs)
+    if (nCmpLevel == 1) {
+        level = 9;
+    }
+    else if (nCmpLevel == 2) {
+        level = 1;
+    }
 
     // Fill the stream structure for zlib
     z.next_in   = (Bytef *)pvInBuffer;
@@ -134,8 +141,9 @@ void Compress_ZLIB(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, in
     // Initialize the compression.
     // Storm.dll uses zlib version 1.1.3
     // Wow.exe uses zlib version 1.2.3
+    // WC3:R, SC:R, and D2:R use zlib version 1.2.11
     nResult = deflateInit2(&z,
-                            6,                  // Compression level used by WoW MPQs
+                            level,
                             Z_DEFLATED,
                             windowBits,
                             8,
