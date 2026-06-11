@@ -773,15 +773,33 @@ bool WINAPI SFileReadFile(HANDLE hFile, void * pvBuffer, DWORD dwToRead, LPDWORD
 }
 
 //-----------------------------------------------------------------------------
+// SFileGetFileArchive
+
+bool WINAPI SFileGetFileArchive(HANDLE hFile, HANDLE * phMpq)
+{
+    TMPQFile * hf;
+
+    // Validate the file handle before we go on
+    if((hf = IsValidFileHandle(hFile)) != NULL)
+    {
+        *phMpq = hf->ha;
+        return true;
+    }
+
+    SErrSetLastError(ERROR_INVALID_HANDLE);
+    return false;
+}
+
+//-----------------------------------------------------------------------------
 // SFileGetFileSize
 
 DWORD WINAPI SFileGetFileSize(HANDLE hFile, LPDWORD pdwFileSizeHigh)
 {
     ULONGLONG FileSize;
-    TMPQFile * hf = (TMPQFile *)hFile;
+    TMPQFile * hf;
 
     // Validate the file handle before we go on
-    if(IsValidFileHandle(hFile))
+    if((hf = IsValidFileHandle(hFile)) != NULL)
     {
         // Make sure that the variable is initialized
         FileSize = 0;

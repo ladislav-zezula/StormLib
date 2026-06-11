@@ -50,6 +50,12 @@ BOOL WINAPI SFILE(CloseFile)(HANDLE hFile)
     return FALSE;
 }
 
+BOOL WINAPI SFILE(GetFileArchive)(HANDLE hFile, HANDLE * hMPQ)
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
 DWORD WINAPI SFILE(GetFileSize)(HANDLE hFile, LPDWORD lpFileSizeHigh)
 {
     SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
