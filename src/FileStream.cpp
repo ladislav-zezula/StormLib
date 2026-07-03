@@ -652,19 +652,20 @@ static void BaseMap_Init(TFileStream * pStream)
 
 static bool BaseMpq_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead)
 {
-    LARGE_INTEGER ByteOffset = { 0 };
+    ULONGLONG ByteOffset64;
+    DWORD dwByteOffsetLo;
+    DWORD dwByteOffsetHi;
     DWORD dwBytesRead = 0;
 
     // Get the byte offset
-    if(pByteOffset != NULL)
-        ByteOffset.QuadPart = *pByteOffset;
-    else
-        ByteOffset.QuadPart = pStream->Base.File.FilePos;
+    ByteOffset64 = (pByteOffset != NULL) ? pByteOffset[0] : pStream->Base.File.FilePos;
+    dwByteOffsetHi = (DWORD)(ByteOffset64 >> 0x20);
+    dwByteOffsetLo = (DWORD)(ByteOffset64 & 0xFFFFFFFF);
 
     // Set the new file pointer
-    if(SFileSetFilePointer(pStream->Base.Mpq.hFile, ByteOffset.LowPart, &ByteOffset.HighPart, FILE_BEGIN) != ByteOffset.LowPart)
+    if(SFileSetFilePointer(pStream->Base.Mpq.hFile, dwByteOffsetLo, (LONG *)(&dwByteOffsetHi), FILE_BEGIN) != dwByteOffsetLo)
         return false;
-    pStream->Base.File.FilePos = ByteOffset.QuadPart;
+    pStream->Base.File.FilePos = MAKE_OFFSET64(dwByteOffsetHi, dwByteOffsetLo);
 
     // Read the file data
     if(!SFileReadFile(pStream->Base.Mpq.hFile, pvBuffer, dwBytesToRead, &dwBytesRead, NULL))
