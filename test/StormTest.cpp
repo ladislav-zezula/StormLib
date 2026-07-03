@@ -4474,11 +4474,30 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 
 static void Test_PlayingSpace()
 {
-    size_t nOutLength = 0;
-    TCHAR szBuffer[128];
+    SFILE_FIND_DATA sf;
+    HANDLE hMpq1 = NULL;
+    HANDLE hMpq2 = NULL;
+    HANDLE hFind;
+    BOOL bFound = TRUE;
 
-    SMemUTF8ToFileName(szBuffer, _countof(szBuffer), FileNameInvalidChar, NULL, SFILE_UTF8_KEEP_INVALID_FCH, &nOutLength);
-    _tprintf(_T("%s\n"), szBuffer);
+    if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
+    {
+        if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
+        {
+            hFind = SFileFindFirstFile(hMpq1, "*", &sf, NULL);
+            if(hFind != NULL)
+            {
+                while(bFound)
+                {
+                    printf("[*] Found: %s\n", sf.cFileName);
+                    bFound = SFileFindNextFile(hFind, &sf);
+                }
+                SFileFindClose(hFind);
+            }
+            SFileCloseArchive(hMpq2);
+        }
+        SFileCloseArchive(hMpq1);
+    }
 }
 
 //-----------------------------------------------------------------------------
