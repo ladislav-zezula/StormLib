@@ -2563,11 +2563,12 @@ TFileStream * FileStream_OpenFile(
 
 TFileStream * FileStream_OpenFileArchive(HANDLE hParentMpq, LPCSTR szFileName)
 {
-    ULARGE_INTEGER FileSize = {0};
     TFileStream * pStream = NULL;
     size_t FileNameSize = strlen(szFileName) + 1;
     size_t StreamSize = sizeof(TFileStream);
     HANDLE hFile = NULL;
+    DWORD dwFileSizeHi = 0;
+    DWORD dwFileSizeLo;
 
     // Allocate the stream structure for the given stream type
     pStream = (TFileStream *)STORM_ALLOC(BYTE, StreamSize + (FileNameSize * sizeof(TCHAR)));
@@ -2576,7 +2577,7 @@ TFileStream * FileStream_OpenFileArchive(HANDLE hParentMpq, LPCSTR szFileName)
         if(SFileOpenFileEx(hParentMpq, szFileName, 0, &hFile))
         {
             // Retrieve the file size
-            FileSize.LowPart = SFileGetFileSize(hFile, &FileSize.HighPart);
+            dwFileSizeLo = SFileGetFileSize(hFile, &dwFileSizeHi);
 
             // Zero the entire structure
             memset(pStream, 0, StreamSize);
@@ -2587,7 +2588,7 @@ TFileStream * FileStream_OpenFileArchive(HANDLE hParentMpq, LPCSTR szFileName)
             StringCopy(pStream->szFileName, FileNameSize, szFileName);
 
             // Initialize the stream
-            pStream->Base.Mpq.FileSize = FileSize.QuadPart;
+            pStream->Base.Mpq.FileSize = MAKE_OFFSET64(dwFileSizeHi, dwFileSizeLo);
             pStream->Base.Mpq.FileTime = 0;
             pStream->Base.Mpq.FilePos = 0;
             pStream->Base.Mpq.hFile = hFile;
