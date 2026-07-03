@@ -4478,7 +4478,7 @@ static void Test_PlayingSpace()
     HANDLE hMpq1 = NULL;
     HANDLE hMpq2 = NULL;
     HANDLE hFind;
-    BOOL bFound = TRUE;
+    bool bFound = true;
 
     if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
     {
