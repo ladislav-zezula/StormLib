@@ -154,18 +154,14 @@ void StringCreatePseudoFileName(char * szBuffer, size_t cchMaxChars, unsigned in
 #ifdef _UNICODE
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const char * szSource)
 {
-    int ccResult;
-
-    ccResult = MultiByteToWideChar(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget));
-    szTarget[ccResult] = 0;
+    // MultiByteToWideChar with cbMultiByte = -1 puts terminating zero to the target buffer
+    MultiByteToWideChar(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget));
 }
 
 void StringCopy(char * szTarget, size_t cchTarget, const TCHAR * szSource)
 {
-    int ccResult;
-
-    ccResult = WideCharToMultiByte(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget), NULL, NULL);
-    szTarget[ccResult] = 0;
+    // WideCharToMultiByte with cchWideChar = -1 puts terminating zero to the target buffer
+    WideCharToMultiByte(CP_UTF8, 0, szSource, -1, szTarget, (int)(cchTarget), NULL, NULL);
 }
 
 void StringCopy(TCHAR * szTarget, size_t cchTarget, const TCHAR * szSource)
@@ -1904,6 +1900,10 @@ bool DereferenceArchive(TMPQArchive * ha)
     // There must be at least one reference
     if(ha == NULL || ha->dwRefCount == 0)
         return false;
+
+    // Dereference the parent archive, if any
+    if(ha->haParent != NULL)
+        DereferenceArchive(ha->haParent);
 
     // Decrement the file count
     ha->dwRefCount--;

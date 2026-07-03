@@ -214,93 +214,18 @@ static DWORD VerifyMpqTablePositions(TMPQArchive * ha, ULONGLONG FileSize)
     return ERROR_SUCCESS;
 }
 
-//-----------------------------------------------------------------------------
-// Support for alternate markers. Call before opening an archive
-
-#define SFILE_MARKERS_MIN_SIZE   (sizeof(DWORD) + sizeof(DWORD) + sizeof(const char *) + sizeof(const char *))
-
-bool WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers)
-{
-    // Check structure minimum size
-    if(pMarkers == NULL || pMarkers->dwSize < SFILE_MARKERS_MIN_SIZE)
-    {
-        SErrSetLastError(ERROR_INVALID_PARAMETER);
-        return false;
-    }
-
-    // Make sure that the MPQ cryptography is initialized at this time
-    InitializeMpqCryptography();
-
-    // Remember the marker for MPQ header
-    if(pMarkers->dwSignature != 0)
-        g_dwMpqSignature = pMarkers->dwSignature;
-
-    // Remember the encryption key for hash table
-    if(pMarkers->szHashTableKey != NULL)
-        g_dwHashTableKey = HashString(pMarkers->szHashTableKey, MPQ_HASH_FILE_KEY);
-
-    // Remember the encryption key for block table
-    if(pMarkers->szBlockTableKey != NULL)
-        g_dwBlockTableKey = HashString(pMarkers->szBlockTableKey, MPQ_HASH_FILE_KEY);
-
-    // Succeeded
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-// SFileGetLocale and SFileSetLocale
-// Set the locale for all newly opened files
-
-LCID WINAPI SFileGetLocale()
-{
-    return g_lcFileLocale;
-}
-
-LCID WINAPI SFileSetLocale(LCID lcFileLocale)
-{
-    return (g_lcFileLocale = lcFileLocale);
-}
-
-//-----------------------------------------------------------------------------
-// SFileOpenArchive
-//
-//   szFileName - MPQ archive file name to open
-//   dwPriority - When SFileOpenFileEx called, this contains the search priority for searched archives
-//   dwFlags    - See MPQ_OPEN_XXX in StormLib.h
-//   phMpq      - Pointer to store open archive handle
-
-bool WINAPI SFileOpenArchive(
-    const TCHAR * szMpqName,
-    DWORD dwPriority,
-    DWORD dwFlags,
-    HANDLE * phMpq)
+static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWORD dwPriority, DWORD dwFlags, HANDLE * phMpq)
 {
     TMPQUserData * pUserData = NULL;
-    TFileStream * pStream = NULL;       // Open file stream
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
     ULONGLONG FileSize = 0;             // Size of the file
     LPBYTE pbHeaderBuffer = NULL;       // Buffer for searching MPQ header
-    DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
     MTYPE MapType = MapTypeNotChecked;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // Verify the parameters
-    if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)
-    {
-        SErrSetLastError(ERROR_INVALID_PARAMETER);
-        return false;
-    }
-
     // One time initialization of MPQ cryptography
     InitializeMpqCryptography();
-    dwPriority = dwPriority;
-
-    // If not forcing MPQ v 1.0, also use file bitmap
-    dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
-
-    // Open the MPQ archive file
-    pStream = FileStream_OpenFile(szMpqName, dwStreamFlags);
     if(pStream == NULL)
         return false;
 
@@ -384,8 +309,10 @@ bool WINAPI SFileOpenArchive(
             // Check whether the file is AVI file or a Warcraft III/Starcraft II map
             if(MapType == MapTypeNotChecked)
             {
+                LPCTSTR szFileName = FileStream_GetFileName(ha->pStream);
+
                 // Do nothing if the file is an AVI file
-                if((MapType = CheckMapType(szMpqName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
+                if((MapType = CheckMapType(szFileName, pbHeaderBuffer, dwBytesAvailable)) == MapTypeAviFile)
                 {
                     dwErrCode = ERROR_AVI_FILE;
                     break;
@@ -486,8 +413,8 @@ bool WINAPI SFileOpenArchive(
                 ha->UserDataPos = ByteOffset;
 
             // Set the position of the MPQ header
-            ha->pHeader  = (TMPQHeader *)ha->HeaderData;
-            ha->MpqPos   = ByteOffset;
+            ha->pHeader = (TMPQHeader *)ha->HeaderData;
+            ha->MpqPos = ByteOffset;
             ha->FileSize = FileSize;
 
             // Sector size must be nonzero.
@@ -520,6 +447,9 @@ bool WINAPI SFileOpenArchive(
         // Example map: MPQ_2016_v1_ProtectedMap_TableSizeOverflow.w3x
         ha->pHeader->dwBlockTableSize = (ha->pHeader->dwBlockTableSize & BLOCK_INDEX_MASK);
         ha->pHeader->dwHashTableSize = (ha->pHeader->dwHashTableSize & BLOCK_INDEX_MASK);
+
+        // Remember the archive priority
+        ha->dwPriority = dwPriority;
 
         // Both MPQ_OPEN_NO_LISTFILE or MPQ_OPEN_NO_ATTRIBUTES trigger read only mode
         if(dwFlags & (MPQ_OPEN_NO_LISTFILE | MPQ_OPEN_NO_ATTRIBUTES))
@@ -625,6 +555,22 @@ bool WINAPI SFileOpenArchive(
         ha->dwFlags |= (ha->dwFlags & MPQ_FLAG_MALFORMED) ? MPQ_FLAG_READ_ONLY : 0;
     }
 
+    // Finally, we need to reference the parent archive, if any
+    if(dwErrCode == ERROR_SUCCESS && hParentMpq != NULL)
+    {
+        TMPQArchive * haParent = IsValidMpqHandle(hParentMpq);
+
+        // Assign the parent archive
+        ha->haParent = haParent;
+
+        // Reference all parent archives
+        while(haParent != NULL)
+        {
+            haParent->dwRefCount++;
+            haParent = haParent->haParent;
+        }
+    }
+
     // Cleanup and exit
     if(dwErrCode != ERROR_SUCCESS)
     {
@@ -640,6 +586,120 @@ bool WINAPI SFileOpenArchive(
     if(phMpq != NULL)
         *phMpq = ha;
     return (dwErrCode == ERROR_SUCCESS);
+}
+
+//-----------------------------------------------------------------------------
+// Support for alternate markers. Call before opening an archive
+
+#define SFILE_MARKERS_MIN_SIZE   (sizeof(DWORD) + sizeof(DWORD) + sizeof(const char *) + sizeof(const char *))
+
+bool WINAPI SFileSetArchiveMarkers(PSFILE_MARKERS pMarkers)
+{
+    // Check structure minimum size
+    if(pMarkers == NULL || pMarkers->dwSize < SFILE_MARKERS_MIN_SIZE)
+    {
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    // Make sure that the MPQ cryptography is initialized at this time
+    InitializeMpqCryptography();
+
+    // Remember the marker for MPQ header
+    if(pMarkers->dwSignature != 0)
+        g_dwMpqSignature = pMarkers->dwSignature;
+
+    // Remember the encryption key for hash table
+    if(pMarkers->szHashTableKey != NULL)
+        g_dwHashTableKey = HashString(pMarkers->szHashTableKey, MPQ_HASH_FILE_KEY);
+
+    // Remember the encryption key for block table
+    if(pMarkers->szBlockTableKey != NULL)
+        g_dwBlockTableKey = HashString(pMarkers->szBlockTableKey, MPQ_HASH_FILE_KEY);
+
+    // Succeeded
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// SFileGetLocale and SFileSetLocale
+// Set the locale for all newly opened files
+
+LCID WINAPI SFileGetLocale()
+{
+    return g_lcFileLocale;
+}
+
+LCID WINAPI SFileSetLocale(LCID lcFileLocale)
+{
+    return (g_lcFileLocale = lcFileLocale);
+}
+
+//-----------------------------------------------------------------------------
+// SFileOpenArchive
+//
+//   szFileName - MPQ archive file name to open
+//   dwPriority - When SFileOpenFileEx called, this contains the search priority for searched archives
+//   dwFlags    - See MPQ_OPEN_XXX in StormLib.h
+//   phMpq      - Pointer to store open archive handle
+
+bool WINAPI SFileOpenArchive(
+    LPCTSTR szMpqName,
+    DWORD dwPriority,
+    DWORD dwFlags,
+    HANDLE * phMpq)
+{
+    TFileStream * pStream;
+    DWORD dwStreamFlags = (dwFlags & STREAM_FLAGS_MASK);
+    bool bResult = false;
+
+    // Verify the parameters
+    if(szMpqName == NULL || *szMpqName == 0 || phMpq == NULL)
+    {
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    // If not forcing MPQ v 1.0, also use file bitmap
+    dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
+    if((pStream = FileStream_OpenFile(szMpqName, dwStreamFlags)) != NULL)
+        bResult = OpenArchiveFromStream(pStream, NULL, dwPriority, dwFlags, phMpq);
+    return bResult;
+}
+
+//-----------------------------------------------------------------------------
+// SFileOpenFileArchive
+//
+//   hMpq       - Handle to the MPQ archive
+//   szFileName - File name in the MPQ to be open as archive 
+//   dwPriority - When SFileOpenFileEx called, this contains the search priority for searched archives
+//   dwFlags    - See MPQ_OPEN_XXX in StormLib.h
+//   phMpq      - Pointer to store open archive handle
+
+bool WINAPI SFileOpenFileArchive(
+    HANDLE hParentMpq,
+    LPCSTR szFileName,
+    DWORD dwPriority,
+    DWORD dwFlags,
+    HANDLE * phMpq)
+{
+    TFileStream * pStream;
+    DWORD dwStreamFlags = dwFlags & (STREAM_OPTIONS_MASK | STREAM_PROVIDER_MASK);
+    bool bResult = false;
+
+    // Verify the parameters
+    if(hParentMpq == NULL || szFileName == NULL || *szFileName == 0 || phMpq == NULL)
+    {
+        SErrSetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    // If not forcing MPQ v 1.0, also use file bitmap
+    dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
+    dwStreamFlags |= BASE_PROVIDER_MPQ;
+    if((pStream = FileStream_OpenFileArchive(hParentMpq, szFileName)) != NULL)
+        bResult = OpenArchiveFromStream(pStream, hParentMpq, dwPriority, dwFlags, phMpq);
+    return bResult;
 }
 
 //-----------------------------------------------------------------------------
@@ -781,6 +841,5 @@ bool WINAPI SFileCloseArchive(HANDLE hMpq)
         SErrSetLastError(ERROR_ACCESS_DENIED);
         return false;
     }
-
     return true;
 }

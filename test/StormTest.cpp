@@ -381,19 +381,23 @@ static void PlayWaveSound(PFILE_DATA pFileData)
     // Suppress ALSA error printing
     snd_lib_error_set_handler(alsa_silent_error_handler);
 
-    // Capture the WAVE file header
+    // Validate the WAVE file header
     if(pFileData->dwFileSize >= sizeof(WAVE_FILE_HEADER) && pWaveHeader->dwRiffSignature == ID_WAVE_MAGIC1 && pWaveHeader->dwTypeSignature == ID_WAVE_MAGIC2)
     {
-        // Scan for "fmt " and "data"
-        if(pWaveHeader->dwChunkMarker == ID_WAVE_CHUNK_FMT && pWaveHeader->dwDataSignature == ID_WAVE_CHUNK_DATA)
+        // Require a standard 16-byte PCM fmt chunk followed by a data chunk
+        if(pWaveHeader->dwChunkMarker == ID_WAVE_CHUNK_FMT && pWaveHeader->dwLength == 16 &&
+           pWaveHeader->wFormat == 1 && pWaveHeader->dwDataSignature == ID_WAVE_CHUNK_DATA)
         {
-            if(pWaveHeader->wBlockAlign != 0)
+            // Guard against a bogus dwDataSize that would read past the buffer
+            if(pWaveHeader->wBlockAlign != 0 && (DWORD)(sizeof(WAVE_FILE_HEADER) + pWaveHeader->dwDataSize) <= pFileData->dwFileSize)
             {
                 // Open the default sound device and play the sound
                 if(snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0) >= 0)
                 {
-                    snd_pcm_format_t format = (pWaveHeader->wBitsPerSample == 16) ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_S8;
+                    // WAV 8-bit samples are unsigned (0-255); 16-bit samples are signed little-endian
+                    snd_pcm_format_t format = (pWaveHeader->wBitsPerSample == 16) ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_U8;
                     unsigned int rate = pWaveHeader->dwSamplesPerSec;
+                    snd_pcm_sframes_t nWritten;
 
                     snd_pcm_hw_params_alloca(&params);
                     snd_pcm_hw_params_any(pcm_handle, params);
@@ -403,14 +407,20 @@ static void PlayWaveSound(PFILE_DATA pFileData)
                     snd_pcm_hw_params_set_rate_near(pcm_handle, params, &rate, 0);
                     snd_pcm_hw_params(pcm_handle, params);
 
-                    snd_pcm_writei(pcm_handle, (pWaveHeader + 1), pWaveHeader->dwDataSize / pWaveHeader->wBlockAlign);
+                    snd_pcm_uframes_t nFrames = pWaveHeader->dwDataSize / pWaveHeader->wBlockAlign;
+                    nWritten = snd_pcm_writei(pcm_handle, (pWaveHeader + 1), nFrames);
+                    if(nWritten == -EPIPE)
+                    {
+                        snd_pcm_recover(pcm_handle, (int)nWritten, 1);
+                        snd_pcm_writei(pcm_handle, (pWaveHeader + 1), nFrames);
+                    }
                     snd_pcm_drain(pcm_handle);
                     snd_pcm_close(pcm_handle);
                 }
             }
         }
     }
-    #endif
+#endif
 }
 
 static bool CompareBlocks(LPBYTE pbBlock1, LPBYTE pbBlock2, DWORD dwLength, DWORD * pdwDifference)
@@ -4474,11 +4484,30 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 
 static void Test_PlayingSpace()
 {
-    size_t nOutLength = 0;
-    TCHAR szBuffer[128];
+    SFILE_FIND_DATA sf;
+    HANDLE hMpq1 = NULL;
+    HANDLE hMpq2 = NULL;
+    HANDLE hFind;
+    bool bFound = true;
 
-    SMemUTF8ToFileName(szBuffer, _countof(szBuffer), FileNameInvalidChar, NULL, SFILE_UTF8_KEEP_INVALID_FCH, &nOutLength);
-    _tprintf(_T("%s\n"), szBuffer);
+    if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
+    {
+        if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
+        {
+            hFind = SFileFindFirstFile(hMpq1, "*", &sf, NULL);
+            if(hFind != NULL)
+            {
+                while(bFound)
+                {
+                    printf("[*] Found: %s\n", sf.cFileName);
+                    bFound = SFileFindNextFile(hFind, &sf);
+                }
+                SFileFindClose(hFind);
+            }
+            SFileCloseArchive(hMpq2);
+        }
+        SFileCloseArchive(hMpq1);
+    }
 }
 
 //-----------------------------------------------------------------------------

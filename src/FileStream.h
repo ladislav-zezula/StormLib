@@ -145,6 +145,14 @@ union TBaseProviderData
         ULONGLONG FileSize;                 // Size of the file
         ULONGLONG FilePos;                  // Current file position
         ULONGLONG FileTime;                 // Last write time
+        HANDLE hFile;                       // File handle
+    } Mpq;
+
+    struct
+    {
+        ULONGLONG FileSize;                 // Size of the file
+        ULONGLONG FilePos;                  // Current file position
+        ULONGLONG FileTime;                 // Last write time
         HANDLE hInternet;                   // Internet handle
         HANDLE hConnect;                    // Connection to the internet server
     } Http;
@@ -179,7 +187,7 @@ struct TFileStream
 
     // Stream provider data
     TFileStream * pMaster;                  // Master stream (e.g. MPQ on a web server)
-    TCHAR * szFileName;                     // File name (self-relative pointer)
+    LPTSTR szFileName;                      // File name (self-relative pointer)
 
     ULONGLONG StreamSize;                   // Stream size (can be less than file size)
     ULONGLONG StreamPos;                    // Stream position

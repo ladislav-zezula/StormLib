@@ -1,6 +1,5 @@
 ==== Test Suite for StormLib version 9.31 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
-units/Orc/HealingWard/Rune2.blp
 TestUseAfterFree (Test-UAF.mpq) succeeded.
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
 TestLiFiSearch (listfile-test.txt) succeeded.
