@@ -33,9 +33,11 @@ EXPORTS
     SFileOpenPatchArchive
     SFileIsPatchedArchive
 
+    SFileOpenFileArchive
     SFileOpenFileEx
-    SFileGetFileSize
+    SFileGetFileArchive
     SFileSetFilePointer
+    SFileGetFileSize
     SFileReadFile
     SFileCloseFile
 
