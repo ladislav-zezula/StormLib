@@ -75,6 +75,7 @@
 /* 10.11.17  9.22  Lad  Release 9.22                                         */
 /* 28.09.22  9.24  Lad  lcLocale -> lcFileLocale, also contains platform     */
 /* 01.11.24  9.30  Lad  Added conversion from UTF-8 to file name and back    */
+/* 04.07.26  9.30  Lad  Added SFileOpenFileArchive                           */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -144,8 +145,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x091F  // Current version of StormLib
-#define STORMLIB_VERSION_STRING         "9.31"  // Current version of StormLib as string
+#define STORMLIB_VERSION                0x0928  // Current numeric version of StormLib
+#define STORMLIB_VERSION_STRING         "9.40"  // Current string version of StormLib
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')

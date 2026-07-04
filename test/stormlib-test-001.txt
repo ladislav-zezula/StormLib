@@ -1,6 +1,5 @@
 ==== Test Suite for StormLib version 9.31 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
-TestUseAfterFree (Test-UAF.mpq) succeeded.
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
 TestLiFiSearch (listfile-test.txt) succeeded.
 TestFileStream (MPQ_2013_v4_alternate-original.MPQ) succeeded.
@@ -15,6 +14,8 @@ TestFileMirror (part-file://MPQ_2009_v1_patch-complete.MPQ.part) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-created.MPQ) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-incomplete.MPQ) succeeded.
 TestFileMirror (MPQ_2013_v4_alternate-complete.MPQ) succeeded.
+TestEmbeddedMpq (MPQ_1997_v1_Diablo1_DIABDAT.MPQ) succeeded.
+TestEmbeddedMpq (MPQ_2001_v1_War3.mpq) succeeded.
 TestReadingMpq: Warning: CRC32 error on replay.game.events
 TestReadingMpq (pocs/MPQ_2024_01_HeapOverrun.mpq) succeeded.
 TestReadingMpq (pocs/MPQ_2024_02_StackOverflow.mpq) succeeded.

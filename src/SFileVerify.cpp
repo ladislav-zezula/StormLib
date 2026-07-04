@@ -185,7 +185,7 @@ static bool CalculateMpqHashMd5(
     PMPQ_SIGNATURE_INFO pSI,
     LPBYTE pMd5Digest)
 {
-    hash_state md5_state;
+    hash_state md5_ctx;
     ULONGLONG BeginBuffer;
     ULONGLONG EndBuffer;
     LPBYTE pbDigestBuffer = NULL;
@@ -196,7 +196,7 @@ static bool CalculateMpqHashMd5(
         return false;
 
     // Initialize the MD5 hash state
-    md5_init(&md5_state);
+    md5_init(&md5_ctx);
 
     // Set the byte offset of begin of the data
     BeginBuffer = pSI->BeginMpqData;
@@ -244,14 +244,14 @@ static bool CalculateMpqHashMd5(
         }
 
         // Pass the buffer to the hashing function
-        md5_process(&md5_state, pbDigestBuffer, dwToRead);
+        md5_process(&md5_ctx, pbDigestBuffer, dwToRead);
 
         // Move pointers
         BeginBuffer += dwToRead;
     }
 
     // Finalize the MD5 hash
-    md5_done(&md5_state, pMd5Digest);
+    md5_done(&md5_ctx, pMd5Digest);
     STORM_FREE(pbDigestBuffer);
     return true;
 }
@@ -561,7 +561,7 @@ static DWORD VerifyFile(
     char * pMD5,
     DWORD dwFlags)
 {
-    hash_state md5_state;
+    hash_state md5_ctx;
     unsigned char * pFileMd5;
     unsigned char md5[MD5_DIGEST_SIZE];
     TFileEntry * pFileEntry;
@@ -618,7 +618,7 @@ static DWORD VerifyFile(
         dwTotalBytes = SFileGetFileSize(hFile, NULL);
 
         // Initialize the CRC32 and MD5 contexts
-        md5_init(&md5_state);
+        md5_init(&md5_ctx);
         dwCrc32 = crc32(0, Z_NULL, 0);
 
         // Also turn on sector checksum verification
@@ -645,7 +645,7 @@ static DWORD VerifyFile(
 
             // Update MD5 value
             if(dwFlags & SFILE_VERIFY_FILE_MD5)
-                md5_process(&md5_state, Buffer, dwBytesRead);
+                md5_process(&md5_ctx, Buffer, dwBytesRead);
 
             // Decrement the total size
             dwTotalBytes -= dwBytesRead;
@@ -683,7 +683,7 @@ static DWORD VerifyFile(
                 {
                     // Patch files have their MD5 saved in the patch info
                     pFileMd5 = (hf->pPatchInfo != NULL) ? hf->pPatchInfo->md5 : pFileEntry->md5;
-                    md5_done(&md5_state, md5);
+                    md5_done(&md5_ctx, md5);
 
                     // Only check the MD5 if it is valid
                     if(IsValidMD5(pFileMd5))
