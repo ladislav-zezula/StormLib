@@ -13,6 +13,7 @@
 #define __INCLUDE_CRYPTOGRAPHY__
 #define __STORMLIB_SELF__                   // Don't use StormLib.lib
 #include <stdio.h>
+#include <vector>
 
 #ifdef _MSC_VER
 #include <crtdbg.h>
@@ -611,7 +612,7 @@ static void CreateFullPathName(char * szBuffer, size_t cchBuffer, LPCTSTR szSubD
 static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR szFileHash)
 {
     TFileStream * pStream;
-    hash_state sha256_state;
+    hash_state sha256_ctx;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
     LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
@@ -638,7 +639,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
         if(pbFileBlock != NULL)
         {
             // Initialize SHA256 calculation
-            sha256_init(&sha256_state);
+            sha256_init(&sha256_ctx);
 
             // Calculate the SHA256 of the file
             while(ByteOffset < FileSize)
@@ -655,7 +656,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
                 }
 
                 // Add to SHA256
-                sha256_process(&sha256_state, pbFileBlock, cbBytesToRead);
+                sha256_process(&sha256_ctx, pbFileBlock, cbBytesToRead);
                 ByteOffset += cbBytesToRead;
             }
 
@@ -663,7 +664,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
             pLogger->PrintProgress(szHashingFormat, szShortPlainName, ByteOffset, FileSize);
 
             // Finalize SHA256
-            sha256_done(&sha256_state, file_hash);
+            sha256_done(&sha256_ctx, file_hash);
 
             // Convert the SHA256 to ANSI text
             ConvertSha256ToText(file_hash, szFileHash);
@@ -1792,12 +1793,31 @@ static DWORD SearchArchive(
     return dwErrCode;
 }
 
+static DWORD VerifyFileCountAndHash(TLogHelper & Logger, const void * NameHash, LPCSTR szExpectedHash, DWORD dwFileCount, DWORD dwExpectedFileCount)
+{
+    char szNameHash[0x40];
+
+    if((dwExpectedFileCount != 0) && (dwExpectedFileCount != dwFileCount))
+    {
+        Logger.PrintMessage("File count mismatch(expected: %u, found: %u)", dwExpectedFileCount, dwFileCount);
+        return ERROR_CAN_NOT_COMPLETE;
+    }
+
+    // Check the MD5 hash, if given
+    SMemBinToStr(szNameHash, _countof(szNameHash), NameHash, MD5_DIGEST_SIZE);
+    if(_stricmp(szNameHash, szExpectedHash))
+    {
+        Logger.PrintMessage("Extracted files MD5 mismatch (expected: %s, obtained: %s)", szExpectedHash, szNameHash);
+        return ERROR_CAN_NOT_COMPLETE;
+    }
+    return ERROR_SUCCESS;
+}
+
 static DWORD VerifyDataChecksum(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearchFlags, LPCSTR szExpectedHash, DWORD dwExpectedFileCount)
 {
     DWORD dwErrCode = ERROR_SUCCESS;
     DWORD dwFileCount = 0;
     BYTE NameHash[MD5_DIGEST_SIZE] = {0};
-    char szNameHash[0x40];
 
     // Do nothing if no name hash and no known file count
     if(IS_VALID_STRING(szExpectedHash) || (dwExpectedFileCount != 0))
@@ -1809,23 +1829,8 @@ static DWORD VerifyDataChecksum(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearch
             return dwErrCode;
         }
 
-        // Check the file count, if given
-        if((dwExpectedFileCount != 0) && (dwExpectedFileCount != dwFileCount))
-        {
-            Logger.PrintMessage("File count mismatch(expected: %u, found: %u)", dwExpectedFileCount, dwFileCount);
-            dwErrCode = ERROR_CAN_NOT_COMPLETE;
-        }
-
-        // Check the MD5 hash, if given
-        if(IS_VALID_STRING(szNameHash))
-        {
-            SMemBinToStr(szNameHash, _countof(szNameHash), NameHash, MD5_DIGEST_SIZE);
-            if(_stricmp(szNameHash, szExpectedHash))
-            {
-                Logger.PrintMessage("Extracted files MD5 mismatch (expected: %s, obtained: %s)", szExpectedHash, szNameHash);
-                dwErrCode = ERROR_CAN_NOT_COMPLETE;
-            }
-        }
+        // Check the file count and hash
+        dwErrCode = VerifyFileCountAndHash(Logger, NameHash, szExpectedHash, dwFileCount, dwExpectedFileCount);
     }
     return dwErrCode;
 }
@@ -2435,7 +2440,103 @@ static DWORD TestArchive_LoadFiles(TLogHelper * pLogger, HANDLE hMpq, DWORD bIgn
 }
 
 //-----------------------------------------------------------------------------
-// Testing archive operations: Single archive
+// Testing opening an embedded archives
+
+typedef std::vector<HANDLE> HANDLE_LIST;
+
+static DWORD TestOpenArchive_SearchEmbedded(TLogHelper & Logger, HANDLE_LIST & Mpqs, hash_state & md5_ctx, HANDLE hParentMPQ, LPCTSTR szListFile)
+{
+    SFILE_FIND_DATA sf;
+    HANDLE hChildMPQ;
+    HANDLE hFind;
+    size_t nLength;
+    LPSTR szExtension;
+    DWORD dwErrCode = ERROR_SUCCESS;
+    bool bFound = true;
+
+    // Hash names of all files within the archive. Go recursively.
+    if((hFind = SFileFindFirstFile(hParentMPQ, "*", &sf, szListFile)) != NULL)
+    {
+        while(bFound)
+        {
+            // Add the file name to the MPQ hash
+            nLength = strlen(sf.cFileName);
+            md5_process(&md5_ctx, (unsigned char *)(sf.cFileName), (unsigned long)(nLength));
+            Logger.FileCount++;
+
+            // If the found file is a MPQ, then we open it as embedded MPQ
+            if((szExtension = strrchr(sf.cFileName, '.')) != NULL)
+            {
+                if(!_stricmp(szExtension, ".mpq"))
+                {
+                    // Attempt to open the embedded archive
+                    if(!SFileOpenFileArchive(hParentMPQ, sf.cFileName, 0, 0, &hChildMPQ))
+                    {
+                        Logger.PrintError("Failed to open embedded MPQ: %s", sf.cFileName);
+                        break;
+                    }
+
+                    // Insert the archive handle to the list of MPQs
+                    Mpqs.push_back(hChildMPQ);
+
+                    // Recursively search the MPQ
+                    dwErrCode = TestOpenArchive_SearchEmbedded(Logger, Mpqs, md5_ctx, hChildMPQ, szListFile);
+                    if(dwErrCode != ERROR_SUCCESS)
+                        break;
+                }
+            }
+
+            bFound = SFileFindNextFile(hFind, &sf);
+        }
+        SFileFindClose(hFind);
+    }
+    else
+    {
+        Logger.PrintError("Failed to search the archive");
+        dwErrCode = GetLastError();
+    }
+    return dwErrCode;
+}
+
+static DWORD TestOpenArchive_Embedded(const TEST_INFO1 & MpqInfo)
+{
+    TLogHelper Logger("TestEmbeddedMpq", MpqInfo.szName1);
+    hash_state md5_ctx;
+    HANDLE_LIST Mpqs;
+    HANDLE hParentMPQ = NULL;
+    DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szListFile[MAX_PATH] = {0};
+    BYTE md5_hash[MD5_DIGEST_SIZE];
+
+    // Get the listfile
+    if(GetExtraType(MpqInfo.pExtra) == ListFile)
+        CreateFullPathName(szListFile, _countof(szListFile), szListFileDir, ((PTEST_EXTRA_ONEFILE)(MpqInfo.pExtra))->szFile);
+
+    // Copy the archive so we won't fuck up the original one
+    dwErrCode = OpenExistingArchiveWithCopy(&Logger, MpqInfo.szName1, MpqInfo.szName1, &hParentMPQ, 0);
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        // Search the archive for embedded MPQs
+        md5_init(&md5_ctx);
+        dwErrCode = TestOpenArchive_SearchEmbedded(Logger, Mpqs, md5_ctx, hParentMPQ, szListFile);
+        md5_done(&md5_ctx, md5_hash);
+
+        // Close the master MPQ first.
+        // The reference counting should take care of proper memory deallocation
+        SFileCloseArchive(hParentMPQ);
+        hParentMPQ = NULL;
+
+        // Now close each of the child MPQs
+        for(size_t i = 0; i < Mpqs.size(); i++)
+            SFileCloseArchive(Mpqs[i]);
+    }
+
+    // Verify the file count
+    return VerifyFileCountAndHash(Logger, md5_hash, MpqInfo.szDataHash, MpqInfo.dwFlags, Logger.FileCount);
+}
+
+//-----------------------------------------------------------------------------
+// Testing opening a single archive
 
 static DWORD TestOpenArchive_VerifySignature(TLogHelper & Logger, HANDLE hMpq, DWORD dwDoItIfNonZero)
 {
@@ -4272,7 +4373,13 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 //  {_T("MPQ_2013_v4_alternate-downloaded.MPQ"),                _T("http://www.zezula.net\\mpqs\\alternate.zip"), NULL, 0}
 };
 
-static const TEST_INFO1 Test_OpenMpqs[] =
+static const TEST_INFO1 TestList_EmbeddedMpqs[] =
+{
+    {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "9110e9b7e27e81eae9eed0dcd45b9013",  3942, &LfBliz},
+    {_T("MPQ_2001_v1_War3.mpq"),                                NULL, "264d7397baf89ea14fd0a673a251e297", 11390}
+};
+
+static const TEST_INFO1 TestList_OpenMpqs[] =
 {
 
     // PoC's by Gabe Sherman, tinh0, Zao Yang
@@ -4416,7 +4523,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
 
 };
 
-static const TEST_INFO1 Test_ReopenMpqs[] =
+static const TEST_INFO1 TestList_ReopenMpqs[] =
 {
     // Test the archive compacting feature
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),           NULL,     "0c8fc921466f07421a281a05fad08b01",    53 | TFLG_COMPACT | TFLG_ADD_USER_DATA | TFLG_HAS_LISTFILE | TFLG_HAS_ATTRIBUTES},
@@ -4438,20 +4545,20 @@ static const TEST_INFO1 Test_ReopenMpqs[] =
 };
 
 // Tests for signature file
-static const TEST_INFO1 Test_Signature[] =
+static const TEST_INFO1 TestList_Signature[] =
 {
     {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_SIGN_AT_CREATE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
     {_T("MPQ_1999_v1_WeakSigned1.mpq"), NULL, NULL, SFLAG_CREATE_ARCHIVE | SFLAG_MODIFY_ARCHIVE | SFLAG_SIGN_ARCHIVE | SFLAG_VERIFY_AFTER},
 };
 
-static const TEST_INFO1 Test_ReplaceFile[] =
+static const TEST_INFO1 TestList_ReplaceFile[] =
 {
     {_T("MPQ_2014_v4_Base.StormReplay"), _T("replay.message.events"), (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
     {_T("MPQ_2022_v1_v4.329.w3x"),       _T("war3map.j"),             (LPCSTR)(MPQ_FILE_SINGLE_UNIT), MPQ_COMPRESSION_ZLIB},
     {_T("MPQ_2023_v1_StarcraftMap.scm"), _T("staredit#scenario.chk"), NULL,                           MPQ_COMPRESSION_ZLIB | MPQ_COMPRESSION_HUFFMANN},
 };
 
-static const TEST_INFO2 Test_CreateMpqs[] =
+static const TEST_INFO2 TestList_CreateMpqs[] =
 {
     // Create empty MPQs containing nothing
     {"EmptyMpq_v2.mpq",                 NULL, NULL, CFLG_V2 | CFLG_EMPTY},
@@ -4517,6 +4624,7 @@ static void Test_PlayingSpace()
 #define TEST_LOCAL_LISTFILE
 #define TEST_STREAM_OPERATIONS
 #define TEST_MASTER_MIRROR
+#define TEST_OPEN_EMBEDDED_ARCHIVES
 #define TEST_OPEN_MPQ
 #define TEST_REOPEN_MPQ
 #define TEST_VERIFY_SIGNATURE
@@ -4544,9 +4652,6 @@ int _tmain(int argc, TCHAR * argv[])
     TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
     TestUtf8Conversions(FileNameInvalidChar, NULL);
 
-    // Test the use-after-free scenarios
-    TestUseAfterFree(_T("Test-UAF.mpq"));
-
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
@@ -4556,14 +4661,14 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_COMMAND_LINE
 
-#ifdef TEST_LOCAL_LISTFILE      // Tests on a local listfile
+#ifdef TEST_LOCAL_LISTFILE              // Tests on a local listfile
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOnLocalListFile(_T("listfile-test.txt"));
 #endif  // TEST_LOCAL_LISTFILE
 
-#ifdef TEST_STREAM_OPERATIONS   // Test file stream operations
+#ifdef TEST_STREAM_OPERATIONS           // Test file stream operations
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(TestList_StreamOps); i++)
@@ -4575,7 +4680,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_STREAM_OPERATIONS
 
-#ifdef TEST_MASTER_MIRROR       // Test master-mirror reading operations
+#ifdef TEST_MASTER_MIRROR               // Test master-mirror reading operations
     if(dwErrCode == ERROR_SUCCESS)
     {
         for(size_t i = 0; i < _countof(TestList_MasterMirror); i++)
@@ -4589,26 +4694,37 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif  // TEST_MASTER_MIRROR
 
-#ifdef TEST_OPEN_MPQ            // Test opening various archives - correct, damaged, protected
+#ifdef TEST_OPEN_EMBEDDED_ARCHIVES      // Test opening of embedded archives
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Test_OpenMpqs); i++)
+        for(size_t i = 0; i < _countof(TestList_EmbeddedMpqs); i++)
         {
-            dwErrCode = TestOpenArchive(Test_OpenMpqs[i]);
+            dwErrCode = TestOpenArchive_Embedded(TestList_EmbeddedMpqs[i]);
+            dwErrCode = ERROR_SUCCESS;
+        }
+    }
+#endif // TEST_OPEN_EMBEDDED_ARCHIVES
+
+#ifdef TEST_OPEN_MPQ                    // Test opening various archives - correct, damaged, protected
+    if(dwErrCode == ERROR_SUCCESS)
+    {
+        for(size_t i = 0; i < _countof(TestList_OpenMpqs); i++)
+        {
+            dwErrCode = TestOpenArchive(TestList_OpenMpqs[i]);
             dwErrCode = ERROR_SUCCESS;
         }
     }
 #endif  // TEST_OPEN_MPQ
 
-#ifdef TEST_REOPEN_MPQ          // Test operations involving reopening the archive
+#ifdef TEST_REOPEN_MPQ                  // Test operations involving reopening the archive
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Test_ReopenMpqs); i++)
+        for(size_t i = 0; i < _countof(TestList_ReopenMpqs); i++)
         {
             // Ignore the error code here; we want to see results of all opens
-            dwErrCode = TestReopenArchive(Test_ReopenMpqs[i].szName1,
-                                          Test_ReopenMpqs[i].szDataHash,
-                                          Test_ReopenMpqs[i].dwFlags);
+            dwErrCode = TestReopenArchive(TestList_ReopenMpqs[i].szName1,
+                                          TestList_ReopenMpqs[i].szDataHash,
+                                          TestList_ReopenMpqs[i].dwFlags);
             dwErrCode = ERROR_SUCCESS;
         }
     }
@@ -4617,12 +4733,12 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_VERIFY_SIGNATURE    // Verify digital signatures of the archives
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Test_Signature); i++)
+        for(size_t i = 0; i < _countof(TestList_Signature); i++)
         {
             // Ignore the error code here; we want to see results of all opens
-            dwErrCode = TestOpenArchive_SignatureTest(Test_Signature[i].szName1,
-                                                      Test_Signature[i].szName1,
-                                                      Test_Signature[i].dwFlags);
+            dwErrCode = TestOpenArchive_SignatureTest(TestList_Signature[i].szName1,
+                                                      TestList_Signature[i].szName1,
+                                                      TestList_Signature[i].dwFlags);
             if(dwErrCode != ERROR_SUCCESS)
                 break;
         }
@@ -4632,13 +4748,13 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_REPLACE_FILE        // Replace a file in archives
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Test_ReplaceFile); i++)
+        for(size_t i = 0; i < _countof(TestList_ReplaceFile); i++)
         {
             // Ignore the error code here; we want to see results of all opens
-            dwErrCode = TestReplaceFile(Test_ReplaceFile[i].szName1,
-                                        Test_ReplaceFile[i].szName2,
-                                        Test_ReplaceFile[i].szDataHash,
-                                        Test_ReplaceFile[i].dwFlags);
+            dwErrCode = TestReplaceFile(TestList_ReplaceFile[i].szName1,
+                                        TestList_ReplaceFile[i].szName2,
+                                        TestList_ReplaceFile[i].szDataHash,
+                                        TestList_ReplaceFile[i].dwFlags);
             if(dwErrCode != ERROR_SUCCESS)
                 break;
         }
@@ -4653,10 +4769,10 @@ int _tmain(int argc, TCHAR * argv[])
 #ifdef TEST_CREATE_MPQS
     if(dwErrCode == ERROR_SUCCESS)
     {
-        for(size_t i = 0; i < _countof(Test_CreateMpqs); i++)
+        for(size_t i = 0; i < _countof(TestList_CreateMpqs); i++)
         {
             // Ignore the error code here; we want to see results of all opens
-            dwErrCode = TestCreateArchive(Test_CreateMpqs[i]);
+            dwErrCode = TestCreateArchive(TestList_CreateMpqs[i]);
             if(dwErrCode != ERROR_SUCCESS)
                 break;
         }

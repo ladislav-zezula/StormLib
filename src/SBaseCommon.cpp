@@ -1765,7 +1765,7 @@ bool IsValidSignature(LPBYTE pbSignature)
 
 bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_md5)
 {
-    hash_state md5_state;
+    hash_state md5_ctx;
     BYTE md5_digest[MD5_DIGEST_SIZE];
     bool bResult = true;
 
@@ -1773,9 +1773,9 @@ bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_
     if(IsValidMD5(expected_md5))
     {
         // Calculate the MD5 of the data block
-        md5_init(&md5_state);
-        md5_process(&md5_state, (unsigned char *)pvDataBlock, cbDataBlock);
-        md5_done(&md5_state, md5_digest);
+        md5_init(&md5_ctx);
+        md5_process(&md5_ctx, (unsigned char *)pvDataBlock, cbDataBlock);
+        md5_done(&md5_ctx, md5_digest);
 
         // Does the MD5's match?
         bResult = (memcmp(md5_digest, expected_md5, MD5_DIGEST_SIZE) == 0);
@@ -1786,11 +1786,11 @@ bool VerifyDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE expected_
 
 void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_hash)
 {
-    hash_state md5_state;
+    hash_state md5_ctx;
 
-    md5_init(&md5_state);
-    md5_process(&md5_state, (unsigned char *)pvDataBlock, cbDataBlock);
-    md5_done(&md5_state, md5_hash);
+    md5_init(&md5_ctx);
+    md5_process(&md5_ctx, (unsigned char *)pvDataBlock, cbDataBlock);
+    md5_done(&md5_ctx, md5_hash);
 }
 
 //-----------------------------------------------------------------------------
