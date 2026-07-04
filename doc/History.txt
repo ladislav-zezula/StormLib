@@ -2,6 +2,10 @@
   StormLib history
   ================
 
+ Version 9.40
+
+ - Added functions SFileOpenFileArchive and SFilegetFileArchive
+
  Version 9.30
 
  - Added functions for conversions between file names and safe operating system file names
