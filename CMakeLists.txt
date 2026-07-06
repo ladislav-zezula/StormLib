@@ -364,6 +364,12 @@ if(BUILD_SHARED_LIBS)
         set_target_properties(${LIBRARY_NAME} PROPERTIES VERSION "${VERSION_STRING}")
         set_target_properties(${LIBRARY_NAME} PROPERTIES SOVERSION "${VERSION_MAJOR}")
     endif()
+    if(WIN32)
+        target_sources(${LIBRARY_NAME}
+            PRIVATE
+                src/DllMain.rc
+        )
+    endif()
 else()
     message(STATUS "Linking against dependent libraries statically")
 endif()
