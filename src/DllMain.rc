@@ -25,17 +25,16 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 9,26,0,3
- PRODUCTVERSION 9,26,0,3
- FILEFLAGSMASK 0x17L
+ FILEVERSION 9,40,0,0
+ PRODUCTVERSION 9,40,0,0
+ FILEFLAGSMASK VS_FF_DEBUG
 #ifdef _DEBUG
- FILEFLAGS 0x1L
+ FILEFLAGS VS_FF_DEBUG
 #else
  FILEFLAGS 0x0L
 #endif
- FILEOS 0x4L
- FILETYPE 0x0L
- FILESUBTYPE 0x0L
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_DLL
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
@@ -43,12 +42,12 @@ BEGIN
         BEGIN
             VALUE "Comments", "http://www.zezula.net/mpq.html"
             VALUE "FileDescription", "StormLib library for reading Blizzard MPQ archives"
-            VALUE "FileVersion", "9.26.0.3"
+            VALUE "FileVersion", "9.40.0.0"
             VALUE "InternalName", "StormLib"
-            VALUE "LegalCopyright", "Copyright (c) 2014 - 2024 Ladislav Zezula"
+            VALUE "LegalCopyright", "Copyright (c) 2014 - 2026 Ladislav Zezula"
             VALUE "OriginalFilename", "StormLib.dll"
             VALUE "ProductName", "StormLib"
-            VALUE "ProductVersion", "9.26.0.3"
+            VALUE "ProductVersion", "9.40.0.0"
         END
     END
     BLOCK "VarFileInfo"
