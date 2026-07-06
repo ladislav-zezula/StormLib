@@ -616,7 +616,7 @@ static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR 
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
     LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
-    LPCTSTR szHashingFormat = _T("Hashing %s ") fmt_X_of_Y_t;
+    LPCTSTR szHashingFormat = _T("Hashing %s ") fmt_XofY_t;
     LPBYTE pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
@@ -1248,7 +1248,7 @@ static DWORD WriteFileData(
             DWORD cbToWrite = (ByteCount > cbDataBuffer) ? cbDataBuffer : (DWORD)ByteCount;
 
             // Notify the user
-            pLogger->PrintProgress("Writing file data " fmt_X_of_Y_a " ...", BytesWritten, SaveByteCount);
+            pLogger->PrintProgress("Writing file data " fmt_XofY_a " ...", BytesWritten, SaveByteCount);
 
             // Write the data
             if(!FileStream_Write(pStream, &ByteOffset, pbDataBuffer, cbToWrite))
@@ -1307,7 +1307,7 @@ static DWORD CopyFileData(
             ByteOffset += BytesToRead;
 
             // Notify the user
-            pLogger->PrintProgress("Copying " fmt_X_of_Y_a " ...", BytesCopied, ByteCount);
+            pLogger->PrintProgress("Copying " fmt_XofY_a " ...", BytesCopied, ByteCount);
         }
 
         STORM_FREE(pbCopyBuffer);
@@ -2965,9 +2965,9 @@ static void WINAPI CompactCallback(void * pvUserData, DWORD dwWork, ULONGLONG By
     if(szWork != NULL)
     {
         if(pLogger != NULL)
-            pLogger->PrintProgress("%s " fmt_X_of_Y_a " ...", szWork, BytesDone, TotalBytes);
+            pLogger->PrintProgress("%s " fmt_XofY_a " ...", szWork, BytesDone, TotalBytes);
         else
-            printf("%s " fmt_X_of_Y_a " ...     \r", szWork, BytesDone, TotalBytes);
+            printf("%s " fmt_XofY_a " ...     \r", szWork, BytesDone, TotalBytes);
     }
 }
 
@@ -4596,6 +4596,10 @@ static void Test_PlayingSpace()
     HANDLE hMpq2 = NULL;
     HANDLE hFind;
     bool bFound = true;
+
+    SFileOpenArchive(_T("e:\\War3x.mpq"), 4, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\War3x.mpq"), 1, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\War3x.mpq"), 2, STREAM_FLAG_READ_ONLY, &hMpq1);
 
     if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
     {

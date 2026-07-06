@@ -20,6 +20,7 @@ char StormLibCopyright[] = "StormLib v " STORMLIB_VERSION_STRING " Copyright Lad
 //-----------------------------------------------------------------------------
 // Local variables
 
+TMPQArchive * pFirst = NULL;                    // The first archive in the list of open archives
 DWORD g_dwMpqSignature = ID_MPQ;                // Marker for MPQ header
 DWORD g_dwHashTableKey = MPQ_KEY_HASH_TABLE;    // Key for hash table
 DWORD g_dwBlockTableKey = MPQ_KEY_BLOCK_TABLE;  // Key for block table
@@ -1796,6 +1797,77 @@ void CalculateDataBlockHash(void * pvDataBlock, DWORD cbDataBlock, LPBYTE md5_ha
 //-----------------------------------------------------------------------------
 // Free the handle structures
 
+void ReferenceArchive(TMPQArchive * ha)
+{
+    while(ha != NULL)
+    {
+        ha->dwRefCount++;
+        ha = ha->haParent;
+    }
+}
+
+void InsertArchiveToList(TMPQArchive * ha)
+{
+    TMPQArchive * pPrev;
+    TMPQArchive * pItem;
+
+    // Case 1: The archive list is empty
+    if(pFirst == NULL)
+    {
+        pFirst = ha;
+        return;
+    }
+
+    // Case 2: Higher priority than the first one
+    if(pFirst->pNext == NULL && ha->dwPriority > pFirst->dwPriority)
+    {
+        ha->pNext = pFirst;
+        pFirst = ha;
+        return;
+    }
+
+    // Case 3: Inserting somewhere to the middle of the list
+    pPrev = pFirst;
+    pItem = pFirst->pNext;
+    while(pItem != NULL && ha->dwPriority <= pItem->dwPriority)
+    {
+        pPrev = pItem;
+        pItem = pItem->pNext;
+    }
+
+    // Insert the item to the middle of the chain
+    pPrev->pNext = ha;
+    ha->pNext = pItem;
+}
+
+static void RemoveArchiveFromList(TMPQArchive * ha)
+{
+    TMPQArchive * pPrev = pFirst;
+    TMPQArchive * pItem;
+
+    // Case 1: 'ha' is the first item
+    if(ha == pFirst)
+    {
+        pFirst = pFirst->pNext;
+        ha->pNext = NULL;
+        return;
+    }
+
+    // Case 2: 'ha' is not the first item
+    pItem = pFirst->pNext;
+    while(pItem != NULL)
+    {
+        if(pItem == ha)
+        {
+            pPrev->pNext = pItem->pNext;
+            pItem->pNext = NULL;
+            return;
+        }
+        pPrev = pItem;
+        pItem = pItem->pNext;
+    }
+}
+
 static void DeleteArchiveHandle(TMPQArchive * ha)
 {
     // Sanity check
@@ -1841,7 +1913,42 @@ static void DeleteArchiveHandle(TMPQArchive * ha)
         STORM_FREE(ha->pHashTable);
     if(ha->pHetTable != NULL)
         FreeHetTable(ha->pHetTable);
+    RemoveArchiveFromList(ha);
     STORM_FREE(ha);
+}
+
+bool DereferenceArchiveFiles(TMPQArchive * ha)
+{
+    // There must be at least one reference
+    if(ha == NULL || ha->dwFileCount == 0)
+        return false;
+
+    // Decrement the file count
+    ha->dwFileCount--;
+
+    // If we reached zero, free the archive
+    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
+        DeleteArchiveHandle(ha);
+    return true;
+}
+
+bool DereferenceArchive(TMPQArchive * ha)
+{
+    // There must be at least one reference
+    if(ha == NULL || ha->dwRefCount == 0)
+        return false;
+
+    // Dereference the parent archive, if any
+    if(ha->haParent != NULL)
+        DereferenceArchive(ha->haParent);
+
+    // Decrement the file count
+    ha->dwRefCount--;
+
+    // If we reached zero, free the archive
+    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
+        DeleteArchiveHandle(ha);
+    return true;
 }
 
 void FreeFileHandle(TMPQFile *& hf)
@@ -1878,40 +1985,6 @@ void FreeFileHandle(TMPQFile *& hf)
         STORM_FREE(hf);
         hf = NULL;
     }
-}
-
-bool DereferenceArchiveFiles(TMPQArchive * ha)
-{
-    // There must be at least one reference
-    if(ha == NULL || ha->dwFileCount == 0)
-        return false;
-
-    // Decrement the file count
-    ha->dwFileCount--;
-
-    // If we reached zero, free the archive
-    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
-        DeleteArchiveHandle(ha);
-    return true;
-}
-
-bool DereferenceArchive(TMPQArchive * ha)
-{
-    // There must be at least one reference
-    if(ha == NULL || ha->dwRefCount == 0)
-        return false;
-
-    // Dereference the parent archive, if any
-    if(ha->haParent != NULL)
-        DereferenceArchive(ha->haParent);
-
-    // Decrement the file count
-    ha->dwRefCount--;
-
-    // If we reached zero, free the archive
-    if(ha->dwRefCount == 0 && ha->dwFileCount == 0)
-        DeleteArchiveHandle(ha);
-    return true;
 }
 
 //-----------------------------------------------------------------------------

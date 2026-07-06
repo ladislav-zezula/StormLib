@@ -830,7 +830,8 @@ typedef struct _TMPQNameCache
 // Archive handle structure
 typedef struct _TMPQArchive
 {
-    TFileStream  * pStream;                     // Open stream for the MPQ
+    struct _TMPQArchive * pNext;                // Pointer to the next-in-chain MPQ archive
+    struct TFileStream * pStream;               // The open stream for the MPQ
 
     ULONGLONG      UserDataPos;                 // Position of user data (relative to the begin of the file)
     ULONGLONG      MpqPos;                      // MPQ header offset (relative to the begin of the file)

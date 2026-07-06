@@ -1,4 +1,4 @@
-==== Test Suite for StormLib version 9.31 ====
+==== Test Suite for StormLib version 9.40 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
 TestLiFiSearch (listfile-test.txt) succeeded.

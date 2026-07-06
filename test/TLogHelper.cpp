@@ -17,20 +17,22 @@
 #endif
 
 #ifdef _MSC_VER
+#define fmt_I64u_a "%I64u"
 #define fmt_I64u_w L"%I64u"
 #define fmt_I64u_t _T("%I64u")
-#define fmt_I64u_a "%I64u"
-#define fmt_I64X_t _T("%I64X")
 #define fmt_I64X_a "%I64X"
+#define fmt_I64X_t _T("%I64X")
+#define fmt_XofY_a "%I64u of %I64u"
+#define fmt_XofY_t _T("%I64u of %I64u")
 #else
-#define fmt_I64u_t _T("%llu")
 #define fmt_I64u_a "%llu"
-#define fmt_I64X_t _T("%llX")
+#define fmt_I64u_w L"%llu"
+#define fmt_I64u_t _T("%llu")
 #define fmt_I64X_a "%llX"
+#define fmt_I64X_t _T("%llX")
+#define fmt_XofY_a "%llu of %llu"
+#define fmt_XofY_t _T("%llu of %llu")
 #endif
-
-#define fmt_X_of_Y_a  "(" fmt_I64u_a " of " fmt_I64u_a ")"
-#define fmt_X_of_Y_t  _T(fmt_X_of_Y_a)
 
 #ifdef __CASCLIB_SELF__
 #define TEST_MIN CASCLIB_MIN

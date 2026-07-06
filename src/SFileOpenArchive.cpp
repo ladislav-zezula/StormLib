@@ -279,7 +279,9 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
         // Also remember if this MPQ is a patch
         ha->dwFlags |= (dwFlags & MPQ_OPEN_PATCH) ? MPQ_FLAG_PATCH : 0;
 
-        // Set the reference count to 1
+        // Set the priority and reference count
+        ha->haParent = IsValidMpqHandle(hParentMpq);
+        ha->dwPriority = dwPriority;
         ha->dwRefCount = 1;
 
         // Limit the header searching to about 130 MB of data
@@ -448,9 +450,6 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
         ha->pHeader->dwBlockTableSize = (ha->pHeader->dwBlockTableSize & BLOCK_INDEX_MASK);
         ha->pHeader->dwHashTableSize = (ha->pHeader->dwHashTableSize & BLOCK_INDEX_MASK);
 
-        // Remember the archive priority
-        ha->dwPriority = dwPriority;
-
         // Both MPQ_OPEN_NO_LISTFILE or MPQ_OPEN_NO_ATTRIBUTES trigger read only mode
         if(dwFlags & (MPQ_OPEN_NO_LISTFILE | MPQ_OPEN_NO_ATTRIBUTES))
             ha->dwFlags |= MPQ_FLAG_READ_ONLY;
@@ -556,23 +555,14 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
     }
 
     // Finally, we need to reference the parent archive, if any
-    if(dwErrCode == ERROR_SUCCESS && hParentMpq != NULL)
+    if(dwErrCode == ERROR_SUCCESS)
     {
-        TMPQArchive * haParent = IsValidMpqHandle(hParentMpq);
-
-        // Assign the parent archive
-        ha->haParent = haParent;
-
-        // Reference all parent archives
-        while(haParent != NULL)
-        {
-            haParent->dwRefCount++;
-            haParent = haParent->haParent;
-        }
+        InsertArchiveToList(ha);
+        ReferenceArchive(ha->haParent);
     }
 
     // Cleanup and exit
-    if(dwErrCode != ERROR_SUCCESS)
+    else
     {
         FileStream_Close(pStream);
         DereferenceArchive(ha);
