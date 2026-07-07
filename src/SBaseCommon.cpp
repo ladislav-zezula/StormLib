@@ -20,7 +20,7 @@ char StormLibCopyright[] = "StormLib v " STORMLIB_VERSION_STRING " Copyright Lad
 //-----------------------------------------------------------------------------
 // Local variables
 
-TMPQArchive * pFirst = NULL;                    // The first archive in the list of open archives
+TMPQArchive * g_pHead = NULL;                   // The first archive in the list of open archives
 DWORD g_dwMpqSignature = ID_MPQ;                // Marker for MPQ header
 DWORD g_dwHashTableKey = MPQ_KEY_HASH_TABLE;    // Key for hash table
 DWORD g_dwBlockTableKey = MPQ_KEY_BLOCK_TABLE;  // Key for block table
@@ -211,7 +211,6 @@ void StringCat(TCHAR * szTarget, size_t cchTargetMax, const char * szSource)
 #define HASH_INDEX_MASK(ha) (ha->pHeader->dwHashTableSize ? (ha->pHeader->dwHashTableSize - 1) : 0)
 
 static DWORD StormBuffer[STORM_BUFFER_SIZE];    // Buffer for the decryption engine
-static bool  bMpqCryptographyInitialized = false;
 
 void InitializeMpqCryptography()
 {
@@ -220,9 +219,8 @@ void InitializeMpqCryptography()
     DWORD index2 = 0;
     int   i;
 
-    // Initialize the decryption buffer.
-    // Do nothing if already done.
-    if(bMpqCryptographyInitialized == false)
+    // Initialize the decryption buffer, once only
+    if(StormBuffer[0] == 0)
     {
         for(index1 = 0; index1 < 0x100; index1++)
         {
@@ -246,9 +244,6 @@ void InitializeMpqCryptography()
 
         // Use LibTomMath as support math library for LibTomCrypt
         ltc_mp = ltm_desc;
-
-        // Don't do that again
-        bMpqCryptographyInitialized = true;
     }
 }
 
@@ -345,22 +340,7 @@ DWORD GetNearestPowerOfTwo(DWORD dwFileCount)
 
     return dwFileCount + 1;
 }
-/*
-DWORD GetNearestPowerOfTwo(DWORD dwFileCount)
-{
-    DWORD dwPowerOfTwo = HASH_TABLE_SIZE_MIN;
 
-    // For zero files, there is no hash table needed
-    if(dwFileCount == 0)
-        return 0;
-
-    // Round the hash table size up to the nearest power of two
-    // Don't allow the hash table size go over allowed maximum
-    while(dwPowerOfTwo < HASH_TABLE_SIZE_MAX && dwPowerOfTwo < dwFileCount)
-        dwPowerOfTwo <<= 1;
-    return dwPowerOfTwo;
-}
-*/
 //-----------------------------------------------------------------------------
 // Calculates a Jenkin's Encrypting and decrypting MPQ file data
 
@@ -405,7 +385,6 @@ DWORD GetDefaultSpecialFileFlags(DWORD dwFileSize, USHORT wFormatVersion)
     // Size-dependent for formats 2.0-4.0
     return (dwFileSize > 0x4000) ? (MPQ_FILE_COMPRESS | MPQ_FILE_SECTOR_CRC) : (MPQ_FILE_COMPRESS | MPQ_FILE_SINGLE_UNIT);
 }
-
 
 //-----------------------------------------------------------------------------
 // Encrypting/Decrypting MPQ data block
@@ -528,23 +507,22 @@ void DecryptMpqBlock(void * pvDataBlock, DWORD dwLength, DWORD dwKey1)
     }
 }
 
-/**
- * Functions tries to get file decryption key. This comes from these facts
- *
- * - We know the decrypted value of the first DWORD in the encrypted data
- * - We know the decrypted value of the second DWORD (at least aproximately)
- * - There is only 256 variants of how the second key is modified
- *
- *  The first iteration of dwKey1 and dwKey2 is this:
- *
- *  dwKey2 = 0xEEEEEEEE + StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)]
- *  dwDecrypted0 = DataBlock[0] ^ (dwKey1 + dwKey2);
- *
- *  This means:
- *
- *  (dwKey1 + dwKey2) = DataBlock[0] ^ dwDecrypted0;
- *
- */
+// 
+// Functions tries to get file decryption key. This comes from these facts
+// 
+// - We know the decrypted value of the first DWORD in the encrypted data
+// - We know the decrypted value of the second DWORD (at least aproximately)
+// - There is only 256 variants of how the second key is modified
+// 
+//  The first iteration of dwKey1 and dwKey2 is this:
+// 
+//  dwKey2 = 0xEEEEEEEE + StormBuffer[MPQ_HASH_KEY2_MIX + (dwKey1 & 0xFF)]
+//  dwDecrypted0 = DataBlock[0] ^ (dwKey1 + dwKey2);
+// 
+//  This means:
+// 
+//  (dwKey1 + dwKey2) = DataBlock[0] ^ dwDecrypted0;
+// 
 
 DWORD DetectFileKeyBySectorSize(LPDWORD EncryptedData, DWORD dwSectorSize, DWORD dwDecrypted0)
 {
@@ -1812,23 +1790,24 @@ void InsertArchiveToList(TMPQArchive * ha)
     TMPQArchive * pItem;
 
     // Case 1: The archive list is empty
-    if(pFirst == NULL)
+    if(g_pHead == NULL)
     {
-        pFirst = ha;
+        ha->pNext = NULL;
+        g_pHead = ha;
         return;
     }
 
     // Case 2: Higher priority than the first one
-    if(pFirst->pNext == NULL && ha->dwPriority > pFirst->dwPriority)
+    if(ha->dwPriority > g_pHead->dwPriority)
     {
-        ha->pNext = pFirst;
-        pFirst = ha;
+        ha->pNext = g_pHead;
+        g_pHead = ha;
         return;
     }
 
     // Case 3: Inserting somewhere to the middle of the list
-    pPrev = pFirst;
-    pItem = pFirst->pNext;
+    pPrev = g_pHead;
+    pItem = g_pHead->pNext;
     while(pItem != NULL && ha->dwPriority <= pItem->dwPriority)
     {
         pPrev = pItem;
@@ -1842,19 +1821,24 @@ void InsertArchiveToList(TMPQArchive * ha)
 
 static void RemoveArchiveFromList(TMPQArchive * ha)
 {
-    TMPQArchive * pPrev = pFirst;
+    TMPQArchive * pPrev;
     TMPQArchive * pItem;
 
-    // Case 1: 'ha' is the first item
-    if(ha == pFirst)
+    // Case 1: The archive list is empty
+    if(g_pHead == NULL)
+        return;
+
+    // Case 2: 'ha' is the first item
+    if(ha == g_pHead)
     {
-        pFirst = pFirst->pNext;
+        g_pHead = g_pHead->pNext;
         ha->pNext = NULL;
         return;
     }
 
-    // Case 2: 'ha' is not the first item
-    pItem = pFirst->pNext;
+    // Case 3: 'ha' is not the first item
+    pItem = g_pHead->pNext;
+    pPrev = g_pHead;
     while(pItem != NULL)
     {
         if(pItem == ha)

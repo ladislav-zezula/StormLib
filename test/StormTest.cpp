@@ -4589,6 +4589,25 @@ static const LPCSTR Test_CreateMpq_Localized[] =
     (LPCSTR)szPlainName_SAU     // (UTF-8) Arabic
 };
 
+#ifdef _DEBUG
+
+extern TMPQArchive * g_pHead;
+
+void DumpArchivePriority()
+{
+    TMPQArchive * pItem;
+    LPCTSTR szFileName;
+    DWORD dwPrevPrio = 0xFFFFFFFF;
+
+    for(pItem = g_pHead; pItem != NULL; pItem = pItem->pNext)
+    {
+        szFileName = FileStream_GetFileName(pItem->pStream);
+        printf("[%02u]: %ls\n", pItem->dwPriority, szFileName);
+        assert(pItem->dwPriority < dwPrevPrio);
+        dwPrevPrio = pItem->dwPriority;
+    }
+}
+
 static void Test_PlayingSpace()
 {
     SFILE_FIND_DATA sf;
@@ -4596,11 +4615,19 @@ static void Test_PlayingSpace()
     HANDLE hMpq2 = NULL;
     HANDLE hFind;
     bool bFound = true;
-
-    SFileOpenArchive(_T("e:\\War3x.mpq"), 4, STREAM_FLAG_READ_ONLY, &hMpq1);
-    SFileOpenArchive(_T("e:\\War3x.mpq"), 1, STREAM_FLAG_READ_ONLY, &hMpq1);
-    SFileOpenArchive(_T("e:\\War3x.mpq"), 2, STREAM_FLAG_READ_ONLY, &hMpq1);
-
+/*
+    SFileOpenArchive(_T("e:\\MpqArchive01.w3m"), 0x01, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive10.w3m"), 0x0A, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive09.w3m"), 0x09, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive08.w3m"), 0x08, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive07.w3m"), 0x07, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive06.w3m"), 0x06, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive05.w3m"), 0x05, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive04.w3m"), 0x04, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive03.w3m"), 0x03, STREAM_FLAG_READ_ONLY, &hMpq1);
+    SFileOpenArchive(_T("e:\\MpqArchive02.w3m"), 0x02, STREAM_FLAG_READ_ONLY, &hMpq1);
+    DumpArchivePriority();
+*/
     if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
     {
         if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
@@ -4620,6 +4647,7 @@ static void Test_PlayingSpace()
         SFileCloseArchive(hMpq1);
     }
 }
+#endif  // _DEBUG
 
 //-----------------------------------------------------------------------------
 // Main
@@ -4650,7 +4678,9 @@ int _tmain(int argc, TCHAR * argv[])
     dwErrCode = InitializeMpqDirectory(argv, argc);
 
     // Placeholder function for various testing purposes
+#ifdef _DEBUG
     Test_PlayingSpace();
+#endif
 
     // Test the UTF-8 conversions
     TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
