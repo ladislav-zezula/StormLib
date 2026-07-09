@@ -7,6 +7,7 @@ env:
 
 jobs:
   debian-trixie:
+    name: debian-trixie (bundled=${{ matrix.storm_use_bundled_libraries }}, shared=${{ matrix.build_shared_libs }}, unicode=${{ matrix.unicode }})
     runs-on: ubuntu-latest
     container:
       image: debian:trixie
@@ -14,7 +15,6 @@ jobs:
     strategy:
       matrix:
         storm_use_bundled_libraries: [ ON, OFF ]
-        with_libtomcrypt: [ ON, OFF ]
         build_shared_libs: [ ON, OFF ]
         unicode: [ ON, OFF ]
 
@@ -24,8 +24,8 @@ jobs:
       - name: Install dependencies
         run: apt-get -y update && apt-get install -y build-essential cmake
 
-      - name: Conditionally install libtomcrypt-dev
-        if: matrix.with_libtomcrypt == 'ON'
+      - name: Conditionally install system libraries
+        if: matrix.storm_use_bundled_libraries == 'OFF'
         run: apt-get install -y libtomcrypt-dev pkg-config
 
       - name: CMake Configuration
@@ -33,7 +33,6 @@ jobs:
           cmake -B build \
             -D CMAKE_BUILD_TYPE=Release \
             -D STORM_USE_BUNDLED_LIBRARIES=${{ matrix.storm_use_bundled_libraries }} \
-            -D WITH_LIBTOMCRYPT=${{ matrix.with_libtomcrypt }} \
             -D BUILD_SHARED_LIBS=${{ matrix.build_shared_libs }} \
             -D STORM_UNICODE=${{ matrix.unicode }}
 
@@ -115,6 +114,7 @@ jobs:
           file "stormlib.dll" |grep "x86-64"
 
   conan:
+    name: conan (${{ matrix.os }}, ${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -154,6 +154,7 @@ jobs:
         run: cmake --build build --config Release
 
   freebsd:
+    name: freebsd (shared=${{ matrix.build_shared_libs }}, bundled=${{ matrix.storm_use_bundled_libraries }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
