@@ -77,6 +77,8 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DWI
 cmake --build build --config Release
 ```
 
+`-DWITH_BUNDLED_LIBTOMCRYPT=ON` is required because `libtomcrypt` is not yet packaged in Conan Index.  
+
 For a 32-bit build on Windows, add `-s:h arch=x86` to the `conan install` command.
 
 ### List of all CMake options
