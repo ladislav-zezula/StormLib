@@ -26,7 +26,7 @@ jobs:
 
       - name: Conditionally install system libraries
         if: matrix.storm_use_bundled_libraries == 'OFF'
-        run: apt-get install -y zlib1g-dev libbz2-dev libtommath-dev libtomcrypt-dev
+        run: apt-get install -y pkg-config zlib1g-dev libbz2-dev libtommath-dev libtomcrypt-dev
 
       - name: CMake Configuration
         run: |
