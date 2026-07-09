@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(StormLib)
+cmake_minimum_required(VERSION 3.13)
+project(StormLib VERSION 9.30.0 LANGUAGES C CXX)
 
 set(LIBRARY_NAME storm)
 set(CMAKE_CXX_STANDARD 11)
@@ -285,9 +285,9 @@ set(ZLIB_FILES
            src/zlib/zutil.c
 )
 
-add_library(${LIBRARY_NAME} ${LIB_TYPE})
+add_library(${LIBRARY_NAME})
 
-target_compile_definitions(${LIBRARY_NAME} PRIVATE -D_7ZIP_ST -DBZ_STRICT_ANSI)
+target_compile_definitions(${LIBRARY_NAME} PRIVATE _7ZIP_ST BZ_STRICT_ANSI)
 set(LINK_LIBS)
 
 find_package(ZLIB)
@@ -306,8 +306,15 @@ else()
 	set(SRC_FILES ${SRC_FILES} ${BZIP2_FILES})
 endif()
 
+find_package(libtommath)
+if (libtommath_FOUND AND NOT STORM_USE_BUNDLED_LIBRARIES)
+    set(LINK_LIBS ${LINK_LIBS} libtommath::libtommath)
+else()
+    set(SRC_ADDITIONAL_FILES ${SRC_ADDITIONAL_FILES} ${TOMMATH_FILES})
+endif()
+
 if(WIN32)
-    set(SRC_ADDITIONAL_FILES ${TOMCRYPT_FILES} ${TOMMATH_FILES})
+    set(SRC_ADDITIONAL_FILES ${SRC_ADDITIONAL_FILES} ${TOMCRYPT_FILES})
 	set(LINK_LIBS ${LINK_LIBS} wininet)
 else()
     option(WITH_LIBTOMCRYPT "Use system LibTomCrypt library" OFF)
@@ -319,13 +326,21 @@ else()
         set(LINK_LIBS ${LINK_LIBS} ${LIBTOMCRYPT_LIBRARY})
         target_include_directories(${LIBRARY_NAME} PRIVATE ${LIBTOMCRYPT_INCLUDE_DIR})
     else()
-        set(SRC_ADDITIONAL_FILES ${TOMCRYPT_FILES} ${TOMMATH_FILES})
+        set(SRC_ADDITIONAL_FILES ${SRC_ADDITIONAL_FILES} ${TOMCRYPT_FILES})
     endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "(Free|Net|Open)BSD")
+if(CMAKE_SYSTEM_NAME MATCHES "(Free|Net|Open)BSD")
     message(STATUS "Using BSD port")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DO_LARGEFILE=0 -Dstat64=stat -Dlstat64=lstat -Dlseek64=lseek -Doff64_t=off_t -Dfstat64=fstat -Dftruncate64=ftruncate")
+    target_compile_definitions(${LIBRARY_NAME} PRIVATE
+        O_LARGEFILE=0
+        stat64=stat
+        lstat64=lstat
+        lseek64=lseek
+        off64_t=off_t
+        fstat64=fstat
+        ftruncate64=ftruncate
+    )
 endif()
 
 target_sources(${LIBRARY_NAME} PRIVATE ${SRC_FILES} ${SRC_ADDITIONAL_FILES} ${STORM_DEF_FILES})
@@ -353,16 +368,14 @@ if(BUILD_SHARED_LIBS)
     message(STATUS "Linking against dependent libraries dynamically")
 
     if(APPLE)
-        set_target_properties(${LIBRARY_NAME} PROPERTIES FRAMEWORK true)
-        set_target_properties(${LIBRARY_NAME} PROPERTIES LINK_FLAGS "-framework Carbon")
+        set_target_properties(${LIBRARY_NAME} PROPERTIES FRAMEWORK TRUE)
+        target_link_options(${LIBRARY_NAME} PRIVATE "-framework Carbon")
     endif()
     if(UNIX)
-        SET(VERSION_MAJOR "9")
-        SET(VERSION_MINOR "30")
-        SET(VERSION_PATCH "0")
-        SET(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-        set_target_properties(${LIBRARY_NAME} PROPERTIES VERSION "${VERSION_STRING}")
-        set_target_properties(${LIBRARY_NAME} PROPERTIES SOVERSION "${VERSION_MAJOR}")
+        set_target_properties(${LIBRARY_NAME} PROPERTIES
+            VERSION "${PROJECT_VERSION}"
+            SOVERSION "${PROJECT_VERSION_MAJOR}"
+        )
     endif()
     if(WIN32)
         target_sources(${LIBRARY_NAME}
@@ -386,35 +399,34 @@ if (NOT STORM_SKIP_INSTALL)
 
         install(EXPORT ${PROJECT_NAME}Config NAMESPACE ${PROJECT_NAME}:: DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
 
-        #CPack configurtion
-        SET(CPACK_GENERATOR "DEB" "RPM")
-        SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
-        SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MPQ manipulation library")
-        SET(CPACK_PACKAGE_VENDOR "Ladislav Zezula")
-        SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
-        SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-        SET(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
-        SET(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
-        SET(CPACK_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
-        SET(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
+        #CPack configuration
+        set(CPACK_GENERATOR "DEB" "RPM")
+        set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+        set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MPQ manipulation library")
+        set(CPACK_PACKAGE_VENDOR "Ladislav Zezula")
+        set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+        set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+        set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+        set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+        set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+        set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
 
         #DEB configuration
         set(CPACK_DEBIAN_PACKAGE_EPOCH 1)
-        SET(CPACK_DEBIAN_PACKAGE_SECTION "libs")
-        SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.zezula.net/en/mpq/stormlib.html")
-        SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "imbacen@gmail.com")
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-        SET(CPACK_DEBIAN_PACKAGE_DEPENDS "zlib1g,bzip2")
+        set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
+        set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.zezula.net/en/mpq/stormlib.html")
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "imbacen@gmail.com")
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS "zlib1g,bzip2")
 
         #RPM configuration
         set(CPACK_RPM_PACKAGE_EPOCH 1)
-        SET(CPACK_RPM_PACKAGE_RELEASE 1)
-        SET(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-        SET(CPACK_RPM_PACKAGE_GROUP "${PROJECT_NAME}")
-        SET(CPACK_RPM_PACKAGE_URL "http://www.zezula.net/en/mpq/stormlib.html")
-        SET(CPACK_RPM_PACKAGE_REQUIRES "zlib,bzip2")
+        set(CPACK_RPM_PACKAGE_RELEASE 1)
+        set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+        set(CPACK_RPM_PACKAGE_GROUP "${PROJECT_NAME}")
+        set(CPACK_RPM_PACKAGE_URL "http://www.zezula.net/en/mpq/stormlib.html")
+        set(CPACK_RPM_PACKAGE_REQUIRES "zlib,bzip2")
 
-        INCLUDE(CPack)
+        include(CPack)
 endif()
 
 if(STORM_BUILD_TESTS)

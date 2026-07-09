@@ -6,10 +6,10 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  debian-bookworm:
+  debian-trixie:
     runs-on: ubuntu-latest
     container:
-      image: debian:bookworm
+      image: debian:trixie
 
     strategy:
       matrix:
@@ -113,3 +113,70 @@ jobs:
         run: |
           file "stormlib.dll"
           file "stormlib.dll" |grep "x86-64"
+
+  conan:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        arch: [x64, x86]
+        exclude:
+          - os: ubuntu-latest
+            arch: x86
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Install Conan
+        uses: turtlebrowser/get-conan@main
+
+      - name: Init Conan
+        run: conan profile detect
+
+      - name: Install dependencies with Conan
+        shell: bash
+        env:
+          CONAN_ARCH_ARG: ${{ matrix.arch == 'x86' && '-s:h arch=x86' || '' }}
+        run: conan install . -of build -s build_type=Release -o '*:shared=False' --build=missing $CONAN_ARCH_ARG
+
+      - name: CMake Configuration
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  freebsd:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_shared_libs: [ON, OFF]
+        storm_use_bundled_libraries: [ON, OFF]
+    env:
+      BUILD_SHARED_LIBS: ${{ matrix.build_shared_libs }}
+      STORM_USE_BUNDLED_LIBRARIES: ${{ matrix.storm_use_bundled_libraries }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          envs: 'BUILD_SHARED_LIBS STORM_USE_BUNDLED_LIBRARIES'
+          usesh: true
+          prepare: |
+            pkg install -y cmake
+            if [ "$STORM_USE_BUNDLED_LIBRARIES" = "OFF" ]; then
+              pkg install -y libtommath
+            fi
+          run: |
+            cmake -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=$BUILD_SHARED_LIBS \
+              -DSTORM_USE_BUNDLED_LIBRARIES=$STORM_USE_BUNDLED_LIBRARIES
+            cmake --build build --config Release

@@ -10,7 +10,7 @@ jobs:
     if: true
     runs-on: ubuntu-latest
     container:
-      image: debian:bookworm
+      image: debian:trixie
     env:
       BUILD_TYPE: Release
 
