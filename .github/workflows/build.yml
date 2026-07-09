@@ -52,7 +52,7 @@ jobs:
         run: dnf -y install cmake gcc gcc-c++
 
       - name: Cmake
-        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON -D STORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config Release

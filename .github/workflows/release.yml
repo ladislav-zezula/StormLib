@@ -21,7 +21,7 @@ jobs:
         run: apt-get -y update && apt-get install -y build-essential cmake
 
       - name: Cmake
-        run: cmake -B build -D BUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        run: cmake -B build -D BUILD_SHARED_LIBS=ON -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D STORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config $BUILD_TYPE
@@ -54,7 +54,7 @@ jobs:
         run: dnf -y install cmake gcc gcc-c++ rpm-build
 
       - name: Cmake
-        run: cmake -B build -D BUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        run: cmake -B build -D BUILD_SHARED_LIBS=ON -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D STORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config $BUILD_TYPE
