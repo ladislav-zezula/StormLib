@@ -73,7 +73,7 @@ cpack -G "RPM" -D CPACK_PACKAGE_FILE_NAME=libstorm-devel-v9.30.x86_64
 pip install conan
 conan profile detect
 conan install . -of build -s build_type=Release --build=missing
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DWITH_BUNDLED_LIBTOMCRYPT=ON -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
 cmake --build build --config Release
 ```
 
@@ -87,5 +87,7 @@ For a 32-bit build on Windows, add `-s:h arch=x86` to the `conan install` comman
 | `STORM_UNICODE`               | Unicode or ANSI support                                           | OFF     |
 | `STORM_SKIP_INSTALL`          | Skip installing files                                             | OFF     |
 | `STORM_USE_BUNDLED_LIBRARIES` | Force use of bundled dependencies instead of system libraries     | OFF     |
+| `WITH_BUNDLED_LIBTOMMATH`     | Bundle libtommath even when `STORM_USE_BUNDLED_LIBRARIES` is OFF  | OFF     |
+| `WITH_BUNDLED_LIBTOMCRYPT`    | Bundle libtomcrypt even when `STORM_USE_BUNDLED_LIBRARIES` is OFF | OFF     |
 | `STORM_BUILD_TESTS`           | Compile StormLib test application                                 | OFF     |
 | `STORMTEST_USE_OLD_PATHS`     | Uses hardcoded paths for test files, OFF uses `build_folder/work` | ON      |

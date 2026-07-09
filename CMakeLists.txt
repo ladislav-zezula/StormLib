@@ -15,6 +15,14 @@ option(STORM_USE_BUNDLED_LIBRARIES
     "Force use of bundled dependencies instead of system libraries."
     OFF
 )
+cmake_dependent_option(WITH_BUNDLED_LIBTOMMATH
+    "Bundle libtommath even when STORM_USE_BUNDLED_LIBRARIES is OFF."
+    OFF "NOT STORM_USE_BUNDLED_LIBRARIES" ON
+)
+cmake_dependent_option(WITH_BUNDLED_LIBTOMCRYPT
+    "Bundle libtomcrypt even when STORM_USE_BUNDLED_LIBRARIES is OFF."
+    OFF "NOT STORM_USE_BUNDLED_LIBRARIES" ON
+)
 option(STORM_BUILD_TESTS
     "Compile StormLib test application" OFF
 #   "BUILD_TESTING" OFF # Stay coherent with CTest variables
@@ -305,7 +313,7 @@ else()
     set(SRC_FILES ${SRC_FILES} ${BZIP2_FILES})
 endif()
 
-if (NOT STORM_USE_BUNDLED_LIBRARIES)
+if (NOT WITH_BUNDLED_LIBTOMMATH)
     find_package(libtommath REQUIRED)
     if (TARGET libtommath::libtommath)
         message(STATUS "Found libtommath: using target libtommath::libtommath")
@@ -319,7 +327,7 @@ else()
     set(SRC_ADDITIONAL_FILES ${SRC_ADDITIONAL_FILES} ${TOMMATH_FILES})
 endif()
 
-if (NOT STORM_USE_BUNDLED_LIBRARIES)
+if (NOT WITH_BUNDLED_LIBTOMCRYPT)
     find_package(libtomcrypt REQUIRED)
     if (TARGET libtomcrypt::libtomcrypt)
         message(STATUS "Found libtomcrypt: using target libtomcrypt::libtomcrypt")

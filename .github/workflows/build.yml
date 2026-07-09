@@ -26,7 +26,7 @@ jobs:
 
       - name: Conditionally install system libraries
         if: matrix.storm_use_bundled_libraries == 'OFF'
-        run: apt-get install -y libtomcrypt-dev pkg-config
+        run: apt-get install -y zlib1g-dev libbz2-dev libtommath-dev libtomcrypt-dev
 
       - name: CMake Configuration
         run: |
@@ -147,7 +147,7 @@ jobs:
 
       - name: CMake Configuration
         shell: bash
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DWITH_BUNDLED_LIBTOMCRYPT=ON -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
 
       - name: Build
         shell: bash
