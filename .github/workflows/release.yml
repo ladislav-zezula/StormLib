@@ -21,7 +21,7 @@ jobs:
         run: apt-get -y update && apt-get install -y build-essential cmake
 
       - name: Cmake
-        run: cmake -B build -D BUILD_SHARED_LIBS=ON -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D STORM_USE_BUNDLED_LIBRARIES=ON
+        run: cmake -B build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DSTORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config $BUILD_TYPE
@@ -30,7 +30,7 @@ jobs:
         id: package
         working-directory: build
         run: |
-          cpack -G "DEB" -D CPACK_PACKAGE_FILE_NAME=libstorm-dev_${{ github.ref_name }}_amd64
+          cpack -G "DEB" -DCPACK_PACKAGE_FILE_NAME=libstorm-dev_${{ github.ref_name }}_amd64
 
       - uses: actions/upload-artifact@v4
         with:
@@ -54,14 +54,14 @@ jobs:
         run: dnf -y install cmake gcc gcc-c++ rpm-build
 
       - name: Cmake
-        run: cmake -B build -D BUILD_SHARED_LIBS=ON -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D STORM_USE_BUNDLED_LIBRARIES=ON
+        run: cmake -B build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DSTORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config $BUILD_TYPE
 
       - name: Package
         working-directory: build
-        run: cpack -G "RPM" -D CPACK_PACKAGE_FILE_NAME=libstorm-devel-${{ github.ref_name }}.x86_64
+        run: cpack -G "RPM" -DCPACK_PACKAGE_FILE_NAME=libstorm-devel-${{ github.ref_name }}.x86_64
 
       - uses: actions/upload-artifact@v4
         with:
@@ -125,13 +125,13 @@ jobs:
           $r = if ("${{ matrix.build_type }}" -eq "Release") { "R" } else { "D" }
           $a = if ("${{ matrix.unicode }}" -eq "ON") { "U" } else { "A" }
           $s = if ("${{ matrix.shared }}" -eq "ON") { "D" } else { "S" }
-      
+
           $zipSuffix = "${r}${a}${s}"
           $zipName = "stormlib_${{ github.ref_name }}_${{ matrix.arch }}_${zipSuffix}.zip"
           "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          
+
           Compress-Archive -Path include -DestinationPath $zipName
-          
+
           $binItems = Get-ChildItem -Path bin\* -ErrorAction SilentlyContinue
           if ($binItems) {
             Compress-Archive -Path bin/* -DestinationPath $zipName -Update
