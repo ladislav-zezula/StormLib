@@ -308,7 +308,7 @@ endif()
 
 find_package(libtommath)
 if (libtommath_FOUND AND NOT STORM_USE_BUNDLED_LIBRARIES)
-    set(LINK_LIBS ${LINK_LIBS} libtommath::libtommath)
+    set(LINK_LIBS ${LINK_LIBS} libtommath)
 else()
     set(SRC_ADDITIONAL_FILES ${SRC_ADDITIONAL_FILES} ${TOMMATH_FILES})
 endif()
