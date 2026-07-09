@@ -146,9 +146,11 @@ jobs:
         run: conan install . -of build -s build_type=Release -o '*:shared=False' --build=missing $CONAN_ARCH_ARG
 
       - name: CMake Configuration
+        shell: bash
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
 
       - name: Build
+        shell: bash
         run: cmake --build build --config Release
 
   freebsd:
