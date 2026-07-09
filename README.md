@@ -70,8 +70,6 @@ cpack -G "RPM" -D CPACK_PACKAGE_FILE_NAME=libstorm-devel-v9.30.x86_64
 [Conan](https://conan.io) can automatically resolve and build all dependencies (zlib, bzip2, libtommath) on any platform.
 
 ```
-pip install conan
-conan profile detect
 conan install . -of build -s build_type=Release --build=missing
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DSTORM_USE_BUNDLED_LIBRARIES=OFF -DWITH_BUNDLED_LIBTOMCRYPT=ON -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
 cmake --build build --config Release
