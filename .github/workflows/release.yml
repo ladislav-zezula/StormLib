@@ -90,12 +90,12 @@ jobs:
       - name: Configure CMake for amd64
         if: ${{ matrix.arch == 'amd64' }}
         shell: cmd
-        run: cmake -B build -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSTORM_UNICODE=${{ matrix.unicode }}
+        run: cmake -B build -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSTORM_UNICODE=${{ matrix.unicode }} -DSTORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Configure CMake for x86
         if: ${{ matrix.arch == 'x86' }}
         shell: cmd
-        run: cmake -B build -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSTORM_UNICODE=${{ matrix.unicode }} -A Win32
+        run: cmake -B build -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSTORM_UNICODE=${{ matrix.unicode }} -DSTORM_USE_BUNDLED_LIBRARIES=ON -A Win32
 
       - name: Build
         shell: cmd

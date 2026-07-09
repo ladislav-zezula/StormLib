@@ -40,10 +40,14 @@ jobs:
         run: cmake --build build --config Release
 
   fedora-latest:
-    if: true
+    name: fedora-latest (bundled=${{ matrix.storm_use_bundled_libraries }})
     runs-on: ubuntu-latest
     container:
       image: fedora:latest
+
+    strategy:
+      matrix:
+        storm_use_bundled_libraries: [ ON, OFF ]
 
     steps:
       - uses: actions/checkout@v4
@@ -51,8 +55,12 @@ jobs:
       - name: Install dependencies
         run: dnf -y install cmake gcc gcc-c++
 
+      - name: Conditionally install system libraries
+        if: matrix.storm_use_bundled_libraries == 'OFF'
+        run: dnf -y install pkg-config zlib-devel bzip2-devel libtommath-devel libtomcrypt-devel
+
       - name: Cmake
-        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON -D STORM_USE_BUNDLED_LIBRARIES=ON
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON -D STORM_USE_BUNDLED_LIBRARIES=${{ matrix.storm_use_bundled_libraries }}
 
       - name: Build
         run: cmake --build build --config Release
@@ -69,7 +77,7 @@ jobs:
           arch: x64
 
       - name: Cmake
-        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON -D STORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config Release
@@ -97,7 +105,7 @@ jobs:
           arch: x86
 
       - name: Cmake
-        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON
+        run: cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D BUILD_SHARED_LIBS=ON -D STORM_USE_BUNDLED_LIBRARIES=ON
 
       - name: Build
         run: cmake --build build --config Release
@@ -175,7 +183,7 @@ jobs:
           prepare: |
             pkg install -y cmake
             if [ "$STORM_USE_BUNDLED_LIBRARIES" = "OFF" ]; then
-              pkg install -y libtommath
+              pkg install -y pkgconf libtommath libtomcrypt
             fi
           run: |
             cmake -B build \
