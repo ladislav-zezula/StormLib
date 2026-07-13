@@ -2493,7 +2493,7 @@ static DWORD TestOpenArchive_SearchEmbedded(TLogHelper & Logger, HANDLE_LIST & M
     else
     {
         Logger.PrintError("Failed to search the archive");
-        dwErrCode = GetLastError();
+        dwErrCode = SErrGetLastError();
     }
     return dwErrCode;
 }
