@@ -2472,6 +2472,7 @@ static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText,
     size_t cbPlainText = cbCipherText;
     DWORD dwSeed = 0;
     unsigned char raw_aes_key[40];
+    bool bResult = false;
 
     // Retrieve the initial seed for the XOR stream
     if(!w3xe_get_xorstream_seed(pbCipherText, cbCipherText, &dwSeed))
@@ -2501,13 +2502,13 @@ static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText,
                 {
                     pStream->StreamData = mpq_payload;
                     pStream->StreamSize = FileTail.payload_size;
-                    return true;
+                    bResult = true;
                 }
             }
         }
         STORM_FREE(pbPlainText);
     }
-    return false;
+    return bResult;
 }
 
 static bool W3xeStream_LoadMap(TCryptStream_W3XE * pStream)
