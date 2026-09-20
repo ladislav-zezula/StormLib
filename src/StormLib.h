@@ -327,8 +327,9 @@ extern "C" {
 
 #define STREAM_PROVIDER_FLAT        0x00000000  // Stream is linear with no offset mapping
 #define STREAM_PROVIDER_PARTIAL     0x00000010  // Stream is partial file (.part)
-#define STREAM_PROVIDER_MPQE        0x00000020  // Stream is an encrypted MPQ
-#define STREAM_PROVIDER_BLOCK4      0x00000030  // 0x4000 per block, text MD5 after each block, max 0x2000 blocks per file
+#define STREAM_PROVIDER_BLOCK4      0x00000020  // 0x4000 per block, text MD5 after each block, max 0x2000 blocks per file
+#define STREAM_PROVIDER_MPQE        0x00000030  // An MPQ encrypted by Salsa20 (Starcraft II instllation MPQs)
+#define STREAM_PROVIDER_W3XE        0x00000040  // A Warcraft III map encrypted by AES-ECB
 #define STREAM_PROVIDER_MASK        0x000000F0  // Mask for stream provider value
 
 #define STREAM_FLAG_READ_ONLY       0x00000100  // Stream is read only

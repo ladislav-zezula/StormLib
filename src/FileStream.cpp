@@ -1948,308 +1948,6 @@ static TFileStream * PartStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - MPQE stream support
-
-static const char * szKeyTemplate = "expand 32-byte k000000000000000000000000000000000000000000000000";
-
-static const char * AuthCodeArray[] =
-{
-    // Starcraft II (Heart of the Swarm)
-    // Authentication code URL: http://dist.blizzard.com/mediakey/hots-authenticationcode-bgdl.txt
-    //                                                                                          -0C-    -1C--08-    -18--04-    -14--00-    -10-
-    "S48B6CDTN5XEQAKQDJNDLJBJ73FDFM3U",         // SC2 Heart of the Swarm-all : "expand 32-byte kQAKQ0000FM3UN5XE000073FD6CDT0000LJBJS48B0000DJND"
-
-    // Diablo III: Agent.exe (1.0.0.954)
-    // Address of decryption routine: 00502b00
-    // Pointer to decryptor object: ECX
-    // Pointer to key: ECX+0x5C
-    // Authentication code URL: http://dist.blizzard.com/mediakey/d3-authenticationcode-enGB.txt
-    //                                                                                           -0C-    -1C--08-    -18--04-    -14--00-    -10-
-    "UCMXF6EJY352EFH4XFRXCFH2XC9MQRZK",         // Diablo III Installer (deDE): "expand 32-byte kEFH40000QRZKY3520000XC9MF6EJ0000CFH2UCMX0000XFRX"
-    "MMKVHY48RP7WXP4GHYBQ7SL9J9UNPHBP",         // Diablo III Installer (enGB): "expand 32-byte kXP4G0000PHBPRP7W0000J9UNHY4800007SL9MMKV0000HYBQ"
-    "8MXLWHQ7VGGLTZ9MQZQSFDCLJYET3CPP",         // Diablo III Installer (enSG): "expand 32-byte kTZ9M00003CPPVGGL0000JYETWHQ70000FDCL8MXL0000QZQS"
-    "EJ2R5TM6XFE2GUNG5QDGHKQ9UAKPWZSZ",         // Diablo III Installer (enUS): "expand 32-byte kGUNG0000WZSZXFE20000UAKP5TM60000HKQ9EJ2R00005QDG"
-    "PBGFBE42Z6LNK65UGJQ3WZVMCLP4HQQT",         // Diablo III Installer (esES): "expand 32-byte kK65U0000HQQTZ6LN0000CLP4BE420000WZVMPBGF0000GJQ3"
-    "X7SEJJS9TSGCW5P28EBSC47AJPEY8VU2",         // Diablo III Installer (esMX): "expand 32-byte kW5P200008VU2TSGC0000JPEYJJS90000C47AX7SE00008EBS"
-    "5KVBQA8VYE6XRY3DLGC5ZDE4XS4P7YA2",         // Diablo III Installer (frFR): "expand 32-byte kRY3D00007YA2YE6X0000XS4PQA8V0000ZDE45KVB0000LGC5"
-    "478JD2K56EVNVVY4XX8TDWYT5B8KB254",         // Diablo III Installer (itIT): "expand 32-byte kVVY40000B2546EVN00005B8KD2K50000DWYT478J0000XX8T"
-    "8TS4VNFQRZTN6YWHE9CHVDH9NVWD474A",         // Diablo III Installer (koKR): "expand 32-byte k6YWH0000474ARZTN0000NVWDVNFQ0000VDH98TS40000E9CH"
-    "LJ52Z32DF4LZ4ZJJXVKK3AZQA6GABLJB",         // Diablo III Installer (plPL): "expand 32-byte k4ZJJ0000BLJBF4LZ0000A6GAZ32D00003AZQLJ520000XVKK"
-    "K6BDHY2ECUE2545YKNLBJPVYWHE7XYAG",         // Diablo III Installer (ptBR): "expand 32-byte k545Y0000XYAGCUE20000WHE7HY2E0000JPVYK6BD0000KNLB"
-    "NDVW8GWLAYCRPGRNY8RT7ZZUQU63VLPR",         // Diablo III Installer (ruRU): "expand 32-byte kXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    "6VWCQTN8V3ZZMRUCZXV8A8CGUX2TAA8H",         // Diablo III Installer (zhTW): "expand 32-byte kMRUC0000AA8HV3ZZ0000UX2TQTN80000A8CG6VWC0000ZXV8"
-//  "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",         // Diablo III Installer (zhCN): "expand 32-byte kXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-
-    // Starcraft II (Wings of Liberty): Installer.exe (4.1.1.4219)
-    // Address of decryption routine: 0053A3D0
-    // Pointer to decryptor object: ECX
-    // Pointer to key: ECX+0x5C
-    // Authentication code URL: http://dist.blizzard.com/mediakey/sc2-authenticationcode-enUS.txt
-    //                                                                                          -0C-    -1C--08-    -18--04-    -14--00-    -10-
-    "Y45MD3CAK4KXSSXHYD9VY64Z8EKJ4XFX",         // SC2 Wings of Liberty (deDE): "expand 32-byte kSSXH00004XFXK4KX00008EKJD3CA0000Y64ZY45M0000YD9V"
-    "G8MN8UDG6NA2ANGY6A3DNY82HRGF29ZH",         // SC2 Wings of Liberty (enGB): "expand 32-byte kANGY000029ZH6NA20000HRGF8UDG0000NY82G8MN00006A3D"
-    "W9RRHLB2FDU9WW5B3ECEBLRSFWZSF7HW",         // SC2 Wings of Liberty (enSG): "expand 32-byte kWW5B0000F7HWFDU90000FWZSHLB20000BLRSW9RR00003ECE"
-    "3DH5RE5NVM5GTFD85LXGWT6FK859ETR5",         // SC2 Wings of Liberty (enUS): "expand 32-byte kTFD80000ETR5VM5G0000K859RE5N0000WT6F3DH500005LXG"
-    "8WLKUAXE94PFQU4Y249PAZ24N4R4XKTQ",         // SC2 Wings of Liberty (esES): "expand 32-byte kQU4Y0000XKTQ94PF0000N4R4UAXE0000AZ248WLK0000249P"
-    "A34DXX3VHGGXSQBRFE5UFFDXMF9G4G54",         // SC2 Wings of Liberty (esMX): "expand 32-byte kSQBR00004G54HGGX0000MF9GXX3V0000FFDXA34D0000FE5U"
-    "ZG7J9K938HJEFWPQUA768MA2PFER6EAJ",         // SC2 Wings of Liberty (frFR): "expand 32-byte kFWPQ00006EAJ8HJE0000PFER9K9300008MA2ZG7J0000UA76"
-    "NE7CUNNNTVAPXV7E3G2BSVBWGVMW8BL2",         // SC2 Wings of Liberty (itIT): "expand 32-byte kXV7E00008BL2TVAP0000GVMWUNNN0000SVBWNE7C00003G2B"
-    "3V9E2FTMBM9QQWK7U6MAMWAZWQDB838F",         // SC2 Wings of Liberty (koKR): "expand 32-byte kQWK70000838FBM9Q0000WQDB2FTM0000MWAZ3V9E0000U6MA"
-    "2NSFB8MELULJ83U6YHA3UP6K4MQD48L6",         // SC2 Wings of Liberty (plPL): "expand 32-byte k83U6000048L6LULJ00004MQDB8ME0000UP6K2NSF0000YHA3"
-    "QA2TZ9EWZ4CUU8BMB5WXCTY65F9CSW4E",         // SC2 Wings of Liberty (ptBR): "expand 32-byte kU8BM0000SW4EZ4CU00005F9CZ9EW0000CTY6QA2T0000B5WX"
-    "VHB378W64BAT9SH7D68VV9NLQDK9YEGT",         // SC2 Wings of Liberty (ruRU): "expand 32-byte k9SH70000YEGT4BAT0000QDK978W60000V9NLVHB30000D68V"
-    "U3NFQJV4M6GC7KBN9XQJ3BRDN3PLD9NE",         // SC2 Wings of Liberty (zhTW): "expand 32-byte k7KBN0000D9NEM6GC0000N3PLQJV400003BRDU3NF00009XQJ"
-
-    NULL
-};
-
-static DWORD Rol32(DWORD dwValue, DWORD dwRolCount)
-{
-    DWORD dwShiftRight = 32 - dwRolCount;
-
-    return (dwValue << dwRolCount) | (dwValue >> dwShiftRight);
-}
-
-static void CreateKeyFromAuthCode(
-    LPBYTE pbKeyBuffer,
-    const char * szAuthCode)
-{
-    LPDWORD KeyPosition = (LPDWORD)(pbKeyBuffer + 0x10);
-    LPDWORD AuthCode32 = (LPDWORD)szAuthCode;
-
-    memcpy(pbKeyBuffer, szKeyTemplate, MPQE_CHUNK_SIZE);
-    KeyPosition[0x00] = AuthCode32[0x03];
-    KeyPosition[0x02] = AuthCode32[0x07];
-    KeyPosition[0x03] = AuthCode32[0x02];
-    KeyPosition[0x05] = AuthCode32[0x06];
-    KeyPosition[0x06] = AuthCode32[0x01];
-    KeyPosition[0x08] = AuthCode32[0x05];
-    KeyPosition[0x09] = AuthCode32[0x00];
-    KeyPosition[0x0B] = AuthCode32[0x04];
-    BSWAP_ARRAY32_UNSIGNED(pbKeyBuffer, MPQE_CHUNK_SIZE);
-}
-
-static void DecryptFileChunk(
-    DWORD * MpqData,
-    LPBYTE pbKey,
-    ULONGLONG ByteOffset,
-    DWORD dwLength)
-{
-    ULONGLONG ChunkOffset;
-    DWORD KeyShuffled[0x10];
-    DWORD KeyMirror[0x10];
-    DWORD RoundCount = 0x14;
-
-    // Prepare the key
-    ChunkOffset = ByteOffset / MPQE_CHUNK_SIZE;
-    memcpy(KeyMirror, pbKey, MPQE_CHUNK_SIZE);
-    BSWAP_ARRAY32_UNSIGNED(KeyMirror, MPQE_CHUNK_SIZE);
-    KeyMirror[0x05] = (DWORD)(ChunkOffset >> 32);
-    KeyMirror[0x08] = (DWORD)(ChunkOffset);
-
-    while(dwLength >= MPQE_CHUNK_SIZE)
-    {
-        // Shuffle the key - part 1
-        KeyShuffled[0x0E] = KeyMirror[0x00];
-        KeyShuffled[0x0C] = KeyMirror[0x01];
-        KeyShuffled[0x05] = KeyMirror[0x02];
-        KeyShuffled[0x0F] = KeyMirror[0x03];
-        KeyShuffled[0x0A] = KeyMirror[0x04];
-        KeyShuffled[0x07] = KeyMirror[0x05];
-        KeyShuffled[0x0B] = KeyMirror[0x06];
-        KeyShuffled[0x09] = KeyMirror[0x07];
-        KeyShuffled[0x03] = KeyMirror[0x08];
-        KeyShuffled[0x06] = KeyMirror[0x09];
-        KeyShuffled[0x08] = KeyMirror[0x0A];
-        KeyShuffled[0x0D] = KeyMirror[0x0B];
-        KeyShuffled[0x02] = KeyMirror[0x0C];
-        KeyShuffled[0x04] = KeyMirror[0x0D];
-        KeyShuffled[0x01] = KeyMirror[0x0E];
-        KeyShuffled[0x00] = KeyMirror[0x0F];
-
-        // Shuffle the key - part 2
-        for(DWORD i = 0; i < RoundCount; i += 2)
-        {
-            KeyShuffled[0x0A] = KeyShuffled[0x0A] ^ Rol32((KeyShuffled[0x0E] + KeyShuffled[0x02]), 0x07);
-            KeyShuffled[0x03] = KeyShuffled[0x03] ^ Rol32((KeyShuffled[0x0A] + KeyShuffled[0x0E]), 0x09);
-            KeyShuffled[0x02] = KeyShuffled[0x02] ^ Rol32((KeyShuffled[0x03] + KeyShuffled[0x0A]), 0x0D);
-            KeyShuffled[0x0E] = KeyShuffled[0x0E] ^ Rol32((KeyShuffled[0x02] + KeyShuffled[0x03]), 0x12);
-
-            KeyShuffled[0x07] = KeyShuffled[0x07] ^ Rol32((KeyShuffled[0x0C] + KeyShuffled[0x04]), 0x07);
-            KeyShuffled[0x06] = KeyShuffled[0x06] ^ Rol32((KeyShuffled[0x07] + KeyShuffled[0x0C]), 0x09);
-            KeyShuffled[0x04] = KeyShuffled[0x04] ^ Rol32((KeyShuffled[0x06] + KeyShuffled[0x07]), 0x0D);
-            KeyShuffled[0x0C] = KeyShuffled[0x0C] ^ Rol32((KeyShuffled[0x04] + KeyShuffled[0x06]), 0x12);
-
-            KeyShuffled[0x0B] = KeyShuffled[0x0B] ^ Rol32((KeyShuffled[0x05] + KeyShuffled[0x01]), 0x07);
-            KeyShuffled[0x08] = KeyShuffled[0x08] ^ Rol32((KeyShuffled[0x0B] + KeyShuffled[0x05]), 0x09);
-            KeyShuffled[0x01] = KeyShuffled[0x01] ^ Rol32((KeyShuffled[0x08] + KeyShuffled[0x0B]), 0x0D);
-            KeyShuffled[0x05] = KeyShuffled[0x05] ^ Rol32((KeyShuffled[0x01] + KeyShuffled[0x08]), 0x12);
-
-            KeyShuffled[0x09] = KeyShuffled[0x09] ^ Rol32((KeyShuffled[0x0F] + KeyShuffled[0x00]), 0x07);
-            KeyShuffled[0x0D] = KeyShuffled[0x0D] ^ Rol32((KeyShuffled[0x09] + KeyShuffled[0x0F]), 0x09);
-            KeyShuffled[0x00] = KeyShuffled[0x00] ^ Rol32((KeyShuffled[0x0D] + KeyShuffled[0x09]), 0x0D);
-            KeyShuffled[0x0F] = KeyShuffled[0x0F] ^ Rol32((KeyShuffled[0x00] + KeyShuffled[0x0D]), 0x12);
-
-            KeyShuffled[0x04] = KeyShuffled[0x04] ^ Rol32((KeyShuffled[0x0E] + KeyShuffled[0x09]), 0x07);
-            KeyShuffled[0x08] = KeyShuffled[0x08] ^ Rol32((KeyShuffled[0x04] + KeyShuffled[0x0E]), 0x09);
-            KeyShuffled[0x09] = KeyShuffled[0x09] ^ Rol32((KeyShuffled[0x08] + KeyShuffled[0x04]), 0x0D);
-            KeyShuffled[0x0E] = KeyShuffled[0x0E] ^ Rol32((KeyShuffled[0x09] + KeyShuffled[0x08]), 0x12);
-
-            KeyShuffled[0x01] = KeyShuffled[0x01] ^ Rol32((KeyShuffled[0x0C] + KeyShuffled[0x0A]), 0x07);
-            KeyShuffled[0x0D] = KeyShuffled[0x0D] ^ Rol32((KeyShuffled[0x01] + KeyShuffled[0x0C]), 0x09);
-            KeyShuffled[0x0A] = KeyShuffled[0x0A] ^ Rol32((KeyShuffled[0x0D] + KeyShuffled[0x01]), 0x0D);
-            KeyShuffled[0x0C] = KeyShuffled[0x0C] ^ Rol32((KeyShuffled[0x0A] + KeyShuffled[0x0D]), 0x12);
-
-            KeyShuffled[0x00] = KeyShuffled[0x00] ^ Rol32((KeyShuffled[0x05] + KeyShuffled[0x07]), 0x07);
-            KeyShuffled[0x03] = KeyShuffled[0x03] ^ Rol32((KeyShuffled[0x00] + KeyShuffled[0x05]), 0x09);
-            KeyShuffled[0x07] = KeyShuffled[0x07] ^ Rol32((KeyShuffled[0x03] + KeyShuffled[0x00]), 0x0D);
-            KeyShuffled[0x05] = KeyShuffled[0x05] ^ Rol32((KeyShuffled[0x07] + KeyShuffled[0x03]), 0x12);
-
-            KeyShuffled[0x02] = KeyShuffled[0x02] ^ Rol32((KeyShuffled[0x0F] + KeyShuffled[0x0B]), 0x07);
-            KeyShuffled[0x06] = KeyShuffled[0x06] ^ Rol32((KeyShuffled[0x02] + KeyShuffled[0x0F]), 0x09);
-            KeyShuffled[0x0B] = KeyShuffled[0x0B] ^ Rol32((KeyShuffled[0x06] + KeyShuffled[0x02]), 0x0D);
-            KeyShuffled[0x0F] = KeyShuffled[0x0F] ^ Rol32((KeyShuffled[0x0B] + KeyShuffled[0x06]), 0x12);
-        }
-
-        // Decrypt one data chunk
-        BSWAP_ARRAY32_UNSIGNED(MpqData, MPQE_CHUNK_SIZE);
-        MpqData[0x00] = MpqData[0x00] ^ (KeyShuffled[0x0E] + KeyMirror[0x00]);
-        MpqData[0x01] = MpqData[0x01] ^ (KeyShuffled[0x04] + KeyMirror[0x0D]);
-        MpqData[0x02] = MpqData[0x02] ^ (KeyShuffled[0x08] + KeyMirror[0x0A]);
-        MpqData[0x03] = MpqData[0x03] ^ (KeyShuffled[0x09] + KeyMirror[0x07]);
-        MpqData[0x04] = MpqData[0x04] ^ (KeyShuffled[0x0A] + KeyMirror[0x04]);
-        MpqData[0x05] = MpqData[0x05] ^ (KeyShuffled[0x0C] + KeyMirror[0x01]);
-        MpqData[0x06] = MpqData[0x06] ^ (KeyShuffled[0x01] + KeyMirror[0x0E]);
-        MpqData[0x07] = MpqData[0x07] ^ (KeyShuffled[0x0D] + KeyMirror[0x0B]);
-        MpqData[0x08] = MpqData[0x08] ^ (KeyShuffled[0x03] + KeyMirror[0x08]);
-        MpqData[0x09] = MpqData[0x09] ^ (KeyShuffled[0x07] + KeyMirror[0x05]);
-        MpqData[0x0A] = MpqData[0x0A] ^ (KeyShuffled[0x05] + KeyMirror[0x02]);
-        MpqData[0x0B] = MpqData[0x0B] ^ (KeyShuffled[0x00] + KeyMirror[0x0F]);
-        MpqData[0x0C] = MpqData[0x0C] ^ (KeyShuffled[0x02] + KeyMirror[0x0C]);
-        MpqData[0x0D] = MpqData[0x0D] ^ (KeyShuffled[0x06] + KeyMirror[0x09]);
-        MpqData[0x0E] = MpqData[0x0E] ^ (KeyShuffled[0x0B] + KeyMirror[0x06]);
-        MpqData[0x0F] = MpqData[0x0F] ^ (KeyShuffled[0x0F] + KeyMirror[0x03]);
-        BSWAP_ARRAY32_UNSIGNED(MpqData, MPQE_CHUNK_SIZE);
-
-        // Update byte offset in the key
-        KeyMirror[0x08]++;
-        if(KeyMirror[0x08] == 0)
-            KeyMirror[0x05]++;
-
-        // Move pointers and decrease number of bytes to decrypt
-        MpqData  += (MPQE_CHUNK_SIZE / sizeof(DWORD));
-        dwLength -= MPQE_CHUNK_SIZE;
-    }
-}
-
-static bool MpqeStream_DetectFileKey(TEncryptedStream * pStream)
-{
-    ULONGLONG ByteOffset = 0;
-    BYTE EncryptedHeader[MPQE_CHUNK_SIZE];
-    BYTE FileHeader[MPQE_CHUNK_SIZE];
-
-    // Read the first file chunk
-    if(pStream->BaseRead(pStream, &ByteOffset, EncryptedHeader, sizeof(EncryptedHeader)))
-    {
-        // We just try all known keys one by one
-        for(int i = 0; AuthCodeArray[i] != NULL; i++)
-        {
-            // Prepare they decryption key from game serial number
-            CreateKeyFromAuthCode(pStream->Key, AuthCodeArray[i]);
-
-            // Try to decrypt with the given key
-            memcpy(FileHeader, EncryptedHeader, MPQE_CHUNK_SIZE);
-            DecryptFileChunk((LPDWORD)FileHeader, pStream->Key, ByteOffset, MPQE_CHUNK_SIZE);
-
-            // We check the decrypted data
-            // All known encrypted MPQs have header at the begin of the file,
-            // so we check for MPQ signature there.
-            if(FileHeader[0] == 'M' && FileHeader[1] == 'P' && FileHeader[2] == 'Q')
-            {
-                // Update the stream size
-                pStream->StreamSize = pStream->Base.File.FileSize;
-
-                // Fill the block information
-                pStream->BlockSize  = MPQE_CHUNK_SIZE;
-                pStream->BlockCount = (DWORD)(pStream->Base.File.FileSize + MPQE_CHUNK_SIZE - 1) / MPQE_CHUNK_SIZE;
-                pStream->IsComplete = 1;
-                return true;
-            }
-        }
-    }
-
-    // Key not found, sorry
-    return false;
-}
-
-static bool MpqeStream_BlockRead(
-    TEncryptedStream * pStream,
-    ULONGLONG StartOffset,
-    ULONGLONG EndOffset,
-    LPBYTE BlockBuffer,
-    DWORD BytesNeeded,
-    bool bAvailable)
-{
-    DWORD dwBytesToRead;
-
-    assert((StartOffset & (pStream->BlockSize - 1)) == 0);
-    assert(StartOffset < EndOffset);
-    assert(bAvailable != false);
-    BytesNeeded = BytesNeeded;
-    bAvailable = bAvailable;
-
-    // Read the file from the stream as-is
-    // Limit the reading to number of blocks really needed
-    dwBytesToRead = (DWORD)(EndOffset - StartOffset);
-    if(!pStream->BaseRead(pStream, &StartOffset, BlockBuffer, dwBytesToRead))
-        return false;
-
-    // Decrypt the data
-    dwBytesToRead = (dwBytesToRead + MPQE_CHUNK_SIZE - 1) & ~(MPQE_CHUNK_SIZE - 1);
-    DecryptFileChunk((LPDWORD)BlockBuffer, pStream->Key, StartOffset, dwBytesToRead);
-    return true;
-}
-
-static TFileStream * MpqeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
-{
-    TEncryptedStream * pStream;
-
-    // Create new empty stream
-    pStream = (TEncryptedStream *)AllocateFileStream(szFileName, sizeof(TEncryptedStream), dwStreamFlags);
-    if(pStream == NULL)
-        return NULL;
-
-    // Attempt to open the base stream
-    assert(pStream->BaseOpen != NULL);
-    if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
-        return NULL;
-
-    // Determine the encryption key for the MPQ
-    if(MpqeStream_DetectFileKey(pStream))
-    {
-        // Set the stream position and size
-        assert(pStream->StreamSize != 0);
-        pStream->StreamPos = 0;
-        pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
-
-        // Set new function pointers
-        pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
-        pStream->StreamGetPos  = BlockStream_GetPos;
-        pStream->StreamGetSize = BlockStream_GetSize;
-        pStream->StreamClose   = pStream->BaseClose;
-
-        // Supply the block functions
-        pStream->BlockRead     = (BLOCK_READ)MpqeStream_BlockRead;
-        return pStream;
-    }
-
-    // Cleanup the stream and return
-    FileStream_Close(pStream);
-    SErrSetLastError(ERROR_UNKNOWN_FILE_KEY);
-    return NULL;
-}
-
-//-----------------------------------------------------------------------------
 // Local functions - Block4 stream support
 
 #define BLOCK4_BLOCK_SIZE   0x4000          // Size of one block
@@ -2286,7 +1984,7 @@ static bool Block4Stream_BlockRead(
     {
         // Calculate the block index and the file index
         StreamIndex = (DWORD)((StartOffset / pStream->BlockSize) / BLOCK4_MAX_BLOCKS);
-        BlockIndex  = (DWORD)((StartOffset / pStream->BlockSize) % BLOCK4_MAX_BLOCKS);
+        BlockIndex = (DWORD)((StartOffset / pStream->BlockSize) % BLOCK4_MAX_BLOCKS);
         if(StreamIndex > pStream->BitmapSize)
             return false;
 
@@ -2366,11 +2064,11 @@ static TFileStream * Block4Stream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
     pStream->szFileName[nNameLength] = 0;
 
     // Supply the stream functions
-    pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
+    pStream->StreamRead = (STREAM_READ)BlockStream_Read;
     pStream->StreamGetSize = BlockStream_GetSize;
-    pStream->StreamGetPos  = BlockStream_GetPos;
-    pStream->StreamClose   = (STREAM_CLOSE)Block4Stream_Close;
-    pStream->BlockRead     = (BLOCK_READ)Block4Stream_BlockRead;
+    pStream->StreamGetPos = BlockStream_GetPos;
+    pStream->StreamClose = (STREAM_CLOSE)Block4Stream_Close;
+    pStream->BlockRead = (BLOCK_READ)Block4Stream_BlockRead;
 
     // Allocate work space for numeric names
     szNameBuff = STORM_ALLOC(TCHAR, nNameLength + 4);
@@ -2431,7 +2129,7 @@ static TFileStream * Block4Stream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
 
         // Fill the remainining block stream variables
         pStream->BitmapSize = dwBaseFiles;
-        pStream->BlockSize  = BLOCK4_BLOCK_SIZE;
+        pStream->BlockSize = BLOCK4_BLOCK_SIZE;
         pStream->IsComplete = 1;
         pStream->IsModified = 0;
 
@@ -2449,8 +2147,469 @@ static TFileStream * Block4Stream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
         SErrSetLastError(ERROR_FILE_NOT_FOUND);
         pStream = NULL;
     }
-
     return pStream;
+}
+
+//-----------------------------------------------------------------------------
+// Local functions - MPQE stream support
+
+static const char * szKeyTemplate = "expand 32-byte k000000000000000000000000000000000000000000000000";
+
+static const char * AuthCodeArray[] =
+{
+    // Starcraft II (Heart of the Swarm)
+    // Authentication code URL: http://dist.blizzard.com/mediakey/hots-authenticationcode-bgdl.txt
+    //                                                                                          -0C-    -1C--08-    -18--04-    -14--00-    -10-
+    "S48B6CDTN5XEQAKQDJNDLJBJ73FDFM3U",         // SC2 Heart of the Swarm-all : "expand 32-byte kQAKQ0000FM3UN5XE000073FD6CDT0000LJBJS48B0000DJND"
+
+    // Diablo III: Agent.exe (1.0.0.954)
+    // Address of decryption routine: 00502b00
+    // Pointer to decryptor object: ECX
+    // Pointer to key: ECX+0x5C
+    // Authentication code URL: http://dist.blizzard.com/mediakey/d3-authenticationcode-enGB.txt
+    //                                                                                           -0C-    -1C--08-    -18--04-    -14--00-    -10-
+    "UCMXF6EJY352EFH4XFRXCFH2XC9MQRZK",         // Diablo III Installer (deDE): "expand 32-byte kEFH40000QRZKY3520000XC9MF6EJ0000CFH2UCMX0000XFRX"
+    "MMKVHY48RP7WXP4GHYBQ7SL9J9UNPHBP",         // Diablo III Installer (enGB): "expand 32-byte kXP4G0000PHBPRP7W0000J9UNHY4800007SL9MMKV0000HYBQ"
+    "8MXLWHQ7VGGLTZ9MQZQSFDCLJYET3CPP",         // Diablo III Installer (enSG): "expand 32-byte kTZ9M00003CPPVGGL0000JYETWHQ70000FDCL8MXL0000QZQS"
+    "EJ2R5TM6XFE2GUNG5QDGHKQ9UAKPWZSZ",         // Diablo III Installer (enUS): "expand 32-byte kGUNG0000WZSZXFE20000UAKP5TM60000HKQ9EJ2R00005QDG"
+    "PBGFBE42Z6LNK65UGJQ3WZVMCLP4HQQT",         // Diablo III Installer (esES): "expand 32-byte kK65U0000HQQTZ6LN0000CLP4BE420000WZVMPBGF0000GJQ3"
+    "X7SEJJS9TSGCW5P28EBSC47AJPEY8VU2",         // Diablo III Installer (esMX): "expand 32-byte kW5P200008VU2TSGC0000JPEYJJS90000C47AX7SE00008EBS"
+    "5KVBQA8VYE6XRY3DLGC5ZDE4XS4P7YA2",         // Diablo III Installer (frFR): "expand 32-byte kRY3D00007YA2YE6X0000XS4PQA8V0000ZDE45KVB0000LGC5"
+    "478JD2K56EVNVVY4XX8TDWYT5B8KB254",         // Diablo III Installer (itIT): "expand 32-byte kVVY40000B2546EVN00005B8KD2K50000DWYT478J0000XX8T"
+    "8TS4VNFQRZTN6YWHE9CHVDH9NVWD474A",         // Diablo III Installer (koKR): "expand 32-byte k6YWH0000474ARZTN0000NVWDVNFQ0000VDH98TS40000E9CH"
+    "LJ52Z32DF4LZ4ZJJXVKK3AZQA6GABLJB",         // Diablo III Installer (plPL): "expand 32-byte k4ZJJ0000BLJBF4LZ0000A6GAZ32D00003AZQLJ520000XVKK"
+    "K6BDHY2ECUE2545YKNLBJPVYWHE7XYAG",         // Diablo III Installer (ptBR): "expand 32-byte k545Y0000XYAGCUE20000WHE7HY2E0000JPVYK6BD0000KNLB"
+    "NDVW8GWLAYCRPGRNY8RT7ZZUQU63VLPR",         // Diablo III Installer (ruRU): "expand 32-byte kXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    "6VWCQTN8V3ZZMRUCZXV8A8CGUX2TAA8H",         // Diablo III Installer (zhTW): "expand 32-byte kMRUC0000AA8HV3ZZ0000UX2TQTN80000A8CG6VWC0000ZXV8"
+//  "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",         // Diablo III Installer (zhCN): "expand 32-byte kXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+    // Starcraft II (Wings of Liberty): Installer.exe (4.1.1.4219)
+    // Address of decryption routine: 0053A3D0
+    // Pointer to decryptor object: ECX
+    // Pointer to key: ECX+0x5C
+    // Authentication code URL: http://dist.blizzard.com/mediakey/sc2-authenticationcode-enUS.txt
+    //                                                                                          -0C-    -1C--08-    -18--04-    -14--00-    -10-
+    "Y45MD3CAK4KXSSXHYD9VY64Z8EKJ4XFX",         // SC2 Wings of Liberty (deDE): "expand 32-byte kSSXH00004XFXK4KX00008EKJD3CA0000Y64ZY45M0000YD9V"
+    "G8MN8UDG6NA2ANGY6A3DNY82HRGF29ZH",         // SC2 Wings of Liberty (enGB): "expand 32-byte kANGY000029ZH6NA20000HRGF8UDG0000NY82G8MN00006A3D"
+    "W9RRHLB2FDU9WW5B3ECEBLRSFWZSF7HW",         // SC2 Wings of Liberty (enSG): "expand 32-byte kWW5B0000F7HWFDU90000FWZSHLB20000BLRSW9RR00003ECE"
+    "3DH5RE5NVM5GTFD85LXGWT6FK859ETR5",         // SC2 Wings of Liberty (enUS): "expand 32-byte kTFD80000ETR5VM5G0000K859RE5N0000WT6F3DH500005LXG"
+    "8WLKUAXE94PFQU4Y249PAZ24N4R4XKTQ",         // SC2 Wings of Liberty (esES): "expand 32-byte kQU4Y0000XKTQ94PF0000N4R4UAXE0000AZ248WLK0000249P"
+    "A34DXX3VHGGXSQBRFE5UFFDXMF9G4G54",         // SC2 Wings of Liberty (esMX): "expand 32-byte kSQBR00004G54HGGX0000MF9GXX3V0000FFDXA34D0000FE5U"
+    "ZG7J9K938HJEFWPQUA768MA2PFER6EAJ",         // SC2 Wings of Liberty (frFR): "expand 32-byte kFWPQ00006EAJ8HJE0000PFER9K9300008MA2ZG7J0000UA76"
+    "NE7CUNNNTVAPXV7E3G2BSVBWGVMW8BL2",         // SC2 Wings of Liberty (itIT): "expand 32-byte kXV7E00008BL2TVAP0000GVMWUNNN0000SVBWNE7C00003G2B"
+    "3V9E2FTMBM9QQWK7U6MAMWAZWQDB838F",         // SC2 Wings of Liberty (koKR): "expand 32-byte kQWK70000838FBM9Q0000WQDB2FTM0000MWAZ3V9E0000U6MA"
+    "2NSFB8MELULJ83U6YHA3UP6K4MQD48L6",         // SC2 Wings of Liberty (plPL): "expand 32-byte k83U6000048L6LULJ00004MQDB8ME0000UP6K2NSF0000YHA3"
+    "QA2TZ9EWZ4CUU8BMB5WXCTY65F9CSW4E",         // SC2 Wings of Liberty (ptBR): "expand 32-byte kU8BM0000SW4EZ4CU00005F9CZ9EW0000CTY6QA2T0000B5WX"
+    "VHB378W64BAT9SH7D68VV9NLQDK9YEGT",         // SC2 Wings of Liberty (ruRU): "expand 32-byte k9SH70000YEGT4BAT0000QDK978W60000V9NLVHB30000D68V"
+    "U3NFQJV4M6GC7KBN9XQJ3BRDN3PLD9NE",         // SC2 Wings of Liberty (zhTW): "expand 32-byte k7KBN0000D9NEM6GC0000N3PLQJV400003BRDU3NF00009XQJ"
+
+    NULL
+};
+
+static DWORD Rol32(DWORD dwValue, DWORD dwRolCount)
+{
+    DWORD dwShiftRight = 32 - dwRolCount;
+
+    return (dwValue << dwRolCount) | (dwValue >> dwShiftRight);
+}
+
+#define SALSA20_QUARTERROUND(a, b, c, d)    \
+    b ^= Rol32(a + d,  7);             \
+    c ^= Rol32(b + a,  9);             \
+    d ^= Rol32(c + b, 13);             \
+    a ^= Rol32(d + c, 18);
+
+static void SALSA20_SetKey(
+    SALSA20_BLOCK & Key,
+    const char * szAuthCode)
+{
+    LPDWORD AuthCode32 = (LPDWORD)szAuthCode;
+
+    memcpy(&Key, szKeyTemplate, sizeof(SALSA20_BLOCK));
+    Key.d[0x04 + 0x00] = AuthCode32[0x03];
+    Key.d[0x04 + 0x02] = AuthCode32[0x07];
+    Key.d[0x04 + 0x03] = AuthCode32[0x02];
+    Key.d[0x04 + 0x05] = AuthCode32[0x06];
+    Key.d[0x04 + 0x06] = AuthCode32[0x01];
+    Key.d[0x04 + 0x08] = AuthCode32[0x05];
+    Key.d[0x04 + 0x09] = AuthCode32[0x00];
+    Key.d[0x04 + 0x0B] = AuthCode32[0x04];
+    BSWAP_ARRAY32_UNSIGNED(Key.d, sizeof(SALSA20_BLOCK));
+}
+
+static void SALSA20_Crypt(
+    const SALSA20_BLOCK & Key,
+    ULONGLONG ByteOffset,
+    void * lpDataOut,
+    const void * lpDataIn,
+    DWORD cbData)
+{
+    SALSA20_BLOCK KeyMirror = Key;
+    SALSA20_BLOCK KeyStream;
+    ULONGLONG ChunkOffset = ByteOffset / SALSA20_BLOCK_SIZE;
+    LPDWORD OutDataU32 = (LPDWORD)(lpDataOut);
+    LPDWORD InDataU32 = (LPDWORD)(lpDataIn);
+    DWORD RoundCount = 0x14;
+
+    // Prepare the key
+    BSWAP_ARRAY32_UNSIGNED(KeyMirror.d, sizeof(SALSA20_BLOCK));
+    KeyMirror.d[0x05] = (DWORD)(ChunkOffset >> 32);
+    KeyMirror.d[0x08] = (DWORD)(ChunkOffset);
+
+    // Run the encryption/decryption loop
+    while(cbData >= SALSA20_BLOCK_SIZE)
+    {
+        // Permute the key (part 1)
+        KeyStream.d[0x0E] = KeyMirror.d[0x00];
+        KeyStream.d[0x0C] = KeyMirror.d[0x01];
+        KeyStream.d[0x05] = KeyMirror.d[0x02];
+        KeyStream.d[0x0F] = KeyMirror.d[0x03];
+        KeyStream.d[0x0A] = KeyMirror.d[0x04];
+        KeyStream.d[0x07] = KeyMirror.d[0x05];
+        KeyStream.d[0x0B] = KeyMirror.d[0x06];
+        KeyStream.d[0x09] = KeyMirror.d[0x07];
+        KeyStream.d[0x03] = KeyMirror.d[0x08];
+        KeyStream.d[0x06] = KeyMirror.d[0x09];
+        KeyStream.d[0x08] = KeyMirror.d[0x0A];
+        KeyStream.d[0x0D] = KeyMirror.d[0x0B];
+        KeyStream.d[0x02] = KeyMirror.d[0x0C];
+        KeyStream.d[0x04] = KeyMirror.d[0x0D];
+        KeyStream.d[0x01] = KeyMirror.d[0x0E];
+        KeyStream.d[0x00] = KeyMirror.d[0x0F];
+
+        // Permute the key
+        for(DWORD i = 0; i < RoundCount; i += 2)
+        {
+            SALSA20_QUARTERROUND(KeyStream.d[0x0E], KeyStream.d[0x0A], KeyStream.d[0x03], KeyStream.d[0x02]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x0C], KeyStream.d[0x07], KeyStream.d[0x06], KeyStream.d[0x04]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x05], KeyStream.d[0x0B], KeyStream.d[0x08], KeyStream.d[0x01]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x0F], KeyStream.d[0x09], KeyStream.d[0x0D], KeyStream.d[0x00]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x0E], KeyStream.d[0x04], KeyStream.d[0x08], KeyStream.d[0x09]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x0C], KeyStream.d[0x01], KeyStream.d[0x0D], KeyStream.d[0x0A]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x05], KeyStream.d[0x00], KeyStream.d[0x03], KeyStream.d[0x07]);
+            SALSA20_QUARTERROUND(KeyStream.d[0x0F], KeyStream.d[0x02], KeyStream.d[0x06], KeyStream.d[0x0B]);
+        }
+
+        // Decrypt one data chunk
+        BSWAP_ARRAY32_UNSIGNED(InDataU32, sizeof(SALSA20_BLOCK));
+        OutDataU32[0x00] = InDataU32[0x00] ^ (KeyStream.d[0x0E] + KeyMirror.d[0x00]);
+        OutDataU32[0x01] = InDataU32[0x01] ^ (KeyStream.d[0x04] + KeyMirror.d[0x0D]);
+        OutDataU32[0x02] = InDataU32[0x02] ^ (KeyStream.d[0x08] + KeyMirror.d[0x0A]);
+        OutDataU32[0x03] = InDataU32[0x03] ^ (KeyStream.d[0x09] + KeyMirror.d[0x07]);
+        OutDataU32[0x04] = InDataU32[0x04] ^ (KeyStream.d[0x0A] + KeyMirror.d[0x04]);
+        OutDataU32[0x05] = InDataU32[0x05] ^ (KeyStream.d[0x0C] + KeyMirror.d[0x01]);
+        OutDataU32[0x06] = InDataU32[0x06] ^ (KeyStream.d[0x01] + KeyMirror.d[0x0E]);
+        OutDataU32[0x07] = InDataU32[0x07] ^ (KeyStream.d[0x0D] + KeyMirror.d[0x0B]);
+        OutDataU32[0x08] = InDataU32[0x08] ^ (KeyStream.d[0x03] + KeyMirror.d[0x08]);
+        OutDataU32[0x09] = InDataU32[0x09] ^ (KeyStream.d[0x07] + KeyMirror.d[0x05]);
+        OutDataU32[0x0A] = InDataU32[0x0A] ^ (KeyStream.d[0x05] + KeyMirror.d[0x02]);
+        OutDataU32[0x0B] = InDataU32[0x0B] ^ (KeyStream.d[0x00] + KeyMirror.d[0x0F]);
+        OutDataU32[0x0C] = InDataU32[0x0C] ^ (KeyStream.d[0x02] + KeyMirror.d[0x0C]);
+        OutDataU32[0x0D] = InDataU32[0x0D] ^ (KeyStream.d[0x06] + KeyMirror.d[0x09]);
+        OutDataU32[0x0E] = InDataU32[0x0E] ^ (KeyStream.d[0x0B] + KeyMirror.d[0x06]);
+        OutDataU32[0x0F] = InDataU32[0x0F] ^ (KeyStream.d[0x0F] + KeyMirror.d[0x03]);
+        BSWAP_ARRAY32_UNSIGNED(OutDataU32, sizeof(SALSA20_BLOCK));
+
+        // Update byte offset in the key
+        if(++KeyMirror.d[0x08] == 0)
+            KeyMirror.d[0x05]++;
+
+        // Move pointers and decrease number of bytes to decrypt
+        OutDataU32 += _countof(KeyStream.d);
+        InDataU32 += _countof(KeyStream.d);
+        cbData -= _countof(KeyStream.b);
+    }
+}
+
+static bool MpqeStream_BruteForce(TCryptStream_MPQE * pStream)
+{
+    ULONGLONG ByteOffset = 0;
+    SALSA20_BLOCK CipherText;
+    SALSA20_BLOCK PlainText;
+
+    // Read the first file chunk
+    if(pStream->BaseRead(pStream, &ByteOffset, &CipherText, sizeof(CipherText)))
+    {
+        // We just try all known keys one by one
+        for(int i = 0; AuthCodeArray[i] != NULL; i++)
+        {
+            // Prepare they decryption key from game auth code
+            SALSA20_SetKey(pStream->Key, AuthCodeArray[i]);
+
+            // Try to decrypt with the given key
+            SALSA20_Crypt(pStream->Key, ByteOffset, &PlainText, &CipherText, sizeof(CipherText));
+
+            // We check the decrypted data
+            // All known encrypted MPQs have header at the begin of the file,
+            // so we check for MPQ signature there.
+            if(PlainText.d[0] == ID_MPQ && PlainText.d[1] == MPQ_HEADER_SIZE_V2)
+            {
+                // Update the stream size
+                pStream->StreamSize = pStream->Base.File.FileSize;
+
+                // Fill the block information
+                pStream->BlockSize  = SALSA20_BLOCK_SIZE;
+                pStream->BlockCount = (DWORD)(pStream->Base.File.FileSize + SALSA20_BLOCK_SIZE - 1) / SALSA20_BLOCK_SIZE;
+                pStream->IsComplete = 1;
+                return true;
+            }
+        }
+    }
+
+    // Key not found, sorry
+    return false;
+}
+
+static bool MpqeStream_BlockRead(
+    TCryptStream_MPQE * pStream,
+    ULONGLONG StartOffset,
+    ULONGLONG EndOffset,
+    LPBYTE BlockBuffer,
+    DWORD BytesNeeded,
+    bool bAvailable)
+{
+    DWORD dwBytesToRead;
+
+    assert((StartOffset & (pStream->BlockSize - 1)) == 0);
+    assert(StartOffset < EndOffset);
+    assert(bAvailable != false);
+    BytesNeeded = BytesNeeded;
+    bAvailable = bAvailable;
+
+    // Read the file from the stream as-is
+    // Limit the reading to number of blocks really needed
+    dwBytesToRead = (DWORD)(EndOffset - StartOffset);
+    if(!pStream->BaseRead(pStream, &StartOffset, BlockBuffer, dwBytesToRead))
+        return false;
+
+    // Decrypt the data
+    dwBytesToRead = (dwBytesToRead + SALSA20_BLOCK_SIZE - 1) & ~(SALSA20_BLOCK_SIZE - 1);
+    SALSA20_Crypt(pStream->Key, StartOffset, BlockBuffer, BlockBuffer, dwBytesToRead);
+    return true;
+}
+
+static TFileStream * MpqeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
+{
+    TCryptStream_MPQE * pStream;
+
+    // Create new empty stream
+    pStream = (TCryptStream_MPQE *)AllocateFileStream(szFileName, sizeof(TCryptStream_MPQE), dwStreamFlags);
+    if(pStream == NULL)
+        return NULL;
+
+    // Attempt to open the base stream
+    assert(pStream->BaseOpen != NULL);
+    if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
+        return NULL;
+
+    // Try to find out the proper encryptio key for the MPQ by simply trying all of them
+    if(MpqeStream_BruteForce(pStream))
+    {
+        // Set the stream position and size
+        assert(pStream->StreamSize != 0);
+        pStream->StreamPos = 0;
+        pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+
+        // Set new function pointers
+        pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
+        pStream->StreamGetPos  = BlockStream_GetPos;
+        pStream->StreamGetSize = BlockStream_GetSize;
+        pStream->StreamClose   = pStream->BaseClose;
+
+        // Supply the block functions
+        pStream->BlockRead     = (BLOCK_READ)MpqeStream_BlockRead;
+        return pStream;
+    }
+
+    // Cleanup the stream and return
+    FileStream_Close(pStream);
+    SErrSetLastError(ERROR_UNKNOWN_FILE_KEY);
+    return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Local functions - W3XE stream support
+
+#include "w3xe/w3xe_support.c"
+
+static bool W3xeStream_UnpackTail(W3XE_TAIL & FileTail, LPBYTE pbPlainText, size_t cbPlainText)
+{
+    size_t cb;
+
+    // Get the pointer to the packed file tail
+    pbPlainText = pbPlainText + cbPlainText - W3XE_TAIL_SIZE_PACKED;
+
+    // Copy the first 4 variables (same packing)
+    cb = sizeof(FileTail.version) + sizeof(FileTail.flags) + sizeof(FileTail.tail_size) + sizeof(FileTail.header_size);
+    memcpy(&FileTail.version, pbPlainText, cb);
+    pbPlainText += cb;
+
+    // Copy the rest
+    cb = sizeof(FileTail.payload_size) + sizeof(FileTail.license) + sizeof(FileTail.zeros);
+    memcpy(&FileTail.payload_size, pbPlainText, cb);
+    pbPlainText += cb;
+
+    // Verify the format
+    if(FileTail.version != 1 || FileTail.tail_size != W3XE_TAIL_SIZE_PACKED)
+        return false;   // Unknown version or block size
+    
+    if(FileTail.header_size + FileTail.payload_size + FileTail.tail_size != cbPlainText)
+        return false;   // header/payload sizes do not add up to the file size
+
+    // Verify zeros
+    for(size_t i = 0; i < W3XE_TAIL_ZEROS_LEN; i++)
+        if(FileTail.zeros[i] != 0)
+            return false;
+
+    // Every check passed
+    return true;
+}
+
+static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText, size_t cbCipherText)
+{
+    W3XE_TAIL FileTail;
+    LPBYTE pbPlainText;
+    size_t cbPlainText = cbCipherText;
+    DWORD dwSeed = 0;
+    unsigned char raw_aes_key[40];
+
+    // Retrieve the initial seed for the XOR stream
+    if(!w3xe_get_xorstream_seed(pbCipherText, cbCipherText, &dwSeed))
+        return false;
+
+    // Allocate buffer for the de-XOR-ed payload
+    if((pbPlainText = STORM_ALLOC(BYTE, cbPlainText)) != NULL)
+    {
+        // Decrypt the payload using XOR stream
+        w3xe_xs_crypt(pbPlainText, pbCipherText, cbCipherText, dwSeed);
+
+        // Unpack the file tail
+        if(W3xeStream_UnpackTail(FileTail, pbPlainText, cbPlainText))
+        {
+            symmetric_key aes_key;
+            LPBYTE mpq_payload = NULL;
+            size_t nonce_offset = 0;
+
+            // Derive the raw AES key
+            w3xe_derive_raw_key(FileTail.license, raw_aes_key);
+            aes_desc.setup(raw_aes_key, 0x20, 0, &aes_key);
+
+            // Find the proper n-once offset
+            if(w3xe_find_nonce_offset(aes_key, pbPlainText, cbPlainText, FileTail.header_size, 0x400, &nonce_offset))
+            {
+                if(w3xe_decrypt_payload(FileTail, aes_key, pbPlainText, cbPlainText, nonce_offset, &mpq_payload))
+                {
+                    pStream->StreamData = mpq_payload;
+                    pStream->StreamSize = FileTail.payload_size;
+                    return true;
+                }
+            }
+        }
+        STORM_FREE(pbPlainText);
+    }
+    return false;
+}
+
+static bool W3xeStream_LoadMap(TCryptStream_W3XE * pStream)
+{
+    ULONGLONG FileSize = 0;
+    LPBYTE pbCipherText;
+    DWORD dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
+
+    // Retrieve the file size
+    if(pStream->BaseGetSize(pStream, &FileSize))
+    {
+        // Check the buffer overflow
+        if((FileSize >> 32) == 0)
+        {
+            DWORD cbCipherText = (DWORD)(FileSize);
+
+            // Allocate space for the cipher text
+            if((pbCipherText = STORM_ALLOC(BYTE, cbCipherText)) != NULL)
+            {
+                // Load the whole map to memory
+                if(pStream->BaseRead(pStream, NULL, pbCipherText, cbCipherText))
+                {
+                    if(W3xeStream_Decrypt(pStream, pbCipherText, cbCipherText))
+                    {
+                        dwErrCode = ERROR_SUCCESS;
+                    }
+                    else
+                    {
+                        dwErrCode = ERROR_FILE_ENCRYPTED;
+                    }
+                }
+                STORM_FREE(pbCipherText);
+            }
+        }
+    }
+    SErrSetLastError(dwErrCode);
+    return (dwErrCode == ERROR_SUCCESS);
+}
+
+static void W3xeStream_Close(TCryptStream_W3XE * pStream)
+{
+    // Free the allocated data
+    if(pStream->StreamData != NULL)
+        STORM_FREE(pStream->StreamData);
+    pStream->StreamData = NULL;
+}
+
+static bool W3xeStream_Read(
+    TCryptStream_W3XE * pStream,
+    ULONGLONG * pByteOffset,
+    void * lpBuffer,
+    DWORD dwBytesToRead)
+{
+    ULONGLONG ByteOffset = (pByteOffset != NULL) ? *pByteOffset : pStream->Base.File.FilePos;
+
+    // Check whether we won't go beyond EOF
+    if((ByteOffset + dwBytesToRead) > pStream->StreamSize)
+    {
+        SErrSetLastError(ERROR_HANDLE_EOF);
+        return false;
+    }
+
+    // Copy the data to the output buffer
+    memcpy(lpBuffer, pStream->StreamData + ByteOffset, dwBytesToRead);
+    pStream->Base.File.FilePos = ByteOffset + dwBytesToRead;
+    return true;
+}
+
+static TFileStream * W3xeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
+{
+    TCryptStream_W3XE * pStream;
+
+    // Create new empty stream
+    pStream = (TCryptStream_W3XE *)AllocateFileStream(szFileName, sizeof(TCryptStream_W3XE), dwStreamFlags);
+    if(pStream == NULL)
+        return NULL;
+
+    // Attempt to open the base stream
+    assert(pStream->BaseOpen != NULL);
+    if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
+        return NULL;
+
+    // Try to find out the proper encryptio key for the MPQ by simply trying all of them
+    if(W3xeStream_LoadMap(pStream))
+    {
+        // Set the stream position and size
+        assert(pStream->StreamSize != 0);
+        pStream->StreamPos = 0;
+        pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+
+        // Set new function pointers
+        pStream->StreamRead = (STREAM_READ)W3xeStream_Read;
+        pStream->StreamGetPos = BlockStream_GetPos;
+        pStream->StreamGetSize = BlockStream_GetSize;
+        pStream->StreamClose = (STREAM_CLOSE)W3xeStream_Close;
+        return pStream;
+    }
+
+    // Cleanup the stream and return
+    FileStream_Close(pStream);
+    SErrSetLastError(ERROR_UNKNOWN_FILE_KEY);
+    return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -2549,11 +2708,14 @@ TFileStream * FileStream_OpenFile(
         case STREAM_PROVIDER_PARTIAL:
             return PartStream_Open(szFileName, dwStreamFlags);
 
+        case STREAM_PROVIDER_BLOCK4:
+            return Block4Stream_Open(szFileName, dwStreamFlags);
+
         case STREAM_PROVIDER_MPQE:
             return MpqeStream_Open(szFileName, dwStreamFlags);
 
-        case STREAM_PROVIDER_BLOCK4:
-            return Block4Stream_Open(szFileName, dwStreamFlags);
+        case STREAM_PROVIDER_W3XE:
+            return W3xeStream_Open(szFileName, dwStreamFlags);
 
         default:
             SErrSetLastError(ERROR_INVALID_PARAMETER);
@@ -2655,15 +2817,21 @@ size_t FileStream_Prefix(LPCTSTR szFileName, DWORD * pdwProvider)
             nPrefixLength1 = 5;
         }
 
+        else if(!_tcsnicmp(szFileName, _T("blk4-"), 5))
+        {
+            dwProvider |= STREAM_PROVIDER_BLOCK4;
+            nPrefixLength1 = 5;
+        }
+
         else if(!_tcsnicmp(szFileName, _T("mpqe-"), 5))
         {
             dwProvider |= STREAM_PROVIDER_MPQE;
             nPrefixLength1 = 5;
         }
 
-        else if(!_tcsnicmp(szFileName, _T("blk4-"), 5))
+        else if(!_tcsnicmp(szFileName, _T("w3xe-"), 5))
         {
-            dwProvider |= STREAM_PROVIDER_BLOCK4;
+            dwProvider |= STREAM_PROVIDER_W3XE;
             nPrefixLength1 = 5;
         }
 

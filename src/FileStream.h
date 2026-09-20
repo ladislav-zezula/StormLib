@@ -75,10 +75,6 @@ typedef bool (*BLOCK_CHECK)(
     ULONGLONG BlockOffset               // Offset of the file to check
     );
 
-typedef void (*BLOCK_SAVEMAP)(
-    struct TFileStream * pStream        // Pointer to a block-oriented stream
-    );
-
 //-----------------------------------------------------------------------------
 // Local structures - partial file structure and bitmap footer
 
@@ -213,13 +209,27 @@ struct TBlockStream : public TFileStream
 };
 
 //-----------------------------------------------------------------------------
-// Structure for encrypted stream
+// Structure for Salsa20-encrypted stream (MPQE files)
 
-#define MPQE_CHUNK_SIZE 0x40                // Size of one chunk to be decrypted
+#define SALSA20_BLOCK_SIZE 0x40                // Size of one chunk to be decrypted
 
-struct TEncryptedStream : public TBlockStream
+union SALSA20_BLOCK
 {
-    BYTE Key[MPQE_CHUNK_SIZE];              // File key
+    DWORD d[SALSA20_BLOCK_SIZE / 4];
+    BYTE  b[SALSA20_BLOCK_SIZE / 1];
+};
+
+struct TCryptStream_MPQE : public TBlockStream
+{
+    SALSA20_BLOCK Key;                          // Key for Salsa20
+};
+
+//-----------------------------------------------------------------------------
+// Structure for AES-encrypted Warcraft III maps
+
+struct TCryptStream_W3XE: public TBlockStream
+{
+    LPBYTE StreamData;                          // Pointer to the decrypted MPQ
 };
 
 #endif // __FILESTREAM_H__

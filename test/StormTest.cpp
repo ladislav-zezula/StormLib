@@ -4597,7 +4597,7 @@ static void Test_PlayingSpace()
     HANDLE hFind;
     bool bFound = true;
 
-    if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
+    if(SFileOpenArchive(_T("w3xe-file://e:\\humanre01.w3xe"), 0, 0, &hMpq1))
     {
         if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
         {
