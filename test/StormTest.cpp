@@ -1901,6 +1901,7 @@ static DWORD CreateNewArchive_V2(TLogHelper * pLogger, LPCTSTR szPlainName, DWOR
 
 static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD dwOpenFlags, HANDLE * phMpq)
 {
+    LPCTSTR szExtension = GetFileExtension(szFullPath);
     HANDLE hMpq = NULL;
     size_t nMarkerIndex;
     DWORD dwErrCode = ERROR_SUCCESS;
@@ -1908,18 +1909,20 @@ static DWORD OpenExistingArchive(TLogHelper * pLogger, LPCTSTR szFullPath, DWORD
     // Get the stream provider from the MPQ prefix or MPQ name
     if(_tcsnicmp(szFullPath, _T("flat-file://"), 11))
     {
-        if(_tcsstr(szFullPath, _T(".MPQE")) != NULL)
-            dwOpenFlags |= STREAM_PROVIDER_MPQE;
-        if(_tcsstr(szFullPath, _T(".MPQ.part")) != NULL)
+        if(!_tcsicmp(szExtension, _T(".MPQ.part")))
             dwOpenFlags |= STREAM_PROVIDER_PARTIAL;
-        if(_tcsstr(szFullPath, _T(".mpq.part")) != NULL)
+        if(!_tcsicmp(szExtension, _T(".mpq.part")))
             dwOpenFlags |= STREAM_PROVIDER_PARTIAL;
-        if(_tcsstr(szFullPath, _T(".MPQ.0")) != NULL)
+        if(!_tcsicmp(szExtension, _T(".MPQ.0")))
             dwOpenFlags |= STREAM_PROVIDER_BLOCK4;
+        if(!_tcsicmp(szExtension, _T(".MPQE")))
+            dwOpenFlags |= STREAM_PROVIDER_MPQE;
+        if(!_tcsicmp(szExtension, _T(".w3xe")))
+            dwOpenFlags |= STREAM_PROVIDER_W3XE;
     }
 
     // Handle ASI files properly
-    nMarkerIndex = (_tcsstr(szFullPath, _T(".asi")) != NULL) ? 1 : 0;
+    nMarkerIndex = (_tcsicmp(szExtension, _T(".asi")) == 0) ? 1 : 0;
     SFileSetArchiveMarkers(&MpqMarkers[nMarkerIndex]);
 
     // Open the copied archive
@@ -4468,6 +4471,7 @@ static const TEST_INFO1 TestList_OpenMpqs[] =
     {_T("MPQ_2025_v1_Legion_TD_11_2d-BETA_2_TeamOZE.w3x"),      NULL, "08efaaa11cafe5e8921a6f112b2fa458",   626},
     {_T("MPQ_2026_v1_The Art of Defense v4.11 G0A.w3x"),        NULL, "892ec8421b34e35899624fc63b451327",   952},               // Some files have slash characters in their names
     {_T("MPQ_2026_v1_BadTablesSize.scx"),                       NULL, "2dd05809bdcb466bbe35778086790caf",     3},               // Fake MPQ header at offset 0
+    {_T("MPQ_2026_v1_Humanre01.w3xe"),                          NULL, "22dcadebc9d6dcd0fa0943e8d3444c28",    67},               // Encrypted Warcraft III map
 
     // ASI plugins
     {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
@@ -4593,25 +4597,25 @@ static void Test_PlayingSpace()
 {
     SFILE_FIND_DATA sf;
     HANDLE hMpq1 = NULL;
-    HANDLE hMpq2 = NULL;
+    //HANDLE hMpq2 = NULL;
     HANDLE hFind;
     bool bFound = true;
 
-    if(SFileOpenArchive(_T("e:\\War3x.mpq"), 0, 0, &hMpq1))
+    if(SFileOpenArchive(_T("w3xe-file://e:\\humanre01.w3xe"), 0, 0, &hMpq1))
     {
-        if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
+        //if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
         {
             hFind = SFileFindFirstFile(hMpq1, "*", &sf, NULL);
             if(hFind != NULL)
             {
                 while(bFound)
                 {
-                    printf("[*] Found: %s\n", sf.cFileName);
+                    //printf("[*] Found: %s\n", sf.cFileName);
                     bFound = SFileFindNextFile(hFind, &sf);
                 }
                 SFileFindClose(hFind);
             }
-            SFileCloseArchive(hMpq2);
+            // SFileCloseArchive(hMpq2);
         }
         SFileCloseArchive(hMpq1);
     }
