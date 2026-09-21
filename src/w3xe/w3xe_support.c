@@ -19,14 +19,14 @@
 #define W3XE_TAIL_ZEROS_LEN     0x16u       // Length of zeros in the packed file tail
 #define W3XE_TAIL_SIZE_PACKED   0x40u       // Size of the packed file tail
 
-// A 32x32 bit matrix over GF(2): row i is a bitmask over the 32 input bits
-// that XOR together to form output bit i. */
+// A 32x32 bit matrix over GF(2):
+// row[i] is a bitmask over the 32 input bits that XOR together to form output bit i
 typedef struct _MATRIX_32x32
 {
     DWORD d[32];
 } MATRIX_32x32, *PMATRIX_32x32;
 
-// Tail structure of the encrypted map
+// Structure of the encrypted map tail (unpacked, aligned)
 typedef struct _W3XE_TAIL
 {
     BYTE version;
@@ -194,7 +194,7 @@ bool w3xe_get_xorstream_seed(const unsigned char * cipher_text, size_t cipher_le
     {
         size_t pos = w3xe_tail_offs + W3XE_TAIL_ZEROS_OFFS + j;
 
-        matrix_pow(matrix, pos + 1);                /* low byte of S[pos+1] */
+        matrix_pow(matrix, pos + 1);                // low byte of S[pos+1]
         unsigned char ct = cipher_text[pos];
         for(int bit = 0; bit < 8; bit++)
         {

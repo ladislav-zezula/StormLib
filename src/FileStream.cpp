@@ -325,6 +325,7 @@ static bool BaseFile_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const
  * \a pStream Pointer to an open stream
  * \a NewFileSize New size of the file
  */
+
 static bool BaseFile_Resize(TFileStream * pStream, ULONGLONG NewFileSize)
 {
 #ifdef STORMLIB_WINDOWS
@@ -2782,6 +2783,7 @@ TFileStream * FileStream_OpenFileArchive(HANDLE hParentMpq, LPCSTR szFileName)
  *
  * \a pStream Pointer to an open stream
  */
+
 LPCTSTR FileStream_GetFileName(TFileStream * pStream)
 {
     assert(pStream != NULL);
@@ -3011,6 +3013,7 @@ bool FileStream_GetBitmap(TFileStream * pStream, void * pvBitmap, DWORD cbBitmap
  * - If the function reads less than required bytes, it returns false and SErrGetLastError() returns ERROR_HANDLE_EOF
  * - If the function fails, it reads false and SErrGetLastError() returns an error code different from ERROR_HANDLE_EOF
  */
+
 bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBuffer, DWORD dwBytesToRead)
 {
     assert(pStream->StreamRead != NULL);
@@ -3029,6 +3032,7 @@ bool FileStream_Read(TFileStream * pStream, ULONGLONG * pByteOffset, void * pvBu
  * \a pvBuffer Pointer to data to be written
  * \a dwBytesToWrite Number of bytes to write to the file
  */
+
 bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void * pvBuffer, DWORD dwBytesToWrite)
 {
     if(pStream->dwFlags & STREAM_FLAG_READ_ONLY)
@@ -3047,6 +3051,7 @@ bool FileStream_Write(TFileStream * pStream, ULONGLONG * pByteOffset, const void
  * \a pStream Pointer to an open stream
  * \a FileSize Pointer where to store the file size
  */
+
 bool FileStream_GetSize(TFileStream * pStream, ULONGLONG * pFileSize)
 {
     assert(pStream->StreamGetSize != NULL);
@@ -3059,6 +3064,7 @@ bool FileStream_GetSize(TFileStream * pStream, ULONGLONG * pFileSize)
  * \a pStream Pointer to an open stream
  * \a NewFileSize File size to set
  */
+
 bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
 {
     if(pStream->dwFlags & STREAM_FLAG_READ_ONLY)
@@ -3076,6 +3082,7 @@ bool FileStream_SetSize(TFileStream * pStream, ULONGLONG NewFileSize)
  * \a pStream
  * \a pByteOffset
  */
+
 bool FileStream_GetPos(TFileStream * pStream, ULONGLONG * pByteOffset)
 {
     assert(pStream->StreamGetPos != NULL);
@@ -3088,6 +3095,7 @@ bool FileStream_GetPos(TFileStream * pStream, ULONGLONG * pByteOffset)
  * \a pStream Pointer to an open stream
  * \a pFileType Pointer where to store the file last write time
  */
+
 bool FileStream_GetTime(TFileStream * pStream, ULONGLONG * pFileTime)
 {
     // Just use the saved filetime value
@@ -3101,6 +3109,7 @@ bool FileStream_GetTime(TFileStream * pStream, ULONGLONG * pFileTime)
  * \a pStream Pointer to an open stream
  * \a pdwStreamFlags Pointer where to store the stream flags
  */
+
 bool FileStream_GetFlags(TFileStream * pStream, LPDWORD pdwStreamFlags)
 {
     *pdwStreamFlags = pStream->dwFlags;
@@ -3118,6 +3127,7 @@ bool FileStream_GetFlags(TFileStream * pStream, LPDWORD pdwStreamFlags)
  * \a pStream Pointer to an open stream
  * \a pNewStream Temporary ("working") stream (created during archive compacting)
  */
+
 bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream)
 {
     // Only supported on flat files
@@ -3159,6 +3169,7 @@ bool FileStream_Replace(TFileStream * pStream, TFileStream * pNewStream)
  *
  * \a pStream Pointer to an open stream
  */
+
 void FileStream_Close(TFileStream * pStream)
 {
     // Check if the stream structure is allocated at all

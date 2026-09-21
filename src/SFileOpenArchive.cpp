@@ -228,6 +228,9 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
     if(pStream == NULL)
         return false;
 
+    // One time initialization of MPQ cryptography
+    InitializeMpqCryptography();
+
     // Check the file size. There must be at least 0x20 bytes
     if(dwErrCode == ERROR_SUCCESS)
     {
@@ -659,9 +662,6 @@ bool WINAPI SFileOpenArchive(
         return false;
     }
 
-    // Cryptography must be initialized at this point
-    InitializeMpqCryptography();
-
     // If not forcing MPQ v 1.0, also use file bitmap
     dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
     if((pStream = FileStream_OpenFile(szMpqName, dwStreamFlags)) != NULL)
@@ -695,9 +695,6 @@ bool WINAPI SFileOpenFileArchive(
         SErrSetLastError(ERROR_INVALID_PARAMETER);
         return false;
     }
-
-    // Cryptography must be initialized at this point
-    InitializeMpqCryptography();
 
     // If not forcing MPQ v 1.0, also use file bitmap
     dwStreamFlags |= (dwFlags & MPQ_OPEN_FORCE_MPQ_V1) ? 0 : STREAM_FLAG_USE_BITMAP;
