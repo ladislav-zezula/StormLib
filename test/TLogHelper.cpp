@@ -51,6 +51,43 @@ XCHAR * StringEnd(XCHAR * sz)
     return sz;
 }
 
+// Retrieves the pointer to plain name and extension
+template <typename XCHAR>
+XCHAR * WINAPI GetPlainName(const XCHAR * szFileName)
+{
+    const XCHAR * szPlainName = szFileName;
+
+    while(szFileName[0] != 0)
+    {
+        if(szFileName[0] == '\\' || szFileName[0] == '/')
+            szPlainName = szFileName + 1;
+        szFileName++;
+    }
+
+    return (XCHAR *)szPlainName;
+}
+
+template <typename XCHAR>
+XCHAR * WINAPI GetFileExtension(const XCHAR * szFileName)
+{
+    const XCHAR * szExtension = NULL;
+
+    // We need to start searching from the plain name
+    // Avoid: C:\$RECYCLE.BIN\File.ext
+    szFileName = GetPlainName(szFileName);
+
+    // Find the last dot in the plain file name
+    while(szFileName[0] != 0)
+    {
+        if(szFileName[0] == '.')
+            szExtension = szFileName;
+        szFileName++;
+    }
+
+    // If not found, return the end of the file name
+    return (XCHAR *)((szExtension != NULL) ? szExtension : szFileName);
+}
+
 // ANSI version of the function - expects UTF-8 encoding
 size_t ConsoleLength(const char * ptr, const char * end)
 {

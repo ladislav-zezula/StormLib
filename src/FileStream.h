@@ -211,7 +211,7 @@ struct TBlockStream : public TFileStream
 //-----------------------------------------------------------------------------
 // Structure for Salsa20-encrypted stream (MPQE files)
 
-#define SALSA20_BLOCK_SIZE 0x40                // Size of one chunk to be decrypted
+#define SALSA20_BLOCK_SIZE 0x40                // Size of one block for Salsa20
 
 union SALSA20_BLOCK
 {
@@ -227,9 +227,11 @@ struct TCryptStream_MPQE : public TBlockStream
 //-----------------------------------------------------------------------------
 // Structure for AES-encrypted Warcraft III maps
 
+#define AES_BLOCK_SIZE      0x10                // Size of one block for AES ECB
+
 struct TCryptStream_W3XE: public TBlockStream
 {
-    LPBYTE StreamData;                          // Pointer to the decrypted MPQ
+    LPBYTE StreamData;
 };
 
 #endif // __FILESTREAM_H__

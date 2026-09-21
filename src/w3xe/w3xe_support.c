@@ -265,7 +265,6 @@ static void w3xe_derive_raw_key(ULONGLONG license, unsigned char * key)
 //-----------------------------------------------------------------------------
 // Brute-forcing the n-once
 
-#define AES_BLOCK_SIZE      0x10
 #define AES_NONCE_DEF_BYTE0 0x04
 #define AES_NONCE_CTR_LEN   0x05
 #define NONCE_LEN (15 - AES_NONCE_CTR_LEN)  // 10
@@ -329,17 +328,18 @@ static void w3xe_aes_decrypt_block(
 
 static bool w3xe_find_nonce_offset(
     symmetric_key & aes_key,
-    const unsigned char * plain_text,
-    size_t plain_length,
+    const unsigned char * layer_data,
+    size_t layer_data_length,
     size_t header_length,
     size_t scan_length,
     size_t * out_nonce_offset)
 {
-    const unsigned char * payload = plain_text + header_length;
-    size_t payload_length = plain_length - header_length;
+    const unsigned char * payload = layer_data + header_length;
+    size_t payload_length = layer_data_length - header_length;
 
     assert(scan_length > header_length);
     assert(payload_length >= 0x10);
+    STORMLIB_UNUSED(payload_length);
 
     if(header_length >= NONCE_LEN)
     {
@@ -347,7 +347,7 @@ static bool w3xe_find_nonce_offset(
 
         for(size_t nonce_offset = 0; nonce_offset <= search_limit; nonce_offset++)
         {
-            const unsigned char * nonce = plain_text + nonce_offset;
+            const unsigned char * nonce = layer_data + nonce_offset;
             unsigned int aes_block[4];
 
             w3xe_aes_decrypt_block(aes_key, nonce, payload, (unsigned char *)(aes_block), 1, sizeof(aes_block));
@@ -447,10 +447,10 @@ static bool w3xe_ccm_decrypt(
 bool w3xe_decrypt_payload(
     const W3XE_TAIL & FileTail,
     symmetric_key & aes_key,
-    const unsigned char * encrypted_buffer,
-    size_t encrypted_length,
+    const unsigned char * layer_data,
+    size_t layer_data_length,
     size_t nonce_offset,
-    unsigned char ** out_payload)
+    unsigned char ** out_plain_text)
 {
     const unsigned char * payload_ct;
     const unsigned char * nonce;
@@ -462,18 +462,18 @@ bool w3xe_decrypt_payload(
     bool quick_valid;
 
     // Set the input text and n-once
-    payload_ct = encrypted_buffer + FileTail.header_size;
-    nonce = encrypted_buffer + nonce_offset;
+    payload_ct = layer_data + FileTail.header_size;
+    nonce = layer_data + nonce_offset;
+    assert(out_plain_text != NULL);
 
     // Allocate buffer for plaintext
     if((payload_pt = STORM_ALLOC(BYTE, payload_length)) != NULL)
     {
         // Try quick decryption if the 
-        quick_valid = (quick_offset + AES_BLOCK_SIZE <= header_length) && (quick_offset + AES_BLOCK_SIZE <= encrypted_length);
-        if(quick_valid && w3xe_ccm_decrypt(aes_key, nonce, encrypted_buffer + quick_offset, payload_ct, payload_pt, payload_length))
+        quick_valid = (quick_offset + AES_BLOCK_SIZE <= header_length) && (quick_offset + AES_BLOCK_SIZE <= layer_data_length);
+        if(quick_valid && w3xe_ccm_decrypt(aes_key, nonce, layer_data + quick_offset, payload_ct, payload_pt, payload_length))
         {
-            if(out_payload != NULL)
-                out_payload[0] = payload_pt;
+            out_plain_text[0] = payload_pt;
             return true;
         }
 
@@ -483,30 +483,24 @@ bool w3xe_decrypt_payload(
             {
                 if(quick_valid && offs == quick_offset)
                     continue;
-                if(offs + AES_BLOCK_SIZE > encrypted_length)
+                if(offs + AES_BLOCK_SIZE > layer_data_length)
                     continue;
-                if(w3xe_ccm_decrypt(aes_key, nonce, encrypted_buffer + offs, payload_ct, payload_pt, payload_length))
+                if(w3xe_ccm_decrypt(aes_key, nonce, layer_data + offs, payload_ct, payload_pt, payload_length))
                 {
-                    if(out_payload != NULL)
-                        out_payload[0] = payload_pt;
+                    out_plain_text[0] = payload_pt;
                     return true;
                 }
             }
         }
 
         last_offset = header_length + payload_length;
-        if(last_offset + AES_BLOCK_SIZE <= encrypted_length && w3xe_ccm_decrypt(aes_key, nonce, encrypted_buffer + last_offset, payload_ct, payload_pt, payload_length))
+        if(last_offset + AES_BLOCK_SIZE <= layer_data_length && w3xe_ccm_decrypt(aes_key, nonce, layer_data + last_offset, payload_ct, payload_pt, payload_length))
         {
-            if(out_payload != NULL)
-                out_payload[0] = payload_pt;
+            out_plain_text[0] = payload_pt;
             return true;
         }
 
         STORM_FREE(payload_pt);
     }
-
-    // Failed
-    if(out_payload != NULL)
-        out_payload[0] = NULL;
-    return false;
+    return false;   // Failed
 }

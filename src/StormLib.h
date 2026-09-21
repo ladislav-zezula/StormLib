@@ -145,13 +145,12 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0928  // Current numeric version of StormLib
-#define STORMLIB_VERSION_STRING         "9.40"  // Current string version of StormLib
+#define STORMLIB_VERSION                0x0929  // Current numeric version of StormLib
+#define STORMLIB_VERSION_STRING         "9.41"  // Current string version of StormLib
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
 #define ID_MPK                      0x1A4B504D  // MPK archive header ID ('MPK\x1A')
-
 #define ID_MPK_VERSION_2000         0x30303032  // MPK version ("2000")
 
 #define ERROR_AVI_FILE                   10000  // Not a MPQ file, but an AVI file.

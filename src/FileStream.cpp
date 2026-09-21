@@ -33,6 +33,8 @@
 //-----------------------------------------------------------------------------
 // Local functions - platform-specific functions
 
+#define GET_BLOCK_COUNT(TotalSize, BlockSize) ((DWORD)(TotalSize + BlockSize - 1) / BlockSize)
+
 static DWORD StringToInt(const char * szString)
 {
     DWORD dwValue = 0;
@@ -2344,13 +2346,6 @@ static bool MpqeStream_BruteForce(TCryptStream_MPQE * pStream)
             // so we check for MPQ signature there.
             if(PlainText.d[0] == ID_MPQ && PlainText.d[1] == MPQ_HEADER_SIZE_V2)
             {
-                // Update the stream size
-                pStream->StreamSize = pStream->Base.File.FileSize;
-
-                // Fill the block information
-                pStream->BlockSize  = SALSA20_BLOCK_SIZE;
-                pStream->BlockCount = (DWORD)(pStream->Base.File.FileSize + SALSA20_BLOCK_SIZE - 1) / SALSA20_BLOCK_SIZE;
-                pStream->IsComplete = 1;
                 return true;
             }
         }
@@ -2373,8 +2368,8 @@ static bool MpqeStream_BlockRead(
     assert((StartOffset & (pStream->BlockSize - 1)) == 0);
     assert(StartOffset < EndOffset);
     assert(bAvailable != false);
-    BytesNeeded = BytesNeeded;
-    bAvailable = bAvailable;
+    STORMLIB_UNUSED(BytesNeeded);
+    STORMLIB_UNUSED(bAvailable);
 
     // Read the file from the stream as-is
     // Limit the reading to number of blocks really needed
@@ -2402,22 +2397,25 @@ static TFileStream * MpqeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
     if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
         return NULL;
 
-    // Try to find out the proper encryptio key for the MPQ by simply trying all of them
+    // Try to find out the proper encryption key for the MPQ by simply trying all of them
     if(MpqeStream_BruteForce(pStream))
     {
         // Set the stream position and size
-        assert(pStream->StreamSize != 0);
+        pStream->StreamSize = pStream->Base.File.FileSize;
         pStream->StreamPos = 0;
         pStream->dwFlags |= STREAM_FLAG_READ_ONLY;
+
+        // Fill the block information
+        pStream->BlockRead = (BLOCK_READ)MpqeStream_BlockRead;
+        pStream->BlockSize = SALSA20_BLOCK_SIZE;
+        pStream->BlockCount = GET_BLOCK_COUNT(pStream->StreamSize, SALSA20_BLOCK_SIZE);
+        pStream->IsComplete = 1;
 
         // Set new function pointers
         pStream->StreamRead    = (STREAM_READ)BlockStream_Read;
         pStream->StreamGetPos  = BlockStream_GetPos;
         pStream->StreamGetSize = BlockStream_GetSize;
         pStream->StreamClose   = pStream->BaseClose;
-
-        // Supply the block functions
-        pStream->BlockRead     = (BLOCK_READ)MpqeStream_BlockRead;
         return pStream;
     }
 
@@ -2432,28 +2430,28 @@ static TFileStream * MpqeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
 
 #include "w3xe/w3xe_support.c"
 
-static bool W3xeStream_UnpackTail(W3XE_TAIL & FileTail, LPBYTE pbPlainText, size_t cbPlainText)
+static bool W3xeStream_UnpackTail(W3XE_TAIL & FileTail, LPBYTE pbLayerData, size_t cbLayerData)
 {
     size_t cb;
 
     // Get the pointer to the packed file tail
-    pbPlainText = pbPlainText + cbPlainText - W3XE_TAIL_SIZE_PACKED;
+    pbLayerData = pbLayerData + cbLayerData - W3XE_TAIL_SIZE_PACKED;
 
     // Copy the first 4 variables (same packing)
     cb = sizeof(FileTail.version) + sizeof(FileTail.flags) + sizeof(FileTail.tail_size) + sizeof(FileTail.header_size);
-    memcpy(&FileTail.version, pbPlainText, cb);
-    pbPlainText += cb;
+    memcpy(&FileTail.version, pbLayerData, cb);
+    pbLayerData += cb;
 
     // Copy the rest
     cb = sizeof(FileTail.payload_size) + sizeof(FileTail.license) + sizeof(FileTail.zeros);
-    memcpy(&FileTail.payload_size, pbPlainText, cb);
-    pbPlainText += cb;
+    memcpy(&FileTail.payload_size, pbLayerData, cb);
+    pbLayerData += cb;
 
     // Verify the format
     if(FileTail.version != 1 || FileTail.tail_size != W3XE_TAIL_SIZE_PACKED)
         return false;   // Unknown version or block size
     
-    if(FileTail.header_size + FileTail.payload_size + FileTail.tail_size != cbPlainText)
+    if(FileTail.header_size + FileTail.payload_size + FileTail.tail_size != cbLayerData)
         return false;   // header/payload sizes do not add up to the file size
 
     // Verify zeros
@@ -2468,10 +2466,11 @@ static bool W3xeStream_UnpackTail(W3XE_TAIL & FileTail, LPBYTE pbPlainText, size
 static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText, size_t cbCipherText)
 {
     W3XE_TAIL FileTail;
-    LPBYTE pbPlainText;
-    size_t cbPlainText = cbCipherText;
+    LPBYTE pbLayerData;                 // (Phase 1) XOR-decrypted cipher text
+    LPBYTE pbPlainText = NULL;          // (Phase 2) AES-decrypted layer data
+    size_t cbLayerData = cbCipherText;
     DWORD dwSeed = 0;
-    unsigned char raw_aes_key[40];
+    BYTE raw_aes_key[40];
     bool bResult = false;
 
     // Retrieve the initial seed for the XOR stream
@@ -2479,16 +2478,15 @@ static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText,
         return false;
 
     // Allocate buffer for the de-XOR-ed payload
-    if((pbPlainText = STORM_ALLOC(BYTE, cbPlainText)) != NULL)
+    if((pbLayerData = STORM_ALLOC(BYTE, cbLayerData)) != NULL)
     {
         // Decrypt the payload using XOR stream
-        w3xe_xs_crypt(pbPlainText, pbCipherText, cbCipherText, dwSeed);
+        w3xe_xs_crypt(pbLayerData, pbCipherText, cbCipherText, dwSeed);
 
         // Unpack the file tail
-        if(W3xeStream_UnpackTail(FileTail, pbPlainText, cbPlainText))
+        if(W3xeStream_UnpackTail(FileTail, pbLayerData, cbLayerData))
         {
             symmetric_key aes_key;
-            LPBYTE mpq_payload = NULL;
             size_t nonce_offset = 0;
 
             // Derive the raw AES key
@@ -2496,17 +2494,17 @@ static bool W3xeStream_Decrypt(TCryptStream_W3XE * pStream, LPBYTE pbCipherText,
             aes_desc.setup(raw_aes_key, 0x20, 0, &aes_key);
 
             // Find the proper n-once offset
-            if(w3xe_find_nonce_offset(aes_key, pbPlainText, cbPlainText, FileTail.header_size, 0x400, &nonce_offset))
+            if(w3xe_find_nonce_offset(aes_key, pbLayerData, cbLayerData, FileTail.header_size, 0x400, &nonce_offset))
             {
-                if(w3xe_decrypt_payload(FileTail, aes_key, pbPlainText, cbPlainText, nonce_offset, &mpq_payload))
+                if(w3xe_decrypt_payload(FileTail, aes_key, pbLayerData, cbLayerData, nonce_offset, &pbPlainText))
                 {
-                    pStream->StreamData = mpq_payload;
+                    pStream->StreamData = pbPlainText;
                     pStream->StreamSize = FileTail.payload_size;
                     bResult = true;
                 }
             }
         }
-        STORM_FREE(pbPlainText);
+        STORM_FREE(pbLayerData);
     }
     return bResult;
 }
@@ -2548,14 +2546,6 @@ static bool W3xeStream_LoadMap(TCryptStream_W3XE * pStream)
     return (dwErrCode == ERROR_SUCCESS);
 }
 
-static void W3xeStream_Close(TCryptStream_W3XE * pStream)
-{
-    // Free the allocated data
-    if(pStream->StreamData != NULL)
-        STORM_FREE(pStream->StreamData);
-    pStream->StreamData = NULL;
-}
-
 static bool W3xeStream_Read(
     TCryptStream_W3XE * pStream,
     ULONGLONG * pByteOffset,
@@ -2577,6 +2567,17 @@ static bool W3xeStream_Read(
     return true;
 }
 
+static void W3xeStream_Close(TCryptStream_W3XE * pStream)
+{
+    // Free the allocated data
+    if(pStream->StreamData != NULL)
+        STORM_FREE(pStream->StreamData);
+    pStream->StreamData = NULL;
+
+    // Call the base class for closing the stream
+    pStream->BaseClose(pStream);
+}
+
 static TFileStream * W3xeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
 {
     TCryptStream_W3XE * pStream;
@@ -2591,7 +2592,7 @@ static TFileStream * W3xeStream_Open(LPCTSTR szFileName, DWORD dwStreamFlags)
     if(!pStream->BaseOpen(pStream, pStream->szFileName, dwStreamFlags))
         return NULL;
 
-    // Try to find out the proper encryptio key for the MPQ by simply trying all of them
+    // Load the map to memory and decrypt it
     if(W3xeStream_LoadMap(pStream))
     {
         // Set the stream position and size

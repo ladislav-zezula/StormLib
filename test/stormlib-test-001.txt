@@ -1,4 +1,4 @@
-==== Test Suite for StormLib version 9.31 ====
+==== Test Suite for StormLib version 9.41 ====
 InitWorkFolder: Work directory \Multimedia\MPQs (default)
 TestLiFiSearch (FLAT-MAP:listfile-test.txt) succeeded.
 TestLiFiSearch (listfile-test.txt) succeeded.
@@ -107,6 +107,7 @@ TestReadingMpq (MPQ_2024_v1_300TK2.09p.w3x) succeeded.
 TestReadingMpq (MPQ_2025_v1_Legion_TD_11_2d-BETA_2_TeamOZE.w3x) succeeded.
 TestReadingMpq (MPQ_2026_v1_The Art of Defense v4.11 G0A.w3x) succeeded.
 TestReadingMpq (MPQ_2026_v1_BadTablesSize.scx) succeeded.
+TestReadingMpq (MPQ_2026_v1_Humanre01.w3xe) succeeded.
 TestReadingMpq (mix-mpq/AHF04patch.mix) succeeded.
 TestReadingMpq (mix-mpq/hs0.1.asi) succeeded.
 TestReadingMpq (mix-mpq/hs0.8.asi) succeeded.
