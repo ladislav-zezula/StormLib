@@ -71,6 +71,7 @@ if(MSVC)
 endif()
 
 set(TOMCRYPT_FILES
+           src/libtomcrypt/src/ciphers/aes.c
            src/libtomcrypt/src/hashes/hash_memory.c
            src/libtomcrypt/src/hashes/md5.c
            src/libtomcrypt/src/hashes/sha1.c
