@@ -414,6 +414,11 @@ if (NOT STORM_SKIP_INSTALL)
 
         install(EXPORT ${PROJECT_NAME}Config NAMESPACE ${PROJECT_NAME}:: DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
 
+        include(CMakePackageConfigHelpers)
+        write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+
         #CPack configuration
         set(CPACK_GENERATOR "DEB" "RPM")
         set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
