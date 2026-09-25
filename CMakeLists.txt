@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(StormLib VERSION 9.30.0 LANGUAGES C CXX)
+project(StormLib VERSION 9.40.0 LANGUAGES C CXX)
 
 set(LIBRARY_NAME storm)
 set(CMAKE_CXX_STANDARD 11)
@@ -297,10 +297,14 @@ add_library(${LIBRARY_NAME})
 
 target_compile_definitions(${LIBRARY_NAME} PRIVATE _7ZIP_ST BZ_STRICT_ANSI)
 
+set(STORMLIB_PACKAGE_DEPENDENCIES "")
+set(STORMLIB_PKG_CONFIG_DEPENDENCIES "")
+
 if (NOT STORM_USE_BUNDLED_LIBRARIES)
     find_package(ZLIB REQUIRED)
     target_link_libraries(${LIBRARY_NAME} PRIVATE ZLIB::ZLIB)
     target_compile_definitions(${LIBRARY_NAME} PRIVATE __SYS_ZLIB)
+    list(APPEND STORMLIB_PACKAGE_DEPENDENCIES ZLIB)
 else()
     set(SRC_FILES ${SRC_FILES} ${ZLIB_FILES})
 endif()
@@ -309,6 +313,7 @@ if (NOT STORM_USE_BUNDLED_LIBRARIES)
     find_package(BZip2 REQUIRED)
     target_link_libraries(${LIBRARY_NAME} PRIVATE BZip2::BZip2)
     target_compile_definitions(${LIBRARY_NAME} PRIVATE __SYS_BZLIB)
+    list(APPEND STORMLIB_PACKAGE_DEPENDENCIES BZip2)
 else()
     set(SRC_FILES ${SRC_FILES} ${BZIP2_FILES})
 endif()
@@ -318,14 +323,17 @@ if (NOT WITH_BUNDLED_LIBTOMMATH)
     if (TARGET libtommath::libtommath)
         message(STATUS "Found libtommath: using target libtommath::libtommath")
         target_link_libraries(${LIBRARY_NAME} PRIVATE libtommath::libtommath)
+        list(APPEND STORMLIB_PACKAGE_DEPENDENCIES libtommath)
     elseif (TARGET libtommath)
         message(STATUS "Found libtommath: using target libtommath")
         target_link_libraries(${LIBRARY_NAME} PRIVATE libtommath)
+        list(APPEND STORMLIB_PACKAGE_DEPENDENCIES libtommath)
     else()
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(libtommath REQUIRED IMPORTED_TARGET libtommath)
         message(STATUS "Found libtommath via pkg-config")
         target_link_libraries(${LIBRARY_NAME} PRIVATE PkgConfig::libtommath)
+        list(APPEND STORMLIB_PKG_CONFIG_DEPENDENCIES libtommath)
     endif()
 else()
     message(STATUS "Using bundled libtommath sources")
@@ -337,14 +345,17 @@ if (NOT WITH_BUNDLED_LIBTOMCRYPT)
     if (TARGET libtomcrypt::libtomcrypt)
         message(STATUS "Found libtomcrypt: using target libtomcrypt::libtomcrypt")
         target_link_libraries(${LIBRARY_NAME} PRIVATE libtomcrypt::libtomcrypt)
+        list(APPEND STORMLIB_PACKAGE_DEPENDENCIES libtomcrypt)
     elseif (TARGET libtomcrypt)
         message(STATUS "Found libtomcrypt: using target libtomcrypt")
         target_link_libraries(${LIBRARY_NAME} PRIVATE libtomcrypt)
+        list(APPEND STORMLIB_PACKAGE_DEPENDENCIES libtomcrypt)
     else()
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(libtomcrypt REQUIRED IMPORTED_TARGET libtomcrypt)
         message(STATUS "Found libtomcrypt via pkg-config")
         target_link_libraries(${LIBRARY_NAME} PRIVATE PkgConfig::libtomcrypt)
+        list(APPEND STORMLIB_PKG_CONFIG_DEPENDENCIES libtomcrypt)
     endif()
     # Use the system's own tomcrypt.h instead of the bundled (vendored) copy,
     # since the two can disagree on struct layouts (e.g. ltc_math_descriptor)
@@ -404,7 +415,7 @@ endif()
 
 if (NOT STORM_SKIP_INSTALL)
     install(TARGETS ${LIBRARY_NAME}
-        EXPORT ${PROJECT_NAME}Config
+        EXPORT ${PROJECT_NAME}Targets
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -412,7 +423,20 @@ if (NOT STORM_SKIP_INSTALL)
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-        install(EXPORT ${PROJECT_NAME}Config NAMESPACE ${PROJECT_NAME}:: DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+        install(EXPORT ${PROJECT_NAME}Targets NAMESPACE ${PROJECT_NAME}:: DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+
+        include(CMakePackageConfigHelpers)
+        # A shared library keeps its dependencies private, so its consumers need none of them
+        get_target_property(STORMLIB_TYPE ${LIBRARY_NAME} TYPE)
+        if (NOT STORMLIB_TYPE STREQUAL "STATIC_LIBRARY")
+            set(STORMLIB_PACKAGE_DEPENDENCIES "")
+            set(STORMLIB_PKG_CONFIG_DEPENDENCIES "")
+        endif()
+        configure_package_config_file(cmake/${PROJECT_NAME}Config.cmake.in ${PROJECT_NAME}Config.cmake
+            INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+        write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY SameMajorVersion)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
 
         #CPack configuration
         set(CPACK_GENERATOR "DEB" "RPM")
