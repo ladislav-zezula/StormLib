@@ -224,6 +224,8 @@ bool WINAPI SFileCreateArchive2(const TCHAR * szMpqName, PSFILE_CREATE_MPQ pCrea
         ha->dwFileFlags3     = pCreateInfo->dwFileFlags3 ? MPQ_FILE_EXISTS : 0;
         ha->dwAttrFlags      = pCreateInfo->dwAttrFlags;
         ha->dwFlags          = dwMpqFlags | MPQ_FLAG_CHANGED;
+        ha->useFreeSpaceOptimization        = true;
+        ha->lastFreeSpaceEntry              = nullptr;
         pStream = NULL;
 
         // Fill the MPQ header

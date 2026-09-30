@@ -409,6 +409,7 @@ static LPBYTE CreateListFile(TMPQArchive * ha, DWORD * pcbListFile)
 static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szFileName)
 {
     TFileEntry * pFileEntry;
+    TMPQHash * pFirstHash;
     TMPQHash * pHashEnd;
     TMPQHash * pHash;
     DWORD dwName1;
@@ -443,25 +444,25 @@ static DWORD SListFileCreateNodeForAllLocales(TMPQArchive * ha, const char * szF
             pHashEnd = ha->pHashTable + (ha->dwRealHashTableSize / sizeof(TMPQHash));
 
         // Go through the hash table and put the name in each item that has the same name pair
-        for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
-        {
-            if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
-            {
-                // Allocate file name for the file entry
-                AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
-            }
-        }
+        // for(pHash = ha->pHashTable; pHash < pHashEnd; pHash++)
+        // {
+        //     if(pHash->dwName1 == dwName1 && pHash->dwName2 == dwName2 && MPQ_BLOCK_INDEX(pHash) < ha->dwFileTableSize)
+        //     {
+        //         // Allocate file name for the file entry
+        //         AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
+        //     }
+        // }
 
         // Go while we found something
-        //pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
-        //while(pHash != NULL)
-        //{
-        //    // Allocate file name for the file entry
-        //    AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
+        pFirstHash = pHash = GetFirstHashEntry(ha, szFileName);
+        while(pHash != NULL)
+        {
+           // Allocate file name for the file entry
+           AllocateFileName(ha, ha->pFileTable + MPQ_BLOCK_INDEX(pHash), szFileName);
 
-        //    // Now find the next language version of the file
-        //    pHash = GetNextHashEntry(ha, pFirstHash, pHash);
-        //}
+           // Now find the next language version of the file
+           pHash = GetNextHashEntry(ha, pFirstHash, pHash);
+        }
 
         return ERROR_SUCCESS;
     }

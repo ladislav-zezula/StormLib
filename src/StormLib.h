@@ -860,6 +860,9 @@ typedef struct _TMPQArchive
     ULONGLONG      CompactBytesProcessed;       // Amount of bytes that have been processed during a particular compact call
     ULONGLONG      CompactTotalBytes;           // Total amount of bytes to be compacted
     void         * pvCompactUserData;           // User data thats passed to the callback
+
+    TFileEntry* lastFreeSpaceEntry;
+    bool           useFreeSpaceOptimization;
 } TMPQArchive;
 
 // File handle structure

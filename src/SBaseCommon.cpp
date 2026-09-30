@@ -884,8 +884,10 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
     ULONGLONG FreeSpacePos = ha->pHeader->dwHeaderSize;
     DWORD dwChunkCount;
 
+    TFileEntry* startEntry = (ha->useFreeSpaceOptimization && ha->lastFreeSpaceEntry != nullptr) ? ha->lastFreeSpaceEntry : ha->pFileTable;
+
     // Parse the entire block table
-    for(pFileEntry = ha->pFileTable; pFileEntry < pFileTableEnd; pFileEntry++)
+    for(pFileEntry = startEntry; pFileEntry < pFileTableEnd; pFileEntry++)
     {
         // Only take existing files with nonzero size
         if((pFileEntry->dwFlags & MPQ_FILE_EXISTS) && (pFileEntry->dwCmpSize != 0))
@@ -906,6 +908,8 @@ ULONGLONG FindFreeMpqSpace(TMPQArchive * ha)
                     dwChunkCount = ((pFileEntry->dwCmpSize - 1) / pHeader->dwRawChunkSize) + 1;
                     FreeSpacePos += dwChunkCount * MD5_DIGEST_SIZE;
                 }
+
+                ha->lastFreeSpaceEntry = pFileEntry;
             }
         }
     }
