@@ -59,6 +59,7 @@ typedef enum _EXTRA_TYPE
     TwoFiles,
     PatchList,
     HashValues,
+    SearchFlags,
 } EXTRA_TYPE, *PEXTRA_TYPE;
 
 typedef struct _FILE_DATA
@@ -89,6 +90,12 @@ typedef struct _TEST_EXTRA_TWOFILES
     LPCSTR  szFile1;                        // The first referenced file name
     LPCSTR  szFile2;                        // The second referenced file name
 } TEST_EXTRA_TWOFILES, *PTEST_EXTRA_TWOFILES;
+
+typedef struct _TEST_EXTRA_SRCHFLGS
+{
+    EXTRA_TYPE Type;                        // Must be SearchFlags
+    DWORD dwSearchFlags;                    // Extra search flags
+} TEST_EXTRA_SRCHFLGS, *PTEST_EXTRA_SRCHFLGS;
 
 typedef struct _TEST_EXTRA_PATCHES
 {
@@ -1447,6 +1454,7 @@ static void WINAPI AddFileCallback(void * pvUserData, DWORD dwBytesWritten, DWOR
 #define SEARCH_FLAG_HASH_FILES      0x00000002      // Test function should load all files in the MPQ
 #define SEARCH_FLAG_PLAY_WAVES      0x00000004      // Play extracted WAVE files
 #define SEARCH_FLAG_IGNORE_ERRORS   0x00000008      // Ignore files that failed to open
+#define SEARCH_FLAG_PARTIAL_READ    0x00000010      // Read files sector-by-sector
 
 static bool CheckIfFileIsPresent(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileName, DWORD bShouldExist)
 {
@@ -1483,13 +1491,52 @@ static DWORD LoadLocalFileMD5(TLogHelper * pLogger, LPCTSTR szFileFullName, LPBY
     return ERROR_SUCCESS;
 }
 
+static DWORD LoadMpqFilePartial(HANDLE hFile, LPBYTE pbBuffer, DWORD dwFileSize)
+{
+    const DWORD LOAD_FILE_STEP = 0x1000;
+    DWORD dwOffset = 0;
+
+    // Read as much as we can
+    while(dwOffset < dwFileSize)
+    {
+        DWORD dwBytesToRead = LOAD_FILE_STEP;
+        DWORD dwBytesRead = 0;
+
+        if((dwFileSize - dwOffset) < LOAD_FILE_STEP)
+            dwBytesToRead = dwFileSize - dwOffset;
+
+        if(!SFileReadFile(hFile, pbBuffer, dwBytesToRead, &dwBytesRead, NULL))
+            break;
+        if(dwBytesRead != dwBytesToRead)
+            break;
+
+        pbBuffer += dwBytesRead;
+        dwOffset += dwBytesRead;
+    }
+
+    // Fill the rest with zeros
+    if(dwOffset < dwFileSize)
+        memset(pbBuffer, 0, (dwFileSize - dwOffset));
+    return ERROR_SUCCESS;
+}
+
+static DWORD LoadMpqFileFull(HANDLE hFile, LPBYTE pbBuffer, DWORD dwFileSize)
+{
+    DWORD dwBytesRead = 0;
+
+    if(!SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL))
+        return SErrGetLastError();
+    if(dwBytesRead != dwFileSize)
+        return ERROR_FILE_CORRUPT;
+    return ERROR_SUCCESS;
+}
+
 static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LCID lcFileLocale, DWORD dwSearchFlags, PFILE_DATA * ppFileData)
 {
     PFILE_DATA pFileData = NULL;
     HANDLE hFile;
     DWORD dwFileSizeHi = 0xCCCCCCCC;
     DWORD dwFileSizeLo = 0;
-    DWORD dwBytesRead;
     DWORD dwCrc32 = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
     TCHAR szSafeName[1024];
@@ -1557,10 +1604,14 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
         // Load the entire file
         if(dwErrCode == ERROR_SUCCESS)
         {
-            // Read the file data
-            SFileReadFile(hFile, pFileData->FileData, dwFileSizeLo, &dwBytesRead, NULL);
-            if(dwBytesRead != dwFileSizeLo)
-                dwErrCode = ERROR_FILE_CORRUPT;
+            if(dwSearchFlags & SEARCH_FLAG_PARTIAL_READ)
+            {
+                dwErrCode = LoadMpqFilePartial(hFile, pFileData->FileData, dwFileSizeLo);
+            }
+            else
+            {
+                dwErrCode = LoadMpqFileFull(hFile, pFileData->FileData, dwFileSizeLo);
+            }
         }
 
         // If succeeded, check the CRC
@@ -2857,6 +2908,9 @@ static DWORD TestOpenArchive(
     dwOpenFlags |= (dwFlags & TFLG_WILL_FAIL) ? MPQ_OPEN_DONT_REPORT_FAILURE : 0;
     dwOpenFlags |= (dwFlags & TFLG_READ_ONLY) ? STREAM_FLAG_READ_ONLY : 0;
 
+    if(GetExtraType(pExtra) == SearchFlags)
+        dwSearchFlags |= ((PTEST_EXTRA_SRCHFLGS)(pExtra))->dwSearchFlags;
+
     // Shall we switch the name of the MPQ?
     szMpqName1 = SwapMpqName(szMpqNameBuff, _countof(szMpqNameBuff), szMpqName1, (PTEST_EXTRA_UTF8)(pExtra));
 
@@ -2908,7 +2962,7 @@ static DWORD TestOpenArchive(
         if((TestArchive_LoadFiles(&Logger, hMpq, (dwMpqFlags & MPQ_FLAG_MALFORMED), LISTFILE_NAME, ATTRIBUTES_NAME, SIGNATURE_NAME, NULL)) != ERROR_SUCCESS)
             break;
 
-        // If required, we search the archive and compare file cound and name hash
+        // If required, we search the archive and compare file count and name hash
         if((dwErrCode = VerifyDataChecksum(Logger, hMpq, dwSearchFlags, szExpectedHash, dwExpectedFileCount)) != ERROR_SUCCESS)
             break;
 
@@ -4189,6 +4243,7 @@ static const TEST_EXTRA_TWOFILES TwoFilesD1  = {TwoFiles, "music\\dintro.wav", "
 static const TEST_EXTRA_TWOFILES TwoFilesD2  = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3X = {TwoFiles, "BlueCrystal.mdx"};
+static const TEST_EXTRA_SRCHFLGS PartRdFlgs  = {SearchFlags, SEARCH_FLAG_PARTIAL_READ };
 
 static const TEST_EXTRA_HASHVALS HashVals =
 {
@@ -4472,6 +4527,7 @@ static const TEST_INFO1 TestList_OpenMpqs[] =
     {_T("MPQ_2026_v1_The Art of Defense v4.11 G0A.w3x"),        NULL, "892ec8421b34e35899624fc63b451327",   952},               // Some files have slash characters in their names
     {_T("MPQ_2026_v1_BadTablesSize.scx"),                       NULL, "2dd05809bdcb466bbe35778086790caf",     3},               // Fake MPQ header at offset 0
     {_T("MPQ_2026_v1_Humanre01.w3xe"),                          NULL, "22dcadebc9d6dcd0fa0943e8d3444c28",    67},               // Encrypted Warcraft III map
+    {_T("MPQ_2026_v1_Evolution TD-S3.w3x"),                     NULL, "1a35b51398ee23a109f5bed6a2cb5192",   712, &PartRdFlgs},  // Warcraft III map with corrupt war3map.j
 
     // ASI plugins
     {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
@@ -4595,30 +4651,46 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 
 static void Test_PlayingSpace()
 {
-    SFILE_FIND_DATA sf;
+#ifdef _DEBUG
+/*
+    ULARGE_INTEGER FileSize;
     HANDLE hMpq1 = NULL;
-    //HANDLE hMpq2 = NULL;
-    HANDLE hFind;
-    bool bFound = true;
+    HANDLE hFile = NULL;
+    LPBYTE pbBuffer;
 
-    if(SFileOpenArchive(_T("w3xe-file://e:\\humanre01.w3xe"), 0, 0, &hMpq1))
+    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\Evolution TD-S3 Enhanced Edition 1.3 Unlocked High Explosive.w3x"), 0, 0, &hMpq1))
     {
-        //if(SFileOpenFileArchive(hMpq1, "A.mpq", 0, 0, &hMpq2))
+        if(SFileOpenFileEx(hMpq1, "war3map.j", 0, &hFile))
         {
-            hFind = SFileFindFirstFile(hMpq1, "*", &sf, NULL);
-            if(hFind != NULL)
+            FileSize.LowPart = SFileGetFileSize(hFile, &FileSize.HighPart);
+            if(FileSize.HighPart == 0)
             {
-                while(bFound)
+                if((pbBuffer = STORM_ALLOC(BYTE, FileSize.LowPart)) != NULL)
                 {
-                    //printf("[*] Found: %s\n", sf.cFileName);
-                    bFound = SFileFindNextFile(hFind, &sf);
+                    for(DWORD dwOffset = 0; dwOffset < FileSize.LowPart; )
+                    {
+                        DWORD dwBytesToRead = 0x1000;
+                        DWORD dwBytesRead = 0;
+
+                        if((dwOffset + dwBytesToRead) > FileSize.LowPart)
+                            dwBytesToRead = FileSize.LowPart - dwOffset;
+
+                        if(!SFileReadFile(hFile, pbBuffer + dwOffset, dwBytesToRead, &dwBytesRead, NULL))
+                            __debugbreak();
+                        if(dwBytesRead != dwBytesToRead)
+                            __debugbreak();
+
+                        dwOffset += dwBytesToRead;
+                    }
+                    STORM_FREE(pbBuffer);
                 }
-                SFileFindClose(hFind);
             }
-            // SFileCloseArchive(hMpq2);
+            SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq1);
     }
+*/
+#endif  // _DEBUG
 }
 
 //-----------------------------------------------------------------------------
