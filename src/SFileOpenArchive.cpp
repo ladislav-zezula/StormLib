@@ -417,8 +417,9 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
             ha->MpqPos = ByteOffset;
             ha->FileSize = FileSize;
 
-            // Sector size must be nonzero.
-            if(ByteOffset >= FileSize || ha->pHeader->wSectorSize == 0)
+            // wSectorSize is a shift (dwSectorSize = 0x200 << wSectorSize), so zero is valid
+            // and means 512-byte sectors. Overflow of the shift is checked further below.
+            if(ByteOffset >= FileSize)
                 dwErrCode = ERROR_BAD_FORMAT;
         }
     }
