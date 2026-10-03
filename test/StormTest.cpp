@@ -4528,6 +4528,8 @@ static const TEST_INFO1 TestList_OpenMpqs[] =
     {_T("MPQ_2026_v1_BadTablesSize.scx"),                       NULL, "2dd05809bdcb466bbe35778086790caf",     3},               // Fake MPQ header at offset 0
     {_T("MPQ_2026_v1_Humanre01.w3xe"),                          NULL, "22dcadebc9d6dcd0fa0943e8d3444c28",    67},               // Encrypted Warcraft III map
     {_T("MPQ_2026_v1_Evolution TD-S3.w3x"),                     NULL, "1a35b51398ee23a109f5bed6a2cb5192",   712, &PartRdFlgs},  // Warcraft III map with corrupt war3map.j
+    {_T("MPQ_2026_v1_BNS.w3x"),                                 NULL, "2c41ba6ca4a52bbd6c42246829cb0ce6",    18},               // Warcraft III map with sector size shift = 0
+    
 
     // ASI plugins
     {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
@@ -4652,13 +4654,13 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 static void Test_PlayingSpace()
 {
 #ifdef _DEBUG
-/*
+
     ULARGE_INTEGER FileSize;
     HANDLE hMpq1 = NULL;
     HANDLE hFile = NULL;
     LPBYTE pbBuffer;
 
-    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\Evolution TD-S3 Enhanced Edition 1.3 Unlocked High Explosive.w3x"), 0, 0, &hMpq1))
+    if(SFileOpenArchive(_T("e:\\BNS.w3x"), 0, 0, &hMpq1))
     {
         if(SFileOpenFileEx(hMpq1, "war3map.j", 0, &hFile))
         {
@@ -4689,7 +4691,7 @@ static void Test_PlayingSpace()
         }
         SFileCloseArchive(hMpq1);
     }
-*/
+
 #endif  // _DEBUG
 }
 

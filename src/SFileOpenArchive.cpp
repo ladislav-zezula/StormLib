@@ -420,7 +420,7 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
             ha->FileSize = FileSize;
 
             // Sector size must be nonzero.
-            if(ByteOffset >= FileSize || ha->pHeader->wSectorSize == 0)
+            if(ByteOffset >= FileSize)
                 dwErrCode = ERROR_BAD_FORMAT;
         }
     }
