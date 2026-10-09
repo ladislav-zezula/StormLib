@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.25)
-project(StormLib VERSION 9.30.0 LANGUAGES C CXX)
+
+# Take the version from StormLib.h so that there is a single place to bump on release
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/src/StormLib.h" STORM_VERSION_LINE
+    REGEX "#define[ \t]+STORMLIB_VERSION_STRING[ \t]+\""
+)
+if(NOT STORM_VERSION_LINE MATCHES "\"([0-9]+\\.[0-9]+(\\.[0-9]+)?)\"")
+    message(FATAL_ERROR "Unable to read STORMLIB_VERSION_STRING from src/StormLib.h")
+endif()
+
+project(StormLib VERSION ${CMAKE_MATCH_1} LANGUAGES C CXX)
 
 set(LIBRARY_NAME storm)
 set(CMAKE_CXX_STANDARD 11)
@@ -59,7 +68,6 @@ set(SRC_FILES
            src/SFileVerify.cpp
            src/SMemUtf8.cpp
            src/libtomcrypt/src/pk/rsa/rsa_verify_simple.c
-           src/libtomcrypt/src/misc/crypt_libc.c
 )
 
 if(MSVC)
@@ -84,6 +92,7 @@ set(TOMCRYPT_FILES
            src/libtomcrypt/src/misc/crypt_find_prng.c
            src/libtomcrypt/src/misc/crypt_hash_descriptor.c
            src/libtomcrypt/src/misc/crypt_hash_is_valid.c
+           src/libtomcrypt/src/misc/crypt_libc.c
            src/libtomcrypt/src/misc/crypt_ltc_mp_descriptor.c
            src/libtomcrypt/src/misc/crypt_prng_descriptor.c
            src/libtomcrypt/src/misc/crypt_prng_is_valid.c
@@ -427,14 +436,16 @@ if (NOT STORM_SKIP_INSTALL)
         set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
 
         #DEB configuration
-        set(CPACK_DEBIAN_PACKAGE_EPOCH 1)
+        set(CPACK_DEBIAN_PACKAGE_NAME "libstorm-dev")
+        set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
         set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
         set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.zezula.net/en/mpq/stormlib.html")
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "imbacen@gmail.com")
         set(CPACK_DEBIAN_PACKAGE_DEPENDS "zlib1g,bzip2")
 
         #RPM configuration
-        set(CPACK_RPM_PACKAGE_EPOCH 1)
+        set(CPACK_RPM_PACKAGE_NAME "libstorm-devel")
+        set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
         set(CPACK_RPM_PACKAGE_RELEASE 1)
         set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
         set(CPACK_RPM_PACKAGE_GROUP "${PROJECT_NAME}")

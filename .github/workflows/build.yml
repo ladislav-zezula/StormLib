@@ -7,7 +7,7 @@ env:
 
 jobs:
   debian-trixie:
-    name: debian-trixie (bundled=${{ matrix.storm_use_bundled_libraries }}, shared=${{ matrix.build_shared_libs }}, unicode=${{ matrix.unicode }})
+    name: debian-trixie (bundled=${{ matrix.storm_use_bundled_libraries }}, shared=${{ matrix.build_shared_libs }}, unicode=${{ matrix.unicode }}, tests=${{ matrix.build_tests }})
     runs-on: ubuntu-latest
     container:
       image: debian:trixie
@@ -17,6 +17,7 @@ jobs:
         storm_use_bundled_libraries: [ ON, OFF ]
         build_shared_libs: [ ON, OFF ]
         unicode: [ ON, OFF ]
+        build_tests: [ ON, OFF ]
 
     steps:
       - uses: actions/checkout@v4
@@ -28,16 +29,21 @@ jobs:
         if: matrix.storm_use_bundled_libraries == 'OFF'
         run: apt-get install -y pkg-config zlib1g-dev libbz2-dev libtommath-dev libtomcrypt-dev
 
+      - name: Conditionally install test dependencies
+        if: matrix.build_tests == 'ON'
+        run: apt-get install -y libasound2-dev
+
       - name: CMake Configuration
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DSTORM_USE_BUNDLED_LIBRARIES=${{ matrix.storm_use_bundled_libraries }} \
             -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }} \
-            -DSTORM_UNICODE=${{ matrix.unicode }}
+            -DSTORM_UNICODE=${{ matrix.unicode }} \
+            -DSTORM_BUILD_TESTS=${{ matrix.build_tests }}
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build
 
   fedora-latest:
     name: fedora-latest (bundled=${{ matrix.storm_use_bundled_libraries }})
@@ -63,7 +69,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_SHARED_LIBS=ON -DSTORM_USE_BUNDLED_LIBRARIES=${{ matrix.storm_use_bundled_libraries }}
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build
 
   windows-latest-x64:
     if: true
@@ -190,4 +196,4 @@ jobs:
               -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=$BUILD_SHARED_LIBS \
               -DSTORM_USE_BUNDLED_LIBRARIES=$STORM_USE_BUNDLED_LIBRARIES
-            cmake --build build --config Release
+            cmake --build build
