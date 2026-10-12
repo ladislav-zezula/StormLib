@@ -13,6 +13,7 @@
 #define __INCLUDE_CRYPTOGRAPHY__
 #define __STORMLIB_SELF__                   // Don't use StormLib.lib
 #include <stdio.h>
+#include <wchar.h>
 #include <vector>
 
 #ifdef _MSC_VER
