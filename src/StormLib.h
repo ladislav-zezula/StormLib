@@ -145,13 +145,12 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0928  // Current numeric version of StormLib
-#define STORMLIB_VERSION_STRING         "9.40"  // Current string version of StormLib
+#define STORMLIB_VERSION                0x0929  // Current numeric version of StormLib
+#define STORMLIB_VERSION_STRING         "9.41"  // Current string version of StormLib
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
 #define ID_MPK                      0x1A4B504D  // MPK archive header ID ('MPK\x1A')
-
 #define ID_MPK_VERSION_2000         0x30303032  // MPK version ("2000")
 
 #define ERROR_AVI_FILE                   10000  // Not a MPQ file, but an AVI file.
@@ -327,8 +326,9 @@ extern "C" {
 
 #define STREAM_PROVIDER_FLAT        0x00000000  // Stream is linear with no offset mapping
 #define STREAM_PROVIDER_PARTIAL     0x00000010  // Stream is partial file (.part)
-#define STREAM_PROVIDER_MPQE        0x00000020  // Stream is an encrypted MPQ
-#define STREAM_PROVIDER_BLOCK4      0x00000030  // 0x4000 per block, text MD5 after each block, max 0x2000 blocks per file
+#define STREAM_PROVIDER_BLOCK4      0x00000020  // 0x4000 per block, text MD5 after each block, max 0x2000 blocks per file
+#define STREAM_PROVIDER_MPQE        0x00000030  // An MPQ encrypted by Salsa20 (Starcraft II instllation MPQs)
+#define STREAM_PROVIDER_W3XE        0x00000040  // A Warcraft III map encrypted by AES-ECB
 #define STREAM_PROVIDER_MASK        0x000000F0  // Mask for stream provider value
 
 #define STREAM_FLAG_READ_ONLY       0x00000100  // Stream is read only

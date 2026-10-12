@@ -5,6 +5,7 @@
 
 #pragma warning(disable:4242)            // der_decode_ia5_string.c(84) : warning C4242: '=' : conversion from 'int' to 'unsigned char', possible loss of data
 
+#include "libtomcrypt/src/ciphers/aes.c"
 #include "libtomcrypt/src/hashes/hash_memory.c"
 #include "libtomcrypt/src/hashes/md5.c"
 #include "libtomcrypt/src/hashes/sha1.c"
