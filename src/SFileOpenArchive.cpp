@@ -224,10 +224,12 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
     MTYPE MapType = MapTypeNotChecked;
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // One time initialization of MPQ cryptography
-    InitializeMpqCryptography();
+    // Sanity check
     if(pStream == NULL)
         return false;
+
+    // One time initialization of MPQ cryptography
+    InitializeMpqCryptography();
 
     // Check the file size. There must be at least 0x20 bytes
     if(dwErrCode == ERROR_SUCCESS)
@@ -418,7 +420,7 @@ static bool OpenArchiveFromStream(TFileStream * pStream, HANDLE hParentMpq, DWOR
             ha->FileSize = FileSize;
 
             // Sector size must be nonzero.
-            if(ByteOffset >= FileSize || ha->pHeader->wSectorSize == 0)
+            if(ByteOffset >= FileSize)
                 dwErrCode = ERROR_BAD_FORMAT;
         }
     }

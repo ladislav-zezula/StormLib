@@ -46,7 +46,7 @@ typedef struct _TSQPHeader
     USHORT wFormatVersion;
 
     // Power of two exponent specifying the number of 512-byte disk sectors in each file sector
-    // in the archive. The size of each file sector in the archive is 512 * 2 ^ wSectorSize.
+    // in the archive. The size of each file sector in the archive is 0x200 << wSectorSize.
     USHORT wSectorSize;
 
 } TSQPHeader;

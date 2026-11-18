@@ -1,11 +1,9 @@
 /*****************************************************************************/
-/* huffman.cpp                       Copyright (c) Ladislav Zezula 1998-2003 */
+/* sparse.cpp                        Copyright (c) Ladislav Zezula 1998-2003 */
 /*---------------------------------------------------------------------------*/
-/* This module contains Huffmann (de)compression methods                     */
+/* Handler for sparse compression mode                                       */
 /*                                                                           */
 /* Authors : Ladislav Zezula (ladik.zezula.net)                              */
-/*           ShadowFlare     (BlakFlare@hotmail.com)                         */
-/*                                                                           */
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */

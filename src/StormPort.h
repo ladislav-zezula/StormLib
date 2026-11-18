@@ -421,6 +421,7 @@
   #define ERROR_BUFFER_OVERFLOW          1005
   #define ERROR_INVALID_DATA             1006
   #define ERROR_NO_UNICODE_TRANSLATION   1007
+  #define ERROR_FILE_ENCRYPTED           1008
 #endif
 
 // Macros that can sometimes be missing
