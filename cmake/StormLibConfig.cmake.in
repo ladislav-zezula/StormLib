@@ -1,0 +1,24 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+foreach(_stormlib_dep IN ITEMS @STORMLIB_PACKAGE_DEPENDENCIES@)
+  find_dependency(${_stormlib_dep})
+endforeach()
+
+if(NOT "@STORMLIB_PKG_CONFIG_DEPENDENCIES@" STREQUAL "")
+  find_dependency(PkgConfig)
+  foreach(_stormlib_dep IN ITEMS @STORMLIB_PKG_CONFIG_DEPENDENCIES@)
+    # Not REQUIRED: a missing module must make find_package(StormLib) fail, not abort the caller
+    pkg_check_modules(${_stormlib_dep} QUIET IMPORTED_TARGET ${_stormlib_dep})
+    if(NOT ${_stormlib_dep}_FOUND)
+      set(@PROJECT_NAME@_NOT_FOUND_MESSAGE "@PROJECT_NAME@ could not be found because dependency ${_stormlib_dep} could not be found by pkg-config.")
+      set(@PROJECT_NAME@_FOUND FALSE)
+      return()
+    endif()
+  endforeach()
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+check_required_components(@PROJECT_NAME@)
